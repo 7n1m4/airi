@@ -1,8 +1,22 @@
 import type { McpCallToolPayload, McpCallToolResult, McpToolDescriptor } from '../../stores/mcp-tool-bridge'
 
-import { tryGetMcpToolBridge } from '../../stores/mcp-tool-bridge'
+import { getActivePinia } from 'pinia'
+
+import { isMcpToolAllowedForCard, tryGetMcpToolBridge } from '../../stores/mcp-tool-bridge'
+import { useAiriCardStore } from '../../stores/modules/airi-card'
 import { executeJevMcpTool, getJevMcpToolDescriptors, isJevMcpTool } from './jev'
 import { postLive2dCommand, postLive2dDispatch } from './live2d'
+
+function getCardAllowedTools(): string[] | undefined {
+  if (!getActivePinia())
+    return undefined
+  try {
+    return useAiriCardStore().activeCard?.extensions?.airi?.generation?.known?.allowedTools
+  }
+  catch {
+    return undefined
+  }
+}
 
 /**
  * Universal MCP executor: routes native Jev tools first, then falls back to the MCP bridge.
@@ -78,14 +92,25 @@ export function describeToolError(res: McpCallToolResult): string {
   return text || 'MCP tool execution failed'
 }
 
-export async function handleWidgetMcpMessage(e: MessageEvent): Promise<boolean> {
+export async function handleWidgetMcpMessage(
+  e: MessageEvent,
+  widgetWindow?: WindowProxy | null,
+): Promise<boolean> {
   if (typeof e.data?.type === 'string' && e.data.type.startsWith('airi:live2d:'))
     return forwardLive2dWidgetMessage(e.data)
 
   if (e.data?.type !== 'mcp-call')
     return false
 
+  // The widget frame is opaque-origin, so its source window is the only identity
+  // we can check: a foreign popup or sibling frame must not reach the MCP bridge.
+  if (widgetWindow && e.source !== widgetWindow)
+    return false
+
   const { id, name, args } = e.data
+  if (typeof name !== 'string' || !isMcpToolAllowedForCard(name, getCardAllowedTools()))
+    return false
+
   const target = e.source as WindowProxy | null
 
   try {

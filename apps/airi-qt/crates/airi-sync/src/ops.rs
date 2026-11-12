@@ -20,6 +20,20 @@ const MANIFEST_FILE: &str = "manifest.json";
 const FILES_DIR: &str = "files";
 const SNAP_SUFFIX: &str = ".snap";
 const STAGING_PREFIX: &str = ".airi-sync-staging-";
+/// Main database file the Qt app opens in its data directory
+/// (`airi_store::Database`'s private `DB_FILE_NAME`, mirrored here to keep this
+/// crate free of a dependency on `airi-store`).
+const SQLITE_DB: &str = "airi.sqlite";
+/// SQLite's `-wal`/`-shm` sidecars. SQLite runs in WAL mode (what
+/// `airi_store::Database::open` always sets) and keeps them beside the main
+/// file, so either one present means the database is open (or was not closed
+/// cleanly) and a plain copy can be a torn checkpoint that still
+/// hashes/length-verifies and later restores to corruption.
+const SQLITE_SIDECARS: [&str; 2] = ["-wal", "-shm"];
+/// Suffix of the name a destination file is moved to while a restore is in
+/// flight; renamed back if the restore fails. The pid keeps concurrent
+/// restores from colliding.
+const RESTORE_TMP_SUFFIX: &str = ".restore-tmp-";
 /// A staging directory this old is considered abandoned (its run died) and is
 /// removed. Fresh ones are left alone so concurrent runs cannot delete each
 /// other's scratch space.
@@ -149,6 +163,30 @@ fn dir_size_bytes(dir: &Path) -> u64 {
         .sum()
 }
 
+/// Name a destination file is moved to while a restore is in flight.
+fn restore_tmp_path(dest: &Path) -> PathBuf {
+    let mut name = dest
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    name.push_str(RESTORE_TMP_SUFFIX);
+    name.push_str(&std::process::id().to_string());
+    dest.with_file_name(name)
+}
+
+/// Undo a failed restore: delete the files this run created, then rename the
+/// overwritten ones back from their aside names.
+fn restore_rollback(aside: &[(PathBuf, PathBuf)], created: &[PathBuf]) {
+    for path in created {
+        let _ = fs::remove_file(path);
+    }
+    for (dest, tmp) in aside.iter().rev() {
+        if fs::rename(tmp, dest).is_err() {
+            tracing::warn!(path = %dest.display(), aside = %tmp.display(), "restore rollback could not restore a file");
+        }
+    }
+}
+
 /// Read and validate the manifest of a `<id>.snap` directory.
 ///
 /// `expected_id`, when set, requires the manifest's `id` to equal it (used
@@ -233,6 +271,11 @@ fn manifest_json(manifest: &SnapshotManifest) -> Result<String, SyncError> {
 /// if it is still changing, the file is listed in `manifest.skipped` rather
 /// than archiving a torn copy.
 ///
+/// An open SQLite database is the one thing that is never copied: if
+/// `airi.sqlite` sits next to its `-wal`/`-shm` sidecars the snapshot is
+/// refused ([`SyncError::ManifestInvalid`]) rather than publishing a possibly
+/// torn copy.
+///
 /// Returns [`SyncError::EmptySource`] when `source_dir` is missing, not a
 /// directory, or yields no archivable files.
 pub fn create_snapshot(
@@ -247,6 +290,31 @@ pub fn create_snapshot(
     }
 
     let (candidates, mut skipped) = walk_files(source_dir);
+    // A live SQLite database cannot be copied consistently (see
+    // `SQLITE_SIDECARS`): a torn copy would be published as a snapshot that
+    // verifies and later restores to a corrupt database, so refuse rather than
+    // silently skipping it. The engine cannot tell "in use" from a crash
+    // leftover, so it fails closed — before anything is created under
+    // `dest_root`.
+    let db_path = source_dir.join(SQLITE_DB);
+    let db_sidecar = if candidates.iter().any(|p| p == &db_path) {
+        SQLITE_SIDECARS.iter().find(|ext| {
+            db_path
+                .with_file_name(format!("{SQLITE_DB}{ext}"))
+                .is_file()
+        })
+    } else {
+        None
+    };
+    if let Some(ext) = db_sidecar {
+        return Err(SyncError::ManifestInvalid {
+            path: db_path,
+            reason: format!(
+                "{SQLITE_DB}{ext} exists: the SQLite database is open in this app \
+                 (or was not closed cleanly). Close the app before taking a snapshot."
+            ),
+        });
+    }
 
     // Leftovers from a run that died before it could clean up. The manifest is
     // written last, so a staging directory never belongs to a snapshot that
@@ -654,9 +722,9 @@ fn compute_plan(manifest: &SnapshotManifest, dest_dir: &Path) -> Result<RestoreP
 /// that are absent from the snapshot are never deleted; they appear in
 /// [`RestorePlan::keep`]. With `require_clean: true` the pre-flight check
 /// happens before any write, so a refused restore leaves the destination
-/// untouched. Writes are plain per-file copies (not atomic renames); on
-/// failure mid-restore the destination may contain a partially restored
-/// tree — v1 does not roll back.
+/// untouched. A restore that fails part-way also leaves the destination as it
+/// was: every file the plan overwrites is renamed aside first, and on failure
+/// those are renamed back while the files this run created are deleted.
 pub fn restore_snapshot(
     snapshot_dir: &Path,
     dest_dir: &Path,
@@ -699,6 +767,22 @@ pub fn restore_snapshot(
 
             fs::create_dir_all(dest_dir).map_err(|e| SyncError::io(dest_dir, e))?;
 
+            // Move aside what the plan overwrites, so a failure can put the
+            // destination back exactly as it was (a plain copy loop cannot:
+            // once a file is replaced, the old bytes are gone).
+            let mut aside: Vec<(PathBuf, PathBuf)> = Vec::new();
+            for rel in &plan.overwrite {
+                let dest = join_under_root(dest_dir, rel)?;
+                let tmp = restore_tmp_path(&dest);
+                if let Err(err) = fs::rename(&dest, &tmp) {
+                    let err = SyncError::io(&dest, err);
+                    restore_rollback(&aside, &[]);
+                    return Err(err);
+                }
+                aside.push((dest, tmp));
+            }
+
+            let mut created: Vec<PathBuf> = Vec::new();
             let mut bytes_written = 0u64;
             for file in &manifest.files {
                 if plan.unchanged.binary_search(&file.path).is_ok() {
@@ -716,8 +800,19 @@ pub fn restore_snapshot(
                         fs::remove_file(&to).map_err(|e| SyncError::io(&to, e))?;
                     }
                 }
-                fs::copy(&from, &to).map_err(|e| SyncError::io(&to, e))?;
+                if let Err(err) = fs::copy(&from, &to) {
+                    let err = SyncError::io(&to, err);
+                    restore_rollback(&aside, &created);
+                    return Err(err);
+                }
+                if !aside.iter().any(|(dest, _)| *dest == to) {
+                    created.push(to);
+                }
                 bytes_written += file.bytes;
+            }
+            // The restore landed: the aside copies are superseded, not needed.
+            for (_, tmp) in &aside {
+                let _ = fs::remove_file(tmp);
             }
             Ok(RestoreReport {
                 plan,

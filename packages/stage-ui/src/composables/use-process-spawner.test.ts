@@ -1,17 +1,42 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ElectronExecuteShellCommandPayload } from '@proj-airi/stage-shared'
+
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 
 import { useProcessSpawner } from './use-process-spawner'
 
+// Mirrors the allowlist in the main-process handler, so a rejection test proves
+// the payload was built the way main will judge it.
+const allowedBasenames = ['python3', 'npx', 'npm', 'pkill']
+const invocations: ElectronExecuteShellCommandPayload[] = []
+
+vi.mock('@proj-airi/electron-vueuse', () => ({
+  useElectronEventaInvoke: () => async (payload: ElectronExecuteShellCommandPayload) => {
+    invocations.push(payload)
+    const bin = payload.argv[0].split('/').pop() || ''
+    return allowedBasenames.includes(bin)
+      ? { success: true, stdout: '', stderr: '', exitCode: 0 }
+      : { success: false, stdout: '', stderr: `Executable not allowed: ${payload.argv[0]}`, exitCode: 1, error: `Executable not allowed: ${payload.argv[0]}` }
+  },
+}))
+
+// `window.electron` is injected by the Electron preload script and is absent from
+// the DOM lib typings; confine that cast to the one place the fixture needs it.
+interface ElectronWindow {
+  electron: unknown
+}
+
 describe('useProcessSpawner', () => {
   beforeEach(() => {
     localStorage.clear()
+    invocations.length = 0
+    ;(window as unknown as ElectronWindow).electron = {}
     vi.restoreAllMocks()
   })
 
-  afterEach(() => {
-    localStorage.clear()
-    vi.restoreAllMocks()
+  // Guards the electron branch: every spawn test below is vacuous without it.
+  it('exposes the electron bridge in this environment', () => {
+    expect(useProcessSpawner({ storageKeyPrefix: 'bridge-test' }).isElectron.value).toBe(true)
   })
 
   it('initializes with default options and storage keys', () => {
@@ -36,15 +61,15 @@ describe('useProcessSpawner', () => {
     })
 
     spawner.spawnCommand.value = 'npx my-server'
-    spawner.stopCommand.value = 'killall my-server'
+    spawner.stopCommand.value = 'pkill -f my-server'
     spawner.autoSpawnOnLaunch.value = true
     await nextTick()
 
     expect(spawner.spawnCommand.value).toBe('npx my-server')
-    expect(spawner.stopCommand.value).toBe('killall my-server')
+    expect(spawner.stopCommand.value).toBe('pkill -f my-server')
     expect(spawner.autoSpawnOnLaunch.value).toBe(true)
     expect(localStorage.getItem('test-spawner:spawn-command')).toBe('npx my-server')
-    expect(localStorage.getItem('test-spawner:stop-command')).toBe('killall my-server')
+    expect(localStorage.getItem('test-spawner:stop-command')).toBe('pkill -f my-server')
     expect(localStorage.getItem('test-spawner:auto-spawn')).toBe('true')
   })
 
@@ -60,9 +85,53 @@ describe('useProcessSpawner', () => {
     const stopRes = await spawner.handleStop()
     expect(stopRes).toBeNull()
     expect(spawner.isExecuting.value).toBe(false)
+    expect(invocations).toHaveLength(0)
+  })
+
+  it('passes shell metacharacters literally as argv instead of executing them', async () => {
+    const spawner = useProcessSpawner({
+      storageKeyPrefix: 'metachar-test',
+      defaultSpawnCommand: 'python3 -c print(1) && touch /tmp/pwned ; echo hi | rm',
+    })
+
+    const res = await spawner.handleSpawn()
+
+    expect(res?.success).toBe(true)
+    expect(invocations).toHaveLength(1)
+    expect(invocations[0].argv).toEqual([
+      'python3',
+      '-c',
+      'print(1)',
+      '&&',
+      'touch',
+      '/tmp/pwned',
+      ';',
+      'echo',
+      'hi',
+      '|',
+      'rm',
+    ])
+  })
+
+  it('rejects a binary outside the allowlist', async () => {
+    const spawner = useProcessSpawner({
+      storageKeyPrefix: 'denied-test',
+      defaultSpawnCommand: '/bin/sh -c whoami',
+    })
+
+    const res = await spawner.handleSpawn()
+
+    expect(res?.success).toBe(false)
+    expect(res?.stderr).toContain('Executable not allowed: /bin/sh')
+    expect(invocations).toHaveLength(1)
+    expect(invocations[0].argv).toEqual(['/bin/sh', '-c', 'whoami'])
   })
 
   it('handles browser mode (non-electron) by copying to clipboard', async () => {
+    // `beforeEach` installs a stub `window.electron` for the desktop cases; browser
+    // mode is the absence of that bridge, so remove it for this case only.
+    delete (window as unknown as ElectronWindow).electron
+
     const writeTextMock = vi.fn().mockResolvedValue(undefined)
     Object.assign(navigator, {
       clipboard: {
@@ -78,6 +147,7 @@ describe('useProcessSpawner', () => {
     const result = await spawner.handleSpawn()
     expect(result).toBeNull()
     expect(writeTextMock).toHaveBeenCalledWith('docker run -p 8080:8080 my-image')
+    expect(invocations).toHaveLength(0)
   })
 
   it('formats logs correctly when copyLogs is invoked', () => {

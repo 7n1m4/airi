@@ -63,15 +63,52 @@ import {
 
 const baseUrlValidator = { value: validateProviderBaseUrl }
 
+const GEMINI_CHAT_PROVIDER_ID = 'google-generative-ai'
+
+/**
+ * Gemini TTS inherits the chat provider's API key, which now lives in the v2
+ * instance snapshot (`{ version: 2, instancesByInstanceKey }`) instead of the
+ * legacy flat `{ providerId: options }` map. Accepts both so a snapshot written
+ * before the instance migration still resolves.
+ */
 function getGeminiChatApiKey(): string {
+  const read = (row: unknown): string => {
+    if (!row || typeof row !== 'object')
+      return ''
+    const record = row as Record<string, unknown>
+    const options = record.options && typeof record.options === 'object' ? record.options as Record<string, unknown> : record
+    const key = options.apiKey
+    return typeof key === 'string' ? key.trim() : ''
+  }
+  const isPrimary = ([key, row]: [string, unknown]) =>
+    key === `${GEMINI_CHAT_PROVIDER_ID}:*`
+    || (!!row && typeof row === 'object' && (row as Record<string, unknown>).isPrimary === true)
+  const readFirst = (rows: Array<[string, unknown]>) => {
+    for (const [, row] of rows.sort((a, b) => Number(isPrimary(b)) - Number(isPrimary(a)))) {
+      const key = read(row)
+      if (key)
+        return key
+    }
+    return ''
+  }
+
   try {
     if (typeof window !== 'undefined') {
       const raw = window.localStorage.getItem('settings/credentials/providers')
       if (raw) {
-        const parsed = JSON.parse(raw)
-        const key = parsed['google-generative-ai']?.apiKey
-        if (typeof key === 'string')
-          return key.trim()
+        const parsed: unknown = JSON.parse(raw)
+        if (!parsed || typeof parsed !== 'object')
+          return ''
+        const record = parsed as Record<string, unknown>
+        const byKey = record.instancesByInstanceKey
+        if (record.version === 2 && byKey && typeof byKey === 'object') {
+          return readFirst(Object.entries(byKey as Record<string, unknown>)
+            .filter(([key]) => key.split(':', 1)[0] === GEMINI_CHAT_PROVIDER_ID))
+        }
+        // Pre-migration snapshot: the legacy flat shape, whose key may still be
+        // the upstream snake_case alias the store's migration normalizes.
+        const legacyRow = record[GEMINI_CHAT_PROVIDER_ID]
+        return read(legacyRow) || read({ apiKey: (legacyRow as Record<string, unknown> | undefined)?.api_key })
       }
     }
   }

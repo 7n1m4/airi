@@ -4,10 +4,9 @@ import process from 'node:process'
 
 import { execSync } from 'node:child_process'
 
-// Construct environment with SSL bypass, max heap size, and GITHUB_TOKEN cleared to fall back to keyring
+// Construct environment with GITHUB_TOKEN cleared to fall back to keyring
 const safeEnv = { ...process.env }
 delete safeEnv.GITHUB_TOKEN
-safeEnv.GH_SSL_NO_VERIFY = 'true'
 delete safeEnv.NODE_OPTIONS
 
 function execute(cmd, options = {}) {
@@ -36,11 +35,13 @@ async function main() {
   // Step 1: Pull and fetch tags from git
   console.info('🔄 Syncing local repository with remote...')
   try {
-    execute('git -c http.sslVerify=false pull')
-    execute('git -c http.sslVerify=false fetch --tags --force')
+    execute('git pull')
+    execute('git fetch --tags --force')
   }
-  catch {
-    console.warn('⚠️ Warning: Git sync failed. Proceeding with local repository state.')
+  catch (err) {
+    console.error('❌ Git sync failed. Refusing to build a release from an un-synced tree.')
+    console.error(err.message)
+    process.exit(1)
   }
 
   // Re-read package.json after git sync in case remote main was updated
@@ -217,10 +218,11 @@ async function main() {
   // Step 7: Verify release assets & cross-platform completeness
   console.info(`\n📦 Verifying release assets inventory for ${tag}...`)
   try {
-    execute(`node scripts/github/ci-status.mjs --release`)
+    execute(`node scripts/github/ci-status.mjs --release --tag=${tag}`)
   }
-  catch {
-    // Non-fatal if ci-status verification encounters an error
+  catch (err) {
+    console.error(`❌ Release asset verification failed for ${tag}. Error:`, err.message)
+    process.exit(1)
   }
 
   console.info(`\n🏆 Success! Windows release artifacts uploaded to GitHub release:`)

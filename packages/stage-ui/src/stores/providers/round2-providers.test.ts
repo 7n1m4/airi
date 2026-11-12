@@ -98,15 +98,41 @@ describe('round 2 providers registry', () => {
       // Without any key configured
       const emptyCheck = await gemini.validators.validateProviderConfig({ apiKey: '' })
       expect(emptyCheck.valid).toBe(false)
+      expect(emptyCheck.reason).toBe('API Key is required (or configure Google Gemini chat provider).')
 
-      // Set key in google-generative-ai chat provider
-      localStorage.setItem('settings/credentials/providers', JSON.stringify({
-        'google-generative-ai': { apiKey: 'shared-gemini-key' },
-      }))
+      // Seed the snapshot shape the instance store actually persists (v2).
+      function seedV2() {
+        localStorage.setItem('settings/credentials/providers', JSON.stringify({
+          version: 2,
+          instancesByInstanceKey: {
+            'google-generative-ai:*': {
+              instanceId: 'google-generative-ai:*',
+              id: '*',
+              providerId: 'google-generative-ai',
+              label: 'Default',
+              options: { apiKey: 'shared-gemini-key' },
+              isPrimary: true,
+            },
+          },
+        }))
+      }
+
+      seedV2()
 
       // Validates successfully via inheritance
       const inheritedCheck = await gemini.validators.validateProviderConfig({ apiKey: '' })
       expect(inheritedCheck.valid).toBe(true)
+
+      // Legacy flat snapshot (pre-migration) still resolves
+      localStorage.setItem('settings/credentials/providers', JSON.stringify({
+        'google-generative-ai': { apiKey: 'legacy-gemini-key' },
+      }))
+      const legacyCheck = await gemini.validators.validateProviderConfig({ apiKey: '' })
+      expect(legacyCheck.valid).toBe(true)
+      expect(legacyCheck.reason).toBe('')
+
+      // Restore the v2 snapshot the speech fetch below inherits from.
+      seedV2()
 
       // Synthesizes speech using inherited key and produces valid WAV response
       const mockFetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({

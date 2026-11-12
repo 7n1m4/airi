@@ -54,7 +54,7 @@ The five groups below organize navigation. Historical “Phase” labels do not 
 
 ## 3. Domain skill catalog
 
-The catalog contains 70 discoverable skills. Desktop chatbox and interaction pipelines retain their entry points and load focused references; reference files are not additional skills.
+The catalog contains 72 discoverable skills. Desktop chatbox and interaction pipelines retain their entry points and load focused references; reference files are not additional skills.
 
 ### 🟢 Phase 1: Core Plumbing & Infrastructure
 
@@ -189,7 +189,7 @@ The catalog contains 70 discoverable skills. Desktop chatbox and interaction pip
 #### 3.1 `airi-onboarding-v3`
 - **Target Domain**: Canonical Onboarding V3 18-Step Architecture, Quick Start (60s), & Modular Pruning.
 - **Key Paths**: `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/`, `docs/design-onboarding-v3.md`, `docs/design-onboarding-v3-emotions.md`.
-- **Content**: Canonical 18-step semantic journey, Quick Start (60s) instant mode, 5-item sliding-window stepper, 6 curated Archetypes and dynamic module pruning, `useOnboardingV3Draft` isolation, and atomic starter-card commit. *(Note: Legacy `airi-onboarding-v2` under `v2/` is deprecated reference only).*
+- **Content**: Canonical 18-step semantic journey, Quick Start (60s) instant mode, 5-item sliding-window stepper, 6 curated Archetypes and dynamic module pruning, `useOnboardingV3Draft` isolation, and atomic starter-card commit.
 
 #### 3.2 `airi-mcp-integration`
 - **Target Domain**: Model Context Protocol (MCP) Server Integration.
@@ -289,7 +289,7 @@ The catalog contains 70 discoverable skills. Desktop chatbox and interaction pip
 #### 3.21 `airi-acting-cue-act-tokens`
 - **Target Domain**: The ACT token system — acting-cue orchestration protocol (emotion/motion/delay/actor tokens), cross-cutting Phase 2 rendering and Phase 3 prompt assembly.
 - **Key Paths**: `packages/stage-ui/src/composables/llm-marker-parser.ts`, `packages/stage-ui/src/composables/response-categoriser.ts`, `packages/stage-ui/src/constants/prompts/character-defaults.ts`, `packages/stage-ui/src/types/chat.ts` (`rawContent`/`content`), `packages/stage-pages/src/pages/settings/airi-card/components/tabs/CardCreationTabActing.vue`, `FieldAiGeneratorModal.vue`, `apps/stage-tamagotchi/src/renderer/components/chat/chat_rehearsal.vue`, `packages/stage-ui/src/components/scenes/ControlStripHost.vue`.
-- **Content**: The two official ACT formats (Short Format, JSON Chaining Format), hidden/tolerated forms (legacy bare-`>` close whitelisted for ACT/DELAY/LLM_, `|}` normalization, escapes), DELAY and ACTOR tokens, rawContent-vs-content dual-key drift contract, teaching layer (DEFAULT_ACTING_* prompts, `AiriExtension.acting`, Acting tab, Field AI Generator templates), cue-execution chain (parser → categoriser → hooks → special-token queue → VRM/Live2D), Rehearsal Room playground, Model Customizer mapping nexus, Discord outbound stripping, and the planned Onboarding-V2 Advanced-Lab acting step. Peer skills: `airi-prompt-builder-engine`, `airi-model-customizer`, `airi-character-rendering`, `airi-interaction-pipelines`, `airi-onboarding-v2`.
+- **Content**: The two official ACT formats (Short Format, JSON Chaining Format), hidden/tolerated forms (legacy bare-`>` close whitelisted for ACT/DELAY/LLM_, `|}` normalization, escapes), DELAY and ACTOR tokens, rawContent-vs-content dual-key drift contract, teaching layer (DEFAULT_ACTING_* prompts, `AiriExtension.acting`, Acting tab, Field AI Generator templates), cue-execution chain (parser → categoriser → hooks → special-token queue → VRM/Live2D), Rehearsal Room playground, Model Customizer mapping nexus, Discord outbound stripping, and the Onboarding-V2 acting reference kept for legacy cards. Peer skills: `airi-prompt-builder-engine`, `airi-model-customizer`, `airi-character-rendering`, `airi-interaction-pipelines`, `airi-onboarding-v2`.
 
 #### 3.22 `airi-director-orchestration`
 - **Target Domain**: Autonomous Director and Studio concept decisions.
@@ -300,6 +300,11 @@ The catalog contains 70 discoverable skills. Desktop chatbox and interaction pip
 - **Target Domain**: TypeSafe Jev System-1 Decision Engine & Discrete Classification Coprocessor.
 - **Key Paths**: `packages/stage-ui/src/stores/modules/system-one.ts`, `packages/stage-ui/src/stores/modules/system-one.test.ts`, `docs/proposal-jev-integration.md`, `packages/stage-ui/src/stores/modules/vision/orchestrator.ts`, `packages/stage-pages/src/pages/settings/airi-card/guided.vue`.
 - **Content**: Sub-150ms parallel non-autoregressive decision network ($42/Btok); OpenRouter Decisions API transport (`POST /api/alpha/decisions`, `"type": "noul"` compatibility contract); `useSystemOneStore` Pinia architecture; question schemas (zero-shot memory triage, candidate reranking, affect & suspicion reflex, entity classification); and multi-domain coprocessor wiring: Attention Ecology Programmable Visual Attention Gate (Domain C), AnimaDex fast voice matching & pitch/speed tuning (Domain E), streaming speech-to-motion expression gating (Domain F), memory token compaction & pre-summary curation (Domain G), and Arcade Room retro gaming co-pilot (Domain A). Peer skills: `airi-attention-ecology-vision`, `airi-animadex-wizard`, `airi-acting-cue-act-tokens`, `airi-memory-short-term`.
+
+#### 3.24 `airi-onboarding-v2`
+- **Target Domain**: Legacy Onboarding V2 flow, retained for reference only.
+- **Key Paths**: `.agents/skills/airi-onboarding-v2/SKILL.md`, `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v2/`.
+- **Content**: Deprecated V2 step architecture and store initialization. Treat current source as authoritative for what remains of the flow. Active development happens in `airi-onboarding-v3`; never extend V2.
 
 ---
 
@@ -437,10 +442,10 @@ The catalog contains 70 discoverable skills. Desktop chatbox and interaction pip
 | --- | ---: |
 | Core plumbing and infrastructure | 9 |
 | Character, stage, motion and sensing | 15 |
-| Modules, cognition and memory | 23 |
+| Modules, cognition and memory | 24 |
 | Operational SOPs and research | 8 |
 | UI surfaces and adjacent services | 16 |
-| **Total** | **71** |
+| **Total** | **72** |
 
 The counts follow the catalog groups above, not a separate historical rollout table.
 

@@ -8,7 +8,7 @@ import {
   ensureMusicToolProvisioned,
   filterMcpToolsForCard,
   getMcpToolBridge,
-
+  isMcpToolAllowedForCard,
   setMcpToolBridge,
   tryGetMcpToolBridge,
 } from './mcp-tool-bridge'
@@ -299,6 +299,27 @@ describe('mCP tool bridge lifecycle, config reconciliation & titration', () => {
 
     it('does not leak audio server tools when only unrelated families are allowed', () => {
       expect(filterMcpToolsForCard(rawTools, ['web_search', 'filesystem'])).toHaveLength(2)
+    })
+
+    it('does not let a web_search grant reach an unrelated server whose name contains "search"', () => {
+      const lookalike: McpToolDescriptor[] = [
+        ...rawTools,
+        {
+          serverName: 'my-search-helper',
+          name: 'my-search-helper::dump_secrets',
+          toolName: 'dump_secrets',
+          inputSchema: {},
+        },
+      ]
+      expect(filterMcpToolsForCard(lookalike, ['web_search']).map(t => t.name)).toEqual(['open-websearch::search'])
+    })
+
+    it('gates a qualified name on the same allowlist as the descriptor filter', () => {
+      expect(isMcpToolAllowedForCard('open-websearch::search', ['web_search'], rawTools)).toBe(true)
+      expect(isMcpToolAllowedForCard('my-search-helper::dump_secrets', ['web_search'], rawTools)).toBe(false)
+      expect(isMcpToolAllowedForCard('filesystem::read_file', ['mcp_filesystem'], rawTools)).toBe(true)
+      expect(isMcpToolAllowedForCard('custom-utility::ping', ['mcp'], rawTools)).toBe(true)
+      expect(isMcpToolAllowedForCard('search', ['web_search'], rawTools)).toBe(false)
     })
   })
 })

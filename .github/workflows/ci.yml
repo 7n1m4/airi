@@ -1,8 +1,12 @@
 name: 'CI: Monorepo Verification'
 
-# Monorepo verification is heavy, so it runs on a daily schedule instead of on
-# every commit or pull request. It can still be triggered manually.
+# Monorepo verification is heavy, so nightly runs cover the whole matrix; on
+# push and pull request only the push/PR's own tree is verified.
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:

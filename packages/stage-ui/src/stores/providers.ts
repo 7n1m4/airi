@@ -396,18 +396,20 @@ export const useProvidersStore = defineStore('providers', () => {
   })
 
   function removeInstance(providerId: string, instanceId?: string) {
-    const prefix = `${providerId}:${(instanceId ?? '*')}:`
-    const keys = Object.keys(providerInstanceCache.value).filter(k => k.startsWith(prefix))
-    for (const key of keys) {
-      delete providerInstanceCache.value[key]
+    const key = instanceId ? `${providerId}:${instanceId}` : providerId
+    // Cache keys carry no trailing segment: evict the exact key plus any
+    // double-prefixed variants (`providerId:providerId:slug`).
+    for (const cachedKey of Object.keys(providerInstanceCache.value)) {
+      if (cachedKey === key || cachedKey.startsWith(`${key}:`))
+        delete providerInstanceCache.value[cachedKey]
     }
     instanceStore.removeInstance(providerId, instanceId)
   }
 
   function removeAllInstances(providerId: string) {
-    const primaryKey = `${providerId}:*`
-    if (providerInstanceCache.value[primaryKey] !== undefined) {
-      delete providerInstanceCache.value[primaryKey]
+    for (const cachedKey of Object.keys(providerInstanceCache.value)) {
+      if (cachedKey === providerId || cachedKey.startsWith(`${providerId}:`))
+        delete providerInstanceCache.value[cachedKey]
     }
     instanceStore.removeAllInstances(providerId)
   }

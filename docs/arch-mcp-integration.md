@@ -8,11 +8,11 @@ The MCP integration in AIRI is primarily managed within the Electron main proces
 
 ### Key Components
 
-- **Manager**: [mcp-servers/index.ts](file:///c:/Users/h4rdc/Documents/Github/airi-rebase-scratch/apps/stage-tamagotchi/src/main/services/airi/mcp-servers/index.ts)
+- **Manager**: `apps/stage-tamagotchi/src/main/services/airi/mcp-servers/index.ts`
   - Manages the lifecycle of MCP server sessions.
   - Handles tool listing and tool calling across all active servers.
   - Implements a unified naming convention for tools: `serverName::toolName`.
-- **IPC Layer**: [eventa.ts](file:///c:/Users/h4rdc/Documents/Github/airi-rebase-scratch/apps/stage-tamagotchi/src/shared/eventa.ts)
+- **IPC Layer**: `apps/stage-tamagotchi/src/shared/eventa.ts`
   - Defines the `electronMcpListTools` and `electronMcpCallTool` contracts.
   - Allows the renderer (UI) to trigger tool executions.
 - **Official SDK**: Uses `@modelcontextprotocol/sdk` for all protocol-level operations.
@@ -102,21 +102,19 @@ To help users understand how to leverage their configured tools, the "Configure"
 
 ## Technical Appendix: Configuration Screenshots
 
-![MCP Store (Proposed)](file:///C:/Users/h4rdc/.gemini/antigravity/brain/3b896cce-fb5e-4b5b-a9fe-ffd25e650ac6/media__1774912452738.png)
-*Figure 1: The MCP Store for curated server discovery.*
-
-![Manage MCP Servers](file:///C:/Users/h4rdc/.gemini/antigravity/brain/3b896cce-fb5e-4b5b-a9fe-ffd25e650ac6/media__1774912465244.png)
-*Figure 2: The tool management and status dashboard.*
-
-![Full Integration Context](file:///C:/Users/h4rdc/.gemini/antigravity/brain/3b896cce-fb5e-4b5b-a9fe-ffd25e650ac6/media__1774913814601.png)
-*Figure 3: Integrated view showing raw JSON configuration alongside discovery tools.*
+_Screenshots unavailable: the proposed MCP Store / server dashboard UI was never implemented, and the original images lived on a contributor's machine._
 
 ---
 
 ## Internal MCP Servers
 
-In addition to acting as a client, some AIRI services implement the **MCP Server** role to expose internal functionality to external tools:
-- **Twitter Services**: [mcp-adapter.ts](file:///c:/Users/h4rdc/Documents/Github/airi-rebase-scratch/services/twitter-services/src/adapters/mcp-adapter.ts) exposes timeline reading and tweet searching capabilities over SSE.
+The standalone service that used to expose AIRI's own functionality as an MCP server
+(`services/twitter-services/src/adapters/mcp-adapter.ts`) was removed along with the other
+`services/*` bots in this fork. AIRI is now MCP **client** only; to expose internal
+capabilities to external tools, add an MCP server config entry in `mcp.json` pointing at your
+own stdio server.
+
+---
 
 ## Relevant Skills
 

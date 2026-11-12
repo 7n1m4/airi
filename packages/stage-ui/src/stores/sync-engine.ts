@@ -3071,11 +3071,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         }
       }
       if (anyChanged && !opts?.skipReload) {
-        await logDebug('restoreLocalStorageFromIndexedDb: LocalStorage changed. Reloading window...')
-        toast.info('Settings updated, reloading interface...', { duration: 1500 })
-        setTimeout(() => {
-          window.location.reload()
-        }, 1500)
+        await logDebug('restoreLocalStorageFromIndexedDb: LocalStorage changed. Restart required.')
+        toast.info('Settings updated. Restart the app to apply them.', { duration: 10000 })
       }
     }
     catch (e) {
@@ -3186,7 +3183,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
               // to prevent OOM from loading large binary assets into the renderer heap.
               const success = await reconcile({ skipBinaryAssets: true })
               if (success) {
-                await restoreLocalStorageFromIndexedDb()
+                await restoreLocalStorageFromIndexedDb({ skipReload: true })
                 window.dispatchEvent(new CustomEvent('airi:idb-key-updated', { detail: { key: 'local:airi-cards' } }))
                 await logDebug('initializeFromLocalBackup: background reconcile + restore complete.')
               }
@@ -3254,7 +3251,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
       }
 
       // 2.5. Restore synced values back to localStorage
-      await restoreLocalStorageFromIndexedDb()
+      await restoreLocalStorageFromIndexedDb({ skipReload: true })
 
       // 2.6. Notify stores that consume native IndexedDB keys (not localStorage) to reload.
       // The airi-card store uses local:airi-cards directly in IndexedDB and has no automatic
@@ -3297,6 +3294,36 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
 
     try {
       await logDebug('[Restore] Starting force restore from remote backup...')
+
+      // 0. Probe the remote backup before touching anything local: a wipe we cannot refill
+      // would leave the user with nothing.
+      const listRes = await client.listFiles()
+      if (!listRes.success) {
+        throw new Error(listRes.error || 'Failed to list remote files')
+      }
+      const remoteFiles = (listRes.files || []) as Array<{ relPath: string, mtime: number, size: number }>
+      if (remoteFiles.length === 0) {
+        throw new Error('Remote backup is empty')
+      }
+      const dbFiles = remoteFiles.filter(f => f.relPath.replace(/\\/g, '/').startsWith('db/'))
+      const remoteDbFiles = new Map<string, string>()
+      await parallelLimit(dbFiles, 15, async (remoteFile) => {
+        const localKey = getKeyForRelPath(remoteFile.relPath)
+        if (!localKey)
+          return
+        const readRes = await client.readFile(remoteFile.relPath)
+        if (!readRes.success || !readRes.content)
+          throw new Error(`Remote file is unreadable: ${remoteFile.relPath}`)
+        try {
+          JSON.parse(readRes.content)
+        }
+        catch {
+          throw new Error(`Remote file is not valid JSON: ${remoteFile.relPath}`)
+        }
+        remoteDbFiles.set(remoteFile.relPath, readRes.content)
+      })
+
+      await logDebug(`[Restore] Found ${remoteFiles.length} remote files. Wiping local data...`)
 
       // 1. Wipe outbox queue
       const rawOutboxKeys = await storage.getKeys('outbox')
@@ -3345,29 +3372,16 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
       // 4. Wipe localforage (VRM/Live2D model files and backgrounds)
       await localforage.clear()
 
-      // 5. List and download all files from remote
-      const listRes = await client.listFiles()
-      if (!listRes.success) {
-        throw new Error(listRes.error || 'Failed to list remote files')
-      }
-
-      const remoteFiles = (listRes.files || []) as Array<{ relPath: string, mtime: number, size: number }>
-      await logDebug(`[Restore] Found ${remoteFiles.length} remote files. Downloading...`)
-
-      // A. Reconcile database files first
-      const dbFiles = remoteFiles.filter(f => f.relPath.replace(/\\/g, '/').startsWith('db/'))
-      await parallelLimit(dbFiles, 15, async (remoteFile) => {
+      // 5. Write the pre-validated database files
+      await logDebug(`[Restore] Wiped local data. Writing ${remoteDbFiles.size} database files...`)
+      for (const remoteFile of dbFiles) {
         const localKey = getKeyForRelPath(remoteFile.relPath)
-        if (!localKey)
-          return
-
-        const readRes = await client.readFile(remoteFile.relPath)
-        if (readRes.success && readRes.content) {
-          const data = JSON.parse(readRes.content)
-          await storage.setItemRaw(localKey, data)
-          await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, remoteFile.mtime)
-        }
-      })
+        const content = remoteDbFiles.get(remoteFile.relPath)
+        if (!localKey || content === undefined)
+          continue
+        await storage.setItemRaw(localKey, JSON.parse(content))
+        await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, remoteFile.mtime)
+      }
 
       // B. Reconcile binary backgrounds and models
       await reconcileBackgrounds()

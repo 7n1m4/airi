@@ -30,7 +30,7 @@ Hello! Thank you for your interest in contributing to this project. This guide w
    scoop install git nodejs rustup
 
    # For Rust dependencies
-   # Not required if you are not going to develop on either crates or apps/tamagotchi
+   # Not required if you are not going to develop on the Qt apps
    scoop install main/rust-msvc
    # Rust & Windows specific
    rustup toolchain install stable-x86_64-pc-windows-msvc
@@ -137,8 +137,7 @@ git checkout -b <your-branch-name>
 corepack enable
 pnpm install
 
-# For Rust dependencies
-# Not required if you are not going to develop on either crates or apps/tamagotchi
+# For Rust dependencies (apps/airi-qt, apps/stage-qt)
 cargo fetch
 ```
 
@@ -206,101 +205,17 @@ pnpm dev:docs
 > nr dev:docs
 > ```
 
-### Telegram bot integration
-
-A Postgres database is required.
-
-```shell
-cd services/telegram-bot
-docker compose up -d
-```
-
-Configure `.env`
-
-```shell
-cp .env .env.local
-```
-
-Edit the credentials in `.env.local`.
-
-Migrate the database
-
-```shell
-pnpm -F @proj-airi/telegram-bot db:generate
-pnpm -F @proj-airi/telegram-bot db:push
-```
-
-Run the bot
-
-```shell
-pnpm -F @proj-airi/telegram-bot start
-```
-
-> [!NOTE]
->
-> For [@antfu/ni](https://github.com/antfu-collective/ni) users, you can
->
-> ```shell
-> nr -F @proj-airi/telegram-bot dev
-> ```
-
 ### Discord bot integration
 
-```shell
-cd services/discord-bot
-```
+The standalone chat-bot services (`services/telegram-bot`, `services/discord-bot`,
+`services/satori-bot`, `services/twitter-services`, `services/minecraft`) were removed in this
+fork. Discord ships in-process instead:
 
-Configure `.env`
+1. Run the desktop app (`pnpm dev:tamagotchi`).
+2. Open Settings > Modules > Discord (route `/settings/modules/messaging-discord`, component `packages/stage-ui/src/components/modules/MessagingDiscord.vue`) and paste your bot token, stored as `settings/discord/token`.
+3. Enable the service; the renderer calls `discordServiceStart` and the Electron main process gateway in `apps/stage-tamagotchi/src/main/services/airi/discord/index.ts` connects (state in `packages/stage-ui/src/stores/modules/discord.ts`).
 
-```shell
-cp .env .env.local
-```
-
-Edit the credentials in `.env.local`.
-
-Run the bot
-
-```shell
-pnpm -F @proj-airi/discord-bot start
-```
-
-> [!NOTE]
->
-> For [@antfu/ni](https://github.com/antfu-collective/ni) users, you can
->
-> ```shell
-> nr -F @proj-airi/discord-bot dev
-> ```
-
-### Minecraft agent
-
-```shell
-cd services/minecraft
-```
-
-Start a Minecraft client, export your world with desired port, and fill-in the port number in `.env.local`.
-
-Configure `.env`
-
-```shell
-cp .env .env.local
-```
-
-Edit the credentials in `.env.local`.
-
-Run the bot
-
-```shell
-pnpm -F @proj-airi/minecraft-bot start
-```
-
-> [!NOTE]
->
-> For [@antfu/ni](https://github.com/antfu-collective/ni) users, you can
->
-> ```shell
-> nr -F @proj-airi/minecraft-bot dev
-> ```
+No database, Docker, or `@proj-airi/discord-bot` package is involved anymore.
 
 ## Commit
 

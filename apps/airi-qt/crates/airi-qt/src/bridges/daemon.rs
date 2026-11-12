@@ -68,6 +68,9 @@
 //! the file, and it does **not** clear the daemon's in-memory ring buffer
 //! (the ring may re-serve events the page stops showing). The file is
 //! 7-day-retention, redacted JSONL; nothing leaves the machine.
+//! `recentAudit()` reads only the last 64 KiB of that file (enough for the 50
+//! rows it shows) because the page polls it every second and the log grows
+//! unbounded up to its 7-day retention.
 //!
 //! # Wake briefing (P4a)
 //!
@@ -100,8 +103,8 @@ use cxx_qt::CxxQtType;
 use cxx_qt_lib::{QDateTime, QString, QTimeZone};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::fs::{read_to_string, OpenOptions};
-use std::io::Write as _;
+use std::fs::{File, OpenOptions};
+use std::io::{Read as _, Seek as _, SeekFrom, Write as _};
 use std::pin::Pin;
 use std::time::Duration;
 
@@ -118,6 +121,9 @@ const AUDIT_FILE_NAME: &str = "awareness-audit.jsonl";
 const DBUS_TIMEOUT: Duration = Duration::from_millis(800);
 /// Hard cap on audit rows returned by `recentAudit()` (and shown by the page).
 const AUDIT_CAP: usize = 50;
+/// Tail window read for `recentAudit()`: comfortably holds `AUDIT_CAP` typical
+/// rows (~200 B each) while keeping the 1 s poll off the full file.
+const AUDIT_TAIL_BYTES: usize = 64 * 1024;
 /// `statusLine` shown when the daemon cannot be reached at all.
 const DAEMON_DOWN_STATUS: &str =
     "airi-daemon is not running — see packaging/README.md (dev-run section)";
@@ -562,24 +568,55 @@ fn set_excluded_apps_ok(body: &str) -> Result<(), String> {
     }
 }
 
-/// Parse the audit JSONL payload and return at most `cap` entries,
+/// Parse the tail of the audit JSONL `path` and return at most `cap` entries,
 /// newest last (callers reverse for newest-first). Malformed lines are
 /// skipped, never fatal.
-fn parse_jsonl_tail(contents: &str, cap: usize) -> Vec<Value> {
-    let mut rows: Vec<Value> = contents
-        .lines()
-        .filter_map(|line| {
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                return None;
+///
+/// Reads only the last [`AUDIT_TAIL_BYTES`] — the file is 7-day-retention with
+/// no size cap and `recentAudit()` is polled every second, so the cost has to
+/// stay bounded no matter how large the log has grown. A missing/unreadable
+/// file yields an empty vec.
+fn parse_jsonl_tail(path: &std::path::Path, cap: usize) -> Vec<Value> {
+    let read_tail = || -> std::io::Result<Vec<Value>> {
+        let mut file = File::open(path)?;
+        let len = file.seek(SeekFrom::End(0))?;
+        file.seek(SeekFrom::Start(len.saturating_sub(AUDIT_TAIL_BYTES as u64)))?;
+        let mut buf = String::new();
+        file.read_to_string(&mut buf)?;
+        // A fragment cut mid-line by the seek is not valid JSON.
+        let start = len as usize - buf.len();
+        let lines: Vec<&str> = if start == 0 {
+            buf.lines().collect()
+        } else {
+            match buf.find('\n') {
+                Some(i) => buf[i + 1..].lines().collect(),
+                None => Vec::new(),
             }
-            serde_json::from_str::<Value>(trimmed).ok()
-        })
-        .collect();
-    if rows.len() > cap {
-        rows.drain(..rows.len() - cap);
-    }
-    rows
+        };
+        let mut rows: Vec<Value> = lines
+            .into_iter()
+            .rev()
+            .filter_map(|line| {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    return None;
+                }
+                serde_json::from_str::<Value>(trimmed).ok()
+            })
+            .take(cap)
+            .collect();
+        rows.reverse();
+        Ok(rows)
+    };
+    read_tail().unwrap_or_else(|e| {
+        if e.kind() != std::io::ErrorKind::NotFound {
+            eprintln!(
+                "[airi-qt] daemon: failed to read audit file {}: {e}",
+                path.display()
+            );
+        }
+        Vec::new()
+    })
 }
 
 /// Shape one audit JSONL row into the public entry shape
@@ -615,14 +652,14 @@ fn audit_entry_json(row: &Value) -> Value {
     })
 }
 
-/// Build the newest-first JSON array returned by `recentAudit()`.
-/// Pure — split out for unit tests.
-fn recent_audit_json(contents: &str, count: i32) -> String {
+/// Shape the tail of the audit JSONL `path` into the newest-first JSON array
+/// returned by `recentAudit()`.
+fn recent_audit_file_json(path: &std::path::Path, count: i32) -> String {
     let cap = count.clamp(0, AUDIT_CAP as i32) as usize;
     if cap == 0 {
         return "[]".to_string();
     }
-    let mut rows = parse_jsonl_tail(contents, cap);
+    let mut rows = parse_jsonl_tail(path, cap);
     rows.reverse();
     let entries: Vec<Value> = rows.iter().map(audit_entry_json).collect();
     Value::Array(entries).to_string()
@@ -676,8 +713,8 @@ pub mod qobject {
         #[cxx_name = "togglePause"]
         fn toggle_pause(self: Pin<&mut DaemonController>) -> bool;
 
-        /// Read the shared audit JSONL file and return at most `count`
-        /// (clamped to 50) newest-first entries shaped
+        /// Read the tail of the shared audit JSONL file and return at most
+        /// `count` (clamped to 50) newest-first entries shaped
         /// `{ts_ms, source, verb, detail}`. Malformed lines are skipped.
         /// Never throws; a missing/unreadable file yields `[]`.
         #[qinvokable]
@@ -948,24 +985,13 @@ impl qobject::DaemonController {
         self.paused
     }
 
-    /// Read the shared audit file, newest-first, shaped
+    /// Read the tail of the shared audit file, newest-first, shaped
     /// `{ts_ms, source, verb, detail}`. Never throws.
     pub fn recent_audit(&self, count: i32) -> QString {
         let Some(path) = audit_file_path() else {
             return QString::from("[]");
         };
-        match read_to_string(&path) {
-            Ok(contents) => QString::from(recent_audit_json(&contents, count).as_str()),
-            Err(e) => {
-                if e.kind() != std::io::ErrorKind::NotFound {
-                    eprintln!(
-                        "[airi-qt] daemon: failed to read audit file {}: {e}",
-                        path.display()
-                    );
-                }
-                QString::from("[]")
-            }
-        }
+        QString::from(recent_audit_file_json(&path, count).as_str())
     }
 
     /// Fetch the current AT-SPI focus digest. Never throws; on any failure
@@ -1174,9 +1200,23 @@ mod tests {
         "\n",
     );
 
+    /// Write `contents` to a throwaway audit file and return its path.
+    fn audit_tmp(contents: &str) -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "airi-qt-audit-test-{}-{}.jsonl",
+            std::process::id(),
+            COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
+        std::fs::write(&path, contents).expect("write temp audit file");
+        path
+    }
+
+    static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
     #[test]
-    fn recent_audit_json_is_newest_first_and_skips_malformed() {
-        let out = recent_audit_json(JSONL, 50);
+    fn recent_audit_file_json_is_newest_first_and_skips_malformed() {
+        let path = audit_tmp(JSONL);
+        let out = recent_audit_file_json(&path, 50);
         let parsed: Value = serde_json::from_str(&out).expect("valid JSON");
         let arr = parsed.as_array().expect("array");
         assert_eq!(arr.len(), 3);
@@ -1186,51 +1226,95 @@ mod tests {
         assert_eq!(arr[0]["source"], "power");
         assert_eq!(arr[0]["verb"], "ac");
         assert_eq!(arr[0]["detail"], "on AC");
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
-    fn recent_audit_json_clamps_count_to_cap_and_handles_zero() {
-        let out = recent_audit_json(JSONL, 2);
+    fn recent_audit_file_json_clamps_count_to_cap_and_handles_zero() {
+        let path = audit_tmp(JSONL);
+        let out = recent_audit_file_json(&path, 2);
         let parsed: Value = serde_json::from_str(&out).unwrap();
         assert_eq!(parsed.as_array().unwrap().len(), 2);
         assert_eq!(parsed[0]["ts_ms"], 3000);
-        assert_eq!(recent_audit_json(JSONL, 0), "[]");
-        assert_eq!(recent_audit_json(JSONL, -5), "[]");
+        assert_eq!(recent_audit_file_json(&path, 0), "[]");
+        assert_eq!(recent_audit_file_json(&path, -5), "[]");
         // Cap is 50 even when the caller asks for more.
         let big = (0..80)
             .map(|i| format!(r#"{{"ts_ms": {i}, "source": "system", "verb": "v", "detail": "d"}}"#))
             .collect::<Vec<_>>()
             .join("\n");
-        let parsed: Value = serde_json::from_str(&recent_audit_json(&big, 1000)).unwrap();
+        let big_path = audit_tmp(&big);
+        let parsed: Value = serde_json::from_str(&recent_audit_file_json(&big_path, 1000)).unwrap();
         assert_eq!(parsed.as_array().unwrap().len(), AUDIT_CAP);
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&big_path);
     }
 
     #[test]
-    fn recent_audit_json_tolerates_missing_fields_and_empty_input() {
-        let out = recent_audit_json("", 10);
-        assert_eq!(out, "[]");
-        let out = recent_audit_json("{}\n", 10);
+    fn recent_audit_file_json_tolerates_missing_fields_and_empty_input() {
+        let path = audit_tmp("");
+        assert_eq!(recent_audit_file_json(&path, 10), "[]");
+        let path = audit_tmp("{}\n");
+        let out = recent_audit_file_json(&path, 10);
         let parsed: Value = serde_json::from_str(&out).unwrap();
         assert_eq!(parsed[0]["ts_ms"], 0);
         assert_eq!(parsed[0]["source"], "");
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
-    fn recent_audit_json_maps_daemon_event_field_to_verb() {
+    fn recent_audit_file_json_maps_daemon_event_field_to_verb() {
         // The daemon writes `{ts_ms, source, event, detail}`; an explicit
         // `verb` field wins when both are present.
-        let out = recent_audit_json(
-            r#"{"ts_ms": 100, "source": "lock", "event": "locked", "detail": "d"}"#,
-            10,
-        );
+        let path =
+            audit_tmp(r#"{"ts_ms": 100, "source": "lock", "event": "locked", "detail": "d"}"#);
+        let out = recent_audit_file_json(&path, 10);
         let parsed: Value = serde_json::from_str(&out).unwrap();
         assert_eq!(parsed[0]["verb"], "locked");
-        let out = recent_audit_json(
+        let path = audit_tmp(
             r#"{"ts_ms": 100, "source": "lock", "event": "locked", "verb": "screen-lock", "detail": "d"}"#,
-            10,
         );
+        let out = recent_audit_file_json(&path, 10);
         let parsed: Value = serde_json::from_str(&out).unwrap();
         assert_eq!(parsed[0]["verb"], "screen-lock");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn parse_jsonl_tail_reads_only_the_window_and_never_tears_a_line() {
+        let row =
+            |i: usize| format!(r#"{{"ts_ms": {i}, "source": "s", "event": "e", "detail": "d"}}"#);
+        // Two windows of rows: the seek lands mid-line, so the torn fragment is
+        // dropped and only whole lines survive.
+        let text = (0..4000).map(row).collect::<Vec<_>>().join("\n");
+        assert!(text.len() > AUDIT_TAIL_BYTES * 2);
+        let path = audit_tmp(&text);
+
+        let rows = parse_jsonl_tail(&path, AUDIT_CAP);
+        assert_eq!(rows.len(), AUDIT_CAP);
+        assert_eq!(rows[AUDIT_CAP - 1]["ts_ms"], 3999);
+        assert_eq!(rows[0]["ts_ms"], 3999 - AUDIT_CAP + 1);
+
+        let out = recent_audit_file_json(&path, 50);
+        let parsed: Value = serde_json::from_str(&out).unwrap();
+        let arr = parsed.as_array().unwrap();
+        assert_eq!(arr[0]["ts_ms"], 3999);
+        assert_eq!(arr[AUDIT_CAP - 1]["ts_ms"], 3999 - AUDIT_CAP + 1);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn parse_jsonl_tail_handles_a_small_file_and_a_missing_one() {
+        let path = audit_tmp("{\"ts_ms\": 1}\n");
+        let rows = parse_jsonl_tail(&path, AUDIT_CAP);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["ts_ms"], 1);
+        let _ = std::fs::remove_file(&path);
+
+        let missing = std::env::temp_dir().join("airi-qt-audit-test-does-not-exist.jsonl");
+        let _ = std::fs::remove_file(&missing);
+        assert!(parse_jsonl_tail(&missing, AUDIT_CAP).is_empty());
+        assert_eq!(recent_audit_file_json(&missing, 10), "[]");
     }
 
     #[test]

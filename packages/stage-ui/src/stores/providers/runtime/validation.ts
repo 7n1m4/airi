@@ -1,10 +1,26 @@
 import type { Ref } from 'vue'
 import type { ComposerTranslation } from 'vue-i18n'
 
-import { keylessOrOptionalKey } from '../../../libs/providers/types'
 import type { ProviderMetadata, ProviderRuntimeState } from '../types'
 
 import { toast } from 'vue-sonner'
+
+import { keylessOrOptionalKey } from '../../../libs/providers/types'
+
+const SECRET_KEY_PATTERN = /key|secret|token|password|credential|authorization/i
+
+/**
+ * Replace secret values with '***' in place, keeping the keys so consumers can
+ * still detect their presence. Non-string and empty values are left alone.
+ */
+export function redactSecrets(config: Record<string, unknown>): Record<string, unknown> {
+  for (const key of Object.keys(config)) {
+    const value = config[key]
+    if (SECRET_KEY_PATTERN.test(key) && typeof value === 'string' && value.length > 0)
+      config[key] = '***'
+  }
+  return config
+}
 
 export interface ProviderValidationDeps {
   providerCredentials: Ref<Record<string, Record<string, unknown>>>
@@ -98,8 +114,9 @@ export function createProviderValidation(deps: ProviderValidationDeps) {
         // Even if forced (periodic check), we don't want terminal spam for things that aren't set up.
         if (!isUnconfigured) {
           try {
-            // Use safe cloning to prevent "object could not be cloned" errors with Vue/Pinia Proxies
-            const safeConfig = config ? JSON.parse(JSON.stringify({ ...config, apiKey: config.apiKey ? '***' : undefined })) : undefined
+            // Clone through JSON to strip Vue/Pinia proxies (and avoid "object could not be cloned"),
+            // then mask every secret-ish field — Aliyun NLS, Bedrock and Polly keep theirs outside `apiKey`.
+            const safeConfig = config ? redactSecrets(JSON.parse(JSON.stringify(config))) : undefined
 
             ;(window as any).electron?.ipcRenderer?.send('provider-validation-result', {
               providerId,

@@ -221,15 +221,13 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
   console.info('[Main/ServerChannel] Loaded stored config. Token exists:', !!storedConfig.authToken)
 
   if (!storedConfig.authToken) {
-    const newToken = randomUUID()
-    console.info('[Main/ServerChannel] No authToken found. Generating new one:', newToken)
-    storedConfig.authToken = newToken
+    storedConfig.authToken = randomUUID()
     channelServerConfigStore.update(storedConfig)
     channelServerConfigStore.flush()
     console.info('[Main/ServerChannel] authToken generated and flushed.')
   }
   else {
-    console.info('[Main/ServerChannel] Using existing authToken:', storedConfig.authToken)
+    console.info('[Main/ServerChannel] Using existing authToken. Token exists: true')
   }
 
   const serverChannel = createServer({
@@ -429,7 +427,7 @@ export async function createServerChannelService(params: { serverChannel: Server
         await params.serverChannel.stop()
         await params.serverChannel.updateConfig({
           port: getServerChannelPort(),
-          hostname: env.SERVER_RUNTIME_HOSTNAME || '0.0.0.0',
+          hostname: next.hostname || env.SERVER_RUNTIME_HOSTNAME || '127.0.0.1',
           tlsConfig: next.tlsConfig ? await getOrCreateCertificate() : null,
         })
         await params.serverChannel.start()

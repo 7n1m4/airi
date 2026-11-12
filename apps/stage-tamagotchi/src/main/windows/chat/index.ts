@@ -9,7 +9,7 @@ import type { WidgetsWindowManager } from '../widgets'
 
 import { join, resolve } from 'node:path'
 
-import { BrowserWindow, shell } from 'electron'
+import { BrowserWindow } from 'electron'
 import { throttle } from 'es-toolkit'
 
 import icon from '../../../../resources/icon.png?asset'
@@ -17,6 +17,7 @@ import icon from '../../../../resources/icon.png?asset'
 import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electron/location'
 import { createReusableWindow } from '../../libs/electron/window-manager'
 import { ensureWindowInVisibleBounds } from '../shared/display'
+import { openExternalSafely } from '../shared/open-external'
 import { setupChatWindowElectronInvokes } from './rpc/index.electron'
 
 let isChatVisible = false
@@ -203,7 +204,7 @@ export function setupChatWindowReusableFunc(params: {
     })
 
     window.webContents.setWindowOpenHandler((details) => {
-      shell.openExternal(details.url)
+      openExternalSafely(details.url)
       return { action: 'deny' }
     })
 

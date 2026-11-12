@@ -9,8 +9,11 @@
 //! Chat/Settings/About windows via the smoke tour, prints the visited pages,
 //! and exits 0. `--import-card <file>` / `--import-model <file>` copy a
 //! character card / `.vrm` model into their respective directories and exit.
-//! GUI launches take a single-instance lock (`airi-qt.lock` in the data dir)
-//! and install a panic hook writing JSON crash logs to `<data>/logs/`.
+//! GUI launches take a single-instance lock (`airi-qt.lock` in the data dir),
+//! acquired before the SQLite store is opened, and install a panic hook writing
+//! JSON crash logs to `<data>/logs/`. The guard is held for the whole session, so
+//! a second process on the same profile exits 0 instead of racing the first
+//! one's settings writes.
 
 use cxx_qt::casting::Upcast;
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QQmlEngine, QUrl};
@@ -283,10 +286,12 @@ fn main() -> ExitCode {
         cli.smoke
     );
 
-    let mut gateway_db: Option<airi_store::Database> = None;
-
     // Open the store against the profile dir (isolated when --profile is passed),
     // then register a SettingsStore for the QML bridges (theme/locale persistence).
+    // `_lock_guard` (acquired above) is still alive here, so no second process can
+    // reach this `airi.sqlite` until this one exits.
+    let mut gateway_db: Option<airi_store::Database> = None;
+
     let store_path = db_path.to_string_lossy().into_owned();
     match airi_store::Database::open(&db_path) {
         Ok(db) => {
@@ -300,6 +305,9 @@ fn main() -> ExitCode {
         }
         Err(e) => eprintln!("[airi-qt] store warning: {e}"),
     }
+    // The guard is never dropped explicitly — it stays alive to the end of `main`
+    // so the lock outlives every DB clone handed to the bridges and services
+    // above; dropping it here would reopen the two-process write race.
 
     bridges::set_smoke(cli.smoke);
 

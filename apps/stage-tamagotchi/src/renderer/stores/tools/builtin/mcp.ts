@@ -2,32 +2,14 @@ import type { ElectronMcpToolDescriptor } from '../../../../shared/eventa'
 
 import z from 'zod'
 
-import { tryGetMcpToolBridge } from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
+import { filterMcpToolsForCard, tryGetMcpToolBridge } from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { tool } from '@xsai/tool'
 
 function filterToolsForCard(rawTools: ElectronMcpToolDescriptor[]): ElectronMcpToolDescriptor[] {
   const cardStore = useAiriCardStore()
   const allowedTools = cardStore.activeCard?.extensions?.airi?.generation?.known?.allowedTools
-  if (!allowedTools) {
-    return []
-  }
-  if (allowedTools.includes('mcp')) {
-    return rawTools
-  }
-  return rawTools.filter((t) => {
-    const sName = t.serverName.toLowerCase()
-    const isWebSearch = sName.includes('websearch') || sName.includes('web-search') || sName.includes('search')
-    const isFilesystem = sName.includes('filesystem')
-
-    if (isWebSearch && (allowedTools.includes('web_search') || allowedTools.includes('mcp_web_search'))) {
-      return true
-    }
-    if (isFilesystem && (allowedTools.includes('filesystem') || allowedTools.includes('mcp_filesystem'))) {
-      return true
-    }
-    return false
-  })
+  return filterMcpToolsForCard(rawTools, allowedTools)
 }
 
 const tools = [

@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path'
 
 import { defineInvokeHandler } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/electron/main'
-import { BrowserWindow, ipcMain, shell } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 
 import icon from '../../../../resources/icon.png?asset'
 
@@ -15,6 +15,7 @@ import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs
 import { createReusableWindow } from '../../libs/electron/window-manager'
 import { createWidgetsService } from '../../services/airi/widgets'
 import { toggleWindowShow } from '../shared'
+import { openExternalSafely } from '../shared/open-external'
 import { setupBaseWindowElectronInvokes } from '../shared/window'
 
 export interface OnboardingWindowManager {
@@ -60,7 +61,7 @@ export function setupOnboardingWindowManager(params: {
 
     newWindow.on('ready-to-show', () => newWindow.show())
     newWindow.webContents.setWindowOpenHandler((details) => {
-      shell.openExternal(details.url)
+      openExternalSafely(details.url)
       return { action: 'deny' }
     })
 

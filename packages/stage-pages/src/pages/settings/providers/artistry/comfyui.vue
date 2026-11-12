@@ -76,6 +76,7 @@ async function testConnection() {
 // --- ComfyUI Process Spawner & Lifecycle ---
 const comfySpawner = useProcessSpawner({
   storageKeyPrefix: 'artistry:comfyui',
+  defaultSpawnCommand: 'python3 main.py --enable-cors-header "*"',
   spawnSuccessDelayMs: 2500,
   stopSuccessDelayMs: 1000,
   onSpawnSuccess: async () => {
@@ -501,9 +502,9 @@ function copyToClipboard(text: string) {
       <ProcessLifecycleCard
         :spawner="comfySpawner"
         title="ComfyUI Lifecycle & Process Spawner"
-        description="Spawn local batch runners or execute remote SSH commands to boot ComfyUI."
-        placeholder-spawn="e.g. ./run_nvidia_gpu.bat or ~/start_comfy.sh or ssh user@host &quot;command&quot;"
-        placeholder-stop="e.g. taskkill /F /IM python.exe or killall python3 or ssh user@host &quot;command&quot;"
+        description="Spawn the local ComfyUI server. Arguments are passed literally — no shell, so quoting is not supported."
+        placeholder-spawn="e.g. python3 main.py --listen 0.0.0.0 --port 8188"
+        placeholder-stop="e.g. pkill -f main.py"
         spawn-button-label="Spawn ComfyUI"
         stop-button-label="Stop ComfyUI"
         icon="i-solar:gallery-wide-bold-duotone"

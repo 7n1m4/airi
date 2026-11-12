@@ -1,13 +1,20 @@
+import type { AiriCard } from '../../stores/modules/airi-card'
+
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { clearMcpToolBridge, setMcpToolBridge } from '../../stores/mcp-tool-bridge'
+import { useAiriCardStore } from '../../stores/modules/airi-card'
 import { clearSystemOneBridge, setSystemOneBridge } from './jev'
 import { executeUniversalMcpTool, handleWidgetMcpMessage, listUniversalMcpTools } from './mcp-bridge'
+
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 
 describe('universal MCP Bridge & Widget Message Dispatcher', () => {
   beforeEach(() => {
     clearMcpToolBridge()
     clearSystemOneBridge()
+    setActivePinia(createPinia())
   })
 
   it('routes jev::choose directly to Jev environment without external MCP server', async () => {
@@ -115,6 +122,15 @@ describe('universal MCP Bridge & Widget Message Dispatcher', () => {
       source: mockWindow,
     } as unknown as MessageEvent
 
+    // An absent allowlist means "no tools", so a card must exist to dispatch.
+    const cardStore = useAiriCardStore()
+    cardStore.cards.set('test-card', {
+      id: 'test-card',
+      name: 'Test Card',
+      extensions: { airi: { generation: { known: { allowedTools: ['mcp'] } } } },
+    } as unknown as AiriCard)
+    cardStore.activeCardId = 'test-card'
+
     const handled = await handleWidgetMcpMessage(event)
     expect(handled).toBe(true)
     expect(postMessage).toHaveBeenCalledWith(
@@ -134,6 +150,34 @@ describe('universal MCP Bridge & Widget Message Dispatcher', () => {
 
     const handled = await handleWidgetMcpMessage(event)
     expect(handled).toBe(false)
+  })
+
+  it('ignores mcp-call messages whose source is not the widget iframe', async () => {
+    const bridgeCallTool = vi.fn().mockResolvedValue({ toolResult: 'ok' })
+    setMcpToolBridge({
+      listTools: vi.fn().mockResolvedValue([]),
+      callTool: bridgeCallTool,
+      getRuntimeStatus: vi.fn(),
+    } as any)
+
+    const widgetWindow = { postMessage: vi.fn() } as unknown as WindowProxy
+    const foreignWindow = { postMessage: vi.fn() } as unknown as WindowProxy
+
+    const foreignEvent = {
+      data: { type: 'mcp-call', id: 'evil-1', name: 'weather::forecast', args: {} },
+      source: foreignWindow,
+    } as unknown as MessageEvent
+
+    expect(await handleWidgetMcpMessage(foreignEvent, widgetWindow)).toBe(false)
+    expect(bridgeCallTool).not.toHaveBeenCalled()
+
+    const unqualifiedEvent = {
+      data: { type: 'mcp-call', id: 'evil-2', name: 'forecast', args: {} },
+      source: widgetWindow,
+    } as unknown as MessageEvent
+
+    expect(await handleWidgetMcpMessage(unqualifiedEvent, widgetWindow)).toBe(false)
+    expect(bridgeCallTool).not.toHaveBeenCalled()
   })
 
   it('forwards allowlisted live2d dispatch over the DSL bridge', async () => {

@@ -238,13 +238,20 @@ impl SettingsRepo {
     }
 
     /// Set a setting value.
+    ///
+    /// The write is skipped when the stored row's `updated_at` is newer than
+    /// this call's timestamp (which a concurrent writer's clock may make look
+    /// "in the future"): two processes can hold the same `airi.sqlite` open and
+    /// the slower writer must not revert the other one's value. Same millisecond
+    /// is last-writer-wins.
     pub fn set<T: Serialize>(&self, key: &str, value: &T) -> Result<()> {
         let json = serde_json::to_string(value)?;
         let ts = now_ms();
         let conn = self.db.conn.lock().expect("database mutex poisoned");
         conn.execute(
             "insert into settings (key, value, updated_at) values (?1, ?2, ?3)
-             on conflict(key) do update set value = excluded.value, updated_at = excluded.updated_at",
+             on conflict(key) do update set value = excluded.value, updated_at = excluded.updated_at
+             where excluded.updated_at >= settings.updated_at",
             params![key, json, ts],
         )?;
         Ok(())
@@ -1316,6 +1323,23 @@ mod tests {
         assert_eq!(keys, vec!["test.key".to_string()]);
         assert!(repo.delete("test.key").unwrap());
         assert!(repo.get::<String>("test.key").unwrap().is_none());
+    }
+
+    #[test]
+    fn settings_set_refuses_older_write() {
+        let db = test_db();
+        let repo = SettingsRepo::new(db);
+        let conn = db.conn.lock().expect("database mutex poisoned");
+        conn.execute(
+            "insert into settings (key, value, updated_at) values ('theme', '\"dark\"', ?1)",
+            params![now_ms() + 60_000],
+        )
+        .unwrap();
+        drop(conn);
+
+        // The stored row is newer than this write, so it must survive untouched.
+        repo.set("theme", &"light").unwrap();
+        assert_eq!(repo.get::<String>("theme").unwrap().as_deref(), Some("dark"));
     }
 
     #[test]

@@ -3,6 +3,8 @@
 > **Living Intelligence Ledger**: Tracks continuous delta from upstream (`moeru-ai/airi`) to inform selective, high-value forward-porting into `dasilva333/airi`.
 > Generated and maintained by Antigravity Scheduled Tasks via `scripts/upstream-tracker.mjs`.
 > Guided by: [`docs/project-selective-upstream-sync-protocol.md`](./project-selective-upstream-sync-protocol.md).
+>
+> Paths cited in radar entries are **upstream** (`moeru-ai/airi`) paths unless marked otherwise. Entries quote upstream commits verbatim, so a path may not exist in this fork (e.g. upstream's `plugins/airi-plugin-homeassistant/`, deleted upstream and never present locally).
 
 ---
 
@@ -25,7 +27,7 @@
 ### 🎯 Executive Highlights
 * **Upstream Focus & Key Merges**: Upstream merged 15 commits (`8772fbb2`..`142e7596`) alongside 30 PR updates (18 new PRs, 7 lifecycle transitions, 5 discussion updates):
   1. **Voice Input Inlay & Composer Expansion (PR #2857 / Commit `142e7596cf` by @nekomeowww, PR #2773 / Commit `947e26ed85`, PR #2761 / Commit `523eedcba1`)**: Large client-side overhaul (+2506/-640 lines) adding dedicated voice composer components (`voice-composer.vue`, `voice-input-button.vue`, `voice-waveform.vue`, `use-voice-composer.ts`) across desktop, web, and mobile layouts (`MobileInteractiveArea.vue`). Pairs with real-time transcript streaming and LLM transcript rephrasing (`voice-rephrase.ts`).
-  2. **First-Class Home Assistant Integration (PR #2865 / Commit `dd1b8a1f8c` by @clansty)**: Promoted Home Assistant from an external plugin (`plugins/airi-plugin-homeassistant/` deleted) into native core tooling. Adds Electron main service (`services/airi/home-assistant/`), eventa IPC channels, typed tools in `stage-ui/src/tools/home-assistant.ts`, client in `stage-ui/src/libs/home-assistant/`, and settings in `stage-pages`.
+  2. **First-Class Home Assistant Integration (PR #2865 / Commit `dd1b8a1f8c` by @clansty)**: Promoted Home Assistant from an external plugin (upstream's `plugins/airi-plugin-homeassistant/`, deleted upstream — not present in this fork) into native core tooling. Adds Electron main service (`services/airi/home-assistant/`), eventa IPC channels, typed tools in `stage-ui/src/tools/home-assistant.ts`, client in `stage-ui/src/libs/home-assistant/`, and settings in `stage-pages`.
   3. **Cloud Character Card & Asset Sync Expansion (PR #2850 / Commit `b6cd1e97c8`, PR #2852, Draft PR #2869 by @luoling8192)**: Rollout of hosted backend synchronization continued with `airi-card.ts` field sync defect fixes (PR #2850), cross-device card sync (PR #2852), and a new draft to sync Live2D/VRM models to private cloud storage (PR #2869).
   4. **UI Design Tokens & Card Architecture (PR #2868 by @clansty, PR #2854 / Commit `45b8670e63` by @luoling8192, PR #2864 / Commit `cb50eff594`)**: Unifying module settings pages with a new `SettingsCard` primitive in `@proj-airi/ui`, fixing muted card contrast (`CARD_MUTED`), refining mobile bottom-drawer interactions, and introducing an automated UI component adoption audit script (`scripts/audit-ui-components.mjs`).
 * **Discussion & Community Buzz**:
@@ -182,8 +184,8 @@
 - `packages/stage-ui/src/tools/home-assistant.ts` *(+153/-0)*
 - `packages/vite-plugin-sherpaw/src/index.test.ts` *(+33/-0)*
 - `packages/vite-plugin-sherpaw/src/index.ts` *(+21/-3)*
-- `plugins/airi-plugin-homeassistant/src/index.ts` *(+0/-1)*
-- `plugins/airi-plugin-homeassistant/tsdown.config.ts` *(+0/-10)*
+- `upstream:plugins/airi-plugin-homeassistant/src/index.ts` *(+0/-1)*
+- `upstream:plugins/airi-plugin-homeassistant/tsdown.config.ts` *(+0/-10)*
 
 #### Core Agent Runtime (`🔍 inspect`) — 5 file(s) (+34/-9)
 - `packages/core-agent/src/agents/spark-command/schema.ts` *(+2/-2)*
@@ -215,8 +217,8 @@
 
 #### Root Build & Tooling (`🔍 inspect`) — 5 file(s) (+191/-55)
 - `packages/stage-ui/package.json` *(+1/-0)*
-- `plugins/airi-plugin-homeassistant/package.json` *(+0/-15)*
-- `plugins/airi-plugin-homeassistant/tsconfig.json` *(+0/-31)*
+- `upstream:plugins/airi-plugin-homeassistant/package.json` *(+0/-15)*
+- `upstream:plugins/airi-plugin-homeassistant/tsconfig.json` *(+0/-31)*
 - `pnpm-lock.yaml` *(+0/-9)*
 - `scripts/audit-ui-components.mjs` *(+190/-0)*
 
