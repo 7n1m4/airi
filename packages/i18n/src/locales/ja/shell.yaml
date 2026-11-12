@@ -1131,6 +1131,12 @@ capture:
   clearConfirmCancel: 'キャンセル'
   clearConfirmConfirm: '削除'
 
+  portal:
+    button: 'portal 経由でキャプチャ (Wayland)'
+    busy: '同意を待っています…'
+    pendingHint: 'ポータルがシステムの同意ダイアログを開きます。承認するとキャプチャが保存されます — 毎回聞かれるのは仕様です。'
+    unavailable: 'このデスクトップではポータルは利用できません — キャプチャは X11 経由のみです。'
+    consentNote: 'ポータル経由は毎回同意 (システムダイアログ) を求めます — バグではなく仕様です。'
 acp:
   title: 'ACPエージェント'
   description: 'ACP (Agent Client Protocol) エージェントをサブプロセスとして接続します。プロンプトを送り、作業を見守り、ツール呼び出しを承認または拒否します。'

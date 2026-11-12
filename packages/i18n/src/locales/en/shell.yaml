@@ -1132,6 +1132,12 @@ capture:
   clearConfirmCancel: 'Cancel'
   clearConfirmConfirm: 'Delete'
 
+  portal:
+    button: 'Capture via portal (Wayland)'
+    busy: 'Waiting for consent…'
+    pendingHint: 'The portal opens a system consent dialog. Approve it to save the shot — it asks every time, by design.'
+    unavailable: 'Portal unavailable on this desktop — screenshots via X11 only.'
+    consentNote: 'The portal path asks for your consent (a system dialog) each time — that is by design, not a bug.'
 acp:
   title: 'ACP Agents'
   description: 'Connect to ACP (Agent Client Protocol) agents running as subprocesses. Prompt them, watch their work, and approve or reject their tool calls.'

@@ -1132,6 +1132,12 @@ capture:
   clearConfirmCancel: 'Annuler'
   clearConfirmConfirm: 'Supprimer'
 
+  portal:
+    button: 'Capturer via le portail (Wayland)'
+    busy: 'En attente du consentement…'
+    pendingHint: 'Le portail ouvre un dialogue de consentement système. Approuvez-le pour enregistrer la capture — il le demande à chaque fois, par design.'
+    unavailable: 'Portail indisponible sur ce bureau — captures uniquement via X11.'
+    consentNote: 'Le chemin portail demande votre consentement (un dialogue système) à chaque fois — c’est voulu, pas un bug.'
 acp:
   title: 'Agents ACP'
   description: 'Connectez-vous à des agents ACP (Agent Client Protocol) exécutés en sous-processus. Promptez-les, regardez leur travail, et approuvez ou rejetez leurs appels d’outils.'

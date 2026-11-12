@@ -7,6 +7,9 @@
 // the system viewer — there is deliberately no bridge call for that. Clear
 // All is destructive behind an AModal confirm and only ever deletes files
 // matching capture-<digits>.png (enforced again in the bridge).
+// A second, Wayland-capable path asks the XDG desktop portal for a
+// full-screen screenshot (user-consent dialog each time, by design); it is
+// driven by the "Capture via portal" button only — never automatically.
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import com.airi.airiqt 1.0
@@ -18,6 +21,7 @@ Item {
     property var captures: []
     // Bridge exposes QString; hop through a QML string so `.length` works.
     readonly property string lastErrorText: controller.lastError
+    readonly property string portalStatusText: controller.portalStatus
 
     CaptureController {
         id: controller
@@ -66,9 +70,30 @@ Item {
         controller.captureNow()
     }
 
+    function captureViaPortal() {
+        // The bridge spawns the worker; poll until portalBusy clears so
+        // capturesJson/portalStatus merge the outcome (the X11 path refreshes
+        // synchronously — this is the async analogue).
+        if (controller.captureViaPortal())
+            portalPoll.restart()
+    }
+
     Component.onCompleted: {
         controller.refreshCaptures()
         page.syncFromBridge()
+    }
+
+    // Drives refreshCaptures() while a portal capture is in flight; stops
+    // itself once portalBusy clears (the outcome is merged by the refresh).
+    Timer {
+        id: portalPoll
+        interval: 500
+        repeat: true
+        onTriggered: {
+            controller.refreshCaptures()
+            if (!controller.portalBusy)
+                portalPoll.stop()
+        }
     }
 
     // Caption-style section header (same idiom as the sibling devtools page).
@@ -254,6 +279,13 @@ Item {
 
                 AButton {
                     variant: AButton.Default
+                    text: controller.portalBusy ? I18n.tr("shell.capture.portal.busy") : I18n.tr("shell.capture.portal.button")
+                    enabled: controller.portalAvailable && !controller.portalBusy
+                    onClicked: page.captureViaPortal()
+                }
+
+                AButton {
+                    variant: AButton.Default
                     text: I18n.tr("shell.capture.refresh")
                     enabled: !controller.working
                     onClicked: controller.refreshCaptures()
@@ -277,6 +309,51 @@ Item {
             Text {
                 Layout.fillWidth: true
                 text: I18n.tr("shell.capture.openHint")
+                font.family: Theme.fontBody
+                font.pixelSize: 11
+                color: Theme.textSecondary
+            }
+
+            // ── Portal (Wayland) status + honest captions ────────────────
+            Text {
+                Layout.fillWidth: true
+                Layout.maximumWidth: 560
+                wrapMode: Text.WordWrap
+                visible: page.portalStatusText.length > 0
+                text: page.portalStatusText
+                font.family: Theme.fontBody
+                font.pixelSize: 11
+                color: Theme.textSecondary
+            }
+
+            Text {
+                Layout.fillWidth: true
+                Layout.maximumWidth: 560
+                wrapMode: Text.WordWrap
+                visible: controller.portalBusy
+                text: I18n.tr("shell.capture.portal.pendingHint")
+                font.family: Theme.fontBody
+                font.pixelSize: 11
+                color: Theme.textPrimary
+            }
+
+            Text {
+                Layout.fillWidth: true
+                Layout.maximumWidth: 560
+                wrapMode: Text.WordWrap
+                visible: !controller.portalAvailable
+                text: I18n.tr("shell.capture.portal.unavailable")
+                font.family: Theme.fontBody
+                font.pixelSize: 11
+                color: Theme.textSecondary
+            }
+
+            Text {
+                Layout.fillWidth: true
+                Layout.maximumWidth: 560
+                wrapMode: Text.WordWrap
+                visible: !controller.portalAvailable
+                text: I18n.tr("shell.capture.portal.consentNote")
                 font.family: Theme.fontBody
                 font.pixelSize: 11
                 color: Theme.textSecondary

@@ -1131,6 +1131,12 @@ capture:
   clearConfirmCancel: '取消'
   clearConfirmConfirm: '删除'
 
+  portal:
+    button: '通过 portal 截图（Wayland）'
+    busy: '等待你同意…'
+    pendingHint: 'portal 会弹出系统同意对话框。批准后即可保存截图——每次都询问是有意为之。'
+    unavailable: '本桌面环境无法使用 portal——仅支持 X11 截图。'
+    consentNote: 'portal 路径每次都会请求你的同意（系统对话框）——这是设计，不是缺陷。'
 acp:
   title: 'ACP 智能体'
   description: '连接以子进程运行的 ACP（Agent Client Protocol）智能体。向它们发送提示、观察工作并批准或拒绝它们的工具调用。'

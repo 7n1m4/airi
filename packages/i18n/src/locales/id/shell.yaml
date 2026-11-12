@@ -1133,6 +1133,12 @@ capture:
   clearConfirmCancel: 'Batal'
   clearConfirmConfirm: 'Hapus'
 
+  portal:
+    button: 'Tangkap via portal (Wayland)'
+    busy: 'Menunggu persetujuan…'
+    pendingHint: 'Portal membuka dialog persetujuan sistem. Setujui untuk menyimpan hasil tangkapan — ditanyakan setiap saat, disengaja.'
+    unavailable: 'Portal tidak tersedia di desktop ini — tangkapan hanya via X11.'
+    consentNote: 'Jalur portal meminta persetujuan Anda (dialog sistem) setiap saat — itu disengaja, bukan bug.'
 acp:
   title: 'Agen ACP'
   description: 'Terhubung ke agen ACP (Agent Client Protocol) yang berjalan sebagai subproses. Kirim prompt, tonton pekerjaan mereka, dan setujui atau tolak panggilan alat mereka.'

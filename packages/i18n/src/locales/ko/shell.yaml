@@ -1132,6 +1132,12 @@ capture:
   clearConfirmCancel: '취소'
   clearConfirmConfirm: '삭제'
 
+  portal:
+    button: 'portal 통해 캡처 (Wayland)'
+    busy: '동의 대기 중…'
+    pendingHint: 'portal이 시스템 동의 대화상자를 엽니다. 승인하면 캡처가 저장됩니다 — 매번 묻는 것은 의도된 동작입니다.'
+    unavailable: '이 데스크탑에는 portal을 사용할 수 없습니다 — 캡처는 X11 전용입니다.'
+    consentNote: 'portal 경로는 매번 동의(시스템 대화상자)를 요청합니다 — 버그가 아니라 의도된 동작입니다.'
 acp:
   title: 'ACP 에이전트'
   description: 'ACP(Agent Client Protocol) 에이전트를 서브프로세스로 연결합니다. 프롬프트를 보내고 작업을 지켜보며 도구 호출을 승인하거나 거부하세요.'

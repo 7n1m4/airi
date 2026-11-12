@@ -1132,6 +1132,12 @@ capture:
   clearConfirmCancel: 'Hủy'
   clearConfirmConfirm: 'Xóa'
 
+  portal:
+    button: 'Chụp qua portal (Wayland)'
+    busy: 'Đang chờ người dùng đồng ý…'
+    pendingHint: 'Portal sẽ mở hộp thoại đồng ý của hệ thống. Phê duyệt để lưu ảnh chụp — hỏi mỗi lần là chủ ý.'
+    unavailable: 'Portal không khả dụng trên desktop này — chỉ chụp qua X11.'
+    consentNote: 'Đường portal yêu cầu sự đồng ý của bạn (hộp thoại hệ thống) mỗi lần — đây là chủ ý, không phải lỗi.'
 acp:
   title: 'Tác tử ACP'
   description: 'Kết nối tới các tác tử ACP (Agent Client Protocol) chạy như tiến trình con. Gửi prompt, theo dõi công việc và chấp thuận hoặc từ chối các lời gọi công cụ của chúng.'
