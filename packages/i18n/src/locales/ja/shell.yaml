@@ -532,7 +532,7 @@ awareness:
   badge: 'Preview'
   caption: 'オプトインのawarenessデーモンの状態、ソース別スイッチ、kill switch、ローカル監査ログ。ここにあるものは何も自分では動きません。'
   daemonDownTitle: 'airi-daemon が起動していません'
-  daemonDownSubtitle: 'awarenessデーモンはオプトインのユーザーセッションサービスです。dev-run手順: apps/airi-qt/packaging/README.md。'
+  daemonDownSubtitle: 'awarenessデーモンはオプトインのユーザーセッションサービスです。dev-run手順: packaging/README.md。'
   retry: '再試行'
   killSwitch:
     title: 'Awareness 有効'

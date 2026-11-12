@@ -533,7 +533,7 @@ awareness:
   badge: 'Preview'
   caption: 'Trạng thái, công tắc từng nguồn, kill switch và nhật ký kiểm toán cục bộ cho daemon awareness opt-in. Không có gì ở đây tự hành động.'
   daemonDownTitle: 'airi-daemon chưa chạy'
-  daemonDownSubtitle: 'Daemon awareness là dịch vụ phiên người dùng opt-in. Hướng dẫn dev-run: apps/airi-qt/packaging/README.md.'
+  daemonDownSubtitle: 'Daemon awareness là dịch vụ phiên người dùng opt-in. Hướng dẫn dev-run: packaging/README.md.'
   retry: 'Thử lại'
   killSwitch:
     title: 'Awareness bật'

@@ -1,6 +1,6 @@
 # AIRI — Qt QML Component Library (P2 Wave A)
 
-`apps/airi-qt/qml/components/` — thin, themed wrappers around Qt Quick
+`qml/components/` — thin, themed wrappers around Qt Quick
 Controls (Controls-style API) or plain primitives. Registered in the
 `com.airi.airiqt` QML module (see `crates/airi-qt/build.rs`); pages import
 `com.airi.airiqt 1.0` for everything below.
@@ -72,7 +72,7 @@ frameless, stays-on-top, 56px, themed) → windows via `WindowManager.open*()`.
   (e.g. `shell.isSmoke()`, `themeCtrl.applyHue(v)`, `i18nBridge.persistLocale()`).
   If you add bridge invokables with snake_case Rust names, either add
   `#[cxx_name = "…"]` or call the snake_case name from QML.
-- The Qt message handler installed in `apps/airi-qt/src/cpp/airi_qt_bridge.cpp`
+- The Qt message handler installed in `crates/airi-qt/src/cpp/airi_qt_bridge.cpp`
   is what makes QML/engine errors visible (stock handler output is discarded
   on some Linux Qt builds).
 - `stage-qt` (apps/stage-qt) has the same missing-`cxx_qt::init_qml_module!`

@@ -532,7 +532,7 @@ awareness:
   badge: 'Preview'
   caption: '这个可选加入的 awareness 守护进程的状态、各项源开关、kill switch 与本地审计日志。这里的一切都不会自行行动。'
   daemonDownTitle: 'airi-daemon 未运行'
-  daemonDownSubtitle: 'awareness 守护进程是一个可选加入的用户会话服务。dev-run 说明：apps/airi-qt/packaging/README.md。'
+  daemonDownSubtitle: 'awareness 守护进程是一个可选加入的用户会话服务。dev-run 说明：packaging/README.md。'
   retry: '重试'
   killSwitch:
     title: 'Awareness 已启用'
