@@ -17,7 +17,7 @@
 //!   bridge never writes, updates, or deletes journal rows.
 //! - **Retrieval provider display** — `retrieval_provider` carries the label
 //!   of the LLM provider the chat pipeline would resolve today (smoke
-//!   override under `--smoke`, then env `AIRI_QT_PROVIDER`, then the first
+//!   override under `--smoke`, then env `AIRI_SLINT_PROVIDER`, then the first
 //!   enabled row in the `providers` table), formatted `id · model` (model
 //!   omitted when unset). `""` means "not configured"; the page renders a
 //!   localized placeholder. Provider secrets (API keys) are never read or
@@ -279,7 +279,7 @@ fn base_status_line(journal_note: &str) -> String {
 }
 
 /// Resolve the chat provider's config exactly like `ChatController`
-/// (smoke override → `AIRI_QT_PROVIDER` env → first enabled `providers`
+/// (smoke override → `AIRI_SLINT_PROVIDER` env → first enabled `providers`
 /// row) and build an embedding client with the default embedding model.
 /// Errors when the chat context is missing, no provider is configured, or
 /// the config has no base URL — the caller surfaces that on the log.
@@ -412,10 +412,10 @@ fn truncate_chars(text: &str, max: usize) -> String {
 /// override is not observable from this bridge (noted in the module docs).
 /// Provider secrets are never read or surfaced.
 fn llm_provider_label() -> String {
-    if let Ok(id) = std::env::var("AIRI_QT_PROVIDER") {
+    if let Ok(id) = std::env::var("AIRI_SLINT_PROVIDER") {
         let id = id.trim().to_string();
         if !id.is_empty() {
-            let model = std::env::var("AIRI_QT_MODEL").unwrap_or_default();
+            let model = std::env::var("AIRI_SLINT_MODEL").unwrap_or_default();
             return provider_label(&id, model.trim());
         }
     }

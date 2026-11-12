@@ -17,14 +17,14 @@
 //!
 //! Boundary contract (same as cards/providers/data bridges): the server list
 //! crosses as a `Vec<McpServerView>` (one plain struct per configured
-//! server, the same row shape the settings page's QML delegate read out of the
+//! server, the same row shape the settings page's list view read out of the
 //! old JSON array); `save_servers` takes the same shape back. Everything else
 //! (probe reports, tool-call reports) stays a JSON document string. Remote
 //! (streamable HTTP) servers connect with the optional static bearer token
 //! from the `authToken` field of their `mcp.json` remote entry — sent only to
 //! the configured `url` as `Authorization: Bearer <token>`, never logged,
-//! never returned by any invokable (the server view-model never contains the
-//! token; sensitive `headers` values are redacted to `***`), redacted in
+//! never returned by any bridge method (the server view-model never contains
+//! the token; sensitive `headers` values are redacted to `***`), redacted in
 //! `Debug`, and scrubbed from error strings by `airi-mcp`.
 
 use serde::{Deserialize, Serialize};
@@ -47,7 +47,7 @@ fn mcp_config_path() -> std::path::PathBuf {
 }
 
 /// Redaction sentinel used for sensitive values in the server view-model.
-/// Values equal to this sentinel in an incoming `saveServers` payload are
+/// Values equal to this sentinel in an incoming `save_servers` payload are
 /// restored from (or dropped in favour of) the on-disk entry — a redacted
 /// placeholder must never be persisted as if it were a real secret.
 const REDACTED: &str = "***";
@@ -177,7 +177,7 @@ pub struct McpServerView {
     /// Config key of the server.
     pub name: String,
     /// `"remote"` when a `url` is configured, else `"stdio"`.
-    pub transport: String,
+    pub transport: &'static str,
     /// One-line description (`command args…`, or the remote URL).
     pub summary: String,
     /// Persisted enabled flag.
@@ -241,7 +241,7 @@ fn servers_value(config: Option<&McpConfigFile>) -> Vec<McpServerView> {
                     };
                     McpServerView {
                         name: name.clone(),
-                        transport: transport.to_string(),
+                        transport,
                         summary,
                         enabled: entry.enabled,
                         command: entry.command.clone(),
@@ -510,7 +510,7 @@ impl McpControllerState {
 
     /// Save the current server list (replaces the config file atomically).
     /// Returns `true` on success.
-    pub fn save_servers(&mut self, servers: Vec<McpServerView>) -> bool {
+    pub fn save_servers(&mut self, servers: &[McpServerView]) -> bool {
         self.clear_error();
         // The view-model never carries secrets, so the payload we get back
         // holds redacted placeholders (`***`) for sensitive header values and
@@ -518,7 +518,7 @@ impl McpControllerState {
         // destroying real secrets on save (see restore_redacted_headers).
         let disk = load_config().ok().flatten();
         let mut config = McpConfigFile::default();
-        for view in &servers {
+        for view in servers {
             if view.name.trim().is_empty() {
                 self.set_error("server names must not be empty".into());
                 return false;
@@ -818,50 +818,47 @@ mod tests {
         assert_eq!(round_tripped.auth_token.as_deref(), Some(TOKEN));
         assert_eq!(round_tripped.headers["Authorization"], "real-secret");
     }
-}
-
-#[cfg(test)]
-mod save_servers_tests {
-    use super::*;
 
     #[test]
-    fn save_servers_rejects_a_nameless_row_without_touching_disk() {
+    fn save_servers_rejects_a_nameless_row() {
         let mut state = McpControllerState::default();
-        let view = McpServerView {
+        let row = McpServerView {
             name: "   ".to_string(),
-            transport: "stdio".to_string(),
-            summary: String::new(),
-            enabled: true,
-            command: Some("npx".to_string()),
-            args: Vec::new(),
-            env: BTreeMap::new(),
-            url: None,
-            headers: BTreeMap::new(),
-            auth_configured: false,
+            ..test_view("npx", None)
         };
-        assert!(!state.save_servers(vec![view]));
+        assert!(!state.save_servers(&[row]));
         assert_eq!(state.last_error, "server names must not be empty");
     }
 
     #[test]
     fn save_servers_rejects_a_row_without_command_or_url() {
         let mut state = McpControllerState::default();
-        let view = McpServerView {
-            name: "broken".to_string(),
-            transport: "stdio".to_string(),
-            summary: String::new(),
-            enabled: true,
+        // `test_view` fills in a command for stdio rows, so strip both here:
+        // a row with neither a command nor a url cannot be saved.
+        let row = McpServerView {
             command: None,
-            args: Vec::new(),
-            env: BTreeMap::new(),
             url: None,
-            headers: BTreeMap::new(),
-            auth_configured: false,
+            ..test_view("broken", None)
         };
-        assert!(!state.save_servers(vec![view]));
+        assert!(!state.save_servers(&[row]));
         assert_eq!(
             state.last_error,
             "server \"broken\" needs either a command or a url"
         );
+    }
+
+    fn test_view(name: &str, url: Option<&str>) -> McpServerView {
+        McpServerView {
+            name: name.to_string(),
+            transport: if url.is_some() { "remote" } else { "stdio" },
+            summary: String::new(),
+            enabled: true,
+            command: url.is_none().then(|| "npx".to_string()),
+            args: Vec::new(),
+            env: BTreeMap::new(),
+            url: url.map(str::to_string),
+            headers: BTreeMap::new(),
+            auth_configured: false,
+        }
     }
 }

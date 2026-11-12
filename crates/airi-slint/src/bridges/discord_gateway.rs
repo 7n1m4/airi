@@ -50,7 +50,6 @@
 //! socket errors.
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::VecDeque;
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -185,7 +184,7 @@ impl GatewayEventEntry {
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_millis() as u64)
             .unwrap_or(0);
-        let truncated: String = content.chars().take(CONTENT_MAX_CHARS).collect();
+        let truncated = truncate_chars(content, CONTENT_MAX_CHARS);
         Self {
             id,
             channel_id,
@@ -574,8 +573,8 @@ fn run_gateway(shared: &Arc<Mutex<GatewayShared>>) -> bool {
     gave_up
 }
 
-/// Truncate `chars` — exposed for unit tests.
-#[cfg(test)]
+/// Truncate to `max` scalar values (never mid-codepoint). Content is personal
+/// data: the inbox keeps at most this much of it.
 fn truncate_chars(input: &str, max: usize) -> String {
     input.chars().take(max).collect()
 }

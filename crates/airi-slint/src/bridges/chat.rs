@@ -17,8 +17,8 @@
 //! launch finds it.
 //!
 //! Provider resolution order: the smoke override (registered by `main` with
-//! `--smoke`) → `AIRI_QT_PROVIDER` / `AIRI_QT_MODEL` / `AIRI_QT_API_KEY` /
-//! `AIRI_QT_BASE_URL` env vars → the first enabled row in the `providers`
+//! `--smoke`) → `AIRI_SLINT_PROVIDER` / `AIRI_SLINT_MODEL` / `AIRI_SLINT_API_KEY` /
+//! `AIRI_SLINT_BASE_URL` env vars → the first enabled row in the `providers`
 //! table (config JSON deserialized into `ProviderConfig`) → unconfigured
 //! (sends fail with a user-facing error; the composer stays usable).
 //!
@@ -693,13 +693,13 @@ pub(crate) fn resolve_provider(ctx: &ChatContext) -> ProviderResolution {
     if let Some(o) = PROVIDER_OVERRIDE.get() {
         return o.clone();
     }
-    if let Ok(id) = std::env::var("AIRI_QT_PROVIDER") {
+    if let Ok(id) = std::env::var("AIRI_SLINT_PROVIDER") {
         let id = id.trim().to_string();
         if !id.is_empty() {
             let config = ProviderConfig {
-                api_key: std::env::var("AIRI_QT_API_KEY").ok(),
-                base_url: std::env::var("AIRI_QT_BASE_URL").ok(),
-                model: std::env::var("AIRI_QT_MODEL").ok(),
+                api_key: std::env::var("AIRI_SLINT_API_KEY").ok(),
+                base_url: std::env::var("AIRI_SLINT_BASE_URL").ok(),
+                model: std::env::var("AIRI_SLINT_MODEL").ok(),
                 extra_json: Default::default(),
             };
             let model = config.model.clone().unwrap_or_default();
@@ -1483,7 +1483,7 @@ impl ChatState {
         if resolution.model.trim().is_empty() {
             self.remove_pending_placeholder();
             self.set_error_text(
-                "No model configured. Set AIRI_QT_PROVIDER / AIRI_QT_MODEL (plus AIRI_QT_API_KEY / AIRI_QT_BASE_URL), or add an enabled provider with a `model` in its config.",
+                "No model configured. Set AIRI_SLINT_PROVIDER / AIRI_SLINT_MODEL (plus AIRI_SLINT_API_KEY / AIRI_SLINT_BASE_URL), or add an enabled provider with a `model` in its config.",
             );
             return;
         }

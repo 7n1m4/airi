@@ -29,11 +29,17 @@ use airi_core::settings::StageModelSettings;
 /// non-property state (`engine`, the monitor size and `last_settings_id`)
 /// lives here too.
 pub struct StageState {
+    /// True once a model is loaded and its buffers are drawable.
     pub ready: bool,
+    /// Human-readable load status (`"Model ready"`, or the load error).
     pub status: String,
+    /// Id (or resolved path) of the loaded model.
     pub model_id: String,
+    /// Number of primitives in the loaded model.
     pub primitive_count: i32,
+    /// Bumped on every load/clear so the UI can drop cached buffers.
     pub model_version: i32,
+    /// The resolved VRM engine; `None` while the stage is empty.
     pub engine: Option<airi_render::vrm::engine::Engine>,
     /// Monitor width in pixels, used to normalize `look_at` positions.
     pub monitor_width: f64,
@@ -101,7 +107,7 @@ fn preset_relative_path(id: &str) -> Option<&'static str> {
 
 /// Search for a repo-relative asset path across the usual roots.
 fn find_bundled(rel: &str) -> Option<PathBuf> {
-    if let Some(dir) = std::env::var_os("AIRI_QT_VRM_DIR") {
+    if let Some(dir) = std::env::var_os("AIRI_SLINT_VRM_DIR") {
         let candidate = PathBuf::from(&dir).join(rel);
         if candidate.is_file() {
             return Some(candidate);
