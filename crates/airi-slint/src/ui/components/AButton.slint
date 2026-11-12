@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Themed push button. Port of qml/components/AButton.qml: a variant enum
+// selects the visual style; `clicked` fires on press. Keyboard focus is
+// provided by the enclosing FocusScope in callers (the QML focusPolicy is a
+// Qt-only concept).
+
+import { Theme } from "../Theme.slint";
+
+export enum ButtonVariant {
+    default,
+    accent,
+    ghost,
+    danger,
+}
+
+export component AButton inherits Rectangle {
+    in property <string> text;
+    in property <ButtonVariant> variant: ButtonVariant.default;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    // Hover/press feedback lives on the TouchArea; mirror into properties so
+    // the background binding can branch on them.
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: MouseCursor.pointer;
+        clicked => { root.clicked(); }
+    }
+    in property <bool> hovered: ta.has-hover;
+    in property <bool> pressed: ta.pressed;
+
+    preferred-width: max(64px, label.preferred-width + 2 * Theme.spacing-m);
+    preferred-height: 36px;
+
+    opacity: root.enabled ? 1 : 0.45;
+    border-radius: Theme.radius-m;
+    border-width: 1px;
+    border-color: root.variant == ButtonVariant.danger
+        ? Theme.error
+        : (root.variant == ButtonVariant.accent ? Theme.accent-pressed : Theme.border);
+
+    background: root.variant == ButtonVariant.accent
+        ? (root.pressed ? Theme.accent-pressed
+            : (root.hovered ? Theme.accent-hover : Theme.accent))
+        : (root.variant == ButtonVariant.ghost
+            ? (root.pressed ? Theme.surface-pressed
+                : (root.hovered ? Theme.surface-hover : transparent))
+            : (root.variant == ButtonVariant.danger
+                ? (root.pressed ? Theme.error : transparent)
+                : (root.hovered ? Theme.surface-hover : Theme.surface)));
+
+    label := Text {
+        text: root.text;
+        font-size: Theme.font-body;
+        font-weight: 500;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        width: 100%;
+        height: 100%;
+        color: root.variant == ButtonVariant.accent
+            ? Theme.accent-contrast
+            : (root.variant == ButtonVariant.danger ? Theme.error : Theme.text-primary);
+    }
+}

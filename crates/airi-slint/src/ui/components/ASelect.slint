@@ -1,0 +1,91 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Themed dropdown. Port of qml/components/ASelect.qml.
+// Slint has no Popup; the option list is a `ListView` toggled by `open` that
+// overlays the control, anchored below it. Caller supplies `options` (model of
+// strings) and binds `current-index`; `selected(index, label)` fires on pick.
+
+import { Theme } from "../Theme.slint";
+
+export component ASelect inherits Rectangle {
+    in property <[string]> options;
+    in-out property <int> current-index;
+    in property <bool> enabled: true;
+    in-out property <bool> open: false;
+    callback selected(int, string);
+
+    in property <bool> hovered: ta.has-hover;
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: MouseCursor.pointer;
+        clicked => { root.open = !root.open; }
+    }
+
+    preferred-height: 36px;
+    opacity: root.enabled ? 1 : 0.45;
+    border-radius: Theme.radius-s;
+    border-width: ta.has-focus ? 2px : 1px;
+    border-color: ta.has-focus ? Theme.accent : Theme.border;
+    background: root.hovered ? Theme.surface-hover : Theme.surface;
+
+    display := Text {
+        x: Theme.spacing-m;
+        y: (parent.height - self.height) / 2;
+        width: parent.width - 2 * Theme.spacing-m - 12px;
+        text: root.current-index >= 0 && root.current-index < root.options.length
+            ? root.options[root.current-index] : "";
+        color: Theme.text-primary;
+        font-size: Theme.font-body;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+
+    chevron := Text {
+        x: parent.width - self.width - Theme.spacing-m;
+        y: (parent.height - self.height) / 2;
+        text: "▾";
+        color: Theme.text-secondary;
+        font-size: 12px;
+    }
+
+    popup := Rectangle {
+        visible: root.open;
+        x: 0;
+        y: parent.height + 2px;
+        width: parent.width;
+        height: min(240px, max(36px, root.options.length * 32px));
+        z: 10;
+        border-radius: Theme.radius-s;
+        border-width: 1px;
+        border-color: Theme.border;
+        background: Theme.surface;
+
+        list := VerticalLayout {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            height: parent.height - 2px;
+            for option[idx] in root.options: Rectangle {
+                width: popup.width - 2px;
+                height: 32px;
+                background: option-ta.has-hover ? Theme.surface-pressed : transparent;
+                option-ta := TouchArea {
+                    mouse-cursor: MouseCursor.pointer;
+                    clicked => {
+                        root.current-index = idx;
+                        root.open = false;
+                        root.selected(idx, option);
+                    }
+                }
+                Text {
+                    x: Theme.spacing-m;
+                    y: (parent.height - self.height) / 2;
+                    text: option;
+                    color: Theme.text-primary;
+                    font-size: Theme.font-body;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}

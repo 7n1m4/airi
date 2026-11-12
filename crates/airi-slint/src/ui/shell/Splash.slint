@@ -1,0 +1,79 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Frameless, always-on-top splash. Port of qml/shell/Splash.qml: walks the
+// startup milestone sequence (core-services → sync → providers →
+// stage-ready), then fires `finished`. The milestone ticker lives in Rust
+// (the bridge drives `milestone-index`); `is-smoke` shortens the interval.
+// `visited` notifies the window registry that the splash was shown.
+
+import { Theme } from "../Theme.slint";
+import { I18n } from "../I18n.slint";
+import { AProgress } from "../components/AProgress.slint";
+
+export component Splash inherits Rectangle {
+    background: transparent;
+
+    in-out property <int> milestone-index: 0;
+    in property <bool> is-smoke: false;
+    in property <string> locale: "en";
+    callback finished();
+    callback visited(string);
+
+    // Milestone key list (mirrors qml/shell/Splash.qml).
+    out property <[string]> milestones: [
+        "shell.splash.milestones.core_services",
+        "shell.splash.milestones.sync_engine",
+        "shell.splash.milestones.providers",
+        "shell.splash.milestones.stage_ready",
+    ];
+
+    Rectangle {
+        x: Theme.spacing-s;
+        y: Theme.spacing-s;
+        width: parent.width - 2 * Theme.spacing-s;
+        height: parent.height - 2 * Theme.spacing-s;
+        border-radius: Theme.radius-l;
+        border-width: 1px;
+        border-color: Theme.border;
+        background: Theme.surface;
+
+        content := VerticalLayout {
+            alignment: center;
+            x: Theme.spacing-l;
+            width: parent.width - 2 * Theme.spacing-l;
+            spacing: Theme.spacing-s;
+
+            Text {
+                text: root.locale == "" ? "AIRI"
+                    : I18n.tr(root.locale, "shell.app.name");
+                color: Theme.accent;
+                font-size: 40px;
+                font-weight: 700;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: root.milestone-index < root.milestones.length
+                    ? I18n.tr(root.locale, root.milestones[root.milestone-index])
+                    : I18n.tr(root.locale, "shell.splash.milestones.stage_ready");
+                color: Theme.text-secondary;
+                font-size: 12px;
+                horizontal-alignment: center;
+                overflow: elide;
+            }
+
+            AProgress {
+                width: parent.width - 2 * Theme.spacing-l;
+                from: 0;
+                to: root.milestones.length;
+                value: root.milestone-index + 1;
+            }
+        }
+    }
+
+    // `finished` is emitted by Rust when the milestone sequence completes
+    // (the timer runs on the Rust side, mirroring the Qt QML Timer).
+    public function complete() {
+        root.finished();
+    }
+}

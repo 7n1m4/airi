@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Re-export every UI surface so `slint::include_modules!` in lib.rs exposes
+// Theme, I18n, the 15 components and the 5 shell windows as Rust types.
+// The entry window (MainWindow) lives in bootstrap.slint (see lib.rs).
+
+import { Theme } from "Theme.slint";
+import { I18n } from "I18n.slint";
+import { AButton } from "components/AButton.slint";
+import { ATextField } from "components/ATextField.slint";
+import { ATextArea } from "components/ATextArea.slint";
+import { ASwitch } from "components/ASwitch.slint";
+import { ASelect } from "components/ASelect.slint";
+import { ASlider } from "components/ASlider.slint";
+import { ACard } from "components/ACard.slint";
+import { AModal } from "components/AModal.slint";
+import { ATooltip } from "components/ATooltip.slint";
+import { AListItem } from "components/AListItem.slint";
+import { AToggleGroup } from "components/AToggleGroup.slint";
+import { AInputNumber } from "components/AInputNumber.slint";
+import { ABadge } from "components/ABadge.slint";
+import { AProgress } from "components/AProgress.slint";
+import { ASeparator } from "components/ASeparator.slint";
+import { AEmptyState } from "components/AEmptyState.slint";
+import { ButtonVariant } from "components/AButton.slint";
+import { MainShell } from "shell/MainShell.slint";
+import { Splash } from "shell/Splash.slint";
+import { ChatWindow } from "shell/ChatWindow.slint";
+import { SettingsWindow } from "shell/SettingsWindow.slint";
+import { AboutWindow } from "shell/AboutWindow.slint";
+
+export { Theme, I18n, AButton, ATextField, ATextArea, ASwitch, ASelect, ASlider, ACard,
+         AModal, ATooltip, AListItem, AToggleGroup, AInputNumber, ABadge, AProgress,
+         ASeparator, AEmptyState, ButtonVariant, MainShell, Splash, ChatWindow,
+         SettingsWindow, AboutWindow };

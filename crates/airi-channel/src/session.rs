@@ -610,7 +610,7 @@ mod tests {
         let out = s.handle_text(r#"{"type":"rpc","action":"runtime.status"}"#);
         let replies = outcome_replies(&out);
         assert_eq!(replies[0]["ok"], true);
-        assert_eq!(replies[0]["data"]["app"], "airi-qt");
+        assert_eq!(replies[0]["data"]["app"], "airi-slint");
         assert_eq!(replies[0]["data"]["version"], env!("CARGO_PKG_VERSION"));
         assert_eq!(replies[0]["data"]["protocol"], "airi-channel/1");
     }

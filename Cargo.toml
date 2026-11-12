@@ -8,7 +8,7 @@ members = [
   "crates/airi-core",
   "crates/airi-i18n",
   "crates/airi-render",
-  "crates/airi-qt",
+  "crates/airi-slint",
   "crates/airi-stt",
   "crates/airi-speech",
   "crates/airi-local-llm",
@@ -21,6 +21,7 @@ members = [
   "crates/airi-discord",
   "crates/airi-daemon",
   "crates/airi-a11y",
+  "crates/airi-slint",
 ]
 
 [workspace.dependencies]
@@ -73,10 +74,9 @@ image = { version = "0.25", features = [
 ] }
 png = "0.17"
 
-# Qt / cxx-qt
-cxx = "1"
-cxx-qt = "0.10"
-cxx-qt-lib = { version = "0.10", features = [ "full" ] }
+# Slint UI toolkit (Qt replacement)
+slint = { version = "1.18", features = [ "renderer-software" ] }
+slint-build = "1.18"
 
 # Laya (P9 lane 4): ONNX Runtime + HF tokenizers
 ort = "2.0.0-rc.15"

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Append-only audit JSONL at `<data_dir>/airi-qt/audit/awareness-audit.jsonl`.
+//! Append-only audit JSONL at `<data_dir>/airi-slint/audit/awareness-audit.jsonl`.
 //!
 //! - every arm/disarm/observed event is one line;
 //! - `detail` is redacted (see [`crate::redact`]) before it is written;
@@ -27,7 +27,7 @@ pub fn now_ms() -> u64 {
 }
 
 pub fn default_audit_path() -> Option<PathBuf> {
-    dirs::data_dir().map(|d| d.join("airi-qt").join("audit").join(AUDIT_FILE_NAME))
+    dirs::data_dir().map(|d| d.join("airi-slint").join("audit").join(AUDIT_FILE_NAME))
 }
 
 /// Pure prune: returns (kept_contents, dropped_count). The rewrite decision

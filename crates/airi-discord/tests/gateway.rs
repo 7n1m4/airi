@@ -112,8 +112,8 @@ fn assert_identify(frame: &Value) {
     assert_eq!(frame["d"]["token"], TOKEN);
     assert_eq!(frame["d"]["intents"], DEFAULT_INTENTS);
     assert_eq!(frame["d"]["properties"]["os"], "linux");
-    assert_eq!(frame["d"]["properties"]["browser"], "airi-qt");
-    assert_eq!(frame["d"]["properties"]["device"], "airi-qt");
+    assert_eq!(frame["d"]["properties"]["browser"], "airi-slint");
+    assert_eq!(frame["d"]["properties"]["device"], "airi-slint");
 }
 
 #[test]

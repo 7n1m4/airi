@@ -1,0 +1,51 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Themed single-line text input. Port of qml/components/ATextField.qml.
+// Two-way binding: bind `text` on the caller side and read it back after
+// `edited`. `PlaceholderText`-style hint is approximated with a dimmed
+// overlay Text (Slint's TextInput has no placeholder of its own).
+
+import { Theme } from "../Theme.slint";
+
+export component ATextField inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder;
+    in property <bool> enabled: true;
+    callback edited(string);
+
+    in property <bool> hovered: ta.has-hover;
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: MouseCursor.text;
+    }
+
+    preferred-height: 36px;
+    opacity: root.enabled ? 1 : 0.45;
+    border-radius: Theme.radius-s;
+    border-width: ta.has-focus ? 2px : 1px;
+    border-color: ta.has-focus ? Theme.accent : Theme.border;
+    background: root.hovered ? Theme.surface-hover : Theme.surface;
+
+    input := TextInput {
+        x: Theme.spacing-m;
+        width: parent.width - 2 * Theme.spacing-m;
+        vertical-alignment: center;
+        single-line: true;
+        color: Theme.text-primary;
+        selection-background-color: Theme.accent;
+        selection-foreground-color: Theme.accent-contrast;
+        font-size: Theme.font-body;
+        text <=> root.text;
+        edited => { root.edited(self.text); }
+    }
+
+    hint := Text {
+        visible: root.text == "";
+        x: Theme.spacing-m;
+        width: parent.width - 2 * Theme.spacing-m;
+        vertical-alignment: center;
+        text: root.placeholder;
+        color: Theme.text-secondary;
+        font-size: Theme.font-body;
+    }
+}

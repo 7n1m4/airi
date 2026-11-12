@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Single-instance guard backed by a named lock file.
 //!
-//! The lock lives at `<dir>/airi-qt.lock` and contains the owning process id.
+//! The lock lives at `<dir>/airi-slint.lock` and contains the owning process id.
 //! [`acquire`] is intended to be called once at startup with the resolved
 //! data directory; see `main.rs` for the directory policy (explicit
 //! `--profile` → inside the profile, `--smoke` without `--profile` → inside
 //! the throwaway temp profile, otherwise the platform data dir
-//! `dirs::data_dir()/airi-qt`).
+//! `dirs::data_dir()/airi-slint`).
 //!
 //! Semantics (best effort, documented rather than enforced by the OS):
 //!
@@ -18,7 +18,7 @@
 //! - If `/proc` is unavailable (non-Linux or a restricted container), the
 //!   liveness probe fails safe: a pid that cannot be *proven* dead is
 //!   treated as alive, so a second instance never starts. Remove a stale
-//!   `airi-qt.lock` manually when the platform offers no process table.
+//!   `airi-slint.lock` manually when the platform offers no process table.
 //! - Unparseable or empty lock contents fail safe the same way
 //!   ([`SingleInstanceError::AlreadyRunning`] with pid 0). The error message
 //!   tells the user the lock path so it can be removed by hand.
@@ -34,7 +34,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 /// File name of the lock inside the data directory.
-pub const LOCK_FILE_NAME: &str = "airi-qt.lock";
+pub const LOCK_FILE_NAME: &str = "airi-slint.lock";
 
 /// RAII guard for the single-instance lock.
 ///
@@ -86,14 +86,14 @@ pub enum SingleInstanceError {
 
 /// Resolve the default lock directory (platform data dir).
 ///
-/// `<dirs::data_dir()>/airi-qt`, falling back to the temp dir when the
+/// `<dirs::data_dir()>/airi-slint`, falling back to the temp dir when the
 /// platform data dir cannot be determined. Explicit `--profile` / `--smoke`
 /// runs do not use this; see `main.rs`.
 #[must_use]
 pub fn default_lock_dir() -> PathBuf {
     dirs::data_dir()
         .unwrap_or_else(std::env::temp_dir)
-        .join("airi-qt")
+        .join("airi-slint")
 }
 
 /// Acquire the single-instance lock inside `dir` (created if missing).

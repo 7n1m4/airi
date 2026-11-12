@@ -40,7 +40,7 @@ pub(crate) static SILERO_ENV_LOCK: Mutex<()> = Mutex::new(());
 pub const SILERO_MODEL_URL: &str =
     "https://github.com/snakers4/silero-vad/raw/master/src/silero_vad/data/silero_vad.onnx";
 /// Path relative to the platform data dir where the model is cached.
-pub const SILERO_MODEL_REL_PATH: &str = "airi-qt/models/silero_vad.onnx";
+pub const SILERO_MODEL_REL_PATH: &str = "airi-slint/models/silero_vad.onnx";
 /// Samples per frame at 16 kHz (512 / 16000 = 32 ms).
 pub const FRAME_SAMPLES: usize = 512;
 /// Frame duration in milliseconds at 16 kHz.
@@ -188,7 +188,7 @@ impl VadHysteresis {
 // ---------------------------------------------------------------------------
 
 /// Path of the cached model inside the platform data dir
-/// (`<data_dir>/airi-qt/models/silero_vad.onnx`).
+/// (`<data_dir>/airi-slint/models/silero_vad.onnx`).
 pub fn model_path() -> Result<PathBuf, VadError> {
     Ok(dirs::data_dir()
         .ok_or(VadError::NoDataDir)?

@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Bootstrap window: minimal visible root that hosts the Splash → Control
+// Strip flow and routes secondary windows through the Rust window registry.
+// (qml/Main.qml equivalent.)
+
+import { MainShell } from "shell/MainShell.slint";
+import { Splash } from "shell/Splash.slint";
+import { I18n } from "I18n.slint";
+
+export component MainWindow inherits Window {
+    title: "airi-slint";
+    preferred-width: 1px;
+    preferred-height: 1px;
+    background: transparent;
+
+    in-out property <bool> strip-visible: false;
+    in-out property <string> locale: "en";
+    in-out property <bool> smoke: false;
+
+    callback open-chat();
+    callback open-settings();
+    callback open-about();
+    callback toggle-stage();
+    callback save-captions();
+    callback quit();
+    callback visited();
+    callback smoke-tour();
+    callback splash-finished();
+
+    init => { I18n.locale = root.locale; }
+
+    Splash {
+        locale: root.locale;
+        is-smoke: root.smoke;
+        visited => { root.visited(); }
+        finished => {
+            root.strip-visible = true;
+            root.splash-finished();
+            if (root.smoke) { root.smoke-tour(); }
+        }
+    }
+
+    MainShell {
+        visible: root.strip-visible;
+        locale: root.locale;
+        open-chat => { root.open-chat(); }
+        open-settings => { root.open-settings(); }
+        open-about => { root.open-about(); }
+        toggle-stage => { root.toggle-stage(); }
+        save-captions => { root.save-captions(); }
+        quit => { root.quit(); }
+        visited => { root.visited(); }
+    }
+}

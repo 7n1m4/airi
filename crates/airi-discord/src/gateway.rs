@@ -20,7 +20,7 @@
 //!    (milliseconds) within ~10 s ([`crate::DEFAULT_TIMEOUT`]), or the
 //!    handshake fails.
 //! 3. The client sends **op 2 (IDENTIFY)**: `{ token, intents, properties:
-//!    { os: "linux", browser: "airi-qt", device: "airi-qt" } }`.
+//!    { os: "linux", browser: "airi-slint", device: "airi-slint" } }`.
 //! 4. The server eventually dispatches `READY` (op 0, `t = "READY"`), which
 //!    carries `session_id` and `resume_gateway_url`. Until then
 //!    [`GatewayClient::session_id`] is `None`.
@@ -329,7 +329,7 @@ impl GatewayClient {
     ///
     /// Waits up to [`crate::DEFAULT_TIMEOUT`] (~10 s) for op 10 HELLO after
     /// the WebSocket handshake. Sends op 2 IDENTIFY with
-    /// `{ os: "linux", browser: "airi-qt", device: "airi-qt" }` properties.
+    /// `{ os: "linux", browser: "airi-slint", device: "airi-slint" }` properties.
     /// Returns once IDENTIFY has been sent; the READY dispatch is the first
     /// thing [`GatewayClient::next_event`] yields.
     ///
@@ -569,8 +569,8 @@ impl GatewayClient {
                 "intents": self.intents,
                 "properties": {
                     "os": "linux",
-                    "browser": "airi-qt",
-                    "device": "airi-qt",
+                    "browser": "airi-slint",
+                    "device": "airi-slint",
                 },
             }
         });

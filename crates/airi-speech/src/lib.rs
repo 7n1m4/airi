@@ -18,7 +18,7 @@
 //! - [`list_output_devices`]: rodio/cpal output device names; the pipeline selects a
 //!   device via [`RodioSinkFactory::new`] and falls back to the default.
 //!
-//! Layering: no Qt, no `airi-core`. The stage bridge (airi-qt) consumes `SpeechEvent`s
+//! Layering: no Qt, no `airi-core`. The stage bridge (airi-slint) consumes `SpeechEvent`s
 //! on its own thread — wire-up is a later integration step, not this crate's concern.
 //!
 //! Verification status is documented in `docs/phase-notes/p5-tts.md`.

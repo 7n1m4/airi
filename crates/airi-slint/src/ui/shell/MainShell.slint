@@ -1,0 +1,189 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// The Control Strip: compact always-on-top pill (vertical) with icon
+// buttons. Port of qml/shell/MainShell.qml. Frameless + no decorations; drag
+// by the handle (WindowMoveArea).
+//
+// The window-open actions are callbacks: the Rust window registry
+// (replacing the Qt WindowManager singleton) handles them. Strings come from
+// I18n; colors/spacing from Theme. State mirrors (collapsed, mic, theme dark,
+// strip visibility) are in-out so Rust can push settings in.
+
+import { Theme } from "../Theme.slint";
+import { I18n } from "../I18n.slint";
+import { AButton } from "../components/AButton.slint";
+import { ATooltip } from "../components/ATooltip.slint";
+
+
+// Themed icon button used only inside the strip.
+export component StripButton inherits Rectangle {
+    in property <string> icon: "❓";
+    in property <string> tip;
+    in property <bool> active: false;
+    in property <bool> show-tip: true;
+    callback clicked();
+
+
+    preferred-width: 40px;
+    preferred-height: 34px;
+
+    button := AButton {
+        width: parent.width;
+        height: parent.height;
+        text: root.icon;
+        variant: root.active ? accent : ghost;
+        clicked => { root.clicked(); }
+    }
+
+    // Hover tooltip: shown below the strip button while hovered.
+    tip-bubble := ATooltip {
+        x: parent.width + 4px;
+        y: (parent.height - self.height) / 2;
+        width: max(60px, self.preferred-width);
+        text: root.tip;
+        show: root.show-tip && button.hovered;
+    }
+}
+
+export component MainShell inherits Rectangle {
+
+    in-out property <bool> collapsed: false;
+    in-out property <bool> mic-on: false;
+    in-out property <string> last-chat-status: "idle";
+    in-out property <bool> stage-strip-visible: true;
+    in-out property <bool> caption-strip-visible: true;
+    in-out property <string> locale: "en";
+
+    // Window-registry callbacks (replaced WindowManager).
+    callback open-chat();
+    callback open-settings();
+    callback open-about();
+    callback toggle-stage();
+    callback save-captions(bool);
+    callback quit();
+    callback visited(string);
+
+    // Desktop integration / hotkey pumps are driven from Rust (see main.rs
+    // event-loop drain); the strip only surfaces the state.
+
+    background: Theme.surface;
+
+    // Drag handle height (grip row).
+    out property <length> handle-height: 22px;
+
+    // Border ring (Qt: inset Rectangle with border).
+    Rectangle {
+        x: 2px;
+        y: 2px;
+        width: parent.width - 4px;
+        height: parent.height - 4px;
+        border-radius: Theme.radius-l;
+        border-width: 1px;
+        border-color: Theme.border;
+        background: Theme.surface;
+    }
+
+    strip-content := VerticalLayout {
+        x: Theme.spacing-s;
+        y: Theme.spacing-s;
+        width: parent.width - 2 * Theme.spacing-s;
+        spacing: Theme.spacing-s;
+
+        // Drag handle (vertical pill grip).
+        handle := Rectangle {
+            height: root.handle-height;
+            WindowMoveArea {
+                width: parent.width;
+                height: parent.height;
+                Text {
+                    text: "⠿";
+                    color: handle-ta.pressed ? Theme.accent : Theme.text-secondary;
+                    font-size: 16px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                handle-ta := TouchArea { }
+            }
+        }
+
+        // Avatar placeholder chip.
+        Rectangle {
+            visible: !root.collapsed;
+            width: 34px;
+            height: 34px;
+            border-radius: self.width / 2;
+            background: Theme.accent;
+            Text {
+                text: "A";
+                color: Theme.accent-contrast;
+                font-size: 16px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        StripButton {
+            icon: root.mic-on ? "🎤" : "🎙️";
+            tip: I18n.tr(root.locale, "shell.strip.tooltips.mic");
+            active: root.mic-on;
+            visible: !root.collapsed;
+            clicked => { root.mic-on = !root.mic-on; }
+        }
+        StripButton {
+            icon: "💬";
+            tip: I18n.tr(root.locale, "shell.strip.tooltips.chat");
+            visible: !root.collapsed;
+            clicked => { root.open-chat(); }
+        }
+        StripButton {
+            icon: "🎭";
+            tip: I18n.tr(root.locale, "shell.strip.tooltips.stage");
+            visible: !root.collapsed && root.stage-strip-visible;
+            clicked => { root.toggle-stage(); }
+        }
+        StripButton {
+            icon: "CC";
+            tip: I18n.tr(root.locale, "shell.strip.tooltips.caption");
+            visible: !root.collapsed && root.caption-strip-visible;
+            clicked => { root.save-captions(true); }
+        }
+        StripButton {
+            icon: "⚙️";
+            tip: I18n.tr(root.locale, "shell.strip.tooltips.settings");
+            visible: !root.collapsed;
+            clicked => { root.open-settings(); }
+        }
+        StripButton {
+            icon: "ℹ️";
+            tip: I18n.tr(root.locale, "shell.strip.tooltips.about");
+            visible: !root.collapsed;
+            clicked => { root.open-about(); }
+        }
+        StripButton {
+            icon: Theme.dark ? "☀️" : "🌙";
+            tip: I18n.tr(root.locale, "shell.strip.tooltips.theme");
+            visible: !root.collapsed;
+            clicked => { Theme.dark = !Theme.dark; }
+        }
+        StripButton {
+            icon: "🌐";
+            tip: I18n.tr(root.locale, "shell.strip.tooltips.language");
+            visible: !root.collapsed;
+            clicked => { I18n.cycle-locale(); }
+        }
+        StripButton {
+            icon: root.collapsed ? "⟩" : "⟨";
+            tip: root.collapsed
+                ? I18n.tr(root.locale, "shell.strip.tooltips.expand")
+                : I18n.tr(root.locale, "shell.strip.tooltips.collapse");
+            clicked => { root.collapsed = !root.collapsed; }
+        }
+        StripButton {
+            icon: "⏻";
+            tip: I18n.tr(root.locale, "shell.strip.tooltips.quit");
+            visible: !root.collapsed;
+            clicked => { root.quit(); }
+        }
+    }
+}

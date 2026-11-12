@@ -4,7 +4,7 @@
 //!
 //! Mirrors `SpeechAudioCache` (packages/stage-ui/src/services/speech/audio-cache.ts):
 //! 200 entries / 50 MB cap, least-recently-used eviction. Unlike the Vue original it is
-//! backed by the filesystem (`<data>/airi-qt/speech-cache/<sha256>.<ext>`) instead of an
+//! backed by the filesystem (`<data>/airi-slint/speech-cache/<sha256>.<ext>`) instead of an
 //! in-memory Map, so decoded-once audio survives restarts. An in-memory index is rebuilt
 //! from the directory at open; file mtimes seed the LRU order.
 //!
@@ -53,12 +53,12 @@ pub struct SpeechAudioCache {
 }
 
 impl SpeechAudioCache {
-    /// Default cache directory: `<dirs::data_dir()>/airi-qt/speech-cache`,
+    /// Default cache directory: `<dirs::data_dir()>/airi-slint/speech-cache`,
     /// falling back to the temp dir when the data dir cannot be resolved.
     #[must_use]
     pub fn default_cache_dir() -> PathBuf {
         dirs::data_dir()
-            .map(|d| d.join("airi-qt").join("speech-cache"))
+            .map(|d| d.join("airi-slint").join("speech-cache"))
             .unwrap_or_else(|| std::env::temp_dir().join("airi-speech-cache"))
     }
 

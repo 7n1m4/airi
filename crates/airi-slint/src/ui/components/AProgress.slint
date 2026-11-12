@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Thin determinate progress bar. Port of qml/components/AProgress.qml.
+// `from`/`to`/`value` match Qt's ProgressBar; the fill is
+// (value - from) / (to - from) of the track width, animated at 150ms.
+
+import { Theme } from "../Theme.slint";
+
+export component AProgress inherits Rectangle {
+    in property <float> from: 0;
+    in property <float> to: 100;
+    in property <float> value: 0;
+
+    preferred-height: 6px;
+    border-radius: 3px;
+    background: Theme.surface-pressed;
+
+    fill := Rectangle {
+        y: 0;
+        height: parent.height;
+        width: parent.width * clamp((root.value - root.from)
+            / (root.to - root.from), 0, 1);
+        border-radius: 3px;
+        background: Theme.accent;
+        animate width { duration: 150ms; }
+    }
+}

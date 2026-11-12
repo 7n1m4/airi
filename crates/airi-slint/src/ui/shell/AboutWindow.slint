@@ -1,0 +1,166 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// About window: app name, version, license note, source and credit. Port of
+// qml/shell/AboutWindow.qml. Version comes from the crate manifest via the
+// update bridge (pushed in as `app-version`); `check-update` /
+// `open-url-externally` are callbacks handled by the Rust registry.
+
+import { Theme } from "../Theme.slint";
+import { I18n } from "../I18n.slint";
+import { AButton } from "../components/AButton.slint";
+import { ABadge } from "../components/ABadge.slint";
+import { ACard } from "../components/ACard.slint";
+import { ASeparator } from "../components/ASeparator.slint";
+import { ButtonVariant } from "../components/AButton.slint";
+
+export component AboutWindow inherits Window {
+    title: root.locale == "" ? "AIRI" : I18n.tr(root.locale, "shell.about.title");
+    preferred-width: 670px;
+    preferred-height: 730px;
+    min-width: 420px;
+    min-height: 480px;
+    max-width: root.width;
+    max-height: root.height;
+    background: Theme.bg;
+
+    in property <string> locale: "en";
+    in property <string> app-version: "0.0.0";
+    in property <string> update-result: "";
+    in property <string> update-url: "";
+    callback check-update();
+    callback open-url-externally(string);
+
+    VerticalLayout {
+        alignment: center;
+        x: Theme.spacing-l;
+        width: min(parent.width - 2 * Theme.spacing-l, 460px);
+        spacing: Theme.spacing-l;
+
+        // Avatar mark.
+        Rectangle {
+            width: 88px;
+            height: 88px;
+            border-radius: width / 2;
+            background: Theme.accent;
+            Text {
+                text: "A";
+                color: Theme.accent-contrast;
+                font-size: 40px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        VerticalLayout {
+            spacing: Theme.spacing-s;
+            Text {
+                text: I18n.tr(root.locale, "shell.about.app-name");
+                color: Theme.text-primary;
+                font-size: 34px;
+                font-weight: 700;
+                horizontal-alignment: center;
+            }
+            Text {
+                text: I18n.tr(root.locale, "shell.about.tagline");
+                color: Theme.text-secondary;
+                font-size: 13px;
+                horizontal-alignment: center;
+            }
+        }
+
+        ACard {
+            width: parent.width;
+            padding: Theme.spacing-l;
+            VerticalLayout {
+                spacing: Theme.spacing-s;
+
+                HorizontalLayout {
+                    Text {
+                        horizontal-stretch: 1;
+                        text: I18n.tr(root.locale, "shell.app.version-label");
+                        color: Theme.text-primary;
+                        font-size: Theme.font-body;
+                    }
+                    ABadge { text: root.app-version; variant: "default"; }
+                }
+
+                ASeparator {}
+
+                Text {
+                    text: I18n.tr(root.locale, "shell.about.body");
+                    color: Theme.text-secondary;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+
+                Text {
+                    text: I18n.tr(root.locale, "shell.about.license");
+                    color: Theme.text-secondary;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+
+                ASeparator {}
+
+                HorizontalLayout {
+                    Text {
+                        text: I18n.tr(root.locale, "shell.about.source-label");
+                        color: Theme.text-primary;
+                        font-size: 13px;
+                    }
+                    source-link := Text {
+                        text: "github.com/moeru-ai/airi";
+                        color: Theme.accent;
+                        font-size: 13px;
+                        source-ta := TouchArea {
+                            mouse-cursor: MouseCursor.pointer;
+                            clicked => {
+                                root.open-url-externally(
+                                    I18n.tr(root.locale, "shell.about.source-url"));
+                            }
+                        }
+                    }
+                }
+
+                Text {
+                    text: I18n.tr(root.locale, "shell.about.credit");
+                    color: Theme.text-secondary;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+
+                ASeparator {}
+
+                HorizontalLayout {
+                    spacing: Theme.spacing-s;
+                    AButton {
+                        text: I18n.tr(root.locale, "shell.about.check-update");
+                        variant: ghost;
+                        clicked => { root.check-update(); }
+                    }
+                    Text {
+                        visible: root.update-result != "";
+                        horizontal-stretch: 1;
+                        text: root.update-result;
+                        color: Theme.text-secondary;
+                        font-size: 12px;
+                        wrap: word-wrap;
+                    }
+                }
+
+                Text {
+                    visible: root.update-url != "";
+                    text: root.update-url;
+                    color: Theme.accent;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                    url-ta := TouchArea {
+                        mouse-cursor: MouseCursor.pointer;
+                        clicked => { root.open-url-externally(root.update-url); }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Themed modal overlay. Port of qml/components/AModal.qml.
+// Visibility is driven by `open` (in-out) — set it from Rust or from a close
+// callback; `closed` fires on backdrop click / close button. Children go in
+// the default slot inside the body column (below the header + separator).
+
+import { Theme } from "../Theme.slint";
+import { AButton } from "AButton.slint";
+
+export component AModal inherits Rectangle {
+    in property <string> title;
+    in-out property <bool> open: false;
+    callback closed();
+
+    visible: root.open;
+    background: #99000000;
+
+    backdrop := TouchArea {
+        clicked => { root.close(); }
+    }
+
+    panel := Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: min(480px, parent.width - 2 * Theme.spacing-l);
+        preferred-height: body.preferred-height + 52px;
+        border-radius: Theme.radius-l;
+        border-width: 1px;
+        border-color: Theme.border;
+        background: Theme.surface;
+
+        body := VerticalLayout {
+            padding: Theme.spacing-l;
+            spacing: Theme.spacing-s;
+            Text {
+                text: root.title;
+                color: Theme.text-primary;
+                font-size: 16px;
+                font-weight: 700;
+            }
+            Rectangle { height: 1px; background: Theme.border; }
+            VerticalLayout {
+                spacing: Theme.spacing-s;
+                @children
+            }
+        }
+
+        close := AButton {
+            x: parent.width - self.width - Theme.spacing-s;
+            y: Theme.spacing-s;
+            text: "✕";
+            variant: ghost;
+            preferred-width: 36px;
+            preferred-height: 36px;
+            clicked => { root.close(); }
+        }
+    }
+
+    // Close helper: flips `open` and notifies.
+    function close() {
+        root.open = false;
+        root.closed();
+    }
+}

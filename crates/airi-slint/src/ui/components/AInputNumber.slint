@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Themed numeric spin box with up/down steppers. Port of
+// qml/components/AInputNumber.qml. `value` is in-out (float, 0..100 by
+// default); `minimum`/`maximum`/`step-size`/`decimals` are in properties;
+// `edited(value)` fires on each committed change. The text input accepts
+// free typing; the value is clamped on focus loss (via the `edited` callback
+// the caller can persist, and the display refreshes from `value`).
+
+import { Theme } from "../Theme.slint";
+
+export component AInputNumber inherits Rectangle {
+    in-out property <float> value: 0;
+    in property <float> minimum: 0;
+    in property <float> maximum: 100;
+    in property <float> step-size: 1;
+    in property <int> decimals: 0;
+    in property <bool> enabled: true;
+    callback edited(float);
+
+    preferred-width: 132px;
+    preferred-height: 36px;
+    opacity: root.enabled ? 1 : 0.45;
+    border-radius: Theme.radius-s;
+    border-width: 1px;
+    border-color: root.input-ta.has-focus ? Theme.accent : Theme.border;
+    background: Theme.surface-hover;
+
+    // Format helper: trim to `decimals` places, then drop trailing zeros.
+    function fmt(v: float) -> string {
+        return Math.round(v * Math.pow(10, root.decimals))
+            / Math.pow(10, root.decimals);
+    }
+
+    up-zone := Rectangle {
+        x: parent.width - self.width;
+        width: 28px;
+        height: parent.height;
+        background: up-ta.pressed ? Theme.surface-pressed : transparent;
+        up-ta := TouchArea {
+            enabled: root.enabled;
+            mouse-cursor: MouseCursor.pointer;
+            clicked => {
+                root.value = Math.clamp(root.value + root.step-size, root.minimum, root.maximum);
+                root.edited(root.value);
+            }
+        }
+        Text {
+            text: "▴";
+            color: Theme.text-secondary;
+            font-size: 12px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    down-zone := Rectangle {
+        x: 0;
+        width: 28px;
+        height: parent.height;
+        background: down-ta.pressed ? Theme.surface-pressed : transparent;
+        down-ta := TouchArea {
+            enabled: root.enabled;
+            mouse-cursor: MouseCursor.pointer;
+            clicked => {
+                root.value = Math.clamp(root.value - root.step-size, root.minimum, root.maximum);
+                root.edited(root.value);
+            }
+        }
+        Text {
+            text: "▾";
+            color: Theme.text-secondary;
+            font-size: 12px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    input := TextInput {
+        x: 28px;
+        y: 0;
+        width: parent.width - 56px;
+        height: parent.height;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        single-line: true;
+        color: Theme.text-primary;
+        selection-background-color: Theme.accent;
+        selection-foreground-color: Theme.accent-contrast;
+        font-size: Theme.font-body;
+        text: root.fmt(root.value);
+        input-ta := TouchArea { mouse-cursor: MouseCursor.text; }
+        edited => {
+            root.value = Math.clamp(self.text.to-float(), root.minimum, root.maximum);
+            root.edited(root.value);
+        }
+    }
+}

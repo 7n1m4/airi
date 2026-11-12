@@ -40,7 +40,7 @@ pub struct Exclusions {
 }
 
 impl Exclusions {
-    /// Load user exclusions from `path` (`<data_dir>/airi-qt/awareness-exclusions.json`).
+    /// Load user exclusions from `path` (`<data_dir>/airi-slint/awareness-exclusions.json`).
     /// Missing file → empty list. Unreadable/invalid → empty list + `eprintln`
     /// note; the daemon keeps running (never fails hard on a config file).
     pub fn load(path: PathBuf) -> Self {
@@ -167,9 +167,9 @@ fn persist(path: &std::path::Path, entries: &[String]) -> Result<(), String> {
     fs::rename(&tmp, path).map_err(|e| format!("cannot rename {}: {e}", tmp.display()))
 }
 
-/// `<data_dir>/airi-qt/awareness-exclusions.json`
+/// `<data_dir>/airi-slint/awareness-exclusions.json`
 pub fn exclusions_path() -> Option<PathBuf> {
-    dirs::data_dir().map(|d| d.join("airi-qt").join("awareness-exclusions.json"))
+    dirs::data_dir().map(|d| d.join("airi-slint").join("awareness-exclusions.json"))
 }
 
 /// What a focus event resolved to (metadata only).

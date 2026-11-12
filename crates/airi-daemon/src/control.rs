@@ -16,7 +16,7 @@
 //!   SetExcludedApps(json: s) -> s            JSON: {ok: bool, error?: string}
 //!                      `json` is a JSON string array of app-name substrings
 //!                      (case-insensitive). Stored in memory + persisted to
-//!                      `<data_dir>/airi-qt/awareness-exclusions.json`.
+//!                      `<data_dir>/airi-slint/awareness-exclusions.json`.
 //!
 //! Every arm/disarm is audited (source tag = "system" for kill switch,
 //! per-source tag for SetSource). Unknown sources and malformed calls are

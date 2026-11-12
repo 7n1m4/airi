@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Themed tooltip bubble. Port of qml/components/ATooltip.qml.
+// Caller controls visibility (usually bound to a hover state) via `show`;
+// the bubble is placed by the caller (x/y) since Qt's ToolTip delay/timeout
+// is Qt-only.
+
+import { Theme } from "../Theme.slint";
+
+export component ATooltip inherits Rectangle {
+    in property <string> text;
+    in property <bool> show: false;
+
+    visible: root.show;
+    preferred-height: 24px;
+    border-radius: Theme.radius-s;
+    border-width: 1px;
+    border-color: Theme.border;
+    background: Theme.surface;
+
+    label := Text {
+        x: Theme.spacing-s;
+        y: (parent.height - self.height) / 2;
+        width: parent.width - 2 * Theme.spacing-s;
+        text: root.text;
+        color: Theme.text-primary;
+        font-size: 12px;
+        vertical-alignment: center;
+    }
+}

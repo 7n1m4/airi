@@ -5,7 +5,7 @@
 //! download or self-replacement path here. `self_update` was evaluated and
 //! rejected for this lane: it is built around replacing an installed binary
 //! in place, which is explicitly out of scope until post-parity. Instead the
-//! `airi-qt` bridge calls [`check_for_update`] on demand and surfaces the
+//! `airi-slint` bridge calls [`check_for_update`] on demand and surfaces the
 //! result in the About window.
 //!
 //! The network path is a single unauthenticated `GET` to the GitHub REST API
@@ -25,7 +25,7 @@ pub const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/anlmalabs/air
 /// Timeout applied to the release check request.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(8);
 /// User-Agent header (GitHub rejects requests without one).
-const USER_AGENT: &str = concat!("airi-qt/", env!("CARGO_PKG_VERSION"), " update-check");
+const USER_AGENT: &str = concat!("airi-slint/", env!("CARGO_PKG_VERSION"), " update-check");
 
 /// Subset of the GitHub release payload this app cares about.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -265,7 +265,7 @@ mod tests {
             )
             .match_header(
                 "user-agent",
-                Matcher::Regex("airi-qt/.*update-check".to_string()),
+                Matcher::Regex("airi-slint/.*update-check".to_string()),
             )
             .with_status(200)
             .with_header("content-type", "application/json")

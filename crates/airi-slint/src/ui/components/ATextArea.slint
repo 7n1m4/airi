@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Themed multi-line text area. Port of qml/components/ATextArea.qml.
+// Wrap is word-wrap by default (Qt TextArea.Wrap).
+
+import { Theme } from "../Theme.slint";
+
+export component ATextArea inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder;
+    in property <bool> enabled: true;
+    callback edited(string);
+
+    in property <bool> hovered: ta.has-hover;
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: MouseCursor.text;
+    }
+
+    preferred-height: 120px;
+    opacity: root.enabled ? 1 : 0.45;
+    border-radius: Theme.radius-s;
+    border-width: ta.has-focus ? 2px : 1px;
+    border-color: ta.has-focus ? Theme.accent : Theme.border;
+    background: root.hovered ? Theme.surface-hover : Theme.surface;
+
+    input := TextInput {
+        x: Theme.spacing-m;
+        y: Theme.spacing-s;
+        width: parent.width - 2 * Theme.spacing-m;
+        height: parent.height - 2 * Theme.spacing-s;
+        color: Theme.text-primary;
+        selection-background-color: Theme.accent;
+        selection-foreground-color: Theme.accent-contrast;
+        font-size: Theme.font-body;
+        text <=> root.text;
+        edited => { root.edited(self.text); }
+    }
+
+    hint := Text {
+        visible: root.text == "";
+        x: Theme.spacing-m;
+        y: Theme.spacing-s;
+        width: parent.width - 2 * Theme.spacing-m;
+        text: root.placeholder;
+        color: Theme.text-secondary;
+        font-size: Theme.font-body;
+    }
+}

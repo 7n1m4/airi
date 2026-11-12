@@ -55,13 +55,13 @@ pub enum ConfigError {
     Io(#[from] io::Error),
 }
 
-/// Default config path: `<data-dir>/airi-qt/server-channel/config.json`.
+/// Default config path: `<data-dir>/airi-slint/server-channel/config.json`.
 ///
 /// Data dir resolution: `dirs::data_dir()` (Linux: `$XDG_DATA_HOME` or
 /// `~/.local/share`; macOS: `~/Library/Application Support`; Windows:
 /// `%APPDATA%`). Returns `None` when no data dir can be determined.
 pub fn default_config_path() -> Option<PathBuf> {
-    dirs::data_dir().map(|d| d.join("airi-qt").join("server-channel").join("config.json"))
+    dirs::data_dir().map(|d| d.join("airi-slint").join("server-channel").join("config.json"))
 }
 
 /// Load the config at `path`, healing it if missing or invalid.

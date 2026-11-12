@@ -1,0 +1,64 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Themed list row (navigation item). Port of qml/components/AListItem.qml.
+// `clicked` fires on press; `active` highlights the row with an accent border.
+
+import { Theme } from "../Theme.slint";
+
+export component AListItem inherits Rectangle {
+    in property <string> icon;
+    in property <string> title;
+    in property <string> subtitle;
+    in property <bool> show-chevron: false;
+    in property <bool> active: false;
+    callback clicked();
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => { root.clicked(); }
+    }
+
+    preferred-height: root.subtitle != "" ? 56px : 40px;
+    border-radius: Theme.radius-m;
+    border-width: root.active ? 1px : 0px;
+    border-color: Theme.accent;
+    background: ta.pressed ? Theme.surface-pressed
+        : (ta.has-hover ? Theme.surface-hover : transparent);
+
+    icon-label := Text {
+        visible: root.icon != "";
+        x: Theme.spacing-m;
+        y: (parent.height - self.height) / 2;
+        text: root.icon;
+        font-size: 18px;
+    }
+
+    text-col := VerticalLayout {
+        x: root.icon != "" ? Theme.spacing-m * 2 + icon-label.preferred-width : Theme.spacing-m;
+        y: (parent.height - self.preferred-height) / 2;
+        width: parent.width - self.x - (root.show-chevron ? 32px : Theme.spacing-m);
+        spacing: 2px;
+        Text {
+            text: root.title;
+            color: Theme.text-primary;
+            font-size: Theme.font-body;
+            overflow: elide;
+        }
+        Text {
+            visible: root.subtitle != "";
+            text: root.subtitle;
+            color: Theme.text-secondary;
+            font-size: 12px;
+            overflow: elide;
+        }
+    }
+
+    chevron := Text {
+        visible: root.show-chevron;
+        x: parent.width - self.width - Theme.spacing-m;
+        y: (parent.height - self.height) / 2;
+        text: "›";
+        color: Theme.text-secondary;
+        font-size: 18px;
+    }
+}

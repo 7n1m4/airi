@@ -1,0 +1,201 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Chat workspace window. Port of qml/shell/ChatWindow.qml.
+// The bridge surface (transcript, sessions, composer) lives in Rust; this
+// file only wires the layout skeleton. Controller data is exposed as
+// properties/callbacks that the Rust window registry fills.
+
+import { Theme } from "../Theme.slint";
+import { I18n } from "../I18n.slint";
+import { AButton } from "../components/AButton.slint";
+import { ABadge } from "../components/ABadge.slint";
+import { ASeparator } from "../components/ASeparator.slint";
+import { ButtonVariant } from "../components/AButton.slint";
+
+export component ChatWindow inherits Window {
+    title: root.locale == "" ? "AIRI" : I18n.tr(root.locale, "shell.chat.title");
+    preferred-width: 880px;
+    preferred-height: 640px;
+    min-width: 720px;
+    min-height: 520px;
+    max-width: root.width;
+    max-height: root.height;
+    background: Theme.bg;
+
+    in property <string> locale: "en";
+    in property <string> error: "";
+    in property <[string]> sessions: [];
+    in property <[string]> transcript: [];
+    in-out property <string> draft: "";
+    in property <bool> streaming: false;
+    callback clear-error();
+    callback send(string);
+    callback pump-events();
+    callback select-session(int);
+
+    VerticalLayout {
+        spacing: 0;
+
+        // Top bar: app mark + active-card picker.
+        Rectangle {
+            vertical-stretch: 0;
+            height: 48px;
+            HorizontalLayout {
+                x: Theme.spacing-m;
+                width: parent.width - 2 * Theme.spacing-m;
+                spacing: Theme.spacing-s;
+                Text {
+                    text: root.locale == "" ? "AIRI"
+                        : I18n.tr(root.locale, "shell.app.name");
+                    color: Theme.text-primary;
+                    font-size: 16px;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
+                Rectangle { horizontal-stretch: 1; }
+                // Card picker is wired by the Rust side (out of this slice).
+                Rectangle {
+                    width: 260px;
+                    border-radius: Theme.radius-s;
+                    border-width: 1px;
+                    border-color: Theme.border;
+                    background: Theme.surface;
+                    Text {
+                        x: Theme.spacing-m;
+                        vertical-alignment: center;
+                        text: I18n.tr(root.locale, "shell.chat.card-picker");
+                        color: Theme.text-secondary;
+                        font-size: Theme.font-body;
+                    }
+                }
+            }
+        }
+
+        ASeparator { vertical-stretch: 0; }
+
+        HorizontalLayout {
+            vertical-stretch: 1;
+            spacing: 0;
+
+            // Left: sessions.
+            Rectangle {
+                vertical-stretch: 1;
+                preferred-width: 240px;
+                x-margin: Theme.spacing-m;
+                background: transparent;
+                sessions-col := VerticalLayout {
+                    x: Theme.spacing-m;
+                    y: Theme.spacing-m;
+                    width: parent.width - 2 * Theme.spacing-m;
+                    height: parent.height - 2 * Theme.spacing-m;
+                    spacing: Theme.spacing-s;
+                    Text {
+                        text: I18n.tr(root.locale, "shell.chat.sessions.title");
+                        color: Theme.text-secondary;
+                        font-size: 12px;
+                        font-weight: 700;
+                    }
+                    for session[idx] in root.sessions: Rectangle {
+                        height: 36px;
+                        border-radius: Theme.radius-s;
+                        background: session-ta.has-hover ? Theme.surface-hover : transparent;
+                        session-ta := TouchArea {
+                            mouse-cursor: MouseCursor.pointer;
+                            clicked => { root.select-session(idx); }
+                        }
+                        Text {
+                            x: Theme.spacing-m;
+                            vertical-alignment: center;
+                            text: session;
+                            color: Theme.text-primary;
+                            font-size: Theme.font-body;
+                        }
+                    }
+                    Rectangle { vertical-stretch: 1; }
+                }
+            }
+
+            Rectangle { width: 1px; background: Theme.border; }
+
+            // Right: transcript + error banner + composer.
+            VerticalLayout {
+                vertical-stretch: 1;
+                horizontal-stretch: 1;
+                spacing: Theme.spacing-s;
+                padding: Theme.spacing-m;
+
+                transcript-flick := VerticalLayout {
+                    vertical-stretch: 1;
+                    alignment: start;
+                    for message in root.transcript: Text {
+                        width: transcript-flick.width;
+                        text: message;
+                        color: Theme.text-primary;
+                        font-size: Theme.font-body;
+                        wrap: word-wrap;
+                    }
+                }
+
+                // Error banner.
+                Rectangle {
+                    visible: root.error != "";
+                    height: 40px;
+                    border-radius: Theme.radius-s;
+                    background: Theme.surface;
+                    HorizontalLayout {
+                        x: Theme.spacing-s;
+                        width: parent.width - 2 * Theme.spacing-s;
+                        spacing: Theme.spacing-s;
+                        ABadge {
+                            text: I18n.tr(root.locale, "shell.chat.status.error");
+                            variant: "error";
+                        }
+                        Text {
+                            horizontal-stretch: 1;
+                            vertical-alignment: center;
+                            text: root.error;
+                            color: Theme.error;
+                            font-size: 12px;
+                            overflow: elide;
+                        }
+                        AButton {
+                            text: "✕";
+                            variant: ghost;
+                            preferred-width: 30px;
+                            preferred-height: 26px;
+                            clicked => { root.clear-error(); }
+                        }
+                    }
+                }
+
+                // Composer.
+                Rectangle {
+                    vertical-stretch: 0;
+                    height: 40px;
+                    border-radius: Theme.radius-s;
+                    border-width: 1px;
+                    border-color: Theme.border;
+                    background: Theme.surface-hover;
+                    composer-input := TextInput {
+                        x: Theme.spacing-m;
+                        width: parent.width - 2 * Theme.spacing-m - 80px;
+                        vertical-alignment: center;
+                        single-line: true;
+                        color: Theme.text-primary;
+                        font-size: Theme.font-body;
+                        text <=> root.draft;
+                        edited => { root.draft = self.text; }
+                    }
+                    AButton {
+                        x: parent.width - self.width - Theme.spacing-s;
+                        y: (parent.height - self.height) / 2;
+                        text: I18n.tr(root.locale, "shell.chat.send");
+                        variant: accent;
+                        enabled: root.draft != "";
+                        clicked => { root.send(root.draft); root.draft = ""; }
+                    }
+                }
+            }
+        }
+    }
+}

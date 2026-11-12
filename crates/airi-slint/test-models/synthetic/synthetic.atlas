@@ -1,0 +1,7 @@
+synthetic.png
+size:32,32
+format:RGBA8888
+filter:Nearest,Nearest
+pma:false
+body
+bounds:0,0,32,32

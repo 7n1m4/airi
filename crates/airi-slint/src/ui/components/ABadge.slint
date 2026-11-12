@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Small pill badge for statuses/labels. Port of qml/components/ABadge.qml.
+// `variant` selects the foreground color (default|accent|success|warning|
+// error|info). The fill is the foreground at 16% alpha; the text is full
+// foreground (the QML version's semi-transparent background is approximated
+// with `background` + reduced opacity on a separate layer).
+
+import { Theme } from "../Theme.slint";
+
+export component ABadge inherits Rectangle {
+    in property <string> variant: "default";
+    in property <string> text;
+
+    out property <color> foreground: root.variant == "accent" ? Theme.accent
+        : (root.variant == "success" ? Theme.success
+            : (root.variant == "warning" ? Theme.warning
+                : (root.variant == "error" ? Theme.error
+                    : (root.variant == "info" ? Theme.info : Theme.text-secondary))));
+
+    label := Text {
+        text: root.text;
+        color: root.foreground;
+        font-size: 11px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    preferred-width: label.preferred-width + 2 * Theme.spacing-s;
+    preferred-height: 20px;
+    border-radius: self.height / 2;
+    border-width: 1px;
+    border-color: root.foreground;
+    background: Theme.surface;
+
+}

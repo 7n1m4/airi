@@ -22,7 +22,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 /// v4: wave ④ (p9-data-vault) — `scrub_runs` optimization log.
 const SCHEMA_VERSION: i32 = 4;
 /// Application data directory name.
-const APP_DIR_NAME: &str = "airi-qt";
+const APP_DIR_NAME: &str = "airi-slint";
 /// Database file name.
 const DB_FILE_NAME: &str = "airi.sqlite";
 
@@ -34,7 +34,7 @@ pub struct Database {
 
 impl Database {
     /// Open or create the database at the default platform data directory:
-    /// `<data>/airi-qt/airi.sqlite`.
+    /// `<data>/airi-slint/airi.sqlite`.
     pub fn open_default() -> Result<Self> {
         let base = data_dir().context("failed to resolve platform data directory")?;
         let dir = base.join(APP_DIR_NAME);

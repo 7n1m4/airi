@@ -15,13 +15,13 @@
 //!   `https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX` (repo sha
 //!   `1939ad2a8e416c0acfeecc08a694d14ef25f2231`, Apache-2.0). fp32, 325,532,232
 //!   bytes, sha256 `8fbea51ea711f2af382e88c833d9e288c6dc82ce5e98421ea61c058ce21a34cb`.
-//!   Cached at `<dirs::data_dir()>/airi-qt/models/kokoro/kokoro-v1.0.onnx`.
+//!   Cached at `<dirs::data_dir()>/airi-slint/models/kokoro/kokoro-v1.0.onnx`.
 //!   Override with the `AIRI_QT_KOKORO_MODEL` env var (path to a local `.onnx`;
 //!   no download happens when set).
 //! - **Voice embeddings** — raw little-endian f32 bins, shape
 //!   `(510, 256)` (522,240 bytes), one per voice, from
 //!   `<repo>/resolve/main/voices/<voice>.bin`. Cached at
-//!   `<dirs::data_dir()>/airi-qt/models/kokoro/voices/<voice>.bin`.
+//!   `<dirs::data_dir()>/airi-slint/models/kokoro/voices/<voice>.bin`.
 //!   Override the directory with `AIRI_QT_KOKORO_VOICES_DIR`.
 //!
 //! First-run semantics mirror the Silero VAD lane (`airi-stt::vad`): cache-hit
@@ -123,7 +123,7 @@ impl Default for KokoroConfig {
 fn default_model_dir() -> PathBuf {
     dirs::data_dir()
         .unwrap_or(std::env::temp_dir())
-        .join("airi-qt")
+        .join("airi-slint")
         .join("models")
         .join("kokoro")
 }
@@ -690,7 +690,7 @@ mod tests {
     }
 
     /// Live inference against real weights. Gated behind `KOKORO_TEST_MODEL=1`.
-    /// Requires `~/.local/share/airi-qt/models/kokoro/kokoro-v1.0.onnx` (or
+    /// Requires `~/.local/share/airi-slint/models/kokoro/kokoro-v1.0.onnx` (or
     /// `AIRI_QT_KOKORO_MODEL`) and `voices/af_heart.bin`.
     #[test]
     fn live_synthesize_af_heart() {

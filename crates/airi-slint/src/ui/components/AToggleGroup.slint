@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Exclusive segmented toggle group. Port of qml/components/AToggleGroup.qml.
+// `options` is a model of labels; `current-index` is the selected row (bind
+// it to observe/change the selection); `toggled(index, label)` fires on pick.
+
+import { Theme } from "../Theme.slint";
+import { AButton } from "AButton.slint";
+
+export component AToggleGroup inherits Rectangle {
+    in property <[string]> options;
+    in-out property <int> current-index: 0;
+    callback toggled(int, string);
+
+    preferred-height: 36px;
+
+    row := HorizontalLayout {
+        spacing: Theme.spacing-s;
+        for option[idx] in root.options: AButton {
+            text: option;
+            variant: idx == root.current-index ? accent : default;
+            clicked => {
+                root.current-index = idx;
+                root.toggled(idx, option);
+            }
+        }
+    }
+}

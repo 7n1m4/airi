@@ -11,7 +11,7 @@
 //! # Model sources
 //!
 //! The weights live on Hugging Face and are downloaded on demand into
-//! `dirs::data_dir()/airi-qt/models/laya/`. They are **never committed**.
+//! `dirs::data_dir()/airi-slint/models/laya/`. They are **never committed**.
 //! Laya family (ModernBERT-large, 16 attention heads):
 //!
 //! - `bgoldfarb93/laya-int8` @ `e6c564dc…` — `laya.onnx` (int8, ~633 MB).
@@ -77,7 +77,7 @@ pub struct ModelConfig {
     /// download is treated as truncated.
     pub min_weights_bytes: Option<u64>,
     /// Directory for downloaded models (defaults to
-    /// `dirs::data_dir()/airi-qt/models/laya/`).
+    /// `dirs::data_dir()/airi-slint/models/laya/`).
     pub model_dir: Option<PathBuf>,
 }
 
@@ -102,7 +102,7 @@ impl Default for ModelConfig {
 fn default_model_dir() -> PathBuf {
     dirs::data_dir()
         .unwrap_or(std::env::temp_dir())
-        .join("airi-qt")
+        .join("airi-slint")
         .join("models")
         .join("laya")
 }

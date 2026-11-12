@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Themed horizontal slider. Port of qml/components/ASlider.qml.
+// `value` is in-out and normalized to 0..1; `edited(value)` fires while the
+// handle is dragged. `active-focus` is set by the caller's FocusScope.
+
+import { Theme } from "../Theme.slint";
+
+export component ASlider inherits Rectangle {
+    in-out property <float> value: 0;
+    in property <bool> enabled: true;
+    in property <bool> active-focus: false;
+    callback edited(float);
+
+    in property <bool> hovered: ta.has-hover;
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: MouseCursor.pointer;
+        moved => {
+            root.value = Math.clamp((self.mouse-x - handle.width / 2)
+                / (root.width - handle.width), 0, 1);
+            root.edited(root.value);
+        }
+    }
+
+    preferred-height: 28px;
+    opacity: root.enabled ? 1 : 0.45;
+
+    track := Rectangle {
+        x: handle.width / 2;
+        y: (parent.height - self.height) / 2;
+        width: parent.width - handle.width;
+        height: 4px;
+        border-radius: height / 2;
+        background: Theme.surface-pressed;
+    }
+
+    fill := Rectangle {
+        x: track.x;
+        y: track.y;
+        width: track.width * root.value;
+        height: track.height;
+        border-radius: height / 2;
+        background: Theme.accent;
+    }
+
+    handle := Rectangle {
+        x: track.x + track.width * root.value - self.width / 2;
+        y: (parent.height - self.height) / 2;
+        width: 16px;
+        height: 16px;
+        border-radius: width / 2;
+        background: Theme.accent;
+        border-width: root.active-focus ? 2px : 1px;
+        border-color: root.active-focus ? Theme.accent-hover : Theme.accent-pressed;
+    }
+}

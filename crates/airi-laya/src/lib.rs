@@ -28,7 +28,7 @@
 //! # Model provenance
 //!
 //! Weights live on Hugging Face and are downloaded on demand into
-//! `dirs::data_dir()/airi-qt/models/laya/` (never committed):
+//! `dirs::data_dir()/airi-slint/models/laya/` (never committed):
 //!
 //! - `bgoldfarb93/laya-int8` @ `e6c564dc…` — `laya.onnx` (int8, ~633 MB).
 //! - `onnx-community/laya-ONNX` @ `42e2a6e3…` — `tokenizer.json`, shared.

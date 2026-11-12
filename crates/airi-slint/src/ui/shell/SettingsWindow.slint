@@ -1,0 +1,114 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Settings window chrome: left nav + content stack. Port of
+// qml/shell/SettingsWindow.qml. The 30 nav items mirror the QML navIndex
+// order; the page bodies live in later tracks (the QML content stack is
+// referenced by the same index constants).
+
+import { Theme } from "../Theme.slint";
+import { I18n } from "../I18n.slint";
+import { AListItem } from "../components/AListItem.slint";
+import { ASeparator } from "../components/ASeparator.slint";
+
+export component SettingsWindow inherits Window {
+    title: root.locale == "" ? "AIRI" : I18n.tr(root.locale, "shell.settings.title");
+    preferred-width: 600px;
+    preferred-height: 800px;
+    min-width: 520px;
+    min-height: 560px;
+    // Clamp so embedding in MainWindow (1x1) doesn't force the root bigger.
+    max-width: root.width;
+    max-height: root.height;
+    background: Theme.bg;
+
+    in property <string> locale: "en";
+    in-out property <int> nav-index: 0;
+    callback navigate(int);
+
+    // Nav model: [icon, labelKey, index] triples kept in lockstep with the
+    // QML navIndex order. Repeater reads the label via I18n.
+    out property <[string]> nav-icons: [
+        "🔌", "🎨", "ℹ️", "🎭", "🌀", "🔩", "🖌️", "🧩", "🖊️", "🔊", "👤", "🃏", "🧭", "🗄️",
+        "✨", "📣", "👁️", "🧩", "🔌", "💬", "☁️", "🛠️", "📷", "🤵", "📦", "🧠", "🗣️", "👂",
+        "👁️",
+    ];
+    out property <[string]> nav-keys: [
+        "shell.settings.nav.providers", "shell.settings.nav.theme",
+        "shell.settings.nav.about", "shell.settings.nav.stage",
+        "shell.settings.nav.spine", "shell.settings.nav.mmd",
+        "shell.settings.nav.live2d", "shell.settings.nav.general",
+        "shell.settings.nav.chat", "shell.settings.nav.voice",
+        "shell.settings.nav.profile", "shell.settings.nav.cards",
+        "shell.settings.nav.explore", "shell.settings.nav.data",
+        "shell.settings.nav.onboardingV3", "shell.settings.nav.notice",
+        "shell.settings.nav.fadeOnHover", "shell.settings.nav.widgets",
+        "shell.settings.nav.mcp", "shell.settings.nav.discord",
+        "shell.settings.nav.cloudSync", "shell.settings.nav.pluginHost",
+        "shell.settings.nav.screenCapture", "shell.settings.nav.acpAgents",
+        "shell.settings.nav.modules", "shell.settings.nav.memory",
+        "shell.settings.nav.speech", "shell.settings.nav.hearing",
+        "shell.settings.nav.awareness",
+    ];
+
+    HorizontalLayout {
+        spacing: 0;
+
+        // Left navigation.
+        Rectangle {
+            preferred-width: 180px;
+            background: Theme.surface;
+            nav-col := VerticalLayout {
+                x: Theme.spacing-s;
+                y: Theme.spacing-s;
+                width: parent.width - 2 * Theme.spacing-s;
+                height: parent.height - 2 * Theme.spacing-s;
+                spacing: Theme.spacing-s;
+
+                Text {
+                    text: I18n.tr(root.locale, "settings.settings.title");
+                    color: Theme.text-secondary;
+                    font-size: 15px;
+                    font-weight: 700;
+                }
+
+                for idx in root.nav-icons.length: AListItem {
+                    icon: root.nav-icons[idx];
+                    title: I18n.tr(root.locale, root.nav-keys[idx]);
+                    active: root.nav-index == idx
+                        || (idx == 11 && root.nav-index == 12);
+                    clicked => {
+                        root.nav-index = idx;
+                        root.navigate(idx);
+                    }
+                }
+
+                Rectangle { vertical-stretch: 1; }
+            }
+        }
+
+        ASeparator { orientation: "vertical"; }
+
+        // Content stack (bodies land in later tracks; this slice shows a
+        // placeholder for the selected nav key).
+        Rectangle {
+            horizontal-stretch: 1;
+            background: Theme.bg;
+            VerticalLayout {
+                alignment: center;
+                Text {
+                    text: I18n.tr(root.locale, "shell.settings.nav.about");
+                    color: Theme.text-primary;
+                    font-size: 18px;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: I18n.tr(root.locale, "shell.about.tagline");
+                    color: Theme.text-secondary;
+                    font-size: 13px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+}

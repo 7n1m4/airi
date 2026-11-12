@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Themed switch (toggle). Port of qml/components/ASwitch.qml.
+// `checked` is in-out: bind it on the caller side to react to changes and to
+// drive it from Rust. `toggled` fires after every user flip.
+
+import { Theme } from "../Theme.slint";
+
+export component ASwitch inherits Rectangle {
+    in-out property <bool> checked;
+    in property <string> text;
+    in property <bool> enabled: true;
+    callback toggled(bool);
+
+    in property <bool> hovered: ta.has-hover;
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: MouseCursor.pointer;
+        clicked => { root.checked = !root.checked; root.toggled(root.checked); }
+    }
+
+    preferred-height: 24px;
+    opacity: root.enabled ? 1 : 0.45;
+
+    track := Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: 20px;
+        width: 36px;
+        border-radius: height / 2;
+        background: root.checked ? Theme.accent : Theme.surface-pressed;
+        border-width: 1px;
+        border-color: root.checked ? Theme.accent : Theme.border;
+        animate background { duration: 120ms; }
+
+        knob := Rectangle {
+            x: root.checked ? parent.width - self.width - 2px : 2px;
+            y: 2px;
+            width: parent.height - 4px;
+            height: parent.height - 4px;
+            border-radius: height / 2;
+            background: root.checked ? Theme.accent-contrast : Theme.text-secondary;
+            animate x { duration: 120ms; }
+        }
+    }
+
+    label := Text {
+        visible: root.text != "";
+        x: track.x + track.width + Theme.spacing-s;
+        y: (parent.height - self.height) / 2;
+        text: root.text;
+        color: Theme.text-primary;
+        font-size: Theme.font-body;
+        vertical-alignment: center;
+    }
+}

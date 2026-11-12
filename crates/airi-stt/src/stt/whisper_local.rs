@@ -8,7 +8,7 @@
 //! - The model file (`.bin` / ggml format) is **never committed**. On first
 //!   use, [`ensure_model`] downloads the default model — `ggml-base.en.bin`
 //!   (~148 MB, English-only) — from the ggerganov/whisper.cpp Hugging Face
-//!   repo into the platform data dir (`<data_dir>/airi-qt/models/`).
+//!   repo into the platform data dir (`<data_dir>/airi-slint/models/`).
 //!   `base.en` is the chosen default because it is the smallest model with
 //!   usable English accuracy (~3× real-time on a modern laptop CPU, ~200 MB
 //!   RAM); `small`/`medium` are better but 3–10× heavier. Override with the
@@ -44,7 +44,7 @@ use super::{SttClient, SttError, SttRequest};
 pub const WHISPER_MODEL_URL: &str =
     "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin";
 /// Path relative to the platform data dir where the model is cached.
-pub const WHISPER_MODEL_REL_PATH: &str = "airi-qt/models/ggml-base.en.bin";
+pub const WHISPER_MODEL_REL_PATH: &str = "airi-slint/models/ggml-base.en.bin";
 /// Env var overriding the model path (any ggml `.bin` / `.gguf`).
 pub const WHISPER_MODEL_ENV: &str = "AIRI_QT_WHISPER_MODEL";
 /// Env var disabling the download path entirely.
@@ -85,7 +85,7 @@ pub enum WhisperModelError {
 // ---------------------------------------------------------------------------
 
 /// Path of the cached default model inside the platform data dir
-/// (`<data_dir>/airi-qt/models/ggml-base.en.bin`).
+/// (`<data_dir>/airi-slint/models/ggml-base.en.bin`).
 pub fn model_path() -> Result<PathBuf, WhisperModelError> {
     Ok(dirs::data_dir()
         .ok_or(WhisperModelError::NoDataDir)?

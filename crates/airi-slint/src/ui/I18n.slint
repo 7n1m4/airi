@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// I18n singleton: Slint entry point for translations. Mirrors qml/I18n.qml.
+// The Rust i18n bridge seeds `locale` at startup and implements `tr`/`cycle-
+// locale`/`set-locale` via callbacks (the bridge reads the current locale and
+// returns the translated string). Bindings that call `I18n.tr(...)` re-render
+// when `locale` changes because `tr` reads `root.locale`.
+
+export global I18n {
+    in-out property <string> locale: "en";
+    out property <[string]> cycle-locales: ["en", "es", "fr", "ja", "zh-Hans"];
+
+    // Translate `key` for the current locale (falls back to English/key).
+    // Implemented on the Rust side; the Slint binding only needs to depend on
+    // `root.locale` so it re-evaluates when the language changes.
+    pure callback tr(string, string) -> string;
+
+    // Advance to the next supported UI language and persist the choice.
+    callback cycle-locale();
+
+    // Set a specific locale and persist it.
+    callback set-locale(string);
+}

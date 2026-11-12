@@ -5,7 +5,7 @@
 //! single JSON object (one line) to `<dir>/panic-<millis>-<pid>.log` before
 //! chaining to the previously registered hook (so default stderr reporting is
 //! preserved). The log directory defaults to the platform data dir
-//! (`dirs::data_dir()/airi-qt/logs`).
+//! (`dirs::data_dir()/airi-slint/logs`).
 //!
 //! **Limitations (documented):**
 //!
@@ -52,13 +52,13 @@ impl PanicLogConfig {
         }
     }
 
-    /// Default log directory: `<dirs::data_dir()>/airi-qt/logs`, falling
+    /// Default log directory: `<dirs::data_dir()>/airi-slint/logs`, falling
     /// back to the temp dir when the platform data dir cannot be determined.
     #[must_use]
     pub fn default_dir() -> PathBuf {
         dirs::data_dir()
             .unwrap_or_else(std::env::temp_dir)
-            .join("airi-qt")
+            .join("airi-slint")
             .join("logs")
     }
 }

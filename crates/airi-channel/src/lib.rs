@@ -11,7 +11,7 @@
 //! 2. Speaks just enough WebSocket (text frames, close, ping/pong) for a
 //!    gateway — no TLS, no extensions, no subprotocols.
 //! 3. Requires the client's **first message to authenticate** with the
-//!    `authToken` from `<data>/airi-qt/server-channel/config.json`.
+//!    `authToken` from `<data>/airi-slint/server-channel/config.json`.
 //!    Unauthenticated peers receive nothing else and are closed with 1008.
 //! 4. After auth: `ping` → `pong` (plus the server-runtime
 //!    `transport:connection:heartbeat` mirror), and a typed `rpc` dispatch

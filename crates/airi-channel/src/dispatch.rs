@@ -22,7 +22,7 @@
 //! | Method             | Result `data` shape                                                              | Notes |
 //! |--------------------|----------------------------------------------------------------------------------|-------|
 //! | `runtime.ping`     | `{ "pong": true, "time": <unix secs>, "uptimeSeconds": <secs> }`                 | Liveness probe |
-//! | `runtime.status`   | `{ "app": "airi-qt", "version": <CARGO_PKG_VERSION>, "pid": <u32>, … }`           | Build/process info |
+//! | `runtime.status`   | `{ "app": "airi-slint", "version": <CARGO_PKG_VERSION>, "pid": <u32>, … }`           | Build/process info |
 //! | `gateway.config`   | `{ "hostname": <str>, "port": <number> }`                                        | **Never** includes `authToken` |
 //! | `gateway.auth`     | `{ "authenticated": true, "sessionStartedMs": <ms> }`                            | Relies on the prior handshake |
 //! | `renderer.*`       | handler-defined | Embedder-registered read-only handlers; unregistered methods are `rpc_not_implemented` |
@@ -71,7 +71,7 @@ use serde_json::{Map, Value};
 pub const PROTOCOL: &str = "airi-channel/1";
 
 /// Application name reported by `runtime.status`.
-pub const APP_NAME: &str = "airi-qt";
+pub const APP_NAME: &str = "airi-slint";
 
 /// A JSON payload as it arrived on the wire (or an empty object when absent).
 pub type Payload = Value;
@@ -429,7 +429,7 @@ mod tests {
     #[test]
     fn runtime_status_shape() {
         let out = dispatch_no_renderers(&ctx(), "runtime.status", &json!({})).unwrap();
-        assert_eq!(out["app"], json!("airi-qt"));
+        assert_eq!(out["app"], json!("airi-slint"));
         assert_eq!(out["version"], json!(env!("CARGO_PKG_VERSION")));
         assert!(out["pid"].as_u64().unwrap() > 0);
         assert!(out["uptimeSeconds"].as_u64().is_some());

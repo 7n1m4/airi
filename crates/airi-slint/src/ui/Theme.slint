@@ -1,0 +1,43 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Theme singleton: design tokens (colors, radii, spacing, typography) as a
+// single source of truth. Kept as `in`/`in-out` properties so the Rust theme
+// bridge can push persisted settings in and UI can react.
+
+export global Theme {
+    // --- Core palette -----------------------------------------------------
+    in-out property <color> bg: #0f1115;
+    in-out property <color> surface: #171a22;
+    in-out property <color> surface-hover: #1f2330;
+    in-out property <color> surface-pressed: #252a3a;
+    in-out property <color> border: #2a3040;
+
+    // --- Text -------------------------------------------------------------
+    in-out property <color> text-primary: #f2f4f8;
+    in-out property <color> text-secondary: #a4adbb;
+
+    // --- Accent (computed from hue/chroma/dark) ---------------------------
+    in-out property <color> accent: #3b82f6;
+    in-out property <color> accent-hover: #60a5fa;
+    in-out property <color> accent-pressed: #2563eb;
+    in-out property <color> accent-contrast: #ffffff;
+
+    // --- Semantic ---------------------------------------------------------
+    in-out property <color> success: #22c55e;
+    in-out property <color> warning: #f59e0b;
+    in-out property <color> error: #ef4444;
+    in-out property <color> info: #06b6d4;
+
+    // --- Radii / spacing / typography -------------------------------------
+    in-out property <length> radius-s: 6px;
+    in-out property <length> radius-m: 8px;
+    in-out property <length> radius-l: 12px;
+    in-out property <length> spacing-s: 4px;
+    in-out property <length> spacing-m: 8px;
+    in-out property <length> spacing-l: 16px;
+    in-out property <length> font-body: 13px;
+    in-out property <length> font-title: 20px;
+
+    // --- Misc -------------------------------------------------------------
+    in-out property <bool> dark: true;
+}

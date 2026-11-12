@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Centered empty-state placeholder. Port of qml/components/AEmptyState.qml.
+// Shows a large icon, a bold title and an optional subtitle; the action row
+// is a default-slot child area placed under the text (centered). Slint has no
+// `anchors.centerIn` on an implicit-sized Column inside an Item, so the
+// content is a VerticalLayout with center alignment and a flexible spacer.
+
+import { Theme } from "../Theme.slint";
+
+export component AEmptyState inherits Rectangle {
+    in property <string> icon: "✦";
+    in property <string> title;
+    in property <string> subtitle;
+
+    content := VerticalLayout {
+        alignment: center;
+        spacing: Theme.spacing-s;
+        width: min(parent.width, 380px);
+        x: (parent.width - self.width) / 2;
+
+        icon-label := Text {
+            text: root.icon;
+            font-size: 44px;
+            horizontal-alignment: center;
+        }
+        title-label := Text {
+            text: root.title;
+            color: Theme.text-primary;
+            font-size: 18px;
+            font-weight: 700;
+            horizontal-alignment: center;
+        }
+        subtitle-label := Text {
+            visible: root.subtitle != "";
+            text: root.subtitle;
+            color: Theme.text-secondary;
+            font-size: 13px;
+            horizontal-alignment: center;
+        }
+        // Action slot: callers drop centered buttons here.
+        HorizontalLayout {
+            alignment: center;
+            spacing: Theme.spacing-s;
+            @children
+        }
+    }
+}

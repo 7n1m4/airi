@@ -4,7 +4,7 @@
 //!
 //! [`ModelBundle::open`] reads a `.zip` archive, locates the entries it
 //! knows, and extracts them into an app-wide cache under
-//! `<platform-data>/airi-qt/model-cache/<slug>-<hash>/`.
+//! `<platform-data>/airi-slint/model-cache/<slug>-<hash>/`.
 //!
 //! The cache always lives in the platform data directory. It is an app
 //! cache, not profile state: `--profile` is intentionally NOT honored here.
@@ -427,7 +427,7 @@ fn hex_sha256(bytes: &[u8]) -> String {
     out
 }
 
-/// `<platform-data>/airi-qt/model-cache`. Not profile-scoped on purpose: the
+/// `<platform-data>/airi-slint/model-cache`. Not profile-scoped on purpose: the
 /// extraction cache is app state, not user state.
 ///
 /// The cache always lives in the platform data directory and never honors
@@ -435,7 +435,7 @@ fn hex_sha256(bytes: &[u8]) -> String {
 /// archive hash.
 pub fn model_cache_root() -> anyhow::Result<PathBuf> {
     let base = dirs::data_dir().context("failed to resolve platform data directory")?;
-    Ok(base.join("airi-qt").join("model-cache"))
+    Ok(base.join("airi-slint").join("model-cache"))
 }
 
 #[cfg(test)]
