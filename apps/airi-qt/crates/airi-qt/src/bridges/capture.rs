@@ -60,13 +60,36 @@ fn system_time_millis(time: SystemTime) -> u64 {
         .unwrap_or(0)
 }
 
+/// List the capture entries directly inside `dir`, newest first. A missing
+/// directory is an empty list (nothing has been captured yet); an unreadable
+/// entry or a non-UTF-8 file name is skipped, never fatal.
+fn list_capture_entries(dir: &std::path::Path) -> Vec<serde_json::Value> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut items: Vec<(u64, serde_json::Value)> = entries
+        .flatten()
+        .filter_map(|entry| capture_entry(dir, &entry))
+        .collect();
+    items.sort_by(|a, b| {
+        b.0.cmp(&a.0).then_with(|| {
+            // Stable, deterministic order for identical mtimes.
+            a.1["fileName"].as_str().cmp(&b.1["fileName"].as_str())
+        })
+    });
+    items.into_iter().map(|(_, value)| value).collect()
+}
+
 /// One capture entry for the JSON list, or `None` when the entry must be
-/// skipped (unreadable metadata, not a regular file, not a capture name).
+/// skipped (unreadable metadata, not a regular file, a file name that is not
+/// valid UTF-8, or not a capture name).
 fn capture_entry(
     dir: &std::path::Path,
     entry: &std::fs::DirEntry,
 ) -> Option<(u64, serde_json::Value)> {
-    let name = entry.file_name().to_str()?.to_string();
+    // `to_str` on a `read_dir` name is the only place a hostile entry name
+    // could turn this scan into a panic — skip instead.
+    let name = entry.file_name().into_string().ok()?;
     if !is_capture_file(&name) {
         return None;
     }
@@ -91,6 +114,52 @@ fn capture_entry(
     ))
 }
 
+/// Delete every `capture-<digits>.png` regular file directly inside `dir`,
+/// returning the count and the first failure (a missing directory is neither:
+/// nothing to delete). Files that do not match the pattern — and anything not a
+/// direct regular child — are left untouched.
+fn clear_capture_files(dir: &std::path::Path) -> (i32, Option<String>) {
+    let mut deleted: i32 = 0;
+    let mut failure: Option<String> = None;
+    match std::fs::read_dir(dir) {
+        Ok(entries) => {
+            for entry in entries.flatten() {
+                // NOTICE: `to_string_lossy` would fabricate a name for a
+                // non-UTF-8 entry and let it match the pattern; such an entry is
+                // not one of ours, so skip it like the listing does.
+                let name = match entry.file_name().into_string() {
+                    Ok(name) => name,
+                    Err(_) => continue,
+                };
+                if !is_capture_file(&name) {
+                    continue;
+                }
+                let metadata = match std::fs::symlink_metadata(entry.path()) {
+                    Ok(metadata) => metadata,
+                    Err(e) => {
+                        failure = Some(format!("failed to stat {name}: {e}"));
+                        continue;
+                    }
+                };
+                // Regular files only — symlinks are never followed or removed.
+                if !metadata.is_file() {
+                    continue;
+                }
+                match std::fs::remove_file(entry.path()) {
+                    Ok(()) => deleted += 1,
+                    Err(e) => failure = Some(format!("failed to delete {name}: {e}")),
+                }
+            }
+        }
+        Err(e) => {
+            if e.kind() != std::io::ErrorKind::NotFound {
+                failure = Some(format!("failed to read {}: {e}", dir.display()));
+            }
+        }
+    }
+    (deleted, failure)
+}
+
 // ── Portal (XDG desktop portal) screenshot path ───────────────────────
 //
 // The sanctioned way to grab the screen on Wayland: the
@@ -113,6 +182,43 @@ const PORTAL_SCREENSHOT_IFACE: &str = "org.freedesktop.portal.Screenshot";
 const PORTAL_REQUEST_IFACE: &str = "org.freedesktop.portal.Request";
 /// Bounded timeout for D-Bus calls in the probe and the portal roundtrip.
 const PORTAL_DBUS_TIMEOUT: Duration = Duration::from_millis(800);
+/// Is `msg` the `org.freedesktop.portal.Request::Response` signal for *our*
+/// request — same object path the `Screenshot` call returned? The rule already
+/// pins the type, interface and member; everything else on this private
+/// connection (method returns, unrelated signals) is dropped.
+fn is_portal_response(
+    msg: &dbus::Message,
+    rule: &dbus::message::MatchRule<'_>,
+    response_path: &dbus::strings::Path<'_>,
+) -> bool {
+    rule.matches(msg) && msg.path().as_deref() == Some(&**response_path)
+}
+
+/// One wait-loop iteration for the portal `Response`: block up to the `tick`
+/// read, then pop every message the queue holds and push each one through
+/// `deliver`, stopping at the first one it claims. Returns `true` when `deliver`
+/// claimed a message. `pop` is the channel's `pop_message` at the call site.
+///
+/// NOTICE: `dbus::blocking::Connection::process` reads with
+/// `dbus_connection_read_write` (fill the incoming queue, never dispatch) and
+/// pops at most one message, so the `org.freedesktop.portal.Request::Response`
+/// signal could sit in the queue until the deadline and every consent-accepted
+/// capture timed out. `tick` only moves bytes off the socket; this pops and
+/// routes every queued message itself, which is what the blocking API omits.
+fn portal_response_tick(
+    tick: impl FnOnce() -> Result<(), dbus::Error>,
+    mut pop: impl FnMut() -> Option<dbus::Message>,
+    mut deliver: impl FnMut(&dbus::Message) -> bool,
+) -> Result<bool, String> {
+    tick().map_err(|e| format!("portal bus error: {e}"))?;
+    while let Some(msg) = pop() {
+        if deliver(&msg) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 /// How long the worker waits for the user's consent dialog before cancelling.
 const PORTAL_RESPONSE_DEADLINE: Duration = Duration::from_secs(8);
 
@@ -377,13 +483,15 @@ fn drain_portal_outcome(shared: &mut PortalShared) -> Option<Result<String, Stri
 /// 2. `handle_token` option (a valid object-path element) is passed so the
 ///    request path is predictable; we subscribe to `Response` *before* the
 ///    call, which is the race avoidance the `org.freedesktop.portal.Request`
-///    docs recommend. Subscription has no path filter: this connection is
-///    private to this capture, so any `Response` signal on it is ours.
+///    docs recommend. The subscription itself has no path filter — this
+///    connection is private to this capture — but the wait loop below only
+///    claims the signal whose path is the one `Screenshot` returned.
 /// 3. `Screenshot(parent_window: "", options: a{sv} {handle_token})`.
 ///    Empty `parent_window` is valid; the reply carries the request path `o`.
 /// 4. Wait for `org.freedesktop.portal.Request::Response(response: u,
-///    results: a{sv})` for up to 8 s; timeout → best-effort `Close` on the
-///    request path and an honest error.
+///    results: a{sv})` on *our* request path for up to 8 s, draining the
+///    incoming queue by hand (`portal_response_tick`); timeout → best-effort
+///    `Close` on the request path and an honest error.
 /// 5. `response == 0` → take `uri` (`s`), convert to a path, move the file
 ///    into the captures directory as `capture-<epoch_ms>.png` (bumping the
 ///    ms on collision). `response == 1` → cancelled; `>= 2` → failed.
@@ -409,24 +517,17 @@ fn portal_screenshot_run(dir: &std::path::Path) -> Result<String, String> {
         .replace('.', "_");
     let expected_path = format!("/org/freedesktop/portal/desktop/request/{sender}/{token}");
 
-    // Subscribe before the call so the Response can never slip past us.
+    // Subscribe before the call so the Response can never slip past us. The
+    // callback never fires on its own: `portal_response_tick` pops the queued
+    // signal and routes it by hand, since the blocking `Connection` exposes no
+    // dispatching read.
     let slot: Arc<Mutex<Option<(u32, PropMap)>>> = Arc::new(Mutex::new(None));
-    let slot_cb = Arc::clone(&slot);
-    let subscribe = conn.add_match(
-        MatchRule::new_signal(PORTAL_REQUEST_IFACE, "Response"),
-        move |(response, results): (u32, PropMap), _c: &Connection, _m: &dbus::Message| {
-            let mut guard = slot_cb.lock().unwrap_or_else(|e| e.into_inner());
-            if guard.is_none() {
-                *guard = Some((response, results));
-            }
-            false // one-shot: auto-remove this subscription
-        },
-    );
+    let response_rule = MatchRule::new_signal(PORTAL_REQUEST_IFACE, "Response");
+    let subscribe = conn.add_match_no_cb(&response_rule.match_str());
     // If we cannot even subscribe, there is no point calling the portal.
     if let Err(e) = subscribe {
         return Err(format!("portal: could not subscribe to Response: {e}"));
     }
-
     let proxy = conn.with_proxy(PORTAL_DESTINATION, PORTAL_PATH, PORTAL_DBUS_TIMEOUT);
     let mut options: HashMap<String, Variant<Box<dyn RefArg>>> = HashMap::new();
     options.insert(
@@ -438,20 +539,37 @@ fn portal_screenshot_run(dir: &std::path::Path) -> Result<String, String> {
         .map_err(|e| format!("portal Screenshot call failed: {e}"))?;
     let handle_path = handle.to_string();
     if handle_path != expected_path {
-        // Odd but legitimate (old portals); our subscription has no path
-        // filter, so the Response still reaches us either way.
+        // Odd but legitimate (old portals); the wait below claims the signal
+        // for whatever path `Screenshot` actually returned.
         eprintln!(
             "[airi-qt][capture] portal returned handle {handle_path} (expected {expected_path})"
         );
     }
 
+    // NOTICE: the blocking `Connection` has no dispatching read, so the wait
+    // below reads bytes and routes each queued message by hand.
+    let channel = conn.channel();
+    let response_path = dbus::strings::Path::new(handle_path.as_str())
+        .map_err(|e| format!("portal returned an invalid request path: {e}"))?;
+    let slot_deliver = Arc::clone(&slot);
+    let deliver = move |msg: &dbus::Message| {
+        if !is_portal_response(msg, &response_rule, &response_path) {
+            return false;
+        }
+        let mut args = msg.iter_init();
+        if let (Ok(response), Ok(results)) = (args.read::<u32>(), args.read::<PropMap>()) {
+            let mut guard = slot_deliver.lock().unwrap_or_else(|e| e.into_inner());
+            if guard.is_none() {
+                *guard = Some((response, results));
+            }
+            return true;
+        }
+        false
+    };
+
     let deadline = std::time::Instant::now() + PORTAL_RESPONSE_DEADLINE;
     loop {
-        let got = {
-            let guard = slot.lock().unwrap_or_else(|e| e.into_inner());
-            guard.is_some()
-        };
-        if got {
+        if slot.lock().unwrap_or_else(|e| e.into_inner()).is_some() {
             break;
         }
         if std::time::Instant::now() >= deadline {
@@ -468,8 +586,19 @@ fn portal_screenshot_run(dir: &std::path::Path) -> Result<String, String> {
                     .to_string(),
             );
         }
-        conn.process(Duration::from_millis(100))
-            .map_err(|e| format!("portal bus error: {e}"))?;
+        // Queue bytes off the socket; the tick never outlives the deadline.
+        if portal_response_tick(
+            || {
+                let left = deadline.saturating_duration_since(std::time::Instant::now());
+                channel
+                    .read_write(Some(left.min(Duration::from_millis(100))))
+                    .map_err(|_| dbus::Error::new_failed("disconnected from D-Bus"))
+            },
+            || channel.pop_message(),
+            |msg| deliver(msg),
+        )? {
+            break;
+        }
     }
 
     let (response, results) = slot
@@ -518,19 +647,10 @@ fn scan_captures() -> Result<Vec<serde_json::Value>, String> {
     if !dir.exists() {
         return Ok(Vec::new());
     }
-    let entries =
-        std::fs::read_dir(&dir).map_err(|e| format!("failed to read {}: {e}", dir.display()))?;
-    let mut items: Vec<(u64, serde_json::Value)> = entries
-        .flatten()
-        .filter_map(|entry| capture_entry(&dir, &entry))
-        .collect();
-    items.sort_by(|a, b| {
-        b.0.cmp(&a.0).then_with(|| {
-            // Stable, deterministic order for identical mtimes.
-            a.1["fileName"].as_str().cmp(&b.1["fileName"].as_str())
-        })
-    });
-    Ok(items.into_iter().map(|(_, value)| value).collect())
+    if let Err(e) = std::fs::read_dir(&dir) {
+        return Err(format!("failed to read {}: {e}", dir.display()));
+    }
+    Ok(list_capture_entries(&dir))
 }
 
 /// cxx-qt bridge definitions for the capture bridge.
@@ -844,38 +964,7 @@ impl qobject::CaptureController {
                 .set_error("could not resolve a captures directory".into());
             return 0;
         };
-        let mut deleted: i32 = 0;
-        let mut failure: Option<String> = None;
-        match std::fs::read_dir(&dir) {
-            Ok(entries) => {
-                for entry in entries.flatten() {
-                    let name = entry.file_name().to_string_lossy().into_owned();
-                    if !is_capture_file(&name) {
-                        continue;
-                    }
-                    let metadata = match std::fs::symlink_metadata(entry.path()) {
-                        Ok(metadata) => metadata,
-                        Err(e) => {
-                            failure = Some(format!("failed to stat {name}: {e}"));
-                            continue;
-                        }
-                    };
-                    // Regular files only — symlinks are never followed or removed.
-                    if !metadata.is_file() {
-                        continue;
-                    }
-                    match std::fs::remove_file(entry.path()) {
-                        Ok(()) => deleted += 1,
-                        Err(e) => failure = Some(format!("failed to delete {name}: {e}")),
-                    }
-                }
-            }
-            Err(e) => {
-                if e.kind() != std::io::ErrorKind::NotFound {
-                    failure = Some(format!("failed to read {}: {e}", dir.display()));
-                }
-            }
-        }
+        let (deleted, failure) = clear_capture_files(&dir);
         self.as_mut().refresh_impl();
         if let Some(failure) = failure {
             self.as_mut().set_error(failure);
@@ -887,6 +976,220 @@ impl qobject::CaptureController {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dbus::arg::{PropMap, RefArg, Variant};
+    use std::collections::HashMap;
+
+    /// A `read_dir` name that is not valid UTF-8 must be skipped, not panic:
+    /// the shim only ever writes ASCII `capture-<digits>.png`, so any such
+    /// entry is a foreign file (or a hostile one) and the scan moves on.
+    #[test]
+    fn capture_listing_skips_non_utf8_entry_names() {
+        use std::ffi::OsStr;
+        #[cfg(unix)]
+        use std::os::unix::ffi::OsStrExt;
+
+        let unique = format!(
+            "airi-qt-capture-nonutf8-{}-{}",
+            std::process::id(),
+            system_time_millis(SystemTime::now())
+        );
+        let dir = std::env::temp_dir().join(unique);
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        let first = dir.join("capture-1700000000001.png");
+        let second = dir.join("capture-1700000000002.png");
+        std::fs::write(&first, b"a").unwrap();
+        std::fs::write(&second, b"bb").unwrap();
+        // Force distinct mtimes: `createdMs` is millisecond-truncated, so two
+        // back-to-back writes can tie and fall back to the name tiebreak,
+        // which sorts ascending — the opposite of the newest-first order.
+        set_mtime_ms(&first, 1_700_000_000_000);
+        set_mtime_ms(&second, 1_700_000_000_001);
+        #[cfg(unix)]
+        {
+            let bad = dir.join(OsStr::from_bytes(b"capture-\xFF\xFE.png"));
+            std::fs::write(&bad, b"hostile").unwrap();
+            assert!(bad.file_name().unwrap().to_str().is_none());
+        }
+
+        let listed = list_capture_entries(&dir);
+        let names: Vec<&str> = listed
+            .iter()
+            .map(|item| item["fileName"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            names,
+            ["capture-1700000000002.png", "capture-1700000000001.png"]
+        );
+        // The foreign entry survives the listing untouched: the scan only reads.
+        let survivors: Vec<PathBuf> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|entry| entry.path())
+            .collect();
+        assert_eq!(survivors.len(), 3);
+
+        // clearCaptures deletes exactly the two captures and leaves the rest.
+        let (deleted, failure) = clear_capture_files(&dir);
+        assert_eq!(deleted, 2);
+        assert_eq!(failure, None);
+        let survivors: Vec<PathBuf> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|entry| entry.path())
+            .collect();
+        assert_eq!(survivors.len(), 1);
+        #[cfg(unix)]
+        assert_eq!(
+            survivors[0].file_name().unwrap(),
+            OsStr::from_bytes(b"capture-\xFF\xFE.png")
+        );
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// Set `path`'s mtime to `ms` since the epoch. `File::set_modified` needs
+    /// only std, unlike the `filetime` crate the workspace does not depend on.
+    fn set_mtime_ms(path: &std::path::Path, ms: u64) {
+        let file = std::fs::File::options().write(true).open(path).unwrap();
+        file.set_modified(UNIX_EPOCH + Duration::from_millis(ms))
+            .unwrap();
+    }
+
+    /// A `Response` signal on the handle path the portal handed back, wrapped in
+    /// the `u32` + `a{sv}` body the roundtrip reads.
+    fn portal_response_signal(path: &str) -> dbus::Message {
+        let mut results: PropMap = HashMap::new();
+        results.insert(
+            "uri".to_string(),
+            Variant(Box::new("file:///tmp/capture-1.png".to_string()) as Box<dyn RefArg>),
+        );
+        dbus::Message::new_signal(path, PORTAL_REQUEST_IFACE, "Response")
+            .unwrap()
+            .append2(0u32, results)
+    }
+
+    /// The exact `MatchRule` and path the roundtrip claims against.
+    fn response_match() -> (
+        dbus::message::MatchRule<'static>,
+        dbus::strings::Path<'static>,
+    ) {
+        (
+            dbus::message::MatchRule::new_signal(PORTAL_REQUEST_IFACE, "Response"),
+            dbus::strings::Path::new("/org/freedesktop/portal/desktop/request/1_2/airi").unwrap(),
+        )
+    }
+
+    #[test]
+    fn response_predicate_accepts_only_our_response() {
+        use dbus::arg::prop_cast;
+
+        let (rule, path) = response_match();
+        let ours = portal_response_signal(&path);
+        assert!(is_portal_response(&ours, &rule, &path));
+        // The body is the documented (response, results) pair.
+        let mut args = ours.iter_init();
+        let (response, results) = (args.read::<u32>().unwrap(), args.read::<PropMap>().unwrap());
+        assert_eq!(response, 0);
+        assert_eq!(
+            prop_cast::<String>(&results, "uri").map(String::as_str),
+            Some("file:///tmp/capture-1.png")
+        );
+
+        // A different request path on the same interface is not ours.
+        let other_path = dbus::strings::Path::new(
+            "/org/freedesktop/portal/desktop/request/9_9/some_other_token",
+        )
+        .unwrap();
+        assert!(!is_portal_response(
+            &portal_response_signal(&other_path),
+            &rule,
+            &path
+        ));
+        // The portal's method returns and unrelated signals are dropped too.
+        let method_return = dbus::Message::new_method_call(
+            "org.freedesktop.DBus",
+            "/org/freedesktop/DBus",
+            "org.freedesktop.DBus",
+            "NameHasOwner",
+        )
+        .unwrap();
+        assert!(!is_portal_response(&method_return, &rule, &path));
+        let name_acquired = dbus::Message::new_signal(
+            "/org/freedesktop/DBus",
+            "org.freedesktop.DBus",
+            "NameAcquired",
+        )
+        .unwrap();
+        assert!(!is_portal_response(&name_acquired, &rule, &path));
+    }
+
+    #[test]
+    fn response_tick_drains_queue_until_a_message_is_claimed() {
+        use std::collections::VecDeque;
+
+        let (rule, path) = response_match();
+        // A FIFO queue models the connection's incoming queue: the foreign
+        // signal is delivered first, then ours.
+        let mut queue: VecDeque<_> = [
+            portal_response_signal("/org/freedesktop/portal/desktop/request/x/y"),
+            portal_response_signal(&path),
+        ]
+        .into();
+        let mut delivered = Vec::new();
+
+        let claimed = portal_response_tick(
+            || Ok(()),
+            || queue.pop_front(),
+            |msg| {
+                delivered.push(msg.path().unwrap().to_string());
+                is_portal_response(msg, &rule, &path)
+            },
+        )
+        .unwrap();
+
+        assert!(claimed);
+        // Draining stops at the claimed message: anything behind it stays queued.
+        let foreign = "/org/freedesktop/portal/desktop/request/x/y".to_string();
+        assert_eq!(delivered, [foreign, path.to_string()]);
+        assert!(queue.is_empty());
+    }
+
+    #[test]
+    fn response_tick_keeps_waiting_when_queue_holds_no_response() {
+        use std::collections::VecDeque;
+
+        let mut queue: VecDeque<_> = [portal_response_signal(
+            "/org/freedesktop/portal/desktop/request/x/y",
+        )]
+        .into();
+        let mut pops = 0;
+
+        let claimed = portal_response_tick(
+            || Ok(()),
+            || {
+                pops += 1;
+                queue.pop_front()
+            },
+            |_| false,
+        )
+        .unwrap();
+
+        assert!(!claimed);
+        assert_eq!(pops, 2); // one per queued message, plus the empty pop
+    }
+
+    #[test]
+    fn response_tick_surfaces_bus_read_failure() {
+        let error = portal_response_tick(
+            || Err(dbus::Error::new_failed("disconnected from D-Bus")),
+            || None,
+            |_| true,
+        );
+        assert_eq!(
+            error.unwrap_err(),
+            "portal bus error: disconnected from D-Bus"
+        );
+    }
 
     #[test]
     fn uri_to_path_converts_plain_file_uri() {

@@ -174,6 +174,183 @@ fn verify_snapshot_detects_corruption() {
     }
 }
 
+/// A big file so `fs::copy` takes a while, and a churn thread that rewrites the
+/// source to a different length mid-copy.
+const TOCTOU_BYTES: usize = 64 * 1024 * 1024;
+/// Replacement length the churn thread writes over the source.
+const TOCTOU_REPLACEMENT: usize = 1024;
+
+/// A file rewritten while it is copied must never produce a snapshot whose
+/// archived bytes disagree with its manifest hash.
+///
+/// The pre-fix code hashed the *source* before copying it, so a source that
+/// changed between hash and copy shipped bytes the manifest did not describe —
+/// [`verify_snapshot`] then reported the snapshot corrupt. The fixed order
+/// (copy first, hash the copy) cannot disagree: whatever the copy caught, the
+/// manifest describes exactly those bytes. A source that moves while the copy
+/// is in flight is copied once more and, if it is still moving, recorded in
+/// `manifest.skipped` rather than archived torn.
+#[test]
+fn create_snapshot_never_archives_bytes_that_disagree_with_the_manifest() {
+    let source = TempDir::new().unwrap();
+    write_file(source.path(), "growing.bin", &vec![b'x'; TOCTOU_BYTES]);
+    let dest_root = TempDir::new().unwrap();
+
+    let churn = std::thread::spawn({
+        let path = source.path().join("growing.bin");
+        move || {
+            let replacement = vec![b'y'; TOCTOU_REPLACEMENT];
+            // Rewriting is the whole point; give up rather than spin forever
+            // if the copy finished before the thread ever got scheduled.
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+            while std::time::Instant::now() < deadline && fs::write(&path, &replacement).is_ok() {}
+        }
+    });
+
+    let manifest = match create_snapshot(source.path(), dest_root.path(), None) {
+        Ok(m) => m,
+        // The churn thread won the race: the source was already replaced before
+        // the snapshot started, so there was nothing left to archive. That is a
+        // valid outcome, not a failure of the invariant under test.
+        Err(SyncError::EmptySource(_)) => {
+            churn.join().unwrap();
+            return;
+        }
+        Err(e) => panic!("unexpected error: {e:?}"),
+    };
+    churn.join().unwrap();
+
+    assert_eq!(
+        manifest.files.len() + manifest.skipped.len(),
+        1,
+        "the file was neither archived nor skipped: {:?} / {:?}",
+        manifest.files,
+        manifest.skipped
+    );
+
+    // A 64 MiB copy cannot finish before the churn thread's first write, so one
+    // of the outcomes below is observed.
+    if manifest.skipped.is_empty() {
+        let entry = &manifest.files[0];
+        assert_eq!(entry.path, "growing.bin");
+        let snap_dir = dest_root.path().join(format!("{}.snap", manifest.id));
+        let archived = fs::read(snap_dir.join("files").join("growing.bin")).unwrap();
+
+        // The invariant the fix exists for: the manifest hash describes the
+        // bytes that were actually archived, so the snapshot verifies.
+        assert_eq!(entry.bytes as usize, archived.len());
+        assert_eq!(entry.sha256, sha256_hex(&archived));
+        match verify_snapshot(&snap_dir).unwrap() {
+            VerifyReport::Ok { files_checked, .. } => assert_eq!(files_checked, 1),
+            other => panic!("expected Ok, got {other:?}"),
+        }
+    } else {
+        // The source never settled: refused, never archived torn.
+        assert_eq!(manifest.skipped, vec!["growing.bin".to_string()]);
+        assert_eq!(manifest.total_bytes, 0);
+        assert!(snapshot_dirs(dest_root.path()).is_empty());
+    }
+}
+
+/// Every snapshot run cleans its staging scratch space, on success and failure.
+#[test]
+fn create_snapshot_removes_its_staging_directory() {
+    let source = make_source();
+    let dest_root = TempDir::new().unwrap();
+    create_snapshot(source.path(), dest_root.path(), None).unwrap();
+    create_snapshot(source.path(), dest_root.path(), None).unwrap();
+    create_snapshot(
+        &dest_root.path().join("does-not-exist"),
+        dest_root.path(),
+        None,
+    )
+    .unwrap_err();
+
+    let leftovers: Vec<String> = fs::read_dir(dest_root.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|name| name.starts_with(".airi-sync-staging-"))
+        .collect();
+    assert!(
+        leftovers.is_empty(),
+        "staging dirs left behind: {leftovers:?}"
+    );
+}
+
+/// Leftovers from a run that died are garbage; a run's own scratch space and
+/// another run's fresh scratch space are never touched.
+#[test]
+fn create_snapshot_only_purges_stale_staging_dirs() {
+    let source = make_source();
+    let dest_root = TempDir::new().unwrap();
+
+    let stale = dest_root.path().join(".airi-sync-staging-1000000000-1-0");
+    write_file(&stale, "airi.sqlite", b"abandoned");
+    let fresh = dest_root.path().join(format!(
+        ".airi-sync-staging-{}-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos(),
+        std::process::id(),
+    ));
+    fs::create_dir_all(&fresh).unwrap();
+
+    create_snapshot(source.path(), dest_root.path(), None).unwrap();
+
+    assert!(!stale.exists(), "stale staging dir was not purged");
+    assert!(fresh.is_dir(), "a concurrent run's staging dir was deleted");
+}
+
+/// A source with one unreadable file still produces a verifiable snapshot that
+/// records the refused file in `manifest.skipped`.
+#[cfg(unix)]
+#[test]
+fn create_snapshot_records_refused_files_in_skipped() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let source = make_source();
+    write_file(source.path(), "secret.txt", b"top secret");
+    fs::set_permissions(
+        source.path().join("secret.txt"),
+        fs::Permissions::from_mode(0o000),
+    )
+    .unwrap();
+    let dest_root = TempDir::new().unwrap();
+
+    let manifest = create_snapshot(source.path(), dest_root.path(), None).unwrap();
+
+    // Root ignores permission bits, so only assert the skip when the file was
+    // really refused.
+    fs::set_permissions(
+        source.path().join("secret.txt"),
+        fs::Permissions::from_mode(0o644),
+    )
+    .unwrap();
+    if manifest.skipped.is_empty() {
+        assert_eq!(manifest.files.len(), 4);
+        return;
+    }
+    assert_eq!(manifest.skipped, vec!["secret.txt".to_string()]);
+    assert_eq!(
+        manifest
+            .files
+            .iter()
+            .map(|f| f.path.as_str())
+            .collect::<Vec<_>>(),
+        vec![
+            "airi.sqlite",
+            "profile/nested/deep/avatar.bin",
+            "profile/settings.json",
+        ]
+    );
+    let snap_dir = dest_root.path().join(format!("{}.snap", manifest.id));
+    match verify_snapshot(&snap_dir).unwrap() {
+        VerifyReport::Ok { files_checked, .. } => assert_eq!(files_checked, 3),
+        other => panic!("expected Ok, got {other:?}"),
+    }
+}
+
 #[test]
 fn list_snapshots_orders_newest_first_and_skips_corrupt_manifests() {
     let source = make_source();

@@ -322,3 +322,30 @@ fn bearer_token_with_invalid_header_characters_is_rejected() {
         other => panic!("expected McpError::Transport, got {other:?}"),
     }
 }
+
+#[test]
+fn token_with_control_bytes_is_rejected_without_echo() {
+    let server = mockito::Server::new();
+    let url = format!("{}/mcp", server.url());
+
+    // A tab inside the token must be rejected exactly like a token with a
+    // newline: `HeaderValue::from_str` would accept it (it trims the tab on
+    // the wire), and `trim()` hides a leading/trailing one.
+    for bad in ["prefix\tsuffix", "\tsurrounded\t"] {
+        match McpHttpClient::connect_with_auth(&url, Some(bad)) {
+            Err(err @ McpError::Transport(_)) => {
+                let display = format!("{err}");
+                let debug = format!("{err:?}");
+                assert!(
+                    !display.contains("prefix") && !display.contains("suffix"),
+                    "error leaked token material: {display}"
+                );
+                assert!(
+                    !debug.contains("prefix") && !debug.contains("suffix"),
+                    "Debug leaked token material: {debug}"
+                );
+            }
+            other => panic!("expected McpError::Transport for {bad:?}, got {other:?}"),
+        }
+    }
+}

@@ -657,6 +657,21 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
   // consume an artifact from an arbitrary universe.
   const activeUniverseId = ref<Map<string, string>>(new Map())
 
+  // First surviving universe anchor for the character, if any. The charId-keyed
+  // `artifacts` mirror has no universe context and is read directly (e.g. the
+  // companion guest snapshot), so it must stay valid as long as some anchor for
+  // the character exists in `artifactsByUniverse`.
+  // shortcut: O(n) scan over artifactsByUniverse, fine for one user's handful of
+  // characters — upgrade to a nested map if the character/universe count grows.
+  function firstUniverseArtifact(characterId: string): LifetimeMemoryArtifact | undefined {
+    const prefix = `${characterId}:`
+    for (const [key, artifact] of artifactsByUniverse.value) {
+      if (key.startsWith(prefix))
+        return artifact
+    }
+    return undefined
+  }
+
   function setCachedArtifact(characterId: string, universeId: string, artifact: LifetimeMemoryArtifact | null) {
     const compositeKey = `${characterId}:${universeId}`
     if (artifact) {
@@ -669,7 +684,15 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
     else {
       artifactsByUniverse.value.delete(compositeKey)
       if (activeUniverseId.value.get(characterId) === universeId) {
-        artifacts.value.delete(characterId)
+        // NOTICE: never leave the mirror pointing at the just-deleted universe,
+        // and never drop it while another universe anchor still exists — re-point
+        // it at the first surviving anchor so universe-agnostic readers keep
+        // seeing a valid artifact.
+        const survivor = firstUniverseArtifact(characterId)
+        if (survivor)
+          artifacts.value.set(characterId, survivor)
+        else
+          artifacts.value.delete(characterId)
       }
     }
   }
@@ -694,11 +717,13 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
       ])
       // Anchor the legacy `artifacts` mirror to this explicitly-loaded
       // universe *before* caching, so setCachedArtifact can mirror it.
-      if (artifact) {
+      if (artifact || !firstUniverseArtifact(characterId)) {
+        // NOTICE: a miss for universe B must not evict a still-valid mirror
+        // for universe A — universe-agnostic readers (the companion guest
+        // snapshot) read `artifacts.get(characterId)` with no universe
+        // context, so the anchor may only be dropped when the character has
+        // no artifact in any universe.
         activeUniverseId.value.set(characterId, universeId)
-      }
-      else {
-        activeUniverseId.value.delete(characterId)
       }
       setCachedArtifact(characterId, universeId, artifact ?? null)
       activeSession.value = session || null

@@ -548,16 +548,23 @@ fn journal_completed_turn(
             return None;
         }
     };
-    let Some(assistant) = messages.iter().rev().find(|m| m.id == assistant_message_id) else {
-        eprintln!(
-            "[airi-qt] memory: assistant message {assistant_message_id} not found; turn not journaled"
-        );
+    let assistant_pos = messages
+        .iter()
+        .rposition(|m| m.id == assistant_message_id)
+        .unwrap_or_else(|| {
+            eprintln!(
+                "[airi-qt] memory: assistant message {assistant_message_id} not found; turn not journaled"
+            );
+            usize::MAX
+        });
+    if assistant_pos == usize::MAX {
         return None;
-    };
+    }
+    let assistant = &messages[assistant_pos];
     if assistant.content.trim().is_empty() {
         return None;
     }
-    let user_text = messages
+    let user_text = messages[..assistant_pos]
         .iter()
         .rev()
         .find(|m| m.role == "user")
@@ -2238,6 +2245,49 @@ mod tests {
         seed_session_with_turn(&t.db, "hello", "hi");
         assert!(journal_completed_turn(&t.db, "s1", "missing").is_none());
         assert_eq!(TextJournalService::new(t.db.clone()).count().unwrap(), 0);
+    }
+
+    #[tokio::test]
+    async fn journal_completed_turn_pairs_assistant_with_its_own_preceding_user() {
+        let t = temp_db();
+        // Two turns persisted; the OLDER assistant message's MessageDone is
+        // applied after the newer turn already exists (stop/regenerate or
+        // rapid resend). The older turn must pair with its own user text,
+        // never the newest user message.
+        SessionRepo::new(t.db.clone())
+            .create("s1", "test")
+            .expect("create session");
+        let messages = MessageRepo::new(t.db.clone());
+        let start = now_ms();
+        for (index, (id, role, content)) in [
+            ("u1", "user", "first question"),
+            ("a1", "assistant", "first answer"),
+            ("u2", "user", "second question"),
+            ("a2", "assistant", "second answer"),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            messages
+                .insert(&StoredMessage {
+                    id: id.to_string(),
+                    session_id: "s1".to_string(),
+                    role: role.to_string(),
+                    content: content.to_string(),
+                    // Distinct, strictly increasing: `MessageRepo::list` orders by
+                    // `created_at, rowid`, so equal timestamps would leave the
+                    // pairing ambiguous for exactly the case under test.
+                    created_at: start + index as i64,
+                    metadata: json!({}),
+                })
+                .expect("insert message");
+        }
+        let entry = journal_completed_turn(&t.db, "s1", "a1").expect("journaled");
+        assert!(
+            entry.content.starts_with("User: first question"),
+            "older assistant pairs with its own user turn, got: {}",
+            entry.content
+        );
     }
 
     #[tokio::test]

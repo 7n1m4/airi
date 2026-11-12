@@ -253,6 +253,7 @@ export const useCompanionStore = defineStore('companion', () => {
   const airiCardStore = useAiriCardStore()
   const echoesStore = useEchoesStore()
   const lifetimeStore = useMemoryLifetimeStore()
+  const chatSessionStore = useChatSessionStore()
 
   const invokeShare = useElectronEventaInvoke(companionServiceShare)
   const invokeVisit = useElectronEventaInvoke(companionServiceVisit)
@@ -331,7 +332,21 @@ export const useCompanionStore = defineStore('companion', () => {
     // `distilledContent` is the relational essence, never the raw archive or the
     // chunk summaries behind it. Reading anything else would leak the source
     // conversations that the distillation exists to abstract away.
-    const artifact = lifetimeStore.artifacts.get(characterId)
+    //
+    // NOTICE: the charId-keyed `lifetimeStore.artifacts` mirror has no universe
+    // context and is only populated while the character's *active* universe
+    // matches it, so with universe isolation a per-universe anchor can exist
+    // while the mirror is empty. Read the universe-aware accessor for the
+    // universe this node is actually in — the active session's universe,
+    // exactly as the other universe-scoped pillars resolve it — and fall back
+    // to the mirror only when no session context is available yet.
+    const activeSessionId = characterId
+      ? (chatSessionStore.getCharacterIndex(characterId)?.activeSessionId || chatSessionStore.activeSessionId)
+      : chatSessionStore.activeSessionId
+    const activeUniverseId = chatSessionStore.getSessionMeta(activeSessionId)?.universeId
+    const artifact = activeUniverseId
+      ? lifetimeStore.getArtifact(characterId, activeUniverseId)
+      : lifetimeStore.artifacts.get(characterId)
     const lifetimeDistilled = artifact?.distilledContent?.slice(0, MAX_LIFETIME_CHARS)
 
     return {
@@ -472,7 +487,6 @@ export const useCompanionStore = defineStore('companion', () => {
 
   const libp2pStore = useLibp2pStore()
   const chatOrchestrator = useChatOrchestratorStore()
-  const chatSessionStore = useChatSessionStore()
   const consciousnessStore = useConsciousnessStore()
   const providersStore = useProvidersStore()
   const napChatStore = useNapChatStore()

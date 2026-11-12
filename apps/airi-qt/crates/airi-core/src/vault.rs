@@ -191,13 +191,28 @@ pub(crate) fn zip_read(bytes: &[u8]) -> Result<Vec<ZipEntry>> {
     let count = u16::from_le_bytes(eocd[10..12].try_into().unwrap()) as usize;
     let cd_size = u32::from_le_bytes(eocd[12..16].try_into().unwrap()) as usize;
     let cd_offset = u32::from_le_bytes(eocd[16..20].try_into().unwrap()) as usize;
-    if cd_offset + cd_size > bytes.len() {
+    // `cd_offset`/`cd_size` come straight from the untrusted EOCD, so use checked
+    // arithmetic: a hand-edited archive can make the sum wrap and slip past the
+    // `bytes.len()` check below.
+    let cd_end = cd_offset
+        .checked_add(cd_size)
+        .context("central-directory offset overflow")?;
+    if cd_end > bytes.len() {
         bail!("central directory extends past end of archive");
     }
 
-    let mut entries = Vec::with_capacity(count);
+    let mut entries = Vec::new();
     let mut pos = cd_offset;
     for _ in 0..count {
+        // Every slice below is derived from attacker-controlled offsets/lengths;
+        // each is bounds-checked before use so a truncated or hand-edited archive
+        // returns an error instead of panicking across the cxx-qt boundary.
+        let entry_end = pos
+            .checked_add(46)
+            .context("central-directory entry offset overflow")?;
+        if entry_end > bytes.len() {
+            bail!("truncated central-directory entry at offset {pos}");
+        }
         if bytes[pos..pos + 4] != b"PK\x01\x02"[..] {
             bail!("bad central-directory signature at offset {pos}");
         }
@@ -210,7 +225,15 @@ pub(crate) fn zip_read(bytes: &[u8]) -> Result<Vec<ZipEntry>> {
             u16::from_le_bytes(bytes[pos + 32..pos + 34].try_into().unwrap()) as usize;
         let local_offset =
             u32::from_le_bytes(bytes[pos + 42..pos + 46].try_into().unwrap()) as usize;
-        let name = std::str::from_utf8(&bytes[pos + 46..pos + 46 + name_len])
+        // `pos + 46` is already known in range from `entry_end`, so only the
+        // name length can push the slice out of bounds.
+        let name_end = entry_end
+            .checked_add(name_len)
+            .context("central-directory entry name length overflow")?;
+        if name_end > bytes.len() {
+            bail!("truncated central-directory entry name at offset {pos}");
+        }
+        let name = std::str::from_utf8(&bytes[pos + 46..name_end])
             .context("zip entry name is not UTF-8")?
             .to_string();
 
@@ -224,6 +247,12 @@ pub(crate) fn zip_read(bytes: &[u8]) -> Result<Vec<ZipEntry>> {
         }
 
         // Read the local header to find the data range.
+        let local_end = local_offset
+            .checked_add(30)
+            .context("local-file-header offset overflow")?;
+        if local_end > bytes.len() {
+            bail!("truncated local file header for entry {name:?} at offset {local_offset}");
+        }
         if bytes[local_offset..local_offset + 4] != b"PK\x03\x04"[..] {
             bail!("bad local-file-header signature for entry {name:?}");
         }
@@ -237,7 +266,10 @@ pub(crate) fn zip_read(bytes: &[u8]) -> Result<Vec<ZipEntry>> {
                 .try_into()
                 .unwrap(),
         ) as usize;
-        let data_start = local_offset + 30 + local_name_len + local_extra_len;
+        let data_start = local_end
+            .checked_add(local_name_len)
+            .and_then(|p| p.checked_add(local_extra_len))
+            .context("local-file-header data offset overflow")?;
         let data_end = data_start
             .checked_add(size)
             .context("zip entry size overflow")?;
@@ -251,7 +283,14 @@ pub(crate) fn zip_read(bytes: &[u8]) -> Result<Vec<ZipEntry>> {
             name,
             data: bytes[data_start..data_end].to_vec(),
         });
-        pos += 46 + name_len + extra_len + comment_len;
+        // `entry_end` already advanced past the fixed 46-byte record; the record
+        // is only bounds-checked against `bytes.len()`, not `cd_end`, because a
+        // valid archive's EOCD may under-report the directory size.
+        pos = entry_end
+            .checked_add(name_len)
+            .and_then(|p| p.checked_add(extra_len))
+            .and_then(|p| p.checked_add(comment_len))
+            .context("central-directory entry length overflow")?;
     }
     Ok(entries)
 }
@@ -1330,5 +1369,121 @@ mod tests {
     fn inspect_rejects_non_vault_zip() {
         let archive = zip_stored(&[("random.txt", b"nope".as_slice())]).expect("zip");
         assert!(inspect_archive(&archive).is_err());
+    }
+
+    /// A central-directory entry whose name length runs past the end of the
+    /// buffer must error, not panic. Only the `name_end` check can reject it:
+    /// the fixed 46-byte record is intact, and the archive is long enough that
+    /// the entry's declared end still fits inside `bytes`.
+    #[test]
+    fn zip_read_rejects_oversized_entry_name_len() {
+        let archive = zip_stored(&[("a.txt", b"hello".as_slice())]).expect("zip");
+        let cd_offset = archive.len() - 46 - 5 - 22;
+        let mut tampered = archive[..cd_offset].to_vec();
+        tampered.extend_from_slice(b"PK\x01\x02");
+        tampered.extend_from_slice(&20u16.to_le_bytes()); // version made by
+        tampered.extend_from_slice(&20u16.to_le_bytes()); // version needed
+        tampered.extend_from_slice(&0u16.to_le_bytes()); // flags
+        tampered.extend_from_slice(&0u16.to_le_bytes()); // method: stored
+        tampered.extend_from_slice(&0u16.to_le_bytes()); // dos time
+        tampered.extend_from_slice(&0u16.to_le_bytes()); // dos date
+        tampered.extend_from_slice(&0u32.to_le_bytes()); // crc
+        tampered.extend_from_slice(&0u32.to_le_bytes()); // compressed size
+        tampered.extend_from_slice(&0u32.to_le_bytes()); // uncompressed size
+        tampered.extend_from_slice(&0x1000u16.to_le_bytes()); // name len: past EOF
+        tampered.extend_from_slice(&0u16.to_le_bytes()); // extra len
+        tampered.extend_from_slice(&0u16.to_le_bytes()); // comment len
+        tampered.extend_from_slice(&0u16.to_le_bytes()); // disk number
+        tampered.extend_from_slice(&0u16.to_le_bytes()); // internal attrs
+        tampered.extend_from_slice(&0u32.to_le_bytes()); // external attrs
+        tampered.extend_from_slice(&0u32.to_le_bytes()); // local header offset
+
+        let cd_size = (tampered.len() - cd_offset + 46) as u32;
+        tampered.extend_from_slice(b"PK\x05\x06");
+        tampered.extend_from_slice(&0u16.to_le_bytes());
+        tampered.extend_from_slice(&0u16.to_le_bytes());
+        tampered.extend_from_slice(&1u16.to_le_bytes());
+        tampered.extend_from_slice(&1u16.to_le_bytes());
+        tampered.extend_from_slice(&cd_size.to_le_bytes());
+        tampered.extend_from_slice(&(cd_offset as u32).to_le_bytes());
+        tampered.extend_from_slice(&0u16.to_le_bytes());
+
+        assert!(zip_read(&tampered).is_err());
+    }
+
+    /// A central directory whose fixed 46-byte entry record is cut in half must
+    /// be a typed error, not a slice-out-of-range panic.
+    #[test]
+    fn zip_read_rejects_truncated_central_directory() {
+        let archive = zip_stored(&[("a.txt", b"hello".as_slice())]).expect("zip");
+        // `find_eocd` only scans backwards, so keep the forged EOCD last: declare
+        // a central directory that starts inside the original one and ends past
+        // EOF, with a count that needs more bytes than remain.
+        let cd_offset = archive.len() - 22 - 10;
+        let mut truncated = archive[..archive.len() - 22].to_vec();
+        truncated.extend_from_slice(b"PK\x05\x06");
+        truncated.extend_from_slice(&0u16.to_le_bytes()); // disk number
+        truncated.extend_from_slice(&0u16.to_le_bytes()); // central dir start disk
+        truncated.extend_from_slice(&1u16.to_le_bytes()); // entries on this disk
+        truncated.extend_from_slice(&1u16.to_le_bytes()); // total entries
+        truncated.extend_from_slice(&10u32.to_le_bytes()); // central dir size
+        truncated.extend_from_slice(&(cd_offset as u32).to_le_bytes()); // central dir offset
+        truncated.extend_from_slice(&0u16.to_le_bytes()); // comment len
+
+        assert!(zip_read(&truncated).is_err());
+    }
+
+    /// An entry whose local-header offset points past the end of the buffer must
+    /// error, not panic.
+    #[test]
+    fn zip_read_rejects_out_of_range_local_header_offset() {
+        let archive = zip_stored(&[("a.txt", b"hello".as_slice())]).expect("zip");
+        // The single central-directory entry's local-header offset lives at +42.
+        let cd_offset = archive.len() - 22 - 46;
+        let mut tampered = archive.clone();
+        tampered[cd_offset + 42..cd_offset + 46].copy_from_slice(&u32::MAX.to_le_bytes());
+
+        assert!(zip_read(&tampered).is_err());
+    }
+
+    /// A central directory whose declared size runs past the end of the buffer
+    /// must error, not panic. The trailing padding keeps the forged EOCD last so
+    /// `find_eocd` cannot fall back to an earlier record.
+    #[test]
+    fn zip_read_rejects_oversized_central_directory_size() {
+        let archive = zip_stored(&[("a.txt", b"hello".as_slice())]).expect("zip");
+        let cd_offset = archive.len() - 46 - 5 - 22;
+        let mut tampered = archive[..cd_offset].to_vec();
+        tampered.extend_from_slice(&[0u8; 64]);
+        tampered.extend_from_slice(b"PK\x05\x06");
+        tampered.extend_from_slice(&0u16.to_le_bytes());
+        tampered.extend_from_slice(&0u16.to_le_bytes());
+        tampered.extend_from_slice(&1u16.to_le_bytes());
+        tampered.extend_from_slice(&1u16.to_le_bytes());
+        tampered.extend_from_slice(&4096u32.to_le_bytes()); // central dir size
+        tampered.extend_from_slice(&(cd_offset as u32).to_le_bytes()); // central dir offset
+        tampered.extend_from_slice(&0u16.to_le_bytes());
+
+        assert!(zip_read(&tampered).is_err());
+    }
+
+    /// An archive whose declared `cd_offset + cd_size` wraps `usize` must error
+    /// via `checked_add`, not slip past the range check.
+    #[test]
+    fn zip_read_rejects_wrapping_central_directory_offset() {
+        let archive = zip_stored(&[("a.txt", b"hello".as_slice())]).expect("zip");
+        let cd_offset = archive.len() - 46 - 5 - 22;
+        let mut tampered = archive[..cd_offset].to_vec();
+        tampered.extend_from_slice(&[0u8; 64]);
+        tampered.extend_from_slice(b"PK\x05\x06");
+        tampered.extend_from_slice(&0u16.to_le_bytes());
+        tampered.extend_from_slice(&0u16.to_le_bytes());
+        tampered.extend_from_slice(&1u16.to_le_bytes());
+        tampered.extend_from_slice(&1u16.to_le_bytes());
+        tampered.extend_from_slice(&u32::MAX.to_le_bytes()); // cd size
+        tampered.extend_from_slice(&(cd_offset as u32).to_le_bytes()); // cd offset
+        tampered.extend_from_slice(&0u16.to_le_bytes());
+
+        assert!(zip_read(&tampered).is_err());
     }
 }

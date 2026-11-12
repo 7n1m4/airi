@@ -19,6 +19,13 @@ use crate::timefmt::snapshot_id;
 const MANIFEST_FILE: &str = "manifest.json";
 const FILES_DIR: &str = "files";
 const SNAP_SUFFIX: &str = ".snap";
+const STAGING_PREFIX: &str = ".airi-sync-staging-";
+/// A staging directory this old is considered abandoned (its run died) and is
+/// removed. Fresh ones are left alone so concurrent runs cannot delete each
+/// other's scratch space.
+const STAGING_STALE_SECS: u64 = 6 * 60 * 60;
+/// Nanoseconds per second, for decoding the timestamp in a staging dir name.
+const NANOS_PER_SEC: u64 = 1_000_000_000;
 
 fn now_unix_ms() -> i64 {
     SystemTime::now()
@@ -208,8 +215,26 @@ fn manifest_json(manifest: &SnapshotManifest) -> Result<String, SyncError> {
 /// directory was created, the partial snapshot is removed before returning
 /// the error.
 ///
+/// ## Per-file consistency (copy-then-hash)
+///
+/// Each file is copied into a per-run staging directory **first**, and its
+/// manifest entry is hashed from those archived bytes. Hashing the source
+/// before copying it (the obvious order) opens a hash-then-copy TOCTOU window:
+/// a file modified in between ships bytes that do not match the manifest, so
+/// [`verify_snapshot`] would later report the snapshot corrupt, or — worse —
+/// inconsistent bytes would reach a restore. Because the manifest records the
+/// hash of exactly the bytes that were archived, the copy/hash pair can never
+/// disagree.
+///
+/// The staged copies are then published into `<id>.snap/files/` with a rename,
+/// so the snapshot tree is only ever filled with files that already have a
+/// manifest hash. A source that changes *while* it is being copied (detected as
+/// a length mismatch against the source after the copy) is copied once more;
+/// if it is still changing, the file is listed in `manifest.skipped` rather
+/// than archiving a torn copy.
+///
 /// Returns [`SyncError::EmptySource`] when `source_dir` is missing, not a
-/// directory, or yields no hashable files.
+/// directory, or yields no archivable files.
 pub fn create_snapshot(
     source_dir: &Path,
     dest_root: &Path,
@@ -223,8 +248,15 @@ pub fn create_snapshot(
 
     let (candidates, mut skipped) = walk_files(source_dir);
 
-    let mut files: Vec<ManifestFile> = Vec::with_capacity(candidates.len());
-    let mut total_bytes: u64 = 0;
+    // Leftovers from a run that died before it could clean up. The manifest is
+    // written last, so a staging directory never belongs to a snapshot that
+    // `list_snapshots` can already see.
+    purge_stale_staging(dest_root);
+
+    fs::create_dir_all(dest_root).map_err(|e| SyncError::io(dest_root, e))?;
+    let staging_root = create_staging_dir(dest_root);
+
+    let mut staged: Vec<ManifestFile> = Vec::with_capacity(candidates.len());
     for path in candidates {
         let rel = match rel_forward_slash(source_dir, &path) {
             Some(rel) => rel,
@@ -233,84 +265,103 @@ pub fn create_snapshot(
                 continue;
             }
         };
-        match sha256_file(&path) {
-            Ok((bytes, sha256)) => {
-                total_bytes += bytes;
-                files.push(ManifestFile {
-                    path: rel,
-                    bytes,
-                    sha256,
-                });
-            }
+        match archive_file(&path, &rel, &staging_root) {
+            Ok(file) => staged.push(file),
             Err(err) => {
-                tracing::warn!(path = %path.display(), error = %err, "skipping file that could not be hashed");
+                // One file that cannot be archived does not sink the snapshot;
+                // it is recorded in `manifest.skipped` like any other unreadable
+                // entry.
+                tracing::warn!(path = %path.display(), error = %err, "skipping file that could not be archived");
                 skipped.push(rel);
             }
         }
     }
 
-    if files.is_empty() {
-        return Err(SyncError::EmptySource(source_dir.into()));
-    }
-    files.sort_by(|a, b| a.path.cmp(&b.path));
-    skipped.sort();
-
-    fs::create_dir_all(dest_root).map_err(|e| SyncError::io(dest_root, e))?;
-
-    let created_unix_ms = now_unix_ms();
-    let mut attempts = 0;
-    let (id, snap_dir) = loop {
-        attempts += 1;
-        let id = snapshot_id(created_unix_ms);
-        let snap_dir = dest_root.join(format!("{id}{SNAP_SUFFIX}"));
-        match fs::create_dir(&snap_dir) {
-            Ok(()) => break (id, snap_dir),
-            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists && attempts < 8 => {
-                tracing::warn!(%id, "snapshot id collision; regenerating");
-                continue;
-            }
-            Err(err) => return Err(SyncError::io(&snap_dir, err)),
+    let result = (|| {
+        if staged.is_empty() {
+            return Err(SyncError::EmptySource(source_dir.into()));
         }
-    };
+        staged.sort_by(|a, b| a.path.cmp(&b.path));
+        skipped.sort();
+        let total_bytes = staged.iter().map(|f| f.bytes).sum();
 
-    let result = create_snapshot_inner(
-        source_dir,
-        &snap_dir,
-        &id,
-        created_unix_ms,
-        label,
-        &files,
-        skipped,
-        total_bytes,
-    );
-    if result.is_err() {
-        // Never leave a half-written snapshot behind.
-        let _ = fs::remove_dir_all(&snap_dir);
-    }
+        let created_unix_ms = now_unix_ms();
+        let mut attempts = 0;
+        let (id, snap_dir) = loop {
+            attempts += 1;
+            let id = snapshot_id(created_unix_ms);
+            let snap_dir = dest_root.join(format!("{id}{SNAP_SUFFIX}"));
+            match fs::create_dir(&snap_dir) {
+                Ok(()) => break (id, snap_dir),
+                Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists && attempts < 8 => {
+                    tracing::warn!(%id, "snapshot id collision; regenerating");
+                    continue;
+                }
+                Err(err) => return Err(SyncError::io(&snap_dir, err)),
+            }
+        };
+
+        let manifest = publish_snapshot(
+            &snap_dir,
+            &id,
+            created_unix_ms,
+            label,
+            source_dir,
+            &staged,
+            &staging_root,
+            skipped,
+            total_bytes,
+        );
+        if manifest.is_err() {
+            // Never leave a half-written snapshot behind.
+            let _ = fs::remove_dir_all(&snap_dir);
+        }
+        manifest
+    })();
+
+    // Staging is scratch space: it must not survive the run, and it must not be
+    // mistaken for a snapshot by `list_snapshots`.
+    let _ = fs::remove_dir_all(&staging_root);
     result
 }
 
+/// Move the staged copies into `<snap_dir>/files/` and write the manifest.
+///
+/// `staged` must already be sorted and hashed (see [`create_snapshot`]); the
+/// manifest is written last.
 #[allow(clippy::too_many_arguments)]
-fn create_snapshot_inner(
-    source_dir: &Path,
+fn publish_snapshot(
     snap_dir: &Path,
     id: &str,
     created_unix_ms: i64,
     label: Option<&str>,
-    files: &[ManifestFile],
+    source_dir: &Path,
+    staged: &[ManifestFile],
+    staging_root: &Path,
     skipped: Vec<String>,
     total_bytes: u64,
 ) -> Result<SnapshotManifest, SyncError> {
     let files_root = snap_dir.join(FILES_DIR);
     fs::create_dir_all(&files_root).map_err(|e| SyncError::io(&files_root, e))?;
 
-    for file in files {
-        let from = join_under_root(source_dir, &file.path)?;
+    for file in staged {
+        let from = join_under_root(staging_root, &file.path)?;
         let to = join_under_root(&files_root, &file.path)?;
         if let Some(parent) = to.parent() {
             fs::create_dir_all(parent).map_err(|e| SyncError::io(parent, e))?;
         }
-        fs::copy(&from, &to).map_err(|e| SyncError::io(&to, e))?;
+        // The staged bytes are the bytes the hash was computed from, so
+        // publishing is a rename — never a re-read that could pick up a
+        // different version of the file.
+        match fs::rename(&from, &to) {
+            Ok(()) => {}
+            // Staging may sit on another filesystem than the destination; the
+            // bytes are unchanged, so a copy is equivalent.
+            Err(err) if err.kind() == std::io::ErrorKind::CrossesDevices => {
+                fs::copy(&from, &to).map_err(|e| SyncError::io(&to, e))?;
+            }
+            Err(err) => return Err(SyncError::io(&from, err)),
+        }
     }
 
     let manifest = SnapshotManifest {
@@ -319,7 +370,7 @@ fn create_snapshot_inner(
         created_unix_ms,
         label: label.map(str::to_string),
         source_path_hint: source_dir.display().to_string(),
-        files: files.to_vec(),
+        files: staged.to_vec(),
         skipped,
         total_bytes,
     };
@@ -328,6 +379,120 @@ fn create_snapshot_inner(
     let json = manifest_json(&manifest)?;
     fs::write(&manifest_path, json).map_err(|e| SyncError::io(&manifest_path, e))?;
     Ok(manifest)
+}
+
+/// Copy one source file into the staging tree and hash the archived bytes.
+///
+/// The manifest entry is derived from the copy, never from the source, so the
+/// recorded `(bytes, sha256)` always describes exactly what will be published.
+/// A source that changes while it is being copied (detected as a length
+/// mismatch after the copy) is copied once more; if it is still changing, the
+/// file is refused and the caller records it as skipped.
+fn archive_file(source: &Path, rel: &str, staging_root: &Path) -> Result<ManifestFile, String> {
+    let staged = staging_root.join(rel);
+    match archive_once(source, &staged, rel)? {
+        Some(entry) => Ok(entry),
+        // The source was being written while it was copied; one more attempt,
+        // then refuse rather than publish a torn copy.
+        None => archive_once(source, &staged, rel)?.ok_or_else(|| {
+            format!(
+                "{rel}: source kept changing while it was being copied ({} -> {})",
+                source.display(),
+                rel
+            )
+        }),
+    }
+}
+
+/// Copy `source` to `staged` and hash the copied bytes.
+///
+/// `Ok(None)` means the copy succeeded but the source no longer has the length
+/// the copy has, i.e. it was rewritten while the copy was in flight. The copy is
+/// self-consistent (its hash describes its own bytes), but the caller should
+/// retry to try to catch a settled version.
+fn archive_once(source: &Path, staged: &Path, rel: &str) -> Result<Option<ManifestFile>, String> {
+    if let Some(parent) = staged.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("{rel}: {e}"))?;
+    }
+    fs::copy(source, staged).map_err(|e| format!("{rel}: {e}"))?;
+
+    // Hash the archived bytes: this is what the manifest records.
+    let (bytes, sha256) = sha256_file(staged).map_err(|e| format!("{rel}: {e}"))?;
+    if fs::metadata(source).is_ok_and(|meta| meta.len() != bytes) {
+        return Ok(None);
+    }
+    Ok(Some(ManifestFile {
+        path: rel.to_string(),
+        bytes,
+        sha256,
+    }))
+}
+
+/// Remove staging directories left behind by a run that never finished.
+///
+/// A staging directory only exists between [`create_staging_dir`] and the end
+/// of [`create_snapshot`], so anything found here is garbage — but only remove
+/// it once it is old enough that a *concurrent* snapshot could not still be
+/// filling it. Names embed the creation time in nanoseconds, so fresh entries
+/// are left alone.
+fn purge_stale_staging(dest_root: &Path) {
+    let Ok(entries) = fs::read_dir(dest_root) else {
+        return;
+    };
+    let cutoff = SystemTime::now()
+        .checked_sub(std::time::Duration::from_secs(STAGING_STALE_SECS))
+        .unwrap_or(UNIX_EPOCH);
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else { continue };
+        let Some(stamp) = name.strip_prefix(STAGING_PREFIX) else {
+            continue;
+        };
+        if !entry.path().is_dir() {
+            continue;
+        }
+        if staging_created_at(stamp).is_some_and(|created| created >= cutoff) {
+            continue;
+        }
+        let _ = fs::remove_dir_all(entry.path());
+    }
+}
+
+/// Parse the nanosecond timestamp embedded in a staging directory name.
+fn staging_created_at(stamp: &str) -> Option<SystemTime> {
+    let nanos: u64 = stamp.split('-').next()?.parse().ok()?;
+    UNIX_EPOCH.checked_add(std::time::Duration::new(
+        nanos / NANOS_PER_SEC,
+        (nanos % NANOS_PER_SEC) as u32,
+    ))
+}
+
+/// Create an empty staging directory for one snapshot run.
+///
+/// The name embeds a wall-clock nanosecond stamp (used by
+/// [`purge_stale_staging`]) plus the pid, so concurrent runs never share a
+/// directory.
+fn create_staging_dir(dest_root: &Path) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let pid = std::process::id();
+    let base = format!("{STAGING_PREFIX}{nanos}-{pid}");
+    for attempt in 0..64u32 {
+        let candidate = dest_root.join(format!("{base}-{attempt}"));
+        match fs::create_dir(&candidate) {
+            Ok(()) => return candidate,
+            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(err) => {
+                tracing::warn!(path = %candidate.display(), error = %err, "could not create staging directory");
+                break;
+            }
+        }
+    }
+    // Fall back to a name that was never created up front: every per-file copy
+    // creates its parent directories, so it still works as scratch space.
+    dest_root.join(format!("{base}-scratch"))
 }
 
 /// List snapshots under `dest_root`.

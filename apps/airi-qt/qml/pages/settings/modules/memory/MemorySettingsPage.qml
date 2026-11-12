@@ -180,7 +180,7 @@ Item {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
                         // Raw English (bridge convention): the locales lane owns
-text: I18n.tr("shell.memory.experimentalNotice")
+                        text: I18n.tr("shell.memory.experimentalNotice")
                         font.family: Theme.fontBody
                         font.pixelSize: 13
                         color: Theme.warning

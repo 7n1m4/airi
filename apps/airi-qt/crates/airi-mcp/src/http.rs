@@ -76,6 +76,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 
+use reqwest::header::{HeaderValue, AUTHORIZATION};
 use serde_json::Value;
 
 use crate::error::McpError;
@@ -152,8 +153,8 @@ impl McpHttpClient {
 
     /// Creates a client for `endpoint` with an optional static bearer token.
     ///
-    /// When `bearer_token` is `Some` (and not empty/whitespace after
-    /// trimming), every request to `endpoint` — including
+    /// When `bearer_token` is `Some` (a non-empty token; leading/trailing HTTP
+    /// whitespace is rejected, not trimmed), every request to `endpoint` — including
     /// `notifications/initialized` and the `close()` `DELETE` — carries
     /// `Authorization: Bearer <token>`. The token is used **only** for the
     /// configured endpoint; it is never sent anywhere else (redirects are
@@ -161,9 +162,11 @@ impl McpHttpClient {
     /// returned by an accessor, redacted in `Debug` and scrubbed out of
     /// every [`McpError`] this client produces.
     ///
-    /// An empty or whitespace-only token is treated as no token. A token
-    /// containing characters invalid in an HTTP header value is rejected
-    /// with [`McpError::Transport`] (without echoing the token).
+    /// A token containing bytes outside the RFC 7230 token charset, or one
+    /// with leading/trailing HTTP whitespace (e.g. a tab-padded secret,
+    /// which cannot be sent verbatim), is rejected with
+    /// [`McpError::Transport`] without echoing the token. A token that is
+    /// empty or whitespace-only is treated as no token.
     ///
     /// This performs **no network I/O**.
     pub fn connect_with_auth(url: &str, bearer_token: Option<&str>) -> Result<Self, McpError> {
@@ -178,19 +181,14 @@ impl McpHttpClient {
             }
         }
 
-        let bearer_token = bearer_token
-            .map(str::trim)
-            .filter(|t| !t.is_empty())
-            .map(str::to_string);
-        if let Some(token) = &bearer_token {
-            // Reject tokens that cannot form a valid header value, without
-            // echoing the token into the error.
-            reqwest::header::HeaderValue::from_str(token).map_err(|_| {
-                McpError::Transport(
-                    "bearer token contains characters invalid in an HTTP header value".to_string(),
-                )
-            })?;
-        }
+        let bearer_token = match bearer_token.map(normalize_bearer_token).transpose() {
+            Ok(token) => token.flatten(),
+            Err(()) => {
+                return Err(McpError::Transport(
+                    "bearer token contains bytes outside the RFC 7230 token charset".to_string(),
+                ));
+            }
+        };
 
         // NOTICE: redirects are disabled entirely. MCP endpoints answer
         // requests directly, and reqwest forwards header values on redirect;
@@ -361,9 +359,7 @@ impl McpHttpClient {
         builder: reqwest::blocking::RequestBuilder,
     ) -> reqwest::blocking::RequestBuilder {
         match &self.bearer_token {
-            Some(token) => {
-                builder.header(reqwest::header::AUTHORIZATION, format!("Bearer {token}"))
-            }
+            Some(token) => builder.header(AUTHORIZATION, bearer_header_value(token)),
             None => builder,
         }
     }
@@ -647,5 +643,134 @@ impl McpHttpClient {
             });
         }
         Ok(())
+    }
+}
+
+/// The bytes RFC 7230 allows in an HTTP *token* (`tchar`): visible ASCII
+/// minus the separators `()<>@,;:\"/[]?={}` and space.
+fn is_rfc7230_token(bytes: &[u8]) -> bool {
+    bytes.iter().copied().all(is_tchar)
+}
+
+fn is_tchar(byte: u8) -> bool {
+    matches!(byte,
+        b'!' | b'#' | b'$' | b'%' | b'&' | b'\'' | b'*' | b'+' | b'-' | b'.'
+        | b'^' | b'_' | b'`' | b'|' | b'~'
+        | b'0'..=b'9' | b'A'..=b'Z' | b'a'..=b'z')
+}
+
+/// Validates a configured bearer token for use as an `Authorization` header.
+/// `Ok(None)` means no usable token; `Err(())` means the token cannot be sent
+/// verbatim (the caller reports it without echoing the token).
+///
+/// Only the token charset is accepted, so a token with interior HTTP
+/// whitespace (a tab, which `HeaderValue::from_str` would happily take) or any
+/// control byte is rejected. A token that is empty or all-whitespace is "no
+/// token"; a token with leading/trailing whitespace is rejected rather than
+/// trimmed, because the trimmed value would silently differ from what the
+/// caller configured (e.g. `"\tsecret"` and `"secret"` reaching a peer as the
+/// same value).
+fn normalize_bearer_token(token: &str) -> Result<Option<String>, ()> {
+    let trimmed = token.trim_matches(|c: char| c.is_ascii_whitespace());
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    if !is_rfc7230_token(trimmed.as_bytes()) {
+        return Err(());
+    }
+    if trimmed.len() != token.len() {
+        return Err(());
+    }
+    Ok(Some(trimmed.to_string()))
+}
+
+/// Builds the `Authorization: Bearer <token>` header value.
+///
+/// `connect_with_auth` only stores charset-valid, unpadded tokens, so this is
+/// unreachable by construction; if the invariant ever breaks, it panics instead
+/// of sending an empty credential on the wire.
+fn bearer_header_value(token: &str) -> HeaderValue {
+    // `connect_with_auth` only stores charset-valid, unpadded tokens, so this is
+    // unreachable by construction. If the invariant ever breaks, fail loudly at
+    // the call site rather than sending an empty credential on the wire.
+    let value = HeaderValue::from_str(&format!("Bearer {token}"))
+        .expect("stored bearer token is always a valid header value");
+    debug_assert!(is_rfc7230_token(token.as_bytes()));
+    value
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn client_with_token(token: &str) -> Result<McpHttpClient, McpError> {
+        McpHttpClient::connect_with_auth("http://127.0.0.1:1/mcp", Some(token))
+    }
+
+    #[test]
+    fn token_with_control_bytes_is_rejected_without_echo() {
+        for bad in [
+            "abc\tdef",
+            "abc\u{1f}def",
+            "abc\ndef",
+            "abc\u{7f}def",
+            "\tabc\t",
+        ] {
+            let err = client_with_token(bad).expect_err("token must be rejected");
+            let McpError::Transport(message) = err else {
+                panic!("expected McpError::Transport for {bad:?}, got {err:?}");
+            };
+            assert!(
+                !message.contains("abc") && !message.contains("def"),
+                "error echoed token material: {message}"
+            );
+        }
+    }
+
+    #[test]
+    fn token_charset_is_exactly_tchar() {
+        for byte in 0u8..=0xFF {
+            let token = format!("a{}a", byte as char);
+            assert_eq!(
+                normalize_bearer_token(&token).is_ok(),
+                is_tchar(byte),
+                "charset and normalization disagree on byte {byte:#04x}"
+            );
+        }
+        assert!(is_rfc7230_token(b"s3cr3t.tok-1"));
+    }
+
+    #[test]
+    fn bearer_header_value_is_well_formed_for_valid_tokens() {
+        assert_eq!(
+            bearer_header_value("s3cr3t.tok-1").as_bytes(),
+            b"Bearer s3cr3t.tok-1"
+        );
+    }
+
+    #[test]
+    fn normalize_bearer_token_trims_and_rejects() {
+        assert_eq!(
+            normalize_bearer_token("s3cr3t").unwrap().as_deref(),
+            Some("s3cr3t")
+        );
+        assert_eq!(normalize_bearer_token("   ").unwrap(), None);
+        assert_eq!(normalize_bearer_token("").unwrap(), None);
+        for bad in [
+            "abc\tdef",
+            "\tabc\t",
+            "\tabc",
+            "abc\t",
+            "abc\u{1f}def",
+            "abc\ndef",
+            "abc\u{7f}def",
+            "abc def",
+        ] {
+            assert_eq!(
+                normalize_bearer_token(bad),
+                Err(()),
+                "token {bad:?} must be rejected"
+            );
+        }
     }
 }

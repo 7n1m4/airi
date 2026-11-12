@@ -324,6 +324,60 @@ describe('f-03 universe isolation', () => {
     await store.loadForCharacter('char-1', 'cyberpunk-au')
     expect(store.artifacts.get('char-1')?.version).toBe(7)
   })
+
+  it('keeps the charId mirror on a miss for a universe that was never built', async () => {
+    shared.lifetime.set('char-1:global', seedArtifact({ id: 'art-global', universeId: 'global', version: 1 }))
+    const store = freshStore()
+    await store.loadForCharacter('char-1', 'global')
+    expect(store.artifacts.get('char-1')?.id).toBe('art-global')
+
+    // The mirror is universe-agnostic — the companion guest snapshot reads
+    // `artifacts.get(characterId)` with no universe context — so a sync for a
+    // universe that has no artifact at all must not evict it: eviction drops
+    // `lifetimeDistilled` even though A's anchor is still valid.
+    await store.loadForCharacter('char-1', 'cyberpunk-au')
+    expect(store.getArtifact('char-1', 'cyberpunk-au')).toBeUndefined()
+    expect(store.artifacts.get('char-1')?.id).toBe('art-global')
+    expect(store.artifacts.get('char-1')?.distilledContent).toBe('# distilled')
+  })
+
+  it('re-points the mirror at the surviving anchor when the active universe is deleted', async () => {
+    shared.lifetime.set('char-1:global', seedArtifact({ id: 'art-global', universeId: 'global', version: 1 }))
+    shared.lifetime.set('char-1:cyberpunk-au', seedArtifact({ id: 'art-cyber', universeId: 'cyberpunk-au', version: 7 }))
+    const store = freshStore()
+
+    // A anchors the mirror, then loading B moves the anchor onto B.
+    await store.loadForCharacter('char-1', 'global')
+    expect(store.artifacts.get('char-1')?.id).toBe('art-global')
+    await store.loadForCharacter('char-1', 'cyberpunk-au')
+    expect(store.artifacts.get('char-1')?.id).toBe('art-cyber')
+
+    // B's row disappears while A's anchor survives in the cache. The mirror
+    // must follow the survivor instead of either evicting (losing
+    // `lifetimeDistilled`) or staying on B (serving a deleted universe through
+    // getArtifact's mirror fallback).
+    shared.lifetime.delete('char-1:cyberpunk-au')
+    await store.loadForCharacter('char-1', 'cyberpunk-au')
+    expect(store.artifactsByUniverse.get('char-1:cyberpunk-au')).toBeUndefined()
+    expect(store.artifacts.get('char-1')?.id).toBe('art-global')
+    expect(store.artifacts.get('char-1')?.distilledContent).toBe('# distilled')
+    expect(store.getArtifact('char-1', 'cyberpunk-au')).toBeUndefined()
+  })
+
+  it('drops the mirror when no universe anchor survives', async () => {
+    shared.lifetime.set('char-1:global', seedArtifact({ id: 'art-global', universeId: 'global', version: 1 }))
+    const store = freshStore()
+    await store.loadForCharacter('char-1', 'global')
+    expect(store.artifacts.get('char-1')?.id).toBe('art-global')
+
+    // With no anchor left in any universe the mirror must go too, or readers
+    // keep seeing an artifact whose universe no longer exists.
+    shared.lifetime.delete('char-1:global')
+    await store.loadForCharacter('char-1', 'global')
+    expect(store.artifactsByUniverse.get('char-1:global')).toBeUndefined()
+    expect(store.getArtifact('char-1', 'global')).toBeUndefined()
+    expect(store.artifacts.get('char-1')).toBeUndefined()
+  })
 })
 
 // ---------------------------------------------------------------------------

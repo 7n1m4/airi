@@ -257,16 +257,40 @@ enum ReconnectOutcome {
 }
 
 /// Bounded, caller-driven reconnect: up to 5 attempts with 1/2/4/8/16 s
-/// backoff. Per attempt: if a session id is known (READY reached) re-open
-/// socket + HELLO and send op 6 RESUME; otherwise build a fresh client with
-/// `connect()` (a fresh IDENTIFY is required — `reconnect()` alone would leave
-/// the server waiting for an IDENTIFY that never comes). If a RESUME is
-/// rejected with `InvalidSession`, subsequent attempts fall back to a fresh
-/// IDENTIFY (the session is dead; resuming it is pointless). `Unauthorized`
+/// backoff. Per attempt, [`next_attempt`] picks RESUME (socket + HELLO + op 6)
+/// when a session id is known and not yet invalidated, or a fresh
+/// `GatewayClient::connect` (op 2 IDENTIFY — `reconnect()` alone would leave
+/// the server waiting for an IDENTIFY that never comes). A RESUME rejected with
+/// `InvalidSession` marks the session dead, so every later attempt in this
+/// sequence identifies afresh: `GatewayClient` exposes no way to clear its
+/// stored session id, so a half-used RESUME client would otherwise still carry
+/// the dead session into a later `client.resume()`. `Unauthorized`
 /// (close 4004) is fatal and never retried.
 ///
-/// `listening` is the last `"listening as <username>"` status line, restored
-/// on success; `None` before READY arrives.
+/// Which handshake one reconnect attempt uses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ReconnectAttempt {
+    /// Re-open the socket + HELLO, then op 6 RESUME the stored session.
+    Resume,
+    /// Open a fresh socket + HELLO + op 2 IDENTIFY via
+    /// [`GatewayClient::connect`], replacing the caller's client.
+    Identify,
+}
+
+/// Pick the handshake for one attempt: RESUME only while a session id is
+/// known and has not been invalidated. Once a RESUME is rejected
+/// (`InvalidSession`), every later attempt identifies afresh — the stored
+/// session is dead, and `GatewayClient` keeps it until the client is replaced
+/// by a `connect()`ed one.
+fn next_attempt(session_id: Option<&str>, resume_broken: bool) -> ReconnectAttempt {
+    if session_id.is_some() && !resume_broken {
+        ReconnectAttempt::Resume
+    } else {
+        ReconnectAttempt::Identify
+    }
+}
+
+/// The bounded reconnect sequence described above.
 fn reconnect_with_backoff(
     client: &mut GatewayClient,
     shared: &Arc<Mutex<GatewayShared>>,
@@ -292,13 +316,13 @@ fn reconnect_with_backoff(
         if !sleep_interruptible(*delay, shared) {
             return ReconnectOutcome::Stopped;
         }
-        let use_resume = client.session_id().is_some() && !resume_broken;
-        let attempt_result = if use_resume {
-            client.reconnect().and_then(|()| client.resume())
-        } else {
-            GatewayClient::connect(url, token, DEFAULT_INTENTS).map(|fresh| {
-                *client = fresh;
-            })
+        let attempt_result = match next_attempt(client.session_id(), resume_broken) {
+            ReconnectAttempt::Resume => client.reconnect().and_then(|()| client.resume()),
+            ReconnectAttempt::Identify => {
+                GatewayClient::connect(url, token, DEFAULT_INTENTS).map(|fresh| {
+                    *client = fresh;
+                })
+            }
         };
         match attempt_result {
             Ok(()) => {
@@ -805,5 +829,28 @@ mod tests {
         assert_eq!(guard.events.len(), MAX_EVENTS);
         // Oldest were dropped.
         assert_eq!(guard.events.front().unwrap()["id"], "25");
+    }
+
+    #[test]
+    fn reconnect_attempt_resumes_while_session_is_live() {
+        assert_eq!(
+            next_attempt(Some("sess-1"), false),
+            ReconnectAttempt::Resume
+        );
+    }
+
+    #[test]
+    fn reconnect_attempt_identifies_after_resume_rejected() {
+        // The session id survives on the client even after op 9, so
+        // `resume_broken` is what forces a fresh IDENTIFY.
+        assert_eq!(
+            next_attempt(Some("sess-dead"), true),
+            ReconnectAttempt::Identify
+        );
+    }
+
+    #[test]
+    fn reconnect_attempt_identifies_without_session() {
+        assert_eq!(next_attempt(None, false), ReconnectAttempt::Identify);
     }
 }
