@@ -1,4 +1,4 @@
-# String untuk shell desktop Qt (QML): splash, strip kontrol, jendela, dan
+# String untuk shell desktop Slint (Slint): splash, strip kontrol, jendela, dan
 # halaman placeholder.
 app:
   name: AIRI
@@ -155,9 +155,9 @@ about:
   title: AIRI — Tentang
   app-name: AIRI
   tagline: Teman AI kamu, di desktopmu.
-  body: AIRI adalah teman AI desktop — makhluk digital yang bisa bicara, melihat, dan bereaksi. Dibangun dengan Rust, Qt 6
-    dan QML.
-  license: Berlisensi GPL-3.0-or-later. Qt Quick 3D digunakan di bawah ketentuan GPL-nya.
+  body: AIRI adalah teman AI desktop — makhluk digital yang bisa bicara, melihat, dan bereaksi. Dibangun dengan Rust, Slint 6
+    dan Slint.
+  license: Berlisensi GPL-3.0-or-later. Slint digunakan di bawah ketentuan GPL-nya.
   source-label: Kode sumber
   source-url: https://github.com/moeru-ai/airi
   credit: Dibuat oleh Neko Ayaka dan para kontributor AIRI.
@@ -336,7 +336,7 @@ models:
       mmd: MMD
 
 onboarding:
-  deferredNotice: 'Penyelesaian first-run belum terhubung di build Qt ini — layar-layar ini hanya presentasi. Tombol yang menyelesaikan atau melewati wizard akan terbuka setelah store onboarding tersedia.'
+  deferredNotice: 'Penyelesaian first-run belum terhubung di build Slint ini — layar-layar ini hanya presentasi. Tombol yang menyelesaikan atau melewati wizard akan terbuka setelah store onboarding tersedia.'
   deferredTip: 'Belum terhubung — store onboarding first-run akan mengaktifkan aksi ini.'
   v3:
     brand: 'Pengaturan Companion AIRI'
@@ -353,7 +353,7 @@ onboarding:
 
 notice:
   previewBadge: 'Pratinjau'
-  deferredTip: 'Membutuhkan jembatan aksi jendela pemberitahuan (windowAction / pageMounted / pageUnmounted), yang belum ada di build Qt.'
+  deferredTip: 'Membutuhkan jembatan aksi jendela pemberitahuan (windowAction / pageMounted / pageUnmounted), yang belum ada di build Slint.'
   index:
     title: 'Pemberitahuan'
     subtitle: 'Proses utama AIRI menampilkan jendela pemberitahuan sementara untuk prompt satu kali. Halaman ini mencantumkan pemberitahuan yang dibawa aplikasi desktop.'
@@ -361,7 +361,7 @@ notice:
     fadeOnHoverTitle: 'Tutorial Fade on Hover'
     fadeOnHoverSubtitle: 'Menjelaskan perilaku sembunyi otomatis yang memudar karakter saat kursor mendekat.'
     routeFadeOnHover: '/notice/fade-on-hover'
-    deferredNotice: 'Build Qt belum punya tuan rumah jendela pemberitahuan. Permukaan-permukaan ini akan terbuka sebagai jendela pemberitahuan tanpa bingkai yang digerakkan oleh store permintaan tertunda setelah tersedia.'
+    deferredNotice: 'Build Slint belum punya tuan rumah jendela pemberitahuan. Permukaan-permukaan ini akan terbuka sebagai jendela pemberitahuan tanpa bingkai yang digerakkan oleh store permintaan tertunda setelah tersedia.'
     footnote: 'Di build Electron, ini berada di /notice/fade-on-hover.'
   fadeOnHover:
     badge: 'Tutorial'
@@ -372,7 +372,7 @@ notice:
     confirm: 'Mengerti'
     dontShowAgain: 'Jangan tampilkan lagi'
     previewTitle: 'Pratinjau tutorial'
-    previewNote: 'Video walkthrough fade-on-hover dibawa oleh aset renderer stage-tamagotchi. Mengemasnya butuh pass pendaftaran aset yang belum masuk ke build Qt.'
+    previewNote: 'Video walkthrough fade-on-hover dibawa oleh aset renderer stage-tamagotchi. Mengemasnya butuh pass pendaftaran aset yang belum masuk ke build Slint.'
 
 modules:
   title: 'Modul'
@@ -392,25 +392,25 @@ modules:
   entries:
     memory:
       blurb: 'Memori jangka pendek & panjang, jurnal dan retrieval untuk companion-mu.'
-      reason: 'Siap di Qt — rute dikelola navigasi pengaturan; backend mendarat di airi-core memory (journal, retrieval, embeddings); permukaan pengaturan tiba di wave ini.'
+      reason: 'Siap di Slint — rute dikelola navigasi pengaturan; backend mendarat di airi-core memory (journal, retrieval, embeddings); permukaan pengaturan tiba di wave ini.'
     speech:
       blurb: 'Keluaran suara text-to-speech untuk companion-mu.'
-      reason: 'Siap di Qt — backend mendarat di airi-speech (26 definisi TTS + Kokoro); permukaan pengaturan TTS/STT Qt tiba di wave ini.'
+      reason: 'Siap di Slint — backend mendarat di airi-speech (26 definisi TTS + Kokoro); permukaan pengaturan TTS/STT Slint tiba di wave ini.'
     hearing:
       blurb: 'Input mikrofon, deteksi aktivitas suara dan transkripsi.'
-      reason: 'Siap di Qt — backend mendarat di airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); permukaan pengaturan pendengaran Qt tiba di wave ini.'
+      reason: 'Siap di Slint — backend mendarat di airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); permukaan pengaturan pendengaran Slint tiba di wave ini.'
     vision:
       blurb: 'Persepsi visual layar dan kamera.'
-      reason: 'Ditunda — tanpa stack vision di Qt (moondream/blip/apple-core-ai tidak ada di registri Rust); hidup di aplikasi Electron hari ini.'
+      reason: 'Ditunda — tanpa stack vision di Slint (moondream/blip/apple-core-ai tidak ada di registri Rust); hidup di aplikasi Electron hari ini.'
     consciousness:
       blurb: 'Kepribadian, penalaran dan perilaku dasar model.'
-      reason: 'Ditunda — tanpa padanan Qt; hidup di aplikasi Electron hari ini.'
+      reason: 'Ditunda — tanpa padanan Slint; hidup di aplikasi Electron hari ini.'
     agenticOs:
       blurb: 'Perilaku otonom berbasis presence dan hook otomasi OS.'
-      reason: 'Ditunda — tanpa backend Qt (presence, companion scopes, event log); hidup di aplikasi Electron hari ini.'
+      reason: 'Ditunda — tanpa backend Slint (presence, companion scopes, event log); hidup di aplikasi Electron hari ini.'
     textToMotion:
       blurb: 'Generasi animasi prosedural dari teks (keluaran VRMA).'
-      reason: 'Ditunda — tanpa padanan Qt (FlowMDM / VRMA); berdekatan dengan P10; hidup di aplikasi Electron hari ini.'
+      reason: 'Ditunda — tanpa padanan Slint (FlowMDM / VRMA); berdekatan dengan P10; hidup di aplikasi Electron hari ini.'
     discord:
       blurb: 'Bot Discord: kirim pesan dan lihat gateway khusus terima.'
       reason: 'Tersambung — REST kirim-saja + gateway terima opt-in di memori; tanpa perintah bot; Electron mempertahankan jalur perintah bot penuh.'
@@ -419,28 +419,28 @@ modules:
       reason: 'Tersambung — klien MCP (stdio + streamable-HTTP) dengan konfigurasi mcp.json; Discover belum disambungkan.'
     acp:
       blurb: 'Sesi Agent Client Protocol dengan izin HITL.'
-      reason: 'Tersambung — jembatan ACP dengan prompt izin HITL fungsional di Qt.'
+      reason: 'Tersambung — jembatan ACP dengan prompt izin HITL fungsional di Slint.'
     cloudSync:
       blurb: 'Cadangkan snapshot ke penyimpananmu sendiri (BYOS).'
       reason: 'Tersambung — target folder lokal, verifikasi/restore snapshot; S3/mesh/selektif belum disambungkan.'
     pluginHost:
       blurb: 'Host untuk paket plugin AIRI.'
-      reason: 'Hanya scaffold — tanpa penemuan/pengaktifan/bus kapabilitas; dibebaskan untuk Qt v1; main process Electron yang meng-host plugin.'
+      reason: 'Hanya scaffold — tanpa penemuan/pengaktifan/bus kapabilitas; dibebaskan untuk Slint v1; main process Electron yang meng-host plugin.'
     vrm:
       blurb: 'Render model VRM dan scene stage.'
-      reason: 'Siap di Qt — stage VRM me-render (VrmMtoonMaterial + scene); terverifikasi smoke.'
+      reason: 'Siap di Slint — stage VRM me-render (VrmMtoonMaterial + scene); terverifikasi smoke.'
     spine:
       blurb: 'Model animasi skeletal 2D Spine.'
-      reason: 'Siap di Qt — SpineStage + SpineSettingsPage; terverifikasi smoke.'
+      reason: 'Siap di Slint — SpineStage + SpineSettingsPage; terverifikasi smoke.'
     mmd:
       blurb: 'Model MikuMikuDance (.pmx/.pmd).'
       reason: 'Eksperimental — rest pose terverifikasi dengan fixture sintetis saja; tidak ada .pmx asli berlisensi yang pernah diuji.'
     live2d:
       blurb: 'Model Live2D Cubism.'
-      reason: 'Ditunda — lisensi; tanpa runtime Cubism di Qt; Electron me-render Live2D.'
+      reason: 'Ditunda — lisensi; tanpa runtime Cubism di Slint; Electron me-render Live2D.'
     cardAiStudio:
       blurb: 'Studio pembuatan character card berbantuan AI.'
-      reason: 'Ditunda — dibebaskan untuk Qt v1, dijadwalkan v1.1; hidup di aplikasi Electron hari ini.'
+      reason: 'Ditunda — dibebaskan untuk Slint v1, dijadwalkan v1.1; hidup di aplikasi Electron hari ini.'
 memory:
   title: 'Memori'
   badge: 'Info'
@@ -493,9 +493,9 @@ hearing:
     title: 'Perangkat input'
     caption: 'Pilih mikrofon yang akan dipakai AIRI setelah pipeline capture mendarat.'
     emptyTitle: 'Tidak ada perangkat input terdaftar'
-    emptySubtitle: 'Build Qt belum bisa mendaftar mikrofon — capture audio belum tersambung.'
+    emptySubtitle: 'Build Slint belum bisa mendaftar mikrofon — capture audio belum tersambung.'
     useDefault: 'Default sistem'
-  footerWarning: 'Pipeline capture dan Silero VAD belum tersambung ke chat di build Qt ini. Pengaturan ini hanya menyimpan niat Anda; tidak ada yang mendengar di sini.'
+  footerWarning: 'Pipeline capture dan Silero VAD belum tersambung ke chat di build Slint ini. Pengaturan ini hanya menyimpan niat Anda; tidak ada yang mendengar di sini.'
   saveError: 'Gagal menyimpan — lihat baris status untuk detail.'
   nav: 'Pendengaran'
 speech:
@@ -506,7 +506,7 @@ speech:
     empty: 'Katalog penyedia gagal dimuat — lihat konsol.'
   noDefaultEndpoint: 'tanpa endpoint default (wajib)'
   save: 'Simpan'
-  missingKey: 'Penyedia ini memerlukan kunci API dan store tidak punya untuknya. Kunci dibaca dari store penyedia (id = penyedia ini); UI penyedia Qt belum menulis kredensial scoped speech.'
+  missingKey: 'Penyedia ini memerlukan kunci API dan store tidak punya untuknya. Kunci dibaca dari store penyedia (id = penyedia ini); UI penyedia Slint belum menulis kredensial scoped speech.'
   status:
     ported: 'Terporting'
     partial: 'Parsial'
@@ -528,7 +528,7 @@ speech:
   stt:
     caption: 'Speech-to-text'
     title: 'Speech-to-text hidup di tempat lain (belum tersambung di sini)'
-    body: 'airi-stt mem-port klien STT: Whisper (in-process, whisper-rs), klien OpenAI-compatible /audio/transcriptions, klien Deepgram streaming, dan Aliyun NLS (streaming, token pra-terbit diperlukan). Permukaan hearing Qt yang akan mengendalikannya belum ada — halaman ini hanya mengonfigurasi text-to-speech.'
+    body: 'airi-stt mem-port klien STT: Whisper (in-process, whisper-rs), klien OpenAI-compatible /audio/transcriptions, klien Deepgram streaming, dan Aliyun NLS (streaming, token pra-terbit diperlukan). Permukaan hearing Slint yang akan mengendalikannya belum ada — halaman ini hanya mengonfigurasi text-to-speech.'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
@@ -603,8 +603,8 @@ widgets:
   missingId: 'ID widget hilang. Luncurkan jendela ini lewat pemanggilan komponen (widgets.render) untuk mengisi tampilan.'
   refresh: 'Muat ulang'
   closeWidget: 'Tutup widget'
-  deferredNotice: 'Build Qt belum punya jembatan widget (widgets.fetch / render / update / remove / clear) dan belum punya registry renderer QML. Semua di bawah ini adalah data pratinjau statis.'
-  deferredTip: 'Membutuhkan jembatan widget (fetch + event render/update/remove/clear) di build Qt.'
+  deferredNotice: 'Build Slint belum punya jembatan widget (widgets.fetch / render / update / remove / clear) dan belum punya registry renderer Slint. Semua di bawah ini adalah data pratinjau statis.'
+  deferredTip: 'Membutuhkan jembatan widget (fetch + event render/update/remove/clear) di build Slint.'
   kinds:
     weather:
       name: 'Cuaca'
@@ -770,7 +770,7 @@ mcp:
   manage:
     runtimeStatus: 'Status Runtime'
     storageLabel: 'Penyimpanan (belum terhubung)'
-    configPathHint: "Default Electron adalah app.getPath('appData') + '/airi/mcp.json'; jembatan Qt akan mengikuti konvensi yang sama. Path yang ditampilkan bersifat ilustratif, tidak dibaca dari disk."
+    configPathHint: "Default Electron adalah app.getPath('appData') + '/airi/mcp.json'; jembatan Slint akan mengikuti konvensi yang sama. Path yang ditampilkan bersifat ilustratif, tidak dibaca dari disk."
     configuredServers: 'Server Terkonfigurasi'
     documentedExample: 'Contoh dokumentasi'
     exampleNote: 'Ditampilkan sebagai dokumentasi — ini konfigurasi bawaan AIRI Desktop (Electron main), bukan server yang pernah dihubungkan AIRI.'
@@ -812,7 +812,7 @@ mcp:
   discover:
     searchPlaceholder: 'Cari registry MCP (mis. fetch, weather, remote)…'
     emptyTitle: 'Penemuan registry belum terhubung'
-    emptySubtitle: 'Mencari di registry MCP membutuhkan jembatan Qt dan klien registry (registry.modelcontextprotocol.io). Sebelum itu, tambahkan server secara manual di tab Kelola.'
+    emptySubtitle: 'Mencari di registry MCP membutuhkan jembatan Slint dan klien registry (registry.modelcontextprotocol.io). Sebelum itu, tambahkan server secara manual di tab Kelola.'
   test:
     sectionCaption: 'Uji Koneksi'
     title: 'Bangku Uji Koneksi MCP'
@@ -836,7 +836,7 @@ discord:
   title: 'Discord'
   description: 'Jembatan pesan antara companion AIRI-mu dengan server Discord dan pesan langsung.'
   deferredNotice: 'Modul Discord belum terhubung ke gateway Rust. Koneksi bot, perilaku relay, dan routing akses ditampilkan sebagai pratinjau struktural — setiap aksi dinonaktifkan sampai jembatan gateway hadir.'
-  deferredTip: 'Membutuhkan jembatan gateway Discord (siklus hidup websocket, penyimpanan token, layanan Rust) di build Qt.'
+  deferredTip: 'Membutuhkan jembatan gateway Discord (siklus hidup websocket, penyimpanan token, layanan Rust) di build Slint.'
   tabs:
     bot: 'Koneksi Bot'
     acl: 'Akses & Routing'
@@ -879,7 +879,7 @@ discord:
     previewTitle: 'Pratinjau Antarmuka Routing Akses & Konteks'
     previewBody: 'Matriks routing dan antarmuka kontrol akses channel ini adalah pratinjau arsitektur awal yang ditampilkan semata-mata untuk tujuan demonstrasi dan umpan balik. Pipeline routing multi-channel yang mendasarinya dan lapisan isolasi per-konteks sedang terus disempurnakan. Kami menampilkan kontrol konfigurasi ini lebih awal agar kamu bisa menjelajahi alur kerja yang diusulkan dan memberikan umpan balik apakah tata letak ini memenuhi kebutuhanmu sebelum mesin routing live diimplementasikan.'
     linkLabel: 'Discord'
-    linkTip: 'Tautan eksternal tidak tersedia di build Qt — buka discord.gg di browsermu.'
+    linkTip: 'Tautan eksternal tidak tersedia di build Slint — buka discord.gg di browsermu.'
     fallbackTitle: 'Mode Fallback Global'
     fallbackIgnoreTitle: 'Fallback Ketat (Abaikan)'
     fallbackIgnoreBody: 'Channel yang tidak dipetakan dibuang. (Bawaan / Teraman)'
@@ -942,8 +942,8 @@ cloudSync:
   title: 'Cloud Sync'
   description: 'Mencadangkan dan menyinkronkan basis data, kartu karakter, segmen memori, dan aset media lintas perangkat.'
   notWiredBadge: 'Belum terhubung'
-  deferredNotice: 'Modul Cloud Sync belum terhubung ke mesin sinkronisasi di build Qt. Target sync, kredensial, jadwal, dan pemulihan ditampilkan sebagai pratinjau struktural — setiap aksi dinonaktifkan sampai mesin sinkronisasi hadir.'
-  deferredTip: 'Membutuhkan mesin sinkronisasi (transport S3 / local-FS, snapshotting IndexedDB, penjaga konflik) di build Qt.'
+  deferredNotice: 'Modul Cloud Sync belum terhubung ke mesin sinkronisasi di build Slint. Target sync, kredensial, jadwal, dan pemulihan ditampilkan sebagai pratinjau struktural — setiap aksi dinonaktifkan sampai mesin sinkronisasi hadir.'
+  deferredTip: 'Membutuhkan mesin sinkronisasi (transport S3 / local-FS, snapshotting IndexedDB, penjaga konflik) di build Slint.'
   storage:
     title: 'Target Penyimpanan'
     notWiredState: 'Tidak terhubung'
@@ -1064,8 +1064,8 @@ pluginHost:
   title: 'Plugin Host'
   description: 'Inspeksi dan kelola plugin AIRI: manifest yang ditemukan, aktivasi, sesi termuat, dan kapabilitas yang diumumkan.'
   notWiredBadge: 'Belum terhubung'
-  deferredTip: 'Belum terhubung — belum ada host plugin di build Qt. Pratinjau ini hanya menampilkan tata letak; tidak ada yang menemukan, memuat, atau menyimpan plugin.'
-  deferredNotice: 'Host plugin tidak terhubung di build ini. Tidak ada manifest yang ditemukan dari disk, tidak ada plugin yang dimuat, dan setiap kontrol di bawah inert sampai host plugin Qt (atau jembatan gaya-Electron) hadir.'
+  deferredTip: 'Belum terhubung — belum ada host plugin di build Slint. Pratinjau ini hanya menampilkan tata letak; tidak ada yang menemukan, memuat, atau menyimpan plugin.'
+  deferredNotice: 'Host plugin tidak terhubung di build ini. Tidak ada manifest yang ditemukan dari disk, tidak ada plugin yang dimuat, dan setiap kontrol di bawah inert sampai host plugin Slint (atau jembatan gaya-Electron) hadir.'
   stats:
     discovered: 'Ditemukan'
     enabled: 'Diaktifkan'

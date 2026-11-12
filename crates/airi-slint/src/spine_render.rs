@@ -6,12 +6,10 @@
 //! viewport, and rasterizes the textured triangles into an RGBA buffer that
 //! Slint displays via [`slint::Image::from_rgba8`].
 //!
-//! The Qt scene-graph `SpineItem` used the GPU for this; Slint 1.x stable does
-//! not expose a raw per-frame GL callback suitable for spine-cpp vertex data,
-//! so the spike falls back to a CPU rasterizer (textured triangles, alpha
-//! blend, additive blend). Good enough for the synthetic fixture and the seam
-//! proof; upgrade to a borrowed-GL-texture path when Slint exposes a stable
-//! render-thread hook.
+//! Slint 1.x stable does not expose a raw per-frame GL callback suitable for
+//! spine-cpp vertex data, so this is a CPU rasterizer (textured triangles, alpha
+//! blend, additive blend). Upgrade to a borrowed-GL-texture path when Slint
+//! exposes a stable render-thread hook.
 
 use airi_render::spine::{DrawData, DrawVertex, SpineSession};
 use image::RgbaImage;

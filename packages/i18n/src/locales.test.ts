@@ -122,7 +122,7 @@ describe('@proj-airi/i18n locale integrity', () => {
   it('maintains 100% key parity for shell.yaml across all supported languages', () => {
     const enPath = path.join(LOCALES_DIR, 'en', 'shell.yaml')
     if (!fs.existsSync(enPath)) {
-      // Pending Qt shell YAML creation
+      // Pending shell YAML creation
       return
     }
 

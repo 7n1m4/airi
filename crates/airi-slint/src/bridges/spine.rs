@@ -5,7 +5,7 @@
 //! Thin bridge over [`crate::spine_rt`]: parsing, bundle extraction and the
 //! spine-cpp session live in `airi-render`; the bridge only shuttles
 //! UI-facing calls into it and caches the display-rate properties the stage
-//! reads every frame. (Port of the former cxx-qt `SpineController`.)
+//! reads every frame.
 
 use std::sync::Mutex;
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // Settings window chrome: left nav + content stack. Port of
-// qml/shell/SettingsWindow.qml. The 30 nav items mirror the QML navIndex
-// order; the page bodies live in later tracks (the QML content stack is
+// The 30 nav items follow the navIndex order; the page bodies live in
+// later tracks (the content stack is
 // referenced by the same index constants).
 
 import { Theme } from "../Theme.slint";
@@ -26,7 +26,7 @@ export component SettingsWindow inherits Window {
     callback navigate(int);
 
     // Nav model: [icon, labelKey, index] triples kept in lockstep with the
-    // QML navIndex order. Repeater reads the label via I18n.
+    // navIndex order. Repeater reads the label via I18n.
     out property <[string]> nav-icons: [
         "🔌", "🎨", "ℹ️", "🎭", "🌀", "🔩", "🖌️", "🧩", "🖊️", "🔊", "👤", "🃏", "🧭", "🗄️",
         "✨", "📣", "👁️", "🧩", "🔌", "💬", "☁️", "🛠️", "📷", "🤵", "📦", "🧠", "🗣️", "👂",

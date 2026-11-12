@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Read-only `renderer.*` RPC handlers exposed by the `--gateway` channel server.
 //!
-//! These run on channel connection threads — never on the Qt thread — and
-//! never see QObjects. They take plain JSON and return plain JSON. Only
+//! These run on channel connection threads, never on the UI thread. They take
+//! plain JSON and return plain JSON. Only
 //! read-only, aggregate app state is exposed: chat session/message counts,
 //! memory summary count, journal entry count, and enabled provider count.
 //! Chat content, session titles, file paths, and credentials are never
@@ -52,7 +52,7 @@ pub fn build(db: Database) -> airi_channel::RendererHandlers {
 
     // GUI-dispatch verbs (opt-in via `allowActions` in server-channel/
     // config.json; enforced at request time by `gateway_pump::dispatch_request`,
-    // which parks the connection thread until the Qt thread pump completes
+    // which parks the connection thread until the UI-thread pump completes
     // the action — or times out after 2 s).
     for verb in ["notify", "window.raise", "stage.visibility"] {
         map.insert(

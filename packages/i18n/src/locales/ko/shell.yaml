@@ -1,4 +1,4 @@
-# Qt(QML) 데스크톱 셸 문자열: 스플래시, 컨트롤 스트립, 창 및
+# Slint(Slint) 데스크톱 셸 문자열: 스플래시, 컨트롤 스트립, 창 및
 # 플레이스홀더 페이지.
 app:
   name: AIRI
@@ -155,8 +155,8 @@ about:
   title: AIRI — 정보
   app-name: AIRI
   tagline: 당신의 AI 컴패니언, 이제 데스크톱에.
-  body: AIRI는 데스크톱 AI 컴패니언입니다 — 말하고, 보고, 반응하는 디지털 존재입니다. Rust, Qt 6, QML로 만들어졌습니다.
-  license: GPL-3.0-or-later 라이선스. Qt Quick 3D는 해당 GPL 조건에 따라 사용됩니다.
+  body: AIRI는 데스크톱 AI 컴패니언입니다 — 말하고, 보고, 반응하는 디지털 존재입니다. Rust, Slint 6, Slint로 만들어졌습니다.
+  license: GPL-3.0-or-later 라이선스. Slint는 해당 GPL 조건에 따라 사용됩니다.
   source-label: 소스 코드
   source-url: https://github.com/moeru-ai/airi
   credit: Neko Ayaka와 AIRI 기여자들이 만들었습니다.
@@ -335,7 +335,7 @@ models:
       mmd: MMD
 
 onboarding:
-  deferredNotice: '이 Qt 빌드에서는 첫 실행 완료 기능이 아직 연결되지 않았습니다 — 이 화면들은 프레젠테이션용입니다. 마법사를 완료하거나 건너뛰는 버튼은 온보딩 스토어가 들어오면 활성화됩니다.'
+  deferredNotice: '이 Slint 빌드에서는 첫 실행 완료 기능이 아직 연결되지 않았습니다 — 이 화면들은 프레젠테이션용입니다. 마법사를 완료하거나 건너뛰는 버튼은 온보딩 스토어가 들어오면 활성화됩니다.'
   deferredTip: '아직 연결 안 됨 — 첫 실행 온보딩 스토어가 이 동작을 활성화합니다.'
   v3:
     brand: 'AIRI 컴패니언 설정'
@@ -352,7 +352,7 @@ onboarding:
 
 notice:
   previewBadge: '미리보기'
-  deferredTip: '알림 창 액션 브리지(windowAction / pageMounted / pageUnmounted)가 필요하며, Qt 빌드에는 아직 없습니다.'
+  deferredTip: '알림 창 액션 브리지(windowAction / pageMounted / pageUnmounted)가 필요하며, Slint 빌드에는 아직 없습니다.'
   index:
     title: '알림'
     subtitle: 'AIRI의 메인 프로세스는 일회성 프롬프트에 대해 일시적인 알림 창을 표시합니다. 이 페이지는 데스크톱 앱이 제공하는 알림을 나열합니다.'
@@ -360,7 +360,7 @@ notice:
     fadeOnHoverTitle: 'Fade on Hover 튜토리얼'
     fadeOnHoverSubtitle: '커서가 가까워지면 캐릭터를 흐리게 하는 자동 숨김 동작을 설명합니다.'
     routeFadeOnHover: '/notice/fade-on-hover'
-    deferredNotice: 'Qt 빌드에는 아직 알림 창 호스트가 없습니다. 이 표면들은 대기 중인 알림 요청 스토어가 들어오면 프레임 없는 알림 창으로 열립니다.'
+    deferredNotice: 'Slint 빌드에는 아직 알림 창 호스트가 없습니다. 이 표면들은 대기 중인 알림 요청 스토어가 들어오면 프레임 없는 알림 창으로 열립니다.'
     footnote: 'Electron 빌드에서 여기 있습니다: /notice/fade-on-hover.'
   fadeOnHover:
     badge: '튜토리얼'
@@ -371,7 +371,7 @@ notice:
     confirm: '알겠습니다'
     dontShowAgain: '다시 표시하지 않음'
     previewTitle: '튜토리얼 미리보기'
-    previewNote: 'fade-on-hover 워크스루 영상은 stage-tamagotchi 렌더러 에셋과 함께 배포됩니다. 번들하려면 Qt 빌드에 아직 들어오지 않은 에셋 등록 단계가 필요합니다.'
+    previewNote: 'fade-on-hover 워크스루 영상은 stage-tamagotchi 렌더러 에셋과 함께 배포됩니다. 번들하려면 Slint 빌드에 아직 들어오지 않은 에셋 등록 단계가 필요합니다.'
 
 modules:
   title: '모듈'
@@ -391,25 +391,25 @@ modules:
   entries:
     memory:
       blurb: '동반자의 단기·장기 기억, 저널, retrieval.'
-      reason: 'Qt에서 사용 가능 — 경로는 설정 내비가 처리. 백엔드는 airi-core memory(journal, retrieval, embeddings)에 구현됨. 설정 표면은 이번 wave에 도착.'
+      reason: 'Slint에서 사용 가능 — 경로는 설정 내비가 처리. 백엔드는 airi-core memory(journal, retrieval, embeddings)에 구현됨. 설정 표면은 이번 wave에 도착.'
     speech:
       blurb: '동반자를 위한 텍스트 음성 출력.'
-      reason: 'Qt에서 사용 가능 — 백엔드는 airi-speech(TTS 정의 26개 + Kokoro)에 구현됨. Qt TTS/STT 설정 표면은 이번 wave에 도착.'
+      reason: 'Slint에서 사용 가능 — 백엔드는 airi-speech(TTS 정의 26개 + Kokoro)에 구현됨. Slint TTS/STT 설정 표면은 이번 wave에 도착.'
     hearing:
       blurb: '마이크 입력, 음성 활동 감지, 전사.'
-      reason: 'Qt에서 사용 가능 — 백엔드는 airi-stt(capture, Silero VAD, Deepgram/Aliyun/whisper-local)에 구현됨. Qt 청취 설정 표면은 이번 wave에 도착.'
+      reason: 'Slint에서 사용 가능 — 백엔드는 airi-stt(capture, Silero VAD, Deepgram/Aliyun/whisper-local)에 구현됨. Slint 청취 설정 표면은 이번 wave에 도착.'
     vision:
       blurb: '화면과 카메라 시각 인식.'
-      reason: '연기됨 — Qt vision 스택 없음(moondream/blip/apple-core-ai는 Rust 레지스트리에 없음). 현재 Electron 앱에 존재.'
+      reason: '연기됨 — Slint vision 스택 없음(moondream/blip/apple-core-ai는 Rust 레지스트리에 없음). 현재 Electron 앱에 존재.'
     consciousness:
       blurb: '성격, 추론, 모델 기본 동작.'
-      reason: '연기됨 — Qt 대응 없음. 현재 Electron 앱에 존재.'
+      reason: '연기됨 — Slint 대응 없음. 현재 Electron 앱에 존재.'
     agenticOs:
       blurb: 'presence 기반 자율 동작과 OS 자동화 훅.'
-      reason: '연기됨 — Qt 백엔드 없음(presence, companion scopes, event log). 현재 Electron 앱에 존재.'
+      reason: '연기됨 — Slint 백엔드 없음(presence, companion scopes, event log). 현재 Electron 앱에 존재.'
     textToMotion:
       blurb: '텍스트에서 절차적 애니메이션 생성(VRMA 출력).'
-      reason: '연기됨 — Qt 대응 없음(FlowMDM / VRMA). P10 인접. 현재 Electron 앱에 존재.'
+      reason: '연기됨 — Slint 대응 없음(FlowMDM / VRMA). P10 인접. 현재 Electron 앱에 존재.'
     discord:
       blurb: 'Discord 봇: 메시지 전송과 수신 전용 게이트웨이 모니터링.'
       reason: '연결됨 — 전송 전용 REST + 옵트인 메모리 내 수신 전용 게이트웨이. 봇 명령 없음. Electron이 전체 봇 명령 경로를 유지.'
@@ -418,28 +418,28 @@ modules:
       reason: '연결됨 — MCP 클라이언트(stdio + streamable-HTTP), mcp.json 구성. Discover 미연결.'
     acp:
       blurb: 'HITL 권한이 있는 Agent Client Protocol 세션.'
-      reason: '연결됨 — ACP 브리지. HITL 권한 프롬프트가 Qt에서 동작.'
+      reason: '연결됨 — ACP 브리지. HITL 권한 프롬프트가 Slint에서 동작.'
     cloudSync:
       blurb: '자체 저장소에 스냅샷 백업(BYOS).'
       reason: '연결됨 — 로컬 폴더 타깃, 스냅샷 검증/복원. S3/메시/선택적 동기화 미연결.'
     pluginHost:
       blurb: 'AIRI 플러그인 패키지의 호스트.'
-      reason: '스캐폴드만 — discovery/활성화/capability 버스 없음. Qt v1 면제. Electron 메인 프로세스가 플러그인을 호스트.'
+      reason: '스캐폴드만 — discovery/활성화/capability 버스 없음. Slint v1 면제. Electron 메인 프로세스가 플러그인을 호스트.'
     vrm:
       blurb: 'VRM 모델 렌더링과 스테이지 씬.'
-      reason: 'Qt에서 사용 가능 — VRM 스테이지 렌더링(VrmMtoonMaterial + 스테이지 씬). smoke 검증됨.'
+      reason: 'Slint에서 사용 가능 — VRM 스테이지 렌더링(VrmMtoonMaterial + 스테이지 씬). smoke 검증됨.'
     spine:
       blurb: 'Spine 2D 스켈레탈 애니메이션 모델.'
-      reason: 'Qt에서 사용 가능 — SpineStage + SpineSettingsPage. smoke 검증됨.'
+      reason: 'Slint에서 사용 가능 — SpineStage + SpineSettingsPage. smoke 검증됨.'
     mmd:
       blurb: 'MikuMikuDance 모델(.pmx/.pmd).'
       reason: '실험적 — 합성 픽스처 rest pose만 검증됨. 라이선스된 실제 .pmx는 아직 구동되지 않음.'
     live2d:
       blurb: 'Live2D Cubism 모델.'
-      reason: '연기됨 — 라이선스. Qt용 Cubism 런타임 없음. Electron이 Live2D를 렌더링.'
+      reason: '연기됨 — 라이선스. Slint용 Cubism 런타임 없음. Electron이 Live2D를 렌더링.'
     cardAiStudio:
       blurb: 'AI 지원 캐릭터 카드 제작 스튜디오.'
-      reason: '연기됨 — Qt v1 면제, v1.1 예정. 현재 Electron 앱에 존재.'
+      reason: '연기됨 — Slint v1 면제, v1.1 예정. 현재 Electron 앱에 존재.'
 memory:
   title: '메모리'
   badge: '정보'
@@ -492,9 +492,9 @@ hearing:
     title: '입력 장치'
     caption: '캡처 파이프라인이 도착하면 AIRI가 사용할 마이크를 선택합니다.'
     emptyTitle: '입력 장치가 열거되지 않았습니다'
-    emptySubtitle: '이 Qt 빌드는 아직 마이크를 나열할 수 없습니다 — 오디오 캡처는 연결되지 않았습니다.'
+    emptySubtitle: '이 Slint 빌드는 아직 마이크를 나열할 수 없습니다 — 오디오 캡처는 연결되지 않았습니다.'
     useDefault: '시스템 기본값'
-  footerWarning: '이 Qt 빌드에서는 캡처 파이프라인과 Silero VAD가 채팅에 연결되어 있지 않습니다. 이 설정들은 의도만 저장합니다. 아무것도 듣지 않습니다.'
+  footerWarning: '이 Slint 빌드에서는 캡처 파이프라인과 Silero VAD가 채팅에 연결되어 있지 않습니다. 이 설정들은 의도만 저장합니다. 아무것도 듣지 않습니다.'
   saveError: '저장에 실패했습니다 — 자세한 내용은 상태 표시줄을 확인하세요.'
   nav: '청취'
 speech:
@@ -505,7 +505,7 @@ speech:
     empty: '제공자 카탈로그를 불러오지 못했습니다 — 콘솔을 확인하세요.'
   noDefaultEndpoint: '기본 엔드포인트 없음 (필수)'
   save: '저장'
-  missingKey: '이 제공자는 API 키가 필요하지만 store에 없습니다. 키는 제공자 store(id = 이 제공자)에서 읽습니다. Qt 제공자 UI는 아직 speech 범위 자격 증명을 쓰지 않습니다.'
+  missingKey: '이 제공자는 API 키가 필요하지만 store에 없습니다. 키는 제공자 store(id = 이 제공자)에서 읽습니다. Slint 제공자 UI는 아직 speech 범위 자격 증명을 쓰지 않습니다.'
   status:
     ported: '이식됨'
     partial: '부분'
@@ -527,7 +527,7 @@ speech:
   stt:
     caption: '음성 인식'
     title: '음성 인식은 다른 곳에 있습니다 (여기서는 연결 안 됨)'
-    body: 'airi-stt는 STT 클라이언트를 이식합니다: Whisper(인프로세스, whisper-rs), OpenAI 호환 /audio/transcriptions 클라이언트, Deepgram streaming 클라이언트, Aliyun NLS(streaming, 사전 발급 토큰 필요). 이를 구동할 Qt 청취 표면은 아직 없습니다 — 이 페이지는 텍스트 음성 변환만 설정합니다.'
+    body: 'airi-stt는 STT 클라이언트를 이식합니다: Whisper(인프로세스, whisper-rs), OpenAI 호환 /audio/transcriptions 클라이언트, Deepgram streaming 클라이언트, Aliyun NLS(streaming, 사전 발급 토큰 필요). 이를 구동할 Slint 청취 표면은 아직 없습니다 — 이 페이지는 텍스트 음성 변환만 설정합니다.'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
@@ -602,8 +602,8 @@ widgets:
   missingId: '위젯 id가 없습니다. 이 창은 컴포넌트 호출(widgets.render)로 실행하여 뷰를 채워주세요.'
   refresh: '새로고침'
   closeWidget: '위젯 닫기'
-  deferredNotice: 'Qt 빌드에는 아직 위젯 브리지(widgets.fetch / render / update / remove / clear 이벤트)와 QML 렌더러 레지스트리가 없습니다. 아래는 모두 정적 미리보기 데이터입니다.'
-  deferredTip: 'Qt 빌드의 위젯 브리지(fetch + render/update/remove/clear 이벤트)가 필요합니다.'
+  deferredNotice: 'Slint 빌드에는 아직 위젯 브리지(widgets.fetch / render / update / remove / clear 이벤트)와 Slint 렌더러 레지스트리가 없습니다. 아래는 모두 정적 미리보기 데이터입니다.'
+  deferredTip: 'Slint 빌드의 위젯 브리지(fetch + render/update/remove/clear 이벤트)가 필요합니다.'
   kinds:
     weather:
       name: '날씨'
@@ -769,7 +769,7 @@ mcp:
   manage:
     runtimeStatus: '런타임 상태'
     storageLabel: '저장소 (미연결)'
-    configPathHint: "Electron 기본값은 app.getPath('appData') + '/airi/mcp.json'이며 Qt 브리지도 같은 규칙을 따릅니다. 표시된 경로는 예시용이며 디스크에서 읽지 않습니다."
+    configPathHint: "Electron 기본값은 app.getPath('appData') + '/airi/mcp.json'이며 Slint 브리지도 같은 규칙을 따릅니다. 표시된 경로는 예시용이며 디스크에서 읽지 않습니다."
     configuredServers: '구성된 서버'
     documentedExample: '문서 예시'
     exampleNote: '문서로 표시됨 — AIRI Desktop(Electron main)에 내장된 기본 설정이며, AIRI가 연결한 서버가 아닙니다.'
@@ -811,7 +811,7 @@ mcp:
   discover:
     searchPlaceholder: 'MCP 레지스트리 검색 (예: fetch, weather, remote)…'
     emptyTitle: '레지스트리 탐색은 아직 연결 안 됨'
-    emptySubtitle: 'MCP 레지스트리 검색에는 Qt 브리지와 레지스트리 클라이언트(registry.modelcontextprotocol.io)가 필요합니다. 그전에는 관리 탭에서 수동으로 서버를 추가하세요.'
+    emptySubtitle: 'MCP 레지스트리 검색에는 Slint 브리지와 레지스트리 클라이언트(registry.modelcontextprotocol.io)가 필요합니다. 그전에는 관리 탭에서 수동으로 서버를 추가하세요.'
   test:
     sectionCaption: '연결 테스트'
     title: 'MCP 연결 테스트 벤치'
@@ -835,7 +835,7 @@ discord:
   title: 'Discord'
   description: 'AIRI 컴패니언과 Discord 서버 및 다이렉트 메시지를 잇는 메시징 브리지.'
   deferredNotice: 'Discord 모듈은 아직 Rust 게이트웨이에 연결되지 않았습니다. Bot 연결, 릴레이 동작, 접근 라우팅은 구조 미리보기로 표시됩니다 — 게이트웨이 브리지가 들어올 때까지 모든 동작은 비활성화됩니다.'
-  deferredTip: 'Qt 빌드에는 Discord 게이트웨이 브리지(웹소켓 수명주기, 토큰 저장소, Rust 서비스)가 필요합니다.'
+  deferredTip: 'Slint 빌드에는 Discord 게이트웨이 브리지(웹소켓 수명주기, 토큰 저장소, Rust 서비스)가 필요합니다.'
   tabs:
     bot: 'Bot 연결'
     acl: '접근 & 라우팅'
@@ -878,7 +878,7 @@ discord:
     previewTitle: '접근 & 컨텍스트 라우팅 인터페이스 미리보기'
     previewBody: '이 라우팅 매트릭스와 채널 접근 제어 인터페이스는 시연 및 피드백 목적으로만 제시된 초기 아키텍처 미리보기입니다. 기반이 되는 멀티채널 라우팅 파이프라인과 컨텍스트별 격리 레이어는 활발하게 다듬어지고 있습니다. 라이브 라우팅 엔진이 구현되기 전에 제안된 워크플로를 탐색하고 이 레이아웃이 요구를 충족하는지에 대한 피드백을 얻을 수 있도록 이 구성 컨트롤을 먼저 공개했습니다.'
     linkLabel: 'Discord'
-    linkTip: 'Qt 빌드에서는 외부 링크를 사용할 수 없습니다 — 브라우저에서 discord.gg를 여세요.'
+    linkTip: 'Slint 빌드에서는 외부 링크를 사용할 수 없습니다 — 브라우저에서 discord.gg를 여세요.'
     fallbackTitle: '전역 폴백 모드'
     fallbackIgnoreTitle: '엄격한 폴백 (무시)'
     fallbackIgnoreBody: '매핑되지 않은 채널은 버려집니다. (기본값 / 가장 안전)'
@@ -941,8 +941,8 @@ cloudSync:
   title: 'Cloud Sync'
   description: '기기 간에 데이터베이스, 캐릭터 카드, 메모리 세그먼트, 미디어 자산을 백업하고 동기화합니다.'
   notWiredBadge: '아직 연결 안 됨'
-  deferredNotice: 'Cloud Sync 모듈은 아직 Qt 빌드의 동기화 엔진에 연결되지 않았습니다. 동기화 대상, 자격 증명, 스케줄링, 복원이 구조 미리보기로 표시됩니다 — 동기화 엔진이 들어올 때까지 모든 동작은 비활성화됩니다.'
-  deferredTip: 'Qt 빌드에는 동기화 엔진(S3 / local-FS 전송, IndexedDB 스냅샷, 충돌 가드)이 필요합니다.'
+  deferredNotice: 'Cloud Sync 모듈은 아직 Slint 빌드의 동기화 엔진에 연결되지 않았습니다. 동기화 대상, 자격 증명, 스케줄링, 복원이 구조 미리보기로 표시됩니다 — 동기화 엔진이 들어올 때까지 모든 동작은 비활성화됩니다.'
+  deferredTip: 'Slint 빌드에는 동기화 엔진(S3 / local-FS 전송, IndexedDB 스냅샷, 충돌 가드)이 필요합니다.'
   storage:
     title: '스토리지 대상'
     notWiredState: '연결 안 됨'
@@ -1063,8 +1063,8 @@ pluginHost:
   title: 'Plugin Host'
   description: 'AIRI 플러그인을 검사하고 관리합니다: 발견된 매니페스트, 활성화, 로드된 세션 및 공지된 기능.'
   notWiredBadge: '아직 연결 안 됨'
-  deferredTip: '아직 연결 안 됨 — Qt 빌드에는 플러그인 호스트가 없습니다. 이 미리보기는 레이아웃만 보여줍니다. 여기서 플러그인을 발견, 로드하거나 저장하지 않습니다.'
-  deferredNotice: '이 빌드에서는 플러그인 호스트가 연결되지 않았습니다. 매니페스트는 디스크에서 발견되지 않고, 플러그인은 로드되지 않으며, 아래 모든 컨트롤은 Qt 플러그인 호스트(또는 Electron 스타일 브리지)가 들어올 때까지 비활성입니다.'
+  deferredTip: '아직 연결 안 됨 — Slint 빌드에는 플러그인 호스트가 없습니다. 이 미리보기는 레이아웃만 보여줍니다. 여기서 플러그인을 발견, 로드하거나 저장하지 않습니다.'
+  deferredNotice: '이 빌드에서는 플러그인 호스트가 연결되지 않았습니다. 매니페스트는 디스크에서 발견되지 않고, 플러그인은 로드되지 않으며, 아래 모든 컨트롤은 Slint 플러그인 호스트(또는 Electron 스타일 브리지)가 들어올 때까지 비활성입니다.'
   stats:
     discovered: '발견됨'
     enabled: '활성화됨'

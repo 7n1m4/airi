@@ -1,4 +1,4 @@
-# Chuỗi cho Qt (QML) desktop shell: màn hình khởi động, thanh điều khiển, các
+# Chuỗi cho Slint desktop shell: màn hình khởi động, thanh điều khiển, các
 # cửa sổ và trang giữ chỗ.
 app:
   name: AIRI
@@ -155,8 +155,8 @@ about:
   title: AIRI — Giới thiệu
   app-name: AIRI
   tagline: Người bạn đồng hành AI của bạn, ngay trên desktop.
-  body: AIRI là một người bạn đồng hành AI trên desktop — một thực thể kỹ thuật số biết nói, nhìn và phản ứng. Được xây dựng bằng Rust, Qt 6 và QML.
-  license: Giấy phép GPL-3.0-or-later. Qt Quick 3D được sử dụng theo các điều khoản GPL của nó.
+  body: AIRI là một người bạn đồng hành AI trên desktop — một thực thể kỹ thuật số biết nói, nhìn và phản ứng. Được xây dựng bằng Rust và Slint.
+  license: Giấy phép GPL-3.0-or-later. Slint được sử dụng theo các điều khoản GPL của nó.
   source-label: Mã nguồn
   source-url: https://github.com/moeru-ai/airi
   credit: Được tạo ra bởi Neko Ayaka và các cộng tác viên AIRI.
@@ -335,7 +335,7 @@ models:
       mmd: MMD
 
 onboarding:
-  deferredNotice: 'Việc hoàn tất khởi chạy lần đầu chưa được nối trong bản dựng Qt này — các màn hình chỉ mang tính trình bày. Các nút hoàn tất hoặc bỏ qua trình hướng dẫn sẽ mở khoá khi store onboarding có mặt.'
+  deferredNotice: 'Việc hoàn tất khởi chạy lần đầu chưa được nối trong bản dựng Slint này — các màn hình chỉ mang tính trình bày. Các nút hoàn tất hoặc bỏ qua trình hướng dẫn sẽ mở khoá khi store onboarding có mặt.'
   deferredTip: 'Chưa được nối — store onboarding lần đầu sẽ kích hoạt hành động này.'
   v3:
     brand: 'Thiết lập bạn đồng hành AIRI'
@@ -352,7 +352,7 @@ onboarding:
 
 notice:
   previewBadge: 'Bản xem trước'
-  deferredTip: 'Cần cầu nối hành động của cửa sổ thông báo (windowAction / pageMounted / pageUnmounted), vốn chưa tồn tại trong bản dựng Qt.'
+  deferredTip: 'Cần cầu nối hành động của cửa sổ thông báo (windowAction / pageMounted / pageUnmounted), vốn chưa tồn tại trong bản dựng Slint.'
   index:
     title: 'Thông báo'
     subtitle: 'Tiến trình chính của AIRI hiển thị các cửa sổ thông báo tạm thời cho các lời nhắc một lần. Trang này liệt kê các thông báo mà ứng dụng desktop đi kèm.'
@@ -360,7 +360,7 @@ notice:
     fadeOnHoverTitle: 'Hướng dẫn Fade on Hover'
     fadeOnHoverSubtitle: 'Giải thích hành vi tự ẩn làm mờ nhân vật khi con trỏ đến gần.'
     routeFadeOnHover: '/notice/fade-on-hover'
-    deferredNotice: 'Bản dựng Qt chưa có host cho cửa sổ thông báo. Các bề mặt này sẽ mở dưới dạng cửa sổ thông báo không khung được điều khiển bởi store yêu cầu đang chờ khi nó có mặt.'
+    deferredNotice: 'Bản dựng Slint chưa có host cho cửa sổ thông báo. Các bề mặt này sẽ mở dưới dạng cửa sổ thông báo không khung được điều khiển bởi store yêu cầu đang chờ khi nó có mặt.'
     footnote: 'Trong bản build Electron, nó nằm ở /notice/fade-on-hover.'
   fadeOnHover:
     badge: 'Hướng dẫn'
@@ -371,7 +371,7 @@ notice:
     confirm: 'Đã hiểu'
     dontShowAgain: 'Không hiện lại'
     previewTitle: 'Xem trước hướng dẫn'
-    previewNote: 'Video hướng dẫn fade-on-hover đi kèm với asset của renderer stage-tamagotchi. Đóng gói nó cần một lượt đăng ký asset chưa có trong bản dựng Qt.'
+    previewNote: 'Video hướng dẫn fade-on-hover đi kèm với asset của renderer stage-tamagotchi. Đóng gói nó cần một lượt đăng ký asset chưa có trong bản dựng Slint.'
 
 modules:
   title: 'Modules'
@@ -391,25 +391,25 @@ modules:
   entries:
     memory:
       blurb: 'Trí nhớ ngắn/dài hạn, journal và retrieval cho companion của bạn.'
-      reason: 'Sẵn sàng trong Qt — tuyến do điều hướng cài đặt lo; backend đã đưa vào airi-core memory (journal, retrieval, embeddings); bề mặt cài đặt đến trong wave này.'
+      reason: 'Sẵn sàng trong Slint — tuyến do điều hướng cài đặt lo; backend đã đưa vào airi-core memory (journal, retrieval, embeddings); bề mặt cài đặt đến trong wave này.'
     speech:
       blurb: 'Đầu ra giọng nói text-to-speech cho companion của bạn.'
-      reason: 'Sẵn sàng trong Qt — backend đã đưa vào airi-speech (26 định nghĩa TTS + Kokoro); bề mặt cài đặt TTS/STT của Qt đến trong wave này.'
+      reason: 'Sẵn sàng trong Slint — backend đã đưa vào airi-speech (26 định nghĩa TTS + Kokoro); bề mặt cài đặt TTS/STT của Slint đến trong wave này.'
     hearing:
       blurb: 'Đầu vào mic, phát hiện hoạt động giọng nói và chuyển lời thành văn bản.'
-      reason: 'Sẵn sàng trong Qt — backend đã đưa vào airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); bề mặt cài đặt hearing của Qt đến trong wave này.'
+      reason: 'Sẵn sàng trong Slint — backend đã đưa vào airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); bề mặt cài đặt hearing của Slint đến trong wave này.'
     vision:
       blurb: 'Nhận thức thị giác màn hình và camera.'
-      reason: 'Hoãn lại — không có vision stack trong Qt (moondream/blip/apple-core-ai không có trong Rust registry); hiện sống trong ứng dụng Electron.'
+      reason: 'Hoãn lại — không có vision stack trong Slint (moondream/blip/apple-core-ai không có trong Rust registry); hiện sống trong ứng dụng Electron.'
     consciousness:
       blurb: 'Tính cách, lý luận và hành vi nền của model.'
-      reason: 'Hoãn lại — không có đối tác Qt; hiện sống trong ứng dụng Electron.'
+      reason: 'Hoãn lại — không có đối tác Slint; hiện sống trong ứng dụng Electron.'
     agenticOs:
       blurb: 'Hành vi tự chủ dẫn dắt bởi presence và các hook tự động hóa OS.'
-      reason: 'Hoãn lại — không có backend Qt (presence, companion scopes, event log); hiện sống trong ứng dụng Electron.'
+      reason: 'Hoãn lại — không có backend Slint (presence, companion scopes, event log); hiện sống trong ứng dụng Electron.'
     textToMotion:
       blurb: 'Sinh animation thủ tục từ văn bản (đầu ra VRMA).'
-      reason: 'Hoãn lại — không có đối tác Qt (FlowMDM / VRMA); kề cận P10; hiện sống trong ứng dụng Electron.'
+      reason: 'Hoãn lại — không có đối tác Slint (FlowMDM / VRMA); kề cận P10; hiện sống trong ứng dụng Electron.'
     discord:
       blurb: 'Bot Discord: gửi tin nhắn và theo dõi gateway chỉ-nhận.'
       reason: 'Đã nối — REST chỉ-gửi + gateway nhận opt-in trong bộ nhớ; không lệnh bot; Electron giữ đường lệnh bot đầy đủ.'
@@ -418,28 +418,28 @@ modules:
       reason: 'Đã nối — client MCP (stdio + streamable-HTTP) với cấu hình mcp.json; Discover chưa được nối.'
     acp:
       blurb: 'Phiên Agent Client Protocol với quyền HITL.'
-      reason: 'Đã nối — cầu ACP; lời nhắc quyền HITL hoạt động trên Qt.'
+      reason: 'Đã nối — cầu ACP; lời nhắc quyền HITL hoạt động trên Slint.'
     cloudSync:
       blurb: 'Sao lưu snapshot tới kho lưu trữ của riêng bạn (BYOS).'
       reason: 'Đã nối — mục tiêu thư mục cục bộ, xác minh/khôi phục snapshot; S3/mesh/chọn lọc chưa được nối.'
     pluginHost:
       blurb: 'Host cho gói plugin AIRI.'
-      reason: 'Chỉ scaffold — không discovery/bật/tắt/capability bus; miễn trừ cho Qt v1; main process Electron host plugin.'
+      reason: 'Chỉ scaffold — không discovery/bật/tắt/capability bus; miễn trừ cho Slint v1; main process Electron host plugin.'
     vrm:
       blurb: 'Render model VRM và cảnh stage.'
-      reason: 'Sẵn sàng trong Qt — stage VRM renders (VrmMtoonMaterial + stage scene); xác minh smoke.'
+      reason: 'Sẵn sàng trong Slint — stage VRM renders (VrmMtoonMaterial + stage scene); xác minh smoke.'
     spine:
       blurb: 'Model animation xương 2D Spine.'
-      reason: 'Sẵn sàng trong Qt — SpineStage + SpineSettingsPage; xác minh smoke.'
+      reason: 'Sẵn sàng trong Slint — SpineStage + SpineSettingsPage; xác minh smoke.'
     mmd:
       blurb: 'Model MikuMikuDance (.pmx/.pmd).'
       reason: 'Thử nghiệm — rest pose chỉ xác minh bằng fixture tổng hợp; chưa từng chạy .pmx thật có license.'
     live2d:
       blurb: 'Model Live2D Cubism.'
-      reason: 'Hoãn lại — license; không runtime Cubism cho Qt; Electron renders Live2D.'
+      reason: 'Hoãn lại — license; không runtime Cubism cho Slint; Electron renders Live2D.'
     cardAiStudio:
       blurb: 'Studio tạo character card bằng AI.'
-      reason: 'Hoãn lại — miễn trừ cho Qt v1, dự kiến v1.1; hiện sống trong ứng dụng Electron.'
+      reason: 'Hoãn lại — miễn trừ cho Slint v1, dự kiến v1.1; hiện sống trong ứng dụng Electron.'
 memory:
   title: 'Trí nhớ'
   badge: 'Thông tin'
@@ -492,9 +492,9 @@ hearing:
     title: 'Thiết bị đầu vào'
     caption: 'Chọn microphone mà AIRI sẽ dùng sau khi pipeline capture đến.'
     emptyTitle: 'Không liệt kê được thiết bị đầu vào'
-    emptySubtitle: 'Build Qt chưa thể liệt kê microphone — capture audio chưa được nối.'
+    emptySubtitle: 'Build Slint chưa thể liệt kê microphone — capture audio chưa được nối.'
     useDefault: 'Mặc định của hệ thống'
-  footerWarning: 'Pipeline capture và Silero VAD chưa được nối vào chat trong build Qt này. Các cài đặt này chỉ lưu ý định của bạn; không có gì nghe ở đây.'
+  footerWarning: 'Pipeline capture và Silero VAD chưa được nối vào chat trong build Slint này. Các cài đặt này chỉ lưu ý định của bạn; không có gì nghe ở đây.'
   saveError: 'Lưu thất bại — xem dòng trạng thái để biết chi tiết.'
   nav: 'Thính giác'
 speech:
@@ -505,7 +505,7 @@ speech:
     empty: 'Danh mục nhà cung cấp không tải được — xem console.'
   noDefaultEndpoint: 'không có endpoint mặc định (bắt buộc)'
   save: 'Lưu'
-  missingKey: 'Nhà cung cấp này yêu cầu API key và store không có cho nó. Key được đọc từ store provider (id = nhà cung cấp này); UI provider của Qt chưa ghi credential scoped speech.'
+  missingKey: 'Nhà cung cấp này yêu cầu API key và store không có cho nó. Key được đọc từ store provider (id = nhà cung cấp này); UI provider của Slint chưa ghi credential scoped speech.'
   status:
     ported: 'Đã port'
     partial: 'Một phần'
@@ -527,7 +527,7 @@ speech:
   stt:
     caption: 'Nhận dạng giọng nói'
     title: 'Nhận dạng giọng nói sống ở nơi khác (chưa nối tại đây)'
-    body: 'airi-stt port các client STT: Whisper (in-process, whisper-rs), client OpenAI-compatible /audio/transcriptions, client Deepgram streaming và Aliyun NLS (streaming, cần token cấp trước). Bề mặt hearing Qt sẽ điều khiển chúng chưa tồn tại — trang này chỉ cấu hình text-to-speech.'
+    body: 'airi-stt port các client STT: Whisper (in-process, whisper-rs), client OpenAI-compatible /audio/transcriptions, client Deepgram streaming và Aliyun NLS (streaming, cần token cấp trước). Bề mặt hearing Slint sẽ điều khiển chúng chưa tồn tại — trang này chỉ cấu hình text-to-speech.'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
@@ -602,8 +602,8 @@ widgets:
   missingId: 'Thiếu widget id. Hãy mở cửa sổ này qua một lời gọi component (widgets.render) để điền view.'
   refresh: 'Làm mới'
   closeWidget: 'Đóng widget'
-  deferredNotice: 'Bản dựng Qt chưa có cầu nối widget (widgets.fetch / render / update / remove / clear) và chưa có registry renderer QML. Mọi thứ bên dưới là dữ liệu xem trước tĩnh.'
-  deferredTip: 'Cần cầu nối widget (fetch + sự kiện render/update/remove/clear) trong bản dựng Qt.'
+  deferredNotice: 'Bản dựng Slint chưa có cầu nối widget (widgets.fetch / render / update / remove / clear) và chưa có registry renderer Slint. Mọi thứ bên dưới là dữ liệu xem trước tĩnh.'
+  deferredTip: 'Cần cầu nối widget (fetch + sự kiện render/update/remove/clear) trong bản dựng Slint.'
   kinds:
     weather:
       name: 'Thời tiết'
@@ -769,7 +769,7 @@ mcp:
   manage:
     runtimeStatus: 'Trạng thái runtime'
     storageLabel: 'Lưu trữ (chưa nối)'
-    configPathHint: "Mặc định của Electron là app.getPath('appData') + '/airi/mcp.json'; cầu nối Qt sẽ theo cùng quy ước. Đường dẫn hiển thị chỉ mang tính minh họa, không được đọc từ đĩa."
+    configPathHint: "Mặc định của Electron là app.getPath('appData') + '/airi/mcp.json'; cầu nối Slint sẽ theo cùng quy ước. Đường dẫn hiển thị chỉ mang tính minh họa, không được đọc từ đĩa."
     configuredServers: 'Máy chủ đã cấu hình'
     documentedExample: 'Ví dụ tài liệu'
     exampleNote: 'Hiển thị như tài liệu — đây là cấu hình mặc định được tích hợp trong AIRI Desktop (Electron main), không phải máy chủ mà AIRI đã kết nối.'
@@ -811,7 +811,7 @@ mcp:
   discover:
     searchPlaceholder: 'Tìm registry MCP (vd. fetch, weather, remote)…'
     emptyTitle: 'Khám phá registry chưa được nối'
-    emptySubtitle: 'Tìm trong registry MCP cần cầu nối Qt và một máy khách registry (registry.modelcontextprotocol.io). Cho đến lúc đó, hãy thêm máy chủ thủ công ở tab Quản lý.'
+    emptySubtitle: 'Tìm trong registry MCP cần cầu nối Slint và một máy khách registry (registry.modelcontextprotocol.io). Cho đến lúc đó, hãy thêm máy chủ thủ công ở tab Quản lý.'
   test:
     sectionCaption: 'Kiểm tra kết nối'
     title: 'Băng thử kết nối MCP'
@@ -835,7 +835,7 @@ discord:
   title: 'Discord'
   description: 'Cầu nối nhắn tin giữa bạn đồng hành AIRI của bạn với các máy chủ Discord và tin nhắn trực tiếp.'
   deferredNotice: 'Module Discord chưa được nối với gateway Rust. Kết nối bot, hành vi relay và định tuyến truy cập được hiển thị như một bản xem trước cấu trúc — mọi hành động đều bị vô hiệu hóa cho đến khi cầu nối gateway có mặt.'
-  deferredTip: 'Cần cầu nối gateway Discord (vòng đời websocket, kho token, dịch vụ Rust) trong bản dựng Qt.'
+  deferredTip: 'Cần cầu nối gateway Discord (vòng đời websocket, kho token, dịch vụ Rust) trong bản dựng Slint.'
   tabs:
     bot: 'Kết nối Bot'
     acl: 'Truy cập & Định tuyến'
@@ -878,7 +878,7 @@ discord:
     previewTitle: 'Xem trước Giao diện Định tuyến Truy cập & Ngữ cảnh'
     previewBody: 'Ma trận định tuyến và giao diện kiểm soát truy cập kênh này là một bản xem trước kiến trúc sớm chỉ được trình bày cho mục đích trình diễn và phản hồi. Pipeline định tuyến đa kênh nền tảng và các lớp cô lập theo ngữ cảnh đang được tinh chỉnh tích cực. Chúng tôi đã đưa các điều khiển cấu hình này lên sớm để bạn có thể khám phá quy trình đề xuất và cho phản hồi về việc bố cục này có đáp ứng nhu cầu của bạn không trước khi công cụ định tuyến trực tiếp được triển khai.'
     linkLabel: 'Discord'
-    linkTip: 'Liên kết ngoài không khả dụng trong bản dựng Qt — mở discord.gg trong trình duyệt.'
+    linkTip: 'Liên kết ngoài không khả dụng trong bản dựng Slint — mở discord.gg trong trình duyệt.'
     fallbackTitle: 'Chế độ Fallback Toàn cục'
     fallbackIgnoreTitle: 'Fallback Nghiêm ngặt (Bỏ qua)'
     fallbackIgnoreBody: 'Các kênh không được ánh xạ sẽ bị loại bỏ. (Mặc định / An toàn nhất)'
@@ -941,8 +941,8 @@ cloudSync:
   title: 'Cloud Sync'
   description: 'Sao lưu và đồng bộ cơ sở dữ liệu, thẻ nhân vật, phân đoạn bộ nhớ và tài sản media giữa các thiết bị.'
   notWiredBadge: 'Chưa nối'
-  deferredNotice: 'Module Cloud Sync chưa được nối với một công cụ đồng bộ trong bản dựng Qt. Các đích đồng bộ, thông tin xác thực, lịch trình và phục hồi được hiển thị như một bản xem trước cấu trúc — mọi hành động đều bị vô hiệu hóa cho đến khi công cụ đồng bộ có mặt.'
-  deferredTip: 'Cần công cụ đồng bộ (transport S3 / local-FS, snapshotting IndexedDB, người canh xung đột) trong bản dựng Qt.'
+  deferredNotice: 'Module Cloud Sync chưa được nối với một công cụ đồng bộ trong bản dựng Slint. Các đích đồng bộ, thông tin xác thực, lịch trình và phục hồi được hiển thị như một bản xem trước cấu trúc — mọi hành động đều bị vô hiệu hóa cho đến khi công cụ đồng bộ có mặt.'
+  deferredTip: 'Cần công cụ đồng bộ (transport S3 / local-FS, snapshotting IndexedDB, người canh xung đột) trong bản dựng Slint.'
   storage:
     title: 'Đích Lưu trữ'
     notWiredState: 'Chưa nối'
@@ -1063,8 +1063,8 @@ pluginHost:
   title: 'Plugin Host'
   description: 'Kiểm tra và quản lý plugin AIRI: manifest được phát hiện, kích hoạt, phiên đã tải và các capability được công bố.'
   notWiredBadge: 'Chưa nối'
-  deferredTip: 'Chưa nối — không có host plugin nào tồn tại trong bản dựng Qt. Bản xem trước này chỉ hiển thị bố cục; không có gì ở đây khám phá, tải hoặc lưu plugin.'
-  deferredNotice: 'Host plugin không được nối trong bản dựng này. Không có manifest nào được phát hiện từ đĩa, không có plugin nào được tải, và mọi điều khiển bên dưới đều vô hiệu cho đến khi một host plugin Qt (hoặc một cầu nối kiểu Electron) đến.'
+  deferredTip: 'Chưa nối — không có host plugin nào tồn tại trong bản dựng Slint. Bản xem trước này chỉ hiển thị bố cục; không có gì ở đây khám phá, tải hoặc lưu plugin.'
+  deferredNotice: 'Host plugin không được nối trong bản dựng này. Không có manifest nào được phát hiện từ đĩa, không có plugin nào được tải, và mọi điều khiển bên dưới đều vô hiệu cho đến khi một host plugin Slint (hoặc một cầu nối kiểu Electron) đến.'
   stats:
     discovered: 'Đã phát hiện'
     enabled: 'Đã kích hoạt'

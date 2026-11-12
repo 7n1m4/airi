@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // The Control Strip: compact always-on-top pill (vertical) with icon
-// buttons. Port of qml/shell/MainShell.qml. Frameless + no decorations; drag
+// buttons. Frameless + no decorations; drag
 // by the handle (WindowMoveArea).
 //
 // The window-open actions are callbacks: the Rust window registry
-// (replacing the Qt WindowManager singleton) handles them. Strings come from
+// (the Rust window registry) handles them. Strings come from
 // I18n; colors/spacing from Theme. State mirrors (collapsed, mic, theme dark,
 // strip visibility) are in-out so Rust can push settings in.
 
@@ -71,7 +71,7 @@ export component MainShell inherits Rectangle {
     // Drag handle height (grip row).
     out property <length> handle-height: 22px;
 
-    // Border ring (Qt: inset Rectangle with border).
+    // Border ring (inset Rectangle with border).
     Rectangle {
         x: 2px;
         y: 2px;

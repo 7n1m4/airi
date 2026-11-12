@@ -1,4 +1,4 @@
-# Strings for the Qt (QML) desktop shell: splash, control strip, windows and
+# Strings for the Slint desktop shell: splash, control strip, windows and
 # placeholder pages. Kept under the `shell.` prefix after flattening.
 app:
   name: AIRI
@@ -155,8 +155,8 @@ about:
   title: AIRI — About
   app-name: AIRI
   tagline: Your AI companion, on your desktop.
-  body: AIRI is a desktop AI companion — a digital being that talks, sees and reacts. Built with Rust, Qt 6 and QML.
-  license: Licensed under GPL-3.0-or-later. Qt Quick 3D is used under its GPL terms.
+  body: AIRI is a desktop AI companion — a digital being that talks, sees and reacts. Built with Rust and Slint.
+  license: Licensed under GPL-3.0-or-later. Slint is used under its GPL terms.
   source-label: Source code
   source-url: https://github.com/moeru-ai/airi
   credit: Created by Neko Ayaka and the AIRI contributors.
@@ -335,7 +335,7 @@ models:
       mmd: MMD
 
 onboarding:
-  deferredNotice: "First-run completion isn't wired in this Qt build yet — these screens are presentational. Buttons that finish or skip the wizard unlock once the onboarding store lands."
+  deferredNotice: "First-run completion isn't wired in this Slint build yet — these screens are presentational. Buttons that finish or skip the wizard unlock once the onboarding store lands."
   deferredTip: 'Not wired yet — the first-run onboarding store will enable this action.'
   v3:
     brand: 'AIRI Companion Setup'
@@ -352,7 +352,7 @@ onboarding:
 
 notice:
   previewBadge: 'Preview'
-  deferredTip: "Needs the notice-window action bridge (windowAction / pageMounted / pageUnmounted), which doesn't exist in the Qt build yet."
+  deferredTip: "Needs the notice-window action bridge (windowAction / pageMounted / pageUnmounted), which doesn't exist in the Slint build yet."
   index:
     title: 'Notice'
     subtitle: "AIRI's main process shows transient notice windows for one-off prompts. This page lists the notices the desktop app ships with."
@@ -360,7 +360,7 @@ notice:
     fadeOnHoverTitle: 'Fade on Hover tutorial'
     fadeOnHoverSubtitle: 'Explains the auto-hide behavior that fades the character when the cursor roams nearby.'
     routeFadeOnHover: '/notice/fade-on-hover'
-    deferredNotice: 'The Qt build has no notice-window host yet. These surfaces will open as frameless notice windows driven by the pending-notice request store once it lands.'
+    deferredNotice: 'The Slint build has no notice-window host yet. These surfaces will open as frameless notice windows driven by the pending-notice request store once it lands.'
     footnote: 'In the Electron build this lives at /notice/fade-on-hover.'
   fadeOnHover:
     badge: 'Tutorial'
@@ -371,7 +371,7 @@ notice:
     confirm: 'Got it'
     dontShowAgain: "Don't show again"
     previewTitle: 'Tutorial preview'
-    previewNote: "The fade-on-hover walkthrough video ships with the stage-tamagotchi renderer assets. Bundling it needs an asset-registration pass that hasn't landed in the Qt build yet."
+    previewNote: "The fade-on-hover walkthrough video ships with the stage-tamagotchi renderer assets. Bundling it needs an asset-registration pass that hasn't landed in the Slint build yet."
 
 modules:
   title: 'Modules'
@@ -391,25 +391,25 @@ modules:
   entries:
     memory:
       blurb: 'Short- and long-term memory, journals and retrieval for your companion.'
-      reason: 'Ready in Qt — routes handled by the settings nav; backend landed in airi-core memory (journal, retrieval, embeddings); settings surface lands in this wave.'
+      reason: 'Ready in Slint — routes handled by the settings nav; backend landed in airi-core memory (journal, retrieval, embeddings); settings surface lands in this wave.'
     speech:
       blurb: 'Text-to-speech voice output for your companion.'
-      reason: 'Ready in Qt — backend landed in airi-speech (26 TTS definitions + Kokoro); Qt TTS/STT settings surface lands in this wave.'
+      reason: 'Ready in Slint — backend landed in airi-speech (26 TTS definitions + Kokoro); Slint TTS/STT settings surface lands in this wave.'
     hearing:
       blurb: 'Microphone input, voice activity detection and transcription.'
-      reason: 'Ready in Qt — backend landed in airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); Qt hearing settings surface lands in this wave.'
+      reason: 'Ready in Slint — backend landed in airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); Slint hearing settings surface lands in this wave.'
     vision:
       blurb: 'Screen and camera visual perception.'
-      reason: 'Deferred — no Qt vision stack (moondream/blip/apple-core-ai not in the Rust registry); lives in the Electron app today.'
+      reason: 'Deferred — no Slint vision stack (moondream/blip/apple-core-ai not in the Rust registry); lives in the Electron app today.'
     consciousness:
       blurb: 'Personality, reasoning and baseline model behavior.'
-      reason: 'Deferred — no Qt counterpart; lives in the Electron app today.'
+      reason: 'Deferred — no Slint counterpart; lives in the Electron app today.'
     agenticOs:
       blurb: 'Presence-driven autonomous behavior and OS automation hooks.'
-      reason: 'Deferred — no Qt backend (presence, companion scopes, event log); lives in the Electron app today.'
+      reason: 'Deferred — no Slint backend (presence, companion scopes, event log); lives in the Electron app today.'
     textToMotion:
       blurb: 'Procedural animation generation from text (VRMA output).'
-      reason: 'Deferred — no Qt counterpart (FlowMDM / VRMA); P10-adjacent; lives in the Electron app today.'
+      reason: 'Deferred — no Slint counterpart (FlowMDM / VRMA); P10-adjacent; lives in the Electron app today.'
     discord:
       blurb: 'Discord bot: send messages and watch a receive-only gateway.'
       reason: 'Wired — send-only REST + opt-in in-memory receive gateway; no bot commands; Electron keeps the full bot-commands path.'
@@ -418,28 +418,28 @@ modules:
       reason: 'Wired — MCP client (stdio + streamable-HTTP) with mcp.json config; Discover not wired yet.'
     acp:
       blurb: 'Agent Client Protocol sessions with HITL permissions.'
-      reason: 'Wired — ACP bridge with HITL permission prompts functional in Qt.'
+      reason: 'Wired — ACP bridge with HITL permission prompts functional in Slint.'
     cloudSync:
       blurb: 'Back up snapshots to your own storage (BYOS).'
       reason: 'Wired — local-folder target, snapshot verify/restore; S3/mesh/selective sync not wired yet.'
     pluginHost:
       blurb: 'Host for AIRI plugin packages.'
-      reason: 'Scaffold only — no discovery/enablement/capability bus; waived for Qt v1; Electron main process hosts plugins.'
+      reason: 'Scaffold only — no discovery/enablement/capability bus; waived for Slint v1; Electron main process hosts plugins.'
     vrm:
       blurb: 'VRM model rendering and stage scene.'
-      reason: 'Ready in Qt — VRM stage renders (VrmMtoonMaterial + stage scene); smoke-verified.'
+      reason: 'Ready in Slint — VRM stage renders (VrmMtoonMaterial + stage scene); smoke-verified.'
     spine:
       blurb: 'Spine 2D skeletal animation models.'
-      reason: 'Ready in Qt — SpineStage + SpineSettingsPage; smoke-verified.'
+      reason: 'Ready in Slint — SpineStage + SpineSettingsPage; smoke-verified.'
     mmd:
       blurb: 'MikuMikuDance models (.pmx/.pmd).'
       reason: 'Experimental — synthetic-verified rest pose only; no licensed real .pmx has been exercised.'
     live2d:
       blurb: 'Live2D Cubism models.'
-      reason: 'Deferred — license; no Qt Cubism runtime; Electron renders Live2D.'
+      reason: 'Deferred — license; no Slint Cubism runtime; Electron renders Live2D.'
     cardAiStudio:
       blurb: 'AI-assisted character card creation studio.'
-      reason: 'Deferred — waived for Qt v1, slated v1.1; lives in the Electron app today.'
+      reason: 'Deferred — waived for Slint v1, slated v1.1; lives in the Electron app today.'
 memory:
   title: 'Memory'
   badge: 'Info'
@@ -492,9 +492,9 @@ hearing:
     title: 'Input device'
     caption: 'Select the microphone AIRI will use once the capture pipeline lands.'
     emptyTitle: 'No input devices enumerated'
-    emptySubtitle: 'The Qt build cannot list microphones yet — audio capture is not wired.'
+    emptySubtitle: 'The Slint build cannot list microphones yet — audio capture is not wired.'
     useDefault: 'System default'
-  footerWarning: 'The capture pipeline and Silero VAD are not wired to chat in this Qt build. These settings persist your intent only; nothing here listens.'
+  footerWarning: 'The capture pipeline and Silero VAD are not wired to chat in this Slint build. These settings persist your intent only; nothing here listens.'
   saveError: 'Failed to save — see the status line for details.'
   nav: 'Hearing'
 speech:
@@ -505,7 +505,7 @@ speech:
     empty: 'The provider catalog failed to load — see console.'
   noDefaultEndpoint: 'no default endpoint (required)'
   save: 'Save'
-  missingKey: 'This provider requires an API key and the store has none for it. Keys are read from the providers store (id = this provider); the Qt providers UI does not write speech-scoped credentials yet.'
+  missingKey: 'This provider requires an API key and the store has none for it. Keys are read from the providers store (id = this provider); the Slint providers UI does not write speech-scoped credentials yet.'
   status:
     ported: 'Ported'
     partial: 'Partial'
@@ -527,7 +527,7 @@ speech:
   stt:
     caption: 'Speech-to-text'
     title: 'Speech-to-text lives elsewhere (not wired here)'
-    body: 'airi-stt ports the STT clients: Whisper (in-process, whisper-rs), an OpenAI-compatible /audio/transcriptions client, a Deepgram streaming client, and Aliyun NLS (streaming, pre-issued token required). The Qt hearing surface that would drive them does not exist yet — this page configures text-to-speech only.'
+    body: 'airi-stt ports the STT clients: Whisper (in-process, whisper-rs), an OpenAI-compatible /audio/transcriptions client, a Deepgram streaming client, and Aliyun NLS (streaming, pre-issued token required). The Slint hearing surface that would drive them does not exist yet — this page configures text-to-speech only.'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
@@ -602,8 +602,8 @@ widgets:
   missingId: 'Missing widget id. Launch this window via a component call (widgets.render) to populate the view.'
   refresh: 'Refresh'
   closeWidget: 'Close widget'
-  deferredNotice: 'The Qt build has no widgets bridge yet (widgets.fetch / render / update / remove / clear events) and no QML renderer registry. Everything below is static preview data.'
-  deferredTip: 'Needs the widgets bridge (fetch + render/update/remove/clear events) in the Qt build.'
+  deferredNotice: 'The Slint build has no widgets bridge yet (widgets.fetch / render / update / remove / clear events) and no Slint renderer registry. Everything below is static preview data.'
+  deferredTip: 'Needs the widgets bridge (fetch + render/update/remove/clear events) in the Slint build.'
   kinds:
     weather:
       name: 'Weather'
@@ -769,7 +769,7 @@ mcp:
   manage:
     runtimeStatus: 'Runtime Status'
     storageLabel: 'Storage (not wired)'
-    configPathHint: "Electron default is app.getPath('appData') + '/airi/mcp.json'; the Qt bridge would follow the same convention. The path shown is illustrative, not read from disk."
+    configPathHint: "Electron default is app.getPath('appData') + '/airi/mcp.json'; the Slint bridge would follow the same convention. The path shown is illustrative, not read from disk."
     configuredServers: 'Configured Servers'
     documentedExample: 'Documentation example'
     exampleNote: 'Shown as documentation — this is the default configuration baked into AIRI Desktop (Electron main), not a server AIRI has connected to.'
@@ -811,7 +811,7 @@ mcp:
   discover:
     searchPlaceholder: 'Search the MCP registry (e.g. fetch, weather, remote)…'
     emptyTitle: 'Registry discovery is not wired yet'
-    emptySubtitle: 'Searching the MCP registry needs the Qt bridge and a registry client (registry.modelcontextprotocol.io). Until it lands, add servers manually on the Manage tab.'
+    emptySubtitle: 'Searching the MCP registry needs the Slint bridge and a registry client (registry.modelcontextprotocol.io). Until it lands, add servers manually on the Manage tab.'
   test:
     sectionCaption: 'Test Connection'
     title: 'MCP Connection Test Bench'
@@ -835,7 +835,7 @@ discord:
   title: 'Discord'
   description: 'Messaging bridge between your AIRI companion and Discord servers and direct messages.'
   deferredNotice: 'The Discord module is not wired to a Rust gateway yet. Bot connection, relay behavior and access routing are shown as a structural preview — every action is disabled until the gateway bridge lands.'
-  deferredTip: 'Needs the Discord gateway bridge (websocket lifecycle, token store, Rust service) in the Qt build.'
+  deferredTip: 'Needs the Discord gateway bridge (websocket lifecycle, token store, Rust service) in the Slint build.'
   tabs:
     bot: 'Bot Connection'
     acl: 'Access & Routing'
@@ -878,7 +878,7 @@ discord:
     previewTitle: 'Access & Context Routing Interface Preview'
     previewBody: "This routing matrix and channel access control interface is an early architectural preview presented for demonstration and feedback purposes only. The underlying multi-channel routing pipeline and per-context isolation layers are actively being refined. We've surfaced these configuration controls early so you can explore the proposed workflow and provide feedback on whether this layout meets your needs before the live routing engine is implemented."
     linkLabel: 'Discord'
-    linkTip: 'External links are unavailable in the Qt build — open discord.gg in your browser.'
+    linkTip: 'External links are unavailable in the Slint build — open discord.gg in your browser.'
     fallbackTitle: 'Global Fallback Mode'
     fallbackIgnoreTitle: 'Strict Fallback (Ignore)'
     fallbackIgnoreBody: 'Unmapped channels are dropped. (Default / Safest)'
@@ -941,8 +941,8 @@ cloudSync:
   title: 'Cloud Sync'
   description: 'Backs up and synchronises your databases, character cards, memory segments, and media assets across devices.'
   notWiredBadge: 'Not wired yet'
-  deferredNotice: 'The Cloud Sync module is not wired to a sync engine in the Qt build yet. Sync targets, credentials, scheduling, and restore are shown as a structural preview — every action is disabled until the sync engine lands.'
-  deferredTip: 'Needs the sync engine (S3 / local-FS transports, IndexedDB snapshotting, conflict guard) in the Qt build.'
+  deferredNotice: 'The Cloud Sync module is not wired to a sync engine in the Slint build yet. Sync targets, credentials, scheduling, and restore are shown as a structural preview — every action is disabled until the sync engine lands.'
+  deferredTip: 'Needs the sync engine (S3 / local-FS transports, IndexedDB snapshotting, conflict guard) in the Slint build.'
   storage:
     title: 'Storage Target'
     notWiredState: 'Not wired'
@@ -1063,8 +1063,8 @@ pluginHost:
   title: 'Plugin Host'
   description: 'Inspect and manage AIRI plugins: discovered manifests, enablement, loaded sessions and announced capabilities.'
   notWiredBadge: 'Not wired yet'
-  deferredTip: 'Not wired yet — no plugin host exists in the Qt build. This preview shows the layout only; nothing here discovers, loads or persists plugins.'
-  deferredNotice: 'The plugin host is not wired in this build. No manifests are discovered from disk, no plugin is loaded, and every control below is inert until a Qt plugin host (or an Electron-style bridge) lands.'
+  deferredTip: 'Not wired yet — no plugin host exists in the Slint build. This preview shows the layout only; nothing here discovers, loads or persists plugins.'
+  deferredNotice: 'The plugin host is not wired in this build. No manifests are discovered from disk, no plugin is loaded, and every control below is inert until a Slint plugin host (or an Electron-style bridge) lands.'
   stats:
     discovered: 'Discovered'
     enabled: 'Enabled'

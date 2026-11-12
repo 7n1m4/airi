@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! UI bridges exposed to Slint. Each bridge is a plain Rust module that
-//! shuttles UI-facing calls into the service layer; no cxx-qt / QObject.
+//! shuttles UI-facing calls into the service layer; plain Rust, no bindings
+//! layer and no UI toolkit types.
 //!
 //! Shared process-lifetime state (the `--smoke` flag, the opened
 //! `SettingsStore`, the provider repo, the database handle, the Tokio

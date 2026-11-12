@@ -14,7 +14,7 @@ PartOf=graphical-session.target
 # Not Requires=: a running-but-inert daemon on a headless/degraded boot is
 # fine (§A.2); it just arms nothing.
 # Restart-storm circuit breaker: 5 starts per 60 s, then systemd stops
-# retrying — the Qt-side circuit breaker (§A.2) takes it from there.
+# retrying — the Slint-side circuit breaker (§A.2) takes it from there.
 StartLimitBurst=5
 StartLimitIntervalSec=60
 
@@ -36,7 +36,7 @@ ProtectSystem=strict
 # resolution; ProtectHome=inaccessible was rejected for the same write
 # reason; ProtectHome=false/yes rejected as broader than needed.)
 ProtectHome=read-only
-ReadWritePaths=%h/.local/share/airi-qt/audit
+ReadWritePaths=%h/.local/share/airi-slint/audit
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true

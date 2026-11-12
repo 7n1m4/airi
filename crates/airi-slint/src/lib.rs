@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! airi-slint library: Slint-based desktop shell for AIRI (Rust port of the
-//! former Qt Quick shell). Holds the spine render seam; the wider shell
-//! (chat, settings, control strip) is wired in later tracks.
+//! airi-slint library: Slint-based desktop shell for AIRI. Holds the spine
+//! render seam; the wider shell (chat, settings, control strip) is wired in
+//! later tracks.
 
 pub mod bridges;
 pub mod spine_render;

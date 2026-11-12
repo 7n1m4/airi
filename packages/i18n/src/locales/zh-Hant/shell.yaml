@@ -1,4 +1,4 @@
-# Qt（QML）桌面 shell 的字串：啟動畫面、控制條、視窗和佔位頁面。
+# Slint（Slint）桌面 shell 的字串：啟動畫面、控制條、視窗和佔位頁面。
 app:
   name: AIRI
   tagline: 你的 AI 夥伴，就在桌面上。
@@ -154,8 +154,8 @@ about:
   title: AIRI — 關於
   app-name: AIRI
   tagline: 你的 AI 夥伴，就在桌面上。
-  body: AIRI 是一款桌面 AI 夥伴——一個會說話、會觀察、會反應的數位生命。使用 Rust、Qt 6 和 QML 建構。
-  license: 採用 GPL-3.0-or-later 授權條款。Qt Quick 3D 依其 GPL 條款使用。
+  body: AIRI 是一款桌面 AI 夥伴——一個會說話、會觀察、會反應的數位生命。使用 Rust、Slint 建構。
+  license: 採用 GPL-3.0-or-later 授權條款。Slint 依其 GPL 條款使用。
   source-label: 原始碼
   source-url: https://github.com/moeru-ai/airi
   credit: 由 Neko Ayaka 和 AIRI 貢獻者共同創作。
@@ -334,7 +334,7 @@ models:
       mmd: MMD
 
 onboarding:
-  deferredNotice: '此 Qt 版本尚未接入首次完成流程 —— 這些頁面僅為展示。完成或跳過精靈的按鈕將在 onboarding 儲存落地後解鎖。'
+  deferredNotice: '此 Slint 版本尚未接入首次完成流程 —— 這些頁面僅為展示。完成或跳過精靈的按鈕將在 onboarding 儲存落地後解鎖。'
   deferredTip: '尚未接入 —— 首次執行的 onboarding 儲存將啟用此操作。'
   v3:
     brand: 'AIRI 夥伴設定'
@@ -351,7 +351,7 @@ onboarding:
 
 notice:
   previewBadge: '預覽'
-  deferredTip: '需要通知視窗動作橋（windowAction / pageMounted / pageUnmounted），Qt 版本尚未具備。'
+  deferredTip: '需要通知視窗動作橋（windowAction / pageMounted / pageUnmounted），Slint 版本尚未具備。'
   index:
     title: '通知'
     subtitle: 'AIRI 主行程會為一次性提示顯示暫時通知視窗。本頁面列出桌面應用程式隨附的通知。'
@@ -359,7 +359,7 @@ notice:
     fadeOnHoverTitle: '淡出懸停教學'
     fadeOnHoverSubtitle: '解釋當游標靠近時自動淡出角色的隱藏行為。'
     routeFadeOnHover: '/notice/fade-on-hover'
-    deferredNotice: 'Qt 版本尚未有通知視窗宿主。這些介面將在待處理通知請求儲存落地後，作為無邊框通知視窗開啟。'
+    deferredNotice: 'Slint 版本尚未有通知視窗宿主。這些介面將在待處理通知請求儲存落地後，作為無邊框通知視窗開啟。'
     footnote: '在 Electron 建構中位於 /notice/fade-on-hover。'
   fadeOnHover:
     badge: '教學'
@@ -370,7 +370,7 @@ notice:
     confirm: '知道了'
     dontShowAgain: '不再顯示'
     previewTitle: '教學預覽'
-    previewNote: '淡出懸停演示影片隨 stage-tamagotchi 渲染器資產一起發佈。打包它需要 Qt 版本尚未具備的資產註冊流程。'
+    previewNote: '淡出懸停演示影片隨 stage-tamagotchi 渲染器資產一起發佈。打包它需要 Slint 版本尚未具備的資產註冊流程。'
 
 modules:
   title: '模組'
@@ -390,25 +390,25 @@ modules:
   entries:
     memory:
       blurb: '為你的夥伴提供短期與長期記憶、日誌與檢索。'
-      reason: 'Qt 中就緒——路由由設定導航處理；後端已落地 airi-core memory（日誌、檢索、向量嵌入）；設定介面在本 wave 到達。'
+      reason: 'Slint 中就緒——路由由設定導航處理；後端已落地 airi-core memory（日誌、檢索、向量嵌入）；設定介面在本 wave 到達。'
     speech:
       blurb: '為你的夥伴提供文字轉語音輸出。'
-      reason: 'Qt 中就緒——後端已落地 airi-speech（26 個 TTS 定義 + Kokoro）；Qt TTS/STT 設定介面在本 wave 到達。'
+      reason: 'Slint 中就緒——後端已落地 airi-speech（26 個 TTS 定義 + Kokoro）；Slint TTS/STT 設定介面在本 wave 到達。'
     hearing:
       blurb: '麥克風輸入、語音活動偵測與轉錄。'
-      reason: 'Qt 中就緒——後端已落地 airi-stt（擷取、Silero VAD、Deepgram/Aliyun/whisper-local）；Qt 聽覺設定介面在本 wave 到達。'
+      reason: 'Slint 中就緒——後端已落地 airi-stt（擷取、Silero VAD、Deepgram/Aliyun/whisper-local）；Slint 聽覺設定介面在本 wave 到達。'
     vision:
       blurb: '螢幕與相機視覺感知。'
-      reason: '延期——Qt 無 vision 堆疊（moondream/blip/apple-core-ai 不在 Rust 註冊表中）；目前存在於 Electron 應用。'
+      reason: '延期——Slint 無 vision 堆疊（moondream/blip/apple-core-ai 不在 Rust 註冊表中）；目前存在於 Electron 應用。'
     consciousness:
       blurb: '性格、推理與模型基礎行為。'
-      reason: '延期——Qt 無對應實作；目前存在於 Electron 應用。'
+      reason: '延期——Slint 無對應實作；目前存在於 Electron 應用。'
     agenticOs:
       blurb: '基於 presence 的自主行為與 OS 自動化鉤子。'
-      reason: '延期——Qt 無後端（presence、companion scopes、event log）；目前存在於 Electron 應用。'
+      reason: '延期——Slint 無後端（presence、companion scopes、event log）；目前存在於 Electron 應用。'
     textToMotion:
       blurb: '從文字生成程序化動畫（VRMA 輸出）。'
-      reason: '延期——Qt 無對應實作（FlowMDM / VRMA）；與 P10 相鄰；目前存在於 Electron 應用。'
+      reason: '延期——Slint 無對應實作（FlowMDM / VRMA）；與 P10 相鄰；目前存在於 Electron 應用。'
     discord:
       blurb: 'Discord 機器人：發送訊息並觀察唯讀接收閘道。'
       reason: '已接線——僅發送 REST + 可選加入的記憶體內唯讀接收閘道；無 bot 指令；完整 bot 指令路徑歸 Electron。'
@@ -417,28 +417,28 @@ modules:
       reason: '已接線——MCP 用戶端（stdio + streamable-HTTP），由 mcp.json 設定；Discover 尚未接線。'
     acp:
       blurb: '帶 HITL 權限的 Agent Client Protocol 工作階段。'
-      reason: '已接線——ACP 橋；HITL 權限提示在 Qt 中可用。'
+      reason: '已接線——ACP 橋；HITL 權限提示在 Slint 中可用。'
     cloudSync:
       blurb: '備份快照到你自己的儲存（BYOS）。'
       reason: '已接線——本地資料夾目標、快照驗證/還原；S3/mesh/選擇性同步未接線。'
     pluginHost:
       blurb: 'AIRI 外掛套件的主機。'
-      reason: '僅腳手架——無發現/啟用/capability 匯流排；Qt v1 豁免；外掛由 Electron 主行程託管。'
+      reason: '僅腳手架——無發現/啟用/capability 匯流排；Slint v1 豁免；外掛由 Electron 主行程託管。'
     vrm:
       blurb: 'VRM 模型渲染與舞台場景。'
-      reason: 'Qt 中就緒——VRM 舞台渲染（VrmMtoonMaterial + 舞台場景）；已通過 smoke 驗證。'
+      reason: 'Slint 中就緒——VRM 舞台渲染（VrmMtoonMaterial + 舞台場景）；已通過 smoke 驗證。'
     spine:
       blurb: 'Spine 2D 骨骼動畫模型。'
-      reason: 'Qt 中就緒——SpineStage + SpineSettingsPage；已通過 smoke 驗證。'
+      reason: 'Slint 中就緒——SpineStage + SpineSettingsPage；已通過 smoke 驗證。'
     mmd:
       blurb: 'MikuMikuDance 模型（.pmx/.pmd）。'
       reason: '實驗性——僅用合成 fixture 驗證了綁定姿勢；未執行過有授權的真實 .pmx。'
     live2d:
       blurb: 'Live2D Cubism 模型。'
-      reason: '延期——授權；Qt 無 Cubism 執行時；Live2D 由 Electron 渲染。'
+      reason: '延期——授權；Slint 無 Cubism 執行時；Live2D 由 Electron 渲染。'
     cardAiStudio:
       blurb: 'AI 輔助的角色卡建立工作室。'
-      reason: '延期——Qt v1 豁免，計畫 v1.1；目前存在於 Electron 應用。'
+      reason: '延期——Slint v1 豁免，計畫 v1.1；目前存在於 Electron 應用。'
 memory:
   title: '記憶'
   badge: '資訊'
@@ -491,9 +491,9 @@ hearing:
     title: '輸入裝置'
     caption: '選擇當擷取管線落地時 AIRI 將使用的麥克風。'
     emptyTitle: '未列舉到輸入裝置'
-    emptySubtitle: '本 Qt 建構尚無法列舉麥克風——音訊擷取未接線。'
+    emptySubtitle: '本 Slint 建構尚無法列舉麥克風——音訊擷取未接線。'
     useDefault: '系統預設'
-  footerWarning: '本 Qt 建構中擷取管線與 Silero VAD 未接入聊天。這些設定僅持久化你的意圖；此處沒有任何東西在聽。'
+  footerWarning: '本 Slint 建構中擷取管線與 Silero VAD 未接入聊天。這些設定僅持久化你的意圖；此處沒有任何東西在聽。'
   saveError: '儲存失敗——詳情見狀態行。'
   nav: '聽覺'
 speech:
@@ -504,7 +504,7 @@ speech:
     empty: '提供商目錄載入失敗——請查看控制台。'
   noDefaultEndpoint: '無預設端點（必填）'
   save: '儲存'
-  missingKey: '該提供商需要 API 金鑰，而 store 中沒有它的金鑰。金鑰從 provider store 讀取（id = 該提供商）；Qt 的提供商 UI 尚不寫入 speech 範圍的憑據。'
+  missingKey: '該提供商需要 API 金鑰，而 store 中沒有它的金鑰。金鑰從 provider store 讀取（id = 該提供商）；Slint 的提供商 UI 尚不寫入 speech 範圍的憑據。'
   status:
     ported: '已移植'
     partial: '部分'
@@ -526,7 +526,7 @@ speech:
   stt:
     caption: '語音辨識'
     title: '語音辨識在別處（此處未接線）'
-    body: 'airi-stt 移植了 STT 用戶端：Whisper（行程內，whisper-rs）、一個 OpenAI 相容 /audio/transcriptions 用戶端、一個 Deepgram streaming 用戶端，以及 Aliyun NLS（streaming，需預先簽發的權杖）。驅動它們的 Qt 聽覺介面尚不存在——本頁僅設定文字轉語音。'
+    body: 'airi-stt 移植了 STT 用戶端：Whisper（行程內，whisper-rs）、一個 OpenAI 相容 /audio/transcriptions 用戶端、一個 Deepgram streaming 用戶端，以及 Aliyun NLS（streaming，需預先簽發的權杖）。驅動它們的 Slint 聽覺介面尚不存在——本頁僅設定文字轉語音。'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
@@ -601,8 +601,8 @@ widgets:
   missingId: '缺少小工具 id。請透過元件呼叫 (widgets.render) 開啟此視窗以填入檢視。'
   refresh: '重新整理'
   closeWidget: '關閉小工具'
-  deferredNotice: 'Qt 版本尚未有小工具橋（widgets.fetch / render / update / remove / clear 事件），也沒有 QML 渲染器註冊表。以下內容均為靜態預覽資料。'
-  deferredTip: '需要 Qt 版本中的小工具橋（fetch + render/update/remove/clear 事件）。'
+  deferredNotice: 'Slint 版本尚未有小工具橋（widgets.fetch / render / update / remove / clear 事件），也沒有 Slint 渲染器註冊表。以下內容均為靜態預覽資料。'
+  deferredTip: '需要 Slint 版本中的小工具橋（fetch + render/update/remove/clear 事件）。'
   kinds:
     weather:
       name: '天氣'
@@ -768,7 +768,7 @@ mcp:
   manage:
     runtimeStatus: '執行時間狀態'
     storageLabel: '儲存（未連接）'
-    configPathHint: "Electron 預設值是 app.getPath('appData') + '/airi/mcp.json'；Qt 橋將遵循同樣的慣例。所示路徑僅為示例，不會從磁碟讀取。"
+    configPathHint: "Electron 預設值是 app.getPath('appData') + '/airi/mcp.json'；Slint 橋將遵循同樣的慣例。所示路徑僅為示例，不會從磁碟讀取。"
     configuredServers: '已設定的伺服器'
     documentedExample: '文件範例'
     exampleNote: '作為文件展示 —— 這是 AIRI Desktop (Electron main) 內建的預設設定，並非 AIRI 已連接的伺服器。'
@@ -810,7 +810,7 @@ mcp:
   discover:
     searchPlaceholder: '搜尋 MCP 登錄檔（例如 fetch、weather、remote）…'
     emptyTitle: '登錄檔發現尚未連接'
-    emptySubtitle: '搜尋 MCP 登錄檔需要 Qt 橋和一個登錄檔用戶端 (registry.modelcontextprotocol.io)。在此之前，請在管理分頁手動新增伺服器。'
+    emptySubtitle: '搜尋 MCP 登錄檔需要 Slint 橋和一個登錄檔用戶端 (registry.modelcontextprotocol.io)。在此之前，請在管理分頁手動新增伺服器。'
   test:
     sectionCaption: '測試連線'
     title: 'MCP 連線測試台'
@@ -834,7 +834,7 @@ discord:
   title: 'Discord'
   description: '你的 AIRI 夥伴與 Discord 伺服器及私訊之間的訊息橋。'
   deferredNotice: 'Discord 模組尚未連接到 Rust 閘道。Bot 連接、中繼行為和存取路由均作為結構預覽展示 —— 在閘道橋交付之前，所有操作均處於停用狀態。'
-  deferredTip: '需要 Qt 版本中的 Discord 閘道橋（websocket 生命週期、權杖儲存、Rust 服務）。'
+  deferredTip: '需要 Slint 版本中的 Discord 閘道橋（websocket 生命週期、權杖儲存、Rust 服務）。'
   tabs:
     bot: 'Bot 連接'
     acl: '存取與路由'
@@ -877,7 +877,7 @@ discord:
     previewTitle: '存取與上下文路由介面預覽'
     previewBody: '這個路由矩陣和頻道存取控制介面是一個早期架構預覽，僅用於演示和收集回饋。其底層的多通道路由管線和按上下文隔離的層正在積極改進中。我們提前開放這些設定控件，是為了你可以探索提議的工作流，並在即時路由引擎實施之前就這個版面是否滿足你的需求提供回饋。'
     linkLabel: 'Discord'
-    linkTip: 'Qt 版本中不可用外部連結 —— 請在瀏覽器中開啟 discord.gg。'
+    linkTip: 'Slint 版本中不可用外部連結 —— 請在瀏覽器中開啟 discord.gg。'
     fallbackTitle: '全域回退模式'
     fallbackIgnoreTitle: '嚴格回退（忽略）'
     fallbackIgnoreBody: '未對映的頻道會被丟棄。（預設 / 最安全）'
@@ -940,8 +940,8 @@ cloudSync:
   title: 'Cloud Sync'
   description: '在多裝置間備份並同步你的資料庫、角色卡、記憶分段與媒體資產。'
   notWiredBadge: '尚未連接'
-  deferredNotice: 'Cloud Sync 模組尚未連接到 Qt 版本的同步引擎。同步目標、憑證、排程與復原均作為結構預覽展示 —— 在同步引擎交付之前，所有操作均處於停用狀態。'
-  deferredTip: '需要 Qt 版本中的同步引擎（S3 / local-FS 傳輸、IndexedDB 快照、衝突守衛）。'
+  deferredNotice: 'Cloud Sync 模組尚未連接到 Slint 版本的同步引擎。同步目標、憑證、排程與復原均作為結構預覽展示 —— 在同步引擎交付之前，所有操作均處於停用狀態。'
+  deferredTip: '需要 Slint 版本中的同步引擎（S3 / local-FS 傳輸、IndexedDB 快照、衝突守衛）。'
   storage:
     title: '儲存目標'
     notWiredState: '未連接'
@@ -1062,8 +1062,8 @@ pluginHost:
   title: 'Plugin Host'
   description: '檢查並管理 AIRI 外掛：已發現的清單、啟用狀態、已載入工作階段與已公布能力。'
   notWiredBadge: '尚未連接'
-  deferredTip: '尚未連接 —— Qt 版本中不存在外掛宿主。此預覽僅顯示版面；此處不會發現、載入或持久化任何外掛。'
-  deferredNotice: '此版本尚未連接外掛宿主。不會從磁碟發現任何清單、不會載入任何外掛，在 Qt 外掛宿主（或 Electron 式橋）交付之前，下方所有控件均處於惰性狀態。'
+  deferredTip: '尚未連接 —— Slint 版本中不存在外掛宿主。此預覽僅顯示版面；此處不會發現、載入或持久化任何外掛。'
+  deferredNotice: '此版本尚未連接外掛宿主。不會從磁碟發現任何清單、不會載入任何外掛，在 Slint 外掛宿主（或 Electron 式橋）交付之前，下方所有控件均處於惰性狀態。'
   stats:
     discovered: '已發現'
     enabled: '已啟用'

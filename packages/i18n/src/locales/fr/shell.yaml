@@ -1,4 +1,4 @@
-# Chaîne du shell de bureau Qt (QML) : splash, bande de contrôle, fenêtres et
+# Chaîne du shell de bureau Slint (Slint) : splash, bande de contrôle, fenêtres et
 # pages d'espace réservé.
 app:
   name: AIRI
@@ -155,8 +155,8 @@ about:
   title: AIRI — À propos
   app-name: AIRI
   tagline: Votre compagnon IA, sur votre bureau.
-  body: AIRI est un compagnon IA de bureau — un être numérique qui parle, voit et réagit. Construit avec Rust, Qt 6 et QML.
-  license: Sous licence GPL-3.0-or-later. Qt Quick 3D est utilisé sous ses termes GPL.
+  body: AIRI est un compagnon IA de bureau — un être numérique qui parle, voit et réagit. Construit avec Rust et Slint.
+  license: Sous licence GPL-3.0-or-later. Slint est utilisé sous ses termes GPL.
   source-label: Code source
   source-url: https://github.com/moeru-ai/airi
   credit: Créé par Neko Ayaka et les contributeurs d'AIRI.
@@ -335,7 +335,7 @@ models:
       mmd: MMD
 
 onboarding:
-  deferredNotice: "La complétion du premier lancement n'est pas encore câblée dans cette build Qt — ces écrans sont présentationnels. Les boutons qui finalisent ou ignorent l'assistant seront débloqués quand le store d'onboarding arrivera."
+  deferredNotice: "La complétion du premier lancement n'est pas encore câblée dans cette build Slint — ces écrans sont présentationnels. Les boutons qui finalisent ou ignorent l'assistant seront débloqués quand le store d'onboarding arrivera."
   deferredTip: "Pas encore câblé — le store d'onboarding du premier lancement activera cette action."
   v3:
     brand: 'Configuration du compagnon AIRI'
@@ -352,7 +352,7 @@ onboarding:
 
 notice:
   previewBadge: 'Aperçu'
-  deferredTip: "Nécessite le pont d'actions des fenêtres de notification (windowAction / pageMounted / pageUnmounted), qui n'existe pas encore dans la build Qt."
+  deferredTip: "Nécessite le pont d'actions des fenêtres de notification (windowAction / pageMounted / pageUnmounted), qui n'existe pas encore dans la build Slint."
   index:
     title: 'Notifications'
     subtitle: "Le processus principal d'AIRI affiche des fenêtres de notification transitoires pour les invites ponctuelles. Cette page liste les notifications livrées avec l'app de bureau."
@@ -360,7 +360,7 @@ notice:
     fadeOnHoverTitle: 'Tutoriel Fade on Hover'
     fadeOnHoverSubtitle: 'Explique le comportement de masquage automatique qui estompe le personnage quand le curseur s’approche.'
     routeFadeOnHover: '/notice/fade-on-hover'
-    deferredNotice: "La build Qt n'a pas encore d'hôte de fenêtres de notification. Ces surfaces s'ouvriront comme des fenêtres de notification sans bordure pilotées par le store de requêtes en attente dès qu'il arrivera."
+    deferredNotice: "La build Slint n'a pas encore d'hôte de fenêtres de notification. Ces surfaces s'ouvriront comme des fenêtres de notification sans bordure pilotées par le store de requêtes en attente dès qu'il arrivera."
     footnote: 'Dans la build Electron, cela se trouve dans /notice/fade-on-hover.'
   fadeOnHover:
     badge: 'Tutoriel'
@@ -371,7 +371,7 @@ notice:
     confirm: 'Compris'
     dontShowAgain: 'Ne plus afficher'
     previewTitle: 'Aperçu du tutoriel'
-    previewNote: "La vidéo du tutoriel est livrée avec les assets du renderer stage-tamagotchi. L'intégrer nécessite un passage d'enregistrement d'assets qui n'a pas encore atterri dans la build Qt."
+    previewNote: "La vidéo du tutoriel est livrée avec les assets du renderer stage-tamagotchi. L'intégrer nécessite un passage d'enregistrement d'assets qui n'a pas encore atterri dans la build Slint."
 
 modules:
   title: 'Modules'
@@ -391,25 +391,25 @@ modules:
   entries:
     memory:
       blurb: 'Mémoire à court et long terme, journaux et retrieval pour votre compagnon.'
-      reason: 'Prêt dans Qt — routes gérées par la navigation des réglages ; backend livré dans airi-core memory (journal, retrieval, embeddings) ; la surface de réglages arrive dans cette wave.'
+      reason: 'Prêt dans Slint — routes gérées par la navigation des réglages ; backend livré dans airi-core memory (journal, retrieval, embeddings) ; la surface de réglages arrive dans cette wave.'
     speech:
       blurb: 'Sortie vocale texte-parole pour votre compagnon.'
-      reason: 'Prêt dans Qt — backend livré dans airi-speech (26 définitions TTS + Kokoro) ; la surface de réglages TTS/STT Qt arrive dans cette wave.'
+      reason: 'Prêt dans Slint — backend livré dans airi-speech (26 définitions TTS + Kokoro) ; la surface de réglages TTS/STT Slint arrive dans cette wave.'
     hearing:
       blurb: 'Entrée micro, détection d’activité vocale et transcription.'
-      reason: 'Prêt dans Qt — backend livré dans airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local) ; la surface de réglages audition Qt arrive dans cette wave.'
+      reason: 'Prêt dans Slint — backend livré dans airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local) ; la surface de réglages audition Slint arrive dans cette wave.'
     vision:
       blurb: 'Perception visuelle écran et caméra.'
-      reason: 'Différé — pas de pile vision en Qt (moondream/blip/apple-core-ai absents du registre Rust) ; vit dans l’app Electron aujourd’hui.'
+      reason: 'Différé — pas de pile vision en Slint (moondream/blip/apple-core-ai absents du registre Rust) ; vit dans l’app Electron aujourd’hui.'
     consciousness:
       blurb: 'Personnalité, raisonnement et comportement de base du modèle.'
-      reason: 'Différé — pas d’équivalent Qt ; vit dans l’app Electron aujourd’hui.'
+      reason: 'Différé — pas d’équivalent Slint ; vit dans l’app Electron aujourd’hui.'
     agenticOs:
       blurb: 'Comportement autonome guidé par la présence et crochets d’automatisation OS.'
-      reason: 'Différé — pas de backend Qt (presence, companion scopes, event log) ; vit dans l’app Electron aujourd’hui.'
+      reason: 'Différé — pas de backend Slint (presence, companion scopes, event log) ; vit dans l’app Electron aujourd’hui.'
     textToMotion:
       blurb: 'Génération procédurale d’animation depuis du texte (sortie VRMA).'
-      reason: 'Différé — pas d’équivalent Qt (FlowMDM / VRMA) ; adjacent à P10 ; vit dans l’app Electron aujourd’hui.'
+      reason: 'Différé — pas d’équivalent Slint (FlowMDM / VRMA) ; adjacent à P10 ; vit dans l’app Electron aujourd’hui.'
     discord:
       blurb: 'Bot Discord : envoie des messages et regarde une gateway en réception seule.'
       reason: 'Câblé — REST envoi-seul + gateway de réception opt-in en mémoire ; pas de commandes bot ; Electron garde la voie complète des commandes bot.'
@@ -418,28 +418,28 @@ modules:
       reason: 'Câblé — client MCP (stdio + streamable-HTTP) configuré par mcp.json ; Discover pas encore câblé.'
     acp:
       blurb: 'Sessions Agent Client Protocol avec permissions HITL.'
-      reason: 'Câblé — pont ACP avec invites de permission HITL fonctionnelles en Qt.'
+      reason: 'Câblé — pont ACP avec invites de permission HITL fonctionnelles en Slint.'
     cloudSync:
       blurb: 'Sauvegarde des snapshots vers votre propre stockage (BYOS).'
       reason: 'Câblé — cible dossier local, vérification/restauration de snapshots ; S3/mesh/selectif pas encore câblés.'
     pluginHost:
       blurb: 'Hôte pour les paquets de plugins AIRI.'
-      reason: 'Scaffold uniquement — pas de découverte/activation/bus de capacités ; dispensé pour Qt v1 ; le processus principal Electron héberge les plugins.'
+      reason: 'Scaffold uniquement — pas de découverte/activation/bus de capacités ; dispensé pour Slint v1 ; le processus principal Electron héberge les plugins.'
     vrm:
       blurb: 'Rendu de modèles VRM et scène du stage.'
-      reason: 'Prêt dans Qt — le stage VRM rend (VrmMtoonMaterial + scène) ; vérifié par smoke.'
+      reason: 'Prêt dans Slint — le stage VRM rend (VrmMtoonMaterial + scène) ; vérifié par smoke.'
     spine:
       blurb: 'Modèles d’animation squelettique 2D Spine.'
-      reason: 'Prêt dans Qt — SpineStage + SpineSettingsPage ; vérifié par smoke.'
+      reason: 'Prêt dans Slint — SpineStage + SpineSettingsPage ; vérifié par smoke.'
     mmd:
       blurb: 'Modèles MikuMikuDance (.pmx/.pmd).'
       reason: 'Expérimental — rest pose vérifié sur fixtures synthétiques uniquement ; aucun .pmx réel sous licence n’a été exercé.'
     live2d:
       blurb: 'Modèles Live2D Cubism.'
-      reason: 'Différé — licence ; pas de runtime Cubism en Qt ; Electron rend Live2D.'
+      reason: 'Différé — licence ; pas de runtime Cubism en Slint ; Electron rend Live2D.'
     cardAiStudio:
       blurb: 'Studio de création de character cards assistée par IA.'
-      reason: 'Différé — dispensé pour Qt v1, prévu pour la v1.1 ; vit dans l’app Electron aujourd’hui.'
+      reason: 'Différé — dispensé pour Slint v1, prévu pour la v1.1 ; vit dans l’app Electron aujourd’hui.'
 memory:
   title: 'Mémoire'
   badge: 'Info'
@@ -492,9 +492,9 @@ hearing:
     title: 'Périphérique d’entrée'
     caption: 'Choisissez le micro qu’AIRI utilisera quand le pipeline de capture arrivera.'
     emptyTitle: 'Aucun périphérique d’entrée énuméré'
-    emptySubtitle: 'Le build Qt ne peut pas encore lister les micros — la capture audio n’est pas câblée.'
+    emptySubtitle: 'Le build Slint ne peut pas encore lister les micros — la capture audio n’est pas câblée.'
     useDefault: 'Défaut système'
-  footerWarning: 'Le pipeline de capture et Silero VAD ne sont pas câblés au chat dans ce build Qt. Ces réglages persistent seulement votre intention ; rien ici n’écoute.'
+  footerWarning: 'Le pipeline de capture et Silero VAD ne sont pas câblés au chat dans ce build Slint. Ces réglages persistent seulement votre intention ; rien ici n’écoute.'
   saveError: 'Échec de l’enregistrement — voir la ligne de statut pour les détails.'
   nav: 'Audition'
 speech:
@@ -505,7 +505,7 @@ speech:
     empty: 'Le catalogue des fournisseurs n’a pas chargé — voir la console.'
   noDefaultEndpoint: 'pas d’endpoint par défaut (requis)'
   save: 'Enregistrer'
-  missingKey: 'Ce fournisseur exige une clé API et le store n’en a aucune pour lui. Les clés sont lues depuis le store fournisseurs (id = ce fournisseur) ; l’UI fournisseurs Qt n’écrit pas encore de crédentiels scopés speech.'
+  missingKey: 'Ce fournisseur exige une clé API et le store n’en a aucune pour lui. Les clés sont lues depuis le store fournisseurs (id = ce fournisseur) ; l’UI fournisseurs Slint n’écrit pas encore de crédentiels scopés speech.'
   status:
     ported: 'Porté'
     partial: 'Partiel'
@@ -527,7 +527,7 @@ speech:
   stt:
     caption: 'Speech-to-text'
     title: 'La speech-to-text vit ailleurs (non câblée ici)'
-    body: 'airi-stt porte les clients STT : Whisper (en processus, whisper-rs), un client OpenAI-compatible /audio/transcriptions, un client Deepgram streaming et Aliyun NLS (streaming, token pré-émis requis). La surface audition Qt qui les piloterait n’existe pas encore — cette page configure uniquement text-to-speech.'
+    body: 'airi-stt porte les clients STT : Whisper (en processus, whisper-rs), un client OpenAI-compatible /audio/transcriptions, un client Deepgram streaming et Aliyun NLS (streaming, token pré-émis requis). La surface audition Slint qui les piloterait n’existe pas encore — cette page configure uniquement text-to-speech.'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
@@ -602,8 +602,8 @@ widgets:
   missingId: 'Identifiant de widget manquant. Lancez cette fenêtre via un appel de composant (widgets.render) pour peupler la vue.'
   refresh: 'Actualiser'
   closeWidget: 'Fermer le widget'
-  deferredNotice: "La build Qt n'a pas encore de pont de widgets (widgets.fetch / render / update / remove / clear) ni de registre de rendu QML. Tout ce qui suit sont des données d'aperçu statiques."
-  deferredTip: 'Nécessite le pont de widgets (fetch + événements render/update/remove/clear) dans la build Qt.'
+  deferredNotice: "La build Slint n'a pas encore de pont de widgets (widgets.fetch / render / update / remove / clear) ni de registre de rendu Slint. Tout ce qui suit sont des données d'aperçu statiques."
+  deferredTip: 'Nécessite le pont de widgets (fetch + événements render/update/remove/clear) dans la build Slint.'
   kinds:
     weather:
       name: 'Météo'
@@ -769,7 +769,7 @@ mcp:
   manage:
     runtimeStatus: 'État du runtime'
     storageLabel: 'Stockage (non câblé)'
-    configPathHint: "La valeur par défaut d’Electron est app.getPath('appData') + '/airi/mcp.json' ; le pont Qt suivrait la même convention. Le chemin affiché est illustratif, il n’est pas lu depuis le disque."
+    configPathHint: "La valeur par défaut d’Electron est app.getPath('appData') + '/airi/mcp.json' ; le pont Slint suivrait la même convention. Le chemin affiché est illustratif, il n’est pas lu depuis le disque."
     configuredServers: 'Serveurs configurés'
     documentedExample: 'Exemple de documentation'
     exampleNote: 'Affiché comme documentation — c’est la configuration par défaut intégrée à AIRI Desktop (Electron main), pas un serveur auquel AIRI s’est connecté.'
@@ -811,7 +811,7 @@ mcp:
   discover:
     searchPlaceholder: 'Rechercher dans le registre MCP (ex. fetch, weather, remote)…'
     emptyTitle: 'La découverte du registre n’est pas encore câblée'
-    emptySubtitle: 'Chercher dans le registre MCP nécessite le pont Qt et un client de registre (registry.modelcontextprotocol.io). En attendant, ajoutez les serveurs manuellement sur l’onglet Gérer.'
+    emptySubtitle: 'Chercher dans le registre MCP nécessite le pont Slint et un client de registre (registry.modelcontextprotocol.io). En attendant, ajoutez les serveurs manuellement sur l’onglet Gérer.'
   test:
     sectionCaption: 'Tester la connexion'
     title: 'Banc de test de connexion MCP'
@@ -835,7 +835,7 @@ discord:
   title: 'Discord'
   description: 'Pont de messagerie entre votre compagnon AIRI et les serveurs et messages directs Discord.'
   deferredNotice: 'Le module Discord n’est pas encore câblé à une passerelle en Rust. Connexion du bot, comportement de relais et routage d’accès sont présentés en aperçu structurel — chaque action est désactivée jusqu’à l’arrivée du pont de passerelle.'
-  deferredTip: 'Nécessite le pont de passerelle Discord (cycle de vie websocket, magasin de jetons, service Rust) dans la build Qt.'
+  deferredTip: 'Nécessite le pont de passerelle Discord (cycle de vie websocket, magasin de jetons, service Rust) dans la build Slint.'
   tabs:
     bot: 'Connexion du bot'
     acl: 'Accès & routage'
@@ -878,7 +878,7 @@ discord:
     previewTitle: 'Aperçu de l’interface de routage des accès et du contexte'
     previewBody: 'Cette matrice de routage et cette interface de contrôle d’accès aux salons sont un aperçu architectural précoce présenté uniquement à des fins de démonstration et de retour. Le pipeline de routage multicanal sous-jacent et les couches d’isolation contextuelle sont activement affinés. Nous avons rendu ces contrôles de configuration visibles tôt afin que vous puissiez explorer le flux proposé et donner votre avis sur la pertinence de cette mise en page avant l’implémentation du moteur de routage en direct.'
     linkLabel: 'Discord'
-    linkTip: 'Les liens externes ne sont pas disponibles dans la build Qt — ouvrez discord.gg dans votre navigateur.'
+    linkTip: 'Les liens externes ne sont pas disponibles dans la build Slint — ouvrez discord.gg dans votre navigateur.'
     fallbackTitle: 'Mode de secours global'
     fallbackIgnoreTitle: 'Secours strict (ignorer)'
     fallbackIgnoreBody: 'Les salons non mappés sont ignorés. (Par défaut / le plus sûr)'
@@ -941,8 +941,8 @@ cloudSync:
   title: 'Cloud Sync'
   description: 'Sauvegarde et synchronise vos bases de données, cartes de personnage, segments de mémoire et assets multimédias entre appareils.'
   notWiredBadge: 'Pas encore câblé'
-  deferredNotice: "Le module Cloud Sync n'est pas encore câblé à un moteur de synchronisation dans la build Qt. Cibles de sync, identifiants, planification et restauration sont présentés en aperçu structurel — chaque action est désactivée jusqu'à l'arrivée du moteur."
-  deferredTip: 'Nécessite le moteur de synchronisation (transports S3 / local-FS, instantanés IndexedDB, garde anti-conflits) dans la build Qt.'
+  deferredNotice: "Le module Cloud Sync n'est pas encore câblé à un moteur de synchronisation dans la build Slint. Cibles de sync, identifiants, planification et restauration sont présentés en aperçu structurel — chaque action est désactivée jusqu'à l'arrivée du moteur."
+  deferredTip: 'Nécessite le moteur de synchronisation (transports S3 / local-FS, instantanés IndexedDB, garde anti-conflits) dans la build Slint.'
   storage:
     title: 'Cible de stockage'
     notWiredState: 'Non câblé'
@@ -1063,8 +1063,8 @@ pluginHost:
   title: 'Plugin Host'
   description: 'Inspectez et gérez les plugins AIRI : manifestes découverts, activation, sessions chargées et capacités annoncées.'
   notWiredBadge: 'Pas encore câblé'
-  deferredTip: 'Pas encore câblé — aucun hôte de plugins n’existe dans la build Qt. Cet aperçu montre seulement la mise en page ; rien ici ne découvre, charge ou persiste de plugins.'
-  deferredNotice: 'L’hôte de plugins n’est pas câblé dans cette build. Aucun manifeste n’est découvert depuis le disque, aucun plugin n’est chargé, et chaque contrôle ci-dessous est inerte jusqu’à l’arrivée d’un hôte de plugins Qt (ou d’un pont style Electron).'
+  deferredTip: 'Pas encore câblé — aucun hôte de plugins n’existe dans la build Slint. Cet aperçu montre seulement la mise en page ; rien ici ne découvre, charge ou persiste de plugins.'
+  deferredNotice: 'L’hôte de plugins n’est pas câblé dans cette build. Aucun manifeste n’est découvert depuis le disque, aucun plugin n’est chargé, et chaque contrôle ci-dessous est inerte jusqu’à l’arrivée d’un hôte de plugins Slint (ou d’un pont style Electron).'
   stats:
     discovered: 'Découverts'
     enabled: 'Activés'

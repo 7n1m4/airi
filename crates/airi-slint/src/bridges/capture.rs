@@ -874,10 +874,9 @@ impl CaptureState {
 /// `capture-<millis>.png`; returns the absolute path of the new PNG, or an
 /// empty string on failure (reason on stderr).
 ///
-/// `shortcut:` the X11 grab lived in the old Qt C++ shim
-/// (`src/cpp/capture_item.cpp`), which is gone with the port. Until a Rust
-/// grabber lands (`xcap`), this reports the failure honestly and the portal
-/// path above stays the working route.
+/// `shortcut:` the X11 grab has no Rust implementation yet. Until one lands
+/// (`xcap`), this reports the failure honestly and the portal path above
+/// stays the working route.
 fn airi_capture_primary_screen(_out_dir: &str) -> String {
     String::new()
 }

@@ -14,10 +14,9 @@
 //!
 //! The smoke tour relies on [`smoke_skin_ticks`] to prove the scene ticked.
 //!
-//! Port of the former cxx-qt `StageSceneController`: byte arrays become
-//! `Vec<u8>`, colors become an `[f32; 4]` RGBA tuple, string types become
-//! `String`/`Vec<String>` and the point type becomes two `f64` pixel
-//! coordinates; the bridge lives behind a process-wide `Mutex`.
+//! The bridge surface is plain Rust: byte buffers are `Vec<u8>`, colors are
+//! `[f32; 4]` RGBA tuples, strings are `String`/`Vec<String>` and positions
+//! are two `f64` pixel coordinates; state lives behind a process-wide `Mutex`.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicI32, Ordering};

@@ -32,9 +32,9 @@
 //! Loading is non-fatal by design: a missing or broken model leaves an
 //! empty stage with a status string, never a crash.
 //!
-//! Port of the former cxx-qt `MmdController`. `QByteArray` becomes
-//! `Vec<u8>`, `QColor` becomes an `[f32; 4]` RGBA tuple, `QString` becomes
-//! `String`; the bridge lives behind a process-wide `Mutex`.
+//! The bridge surface is plain Rust: byte buffers are `Vec<u8>`, colors are
+//! `[f32; 4]` RGBA tuples, strings are `String`; state lives behind a
+//! process-wide `Mutex`.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicI32, Ordering};

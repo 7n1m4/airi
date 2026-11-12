@@ -18,7 +18,7 @@
 //!   wired and never will be silently; they go through a dedicated
 //!   destructive-action bridge in wave ④, gated on explicit user intent;
 //! - Cloud Sync is untouched (sync-engine bridge, separate phase);
-//! - orphan detection is impossible today — Qt sessions carry no card linkage
+//! - orphan detection is impossible today — sessions carry no card linkage
 //!   (`sessions.metadata` is `{}` by default), so the unlinked-data UI stays
 //!   an empty state rather than a lie.
 

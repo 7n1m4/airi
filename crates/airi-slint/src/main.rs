@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #![deny(missing_docs)]
 
-//! airi-slint: Slint-based desktop shell for AIRI (Rust port of the former
-//! Qt Quick shell).
+//! airi-slint: Slint-based desktop shell for AIRI.
 //!
 //! The spine render seam is the first slice: the shared `spine_rt` session
 //! produces CPU-rasterized frames (`spine_render`) that the `SpineStage`

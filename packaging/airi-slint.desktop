@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
-Name=AIRI (Qt dev)
+Name=AIRI (Slint dev)
 GenericName=AI VTuber companion
-Comment=AIRI — Decentralized AI-based VTuber companion (Qt development build)
-Exec=airi-qt
-Icon=airi-qt
+Comment=AIRI — Decentralized AI-based VTuber companion (Slint development build)
+Exec=airi-slint
+Icon=airi-slint
 Terminal=false
 Categories=Utility;
 Keywords=ai;vtuber;anime;assistant;companion;

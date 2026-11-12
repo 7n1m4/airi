@@ -74,7 +74,7 @@ image = { version = "0.25", features = [
 ] }
 png = "0.17"
 
-# Slint UI toolkit (Qt replacement)
+# Slint UI toolkit
 slint = { version = "1.18", features = [ "renderer-software" ] }
 slint-build = "1.18"
 

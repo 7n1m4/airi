@@ -1684,8 +1684,8 @@ mod tests {
     use super::*;
 
     use std::future::Future;
-    // Aliased: the Qt-bridge grep must stay empty on this file, and `Pin` here
-    // is the `#[async_trait]` desugaring, not cxx.
+    // Aliased so `Pin` reads as the `#[async_trait]` desugaring rather than a
+    // bare marker type.
     use std::pin::Pin as PinBox;
 
     use airi_core::memory::embedding::EmbeddingError;

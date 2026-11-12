@@ -1,4 +1,4 @@
-# Qt (QML) デスクトップシェル用の文字列：スプラッシュ、コントロールストリップ、ウィンドウ、プレースホルダーページ。
+# Slint (Slint) デスクトップシェル用の文字列：スプラッシュ、コントロールストリップ、ウィンドウ、プレースホルダーページ。
 app:
   name: AIRI
   tagline: あなたのAIコンパニオンが、デスクトップに。
@@ -154,8 +154,8 @@ about:
   title: AIRI — このアプリについて
   app-name: AIRI
   tagline: あなたのAIコンパニオンが、デスクトップに。
-  body: AIRI はデスクトップAIコンパニオンです。話し、見て、反応するデジタルの存在。Rust、Qt 6、QML で構築されています。
-  license: GPL-3.0-or-later ライセンス。Qt Quick 3D は GPL 条件の下で使用されています。
+  body: AIRI はデスクトップAIコンパニオンです。話し、見て、反応するデジタルの存在。Rust、Slint で構築されています。
+  license: GPL-3.0-or-later ライセンス。Slint は GPL 条件の下で使用されています。
   source-label: ソースコード
   source-url: https://github.com/moeru-ai/airi
   credit: Neko Ayaka と AIRI コントリビューターによって作られました。
@@ -334,7 +334,7 @@ models:
       mmd: MMD
 
 onboarding:
-  deferredNotice: 'このQtビルドでは初回セットアップ完了がまだ接続されていません — これらの画面はプレゼンテーション用です。ウィザードを完了またはスキップするボタンは、オンボーディングストアが実装されると有効になります。'
+  deferredNotice: 'このSlintビルドでは初回セットアップ完了がまだ接続されていません — これらの画面はプレゼンテーション用です。ウィザードを完了またはスキップするボタンは、オンボーディングストアが実装されると有効になります。'
   deferredTip: '未接続 — 初回オンボーディングストアが実装されるとこの操作が有効になります。'
   v3:
     brand: 'AIRIコンパニオンセットアップ'
@@ -351,7 +351,7 @@ onboarding:
 
 notice:
   previewBadge: 'プレビュー'
-  deferredTip: '通知ウィンドウのアクションブリッジ (windowAction / pageMounted / pageUnmounted) が必要です。Qtビルドにはまだありません。'
+  deferredTip: '通知ウィンドウのアクションブリッジ (windowAction / pageMounted / pageUnmounted) が必要です。Slintビルドにはまだありません。'
   index:
     title: '通知'
     subtitle: 'AIRIのメインプロセスは、一回限りのプロンプト用に一時的な通知ウィンドウを表示します。このページはデスクトップアプリが同梱する通知を一覧します。'
@@ -359,7 +359,7 @@ notice:
     fadeOnHoverTitle: 'Fade on Hoverチュートリアル'
     fadeOnHoverSubtitle: 'カーソルが近づくとキャラクターをフェードする自動非表示の動作を説明します。'
     routeFadeOnHover: '/notice/fade-on-hover'
-    deferredNotice: 'Qtビルドにはまだ通知ウィンドウのホストがありません。これらのサーフェスは、保留中の通知リクエストストアが実装され次第、フレームレスの通知ウィンドウとして開きます。'
+    deferredNotice: 'Slintビルドにはまだ通知ウィンドウのホストがありません。これらのサーフェスは、保留中の通知リクエストストアが実装され次第、フレームレスの通知ウィンドウとして開きます。'
     footnote: 'Electron 版では /notice/fade-on-hover にあります。'
   fadeOnHover:
     badge: 'チュートリアル'
@@ -370,7 +370,7 @@ notice:
     confirm: 'わかりました'
     dontShowAgain: '次回から表示しない'
     previewTitle: 'チュートリアルプレビュー'
-    previewNote: 'fade-on-hoverのウォークスルー動画は、stage-tamagotchiレンダラーのアセットとして同梱されています。バンドルにはQtビルドに未導入のアセット登録パスが必要です。'
+    previewNote: 'fade-on-hoverのウォークスルー動画は、stage-tamagotchiレンダラーのアセットとして同梱されています。バンドルにはSlintビルドに未導入のアセット登録パスが必要です。'
 
 modules:
   title: 'モジュール'
@@ -390,25 +390,25 @@ modules:
   entries:
     memory:
       blurb: 'コンパニオンのための短期・長期記憶、ジャーナル、retrieval。'
-      reason: 'Qt で使用可能 — ルートは設定ナビが処理。バックエンドは airi-core memory (journal・retrieval・embeddings) に着地。設定サーフェスはこのwaveで到着。'
+      reason: 'Slint で使用可能 — ルートは設定ナビが処理。バックエンドは airi-core memory (journal・retrieval・embeddings) に着地。設定サーフェスはこのwaveで到着。'
     speech:
       blurb: 'コンパニオンのテキスト読み上げ音声出力。'
-      reason: 'Qt で使用可能 — バックエンドは airi-speech (TTS 定義26件 + Kokoro) に着地。Qt TTS/STT 設定サーフェスはこのwaveで到着。'
+      reason: 'Slint で使用可能 — バックエンドは airi-speech (TTS 定義26件 + Kokoro) に着地。Slint TTS/STT 設定サーフェスはこのwaveで到着。'
     hearing:
       blurb: 'マイク入力、音声区間検出、文字起こし。'
-      reason: 'Qt で使用可能 — バックエンドは airi-stt (capture・Silero VAD・Deepgram/Aliyun/whisper-local) に着地。Qt ヒアリング設定サーフェスはこのwaveで到着。'
+      reason: 'Slint で使用可能 — バックエンドは airi-stt (capture・Silero VAD・Deepgram/Aliyun/whisper-local) に着地。Slint ヒアリング設定サーフェスはこのwaveで到着。'
     vision:
       blurb: '画面とカメラの視覚認識。'
-      reason: '延期 — Qt の vision スタックなし (moondream/blip/apple-core-ai は Rust レジストリにない)。現在は Electron アプリに存在。'
+      reason: '延期 — Slint の vision スタックなし (moondream/blip/apple-core-ai は Rust レジストリにない)。現在は Electron アプリに存在。'
     consciousness:
       blurb: '性格、推論、モデルの基本挙動。'
-      reason: '延期 — Qt 対応なし。現在は Electron アプリに存在。'
+      reason: '延期 — Slint 対応なし。現在は Electron アプリに存在。'
     agenticOs:
       blurb: 'presence 駆動の自律的挙動と OS 自動化フック。'
-      reason: '延期 — Qt バックエンドなし (presence、companion scopes、event log)。現在は Electron アプリに存在。'
+      reason: '延期 — Slint バックエンドなし (presence、companion scopes、event log)。現在は Electron アプリに存在。'
     textToMotion:
       blurb: 'テキストからの手続き的アニメーション生成 (VRMA 出力)。'
-      reason: '延期 — Qt 対応なし (FlowMDM / VRMA)。P10 隣接。現在は Electron アプリに存在。'
+      reason: '延期 — Slint 対応なし (FlowMDM / VRMA)。P10 隣接。現在は Electron アプリに存在。'
     discord:
       blurb: 'Discord ボット: メッセージ送信と受信専用ゲートウェイの閲覧。'
       reason: '配線済み — 送信専用 REST + オプトイン・メモリ上・受信専用ゲートウェイ。bot コマンドなし。完全な bot コマンド経路は Electron が担当。'
@@ -417,28 +417,28 @@ modules:
       reason: '配線済み — MCP クライアント (stdio + streamable-HTTP)、mcp.json で設定。Discover は未配線。'
     acp:
       blurb: 'HITL パーミッション付き Agent Client Protocol セッション。'
-      reason: '配線済み — ACP ブリッジ。HITL パーミッションプロンプトが Qt で機能。'
+      reason: '配線済み — ACP ブリッジ。HITL パーミッションプロンプトが Slint で機能。'
     cloudSync:
       blurb: '自前のストレージへスナップショットをバックアップ (BYOS)。'
       reason: '配線済み — ローカルフォルダーターゲット、スナップショット検証/復元。S3/メッシュ/選択的同期は未配線。'
     pluginHost:
       blurb: 'AIRI プラグインパッケージのホスト。'
-      reason: 'スキャフォールドのみ — discovery/有効化/capability バスなし。Qt v1 では免除。Electron のメインプロセスがプラグインをホスト。'
+      reason: 'スキャフォールドのみ — discovery/有効化/capability バスなし。Slint v1 では免除。Electron のメインプロセスがプラグインをホスト。'
     vrm:
       blurb: 'VRM モデルのレンダリングとステージシーン。'
-      reason: 'Qt で使用可能 — VRM ステージがレンダリング (VrmMtoonMaterial + ステージシーン)。smoke 検証済み。'
+      reason: 'Slint で使用可能 — VRM ステージがレンダリング (VrmMtoonMaterial + ステージシーン)。smoke 検証済み。'
     spine:
       blurb: 'Spine 2D スケルタルアニメーションモデル。'
-      reason: 'Qt で使用可能 — SpineStage + SpineSettingsPage。smoke 検証済み。'
+      reason: 'Slint で使用可能 — SpineStage + SpineSettingsPage。smoke 検証済み。'
     mmd:
       blurb: 'MikuMikuDance モデル (.pmx/.pmd)。'
       reason: '実験的 — 合成フィクスチャによる rest pose のみ検証済み。ライセンスのある実 .pmx は未実演。'
     live2d:
       blurb: 'Live2D Cubism モデル。'
-      reason: '延期 — ライセンス。Qt の Cubism ランタイムなし。Electron が Live2D をレンダリング。'
+      reason: '延期 — ライセンス。Slint の Cubism ランタイムなし。Electron が Live2D をレンダリング。'
     cardAiStudio:
       blurb: 'AI 支援キャラクターカード作成スタジオ。'
-      reason: '延期 — Qt v1 では免除、v1.1 予定。現在は Electron アプリに存在。'
+      reason: '延期 — Slint v1 では免除、v1.1 予定。現在は Electron アプリに存在。'
 memory:
   title: 'メモリ'
   badge: '情報'
@@ -491,9 +491,9 @@ hearing:
     title: '入力デバイス'
     caption: 'キャプチャパイプラインが来たときにAIRIが使うマイクを選択します。'
     emptyTitle: '入力デバイスが列挙されていません'
-    emptySubtitle: 'このQtビルドはまだマイクを列挙できません — 音声キャプチャは未配線です。'
+    emptySubtitle: 'このSlintビルドはまだマイクを列挙できません — 音声キャプチャは未配線です。'
     useDefault: 'システムデフォルト'
-  footerWarning: 'このQtビルドではキャプチャパイプラインとSilero VADはチャットに未配線です。これらの設定は意志のみを保存します。ここでの何も聞きません。'
+  footerWarning: 'このSlintビルドではキャプチャパイプラインとSilero VADはチャットに未配線です。これらの設定は意志のみを保存します。ここでの何も聞きません。'
   saveError: '保存に失敗しました — 詳細はステータス行を確認してください。'
   nav: 'ヒアリング'
 speech:
@@ -504,7 +504,7 @@ speech:
     empty: 'プロバイダーカタログを読み込めませんでした — コンソールを確認してください。'
   noDefaultEndpoint: 'デフォルトエンドポイントなし (必須)'
   save: '保存'
-  missingKey: 'このプロバイダーはAPIキーが必要ですが、storeにはありません。キーはプロバイダーストア (id = このプロバイダー) から読まれます。QtのプロバイダーUIはまだ音声スコープの資格情報を書きません。'
+  missingKey: 'このプロバイダーはAPIキーが必要ですが、storeにはありません。キーはプロバイダーストア (id = このプロバイダー) から読まれます。SlintのプロバイダーUIはまだ音声スコープの資格情報を書きません。'
   status:
     ported: 'ポート済み'
     partial: '部分'
@@ -526,7 +526,7 @@ speech:
   stt:
     caption: '音声認識'
     title: '音声認識は別の場所にあります (ここでは未配線)'
-    body: 'airi-sttはSTTクライアントをポートします: Whisper (インプロセス、whisper-rs)、OpenAI互換 /audio/transcriptions クライアント、Deepgram streaming クライアント、Aliyun NLS (streaming、事前発行トークンが必要)。それらを駆動するQtヒアリングサーフェスはまだありません — このページはテキスト読み上げのみを設定します。'
+    body: 'airi-sttはSTTクライアントをポートします: Whisper (インプロセス、whisper-rs)、OpenAI互換 /audio/transcriptions クライアント、Deepgram streaming クライアント、Aliyun NLS (streaming、事前発行トークンが必要)。それらを駆動するSlintヒアリングサーフェスはまだありません — このページはテキスト読み上げのみを設定します。'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
@@ -601,8 +601,8 @@ widgets:
   missingId: 'ウィジェットIDがありません。このウィンドウはコンポーネント呼び出し (widgets.render) 経由で起動して表示を埋めてください。'
   refresh: '更新'
   closeWidget: 'ウィジェットを閉じる'
-  deferredNotice: 'Qtビルドにはまだウィジェットブリッジ (widgets.fetch / render / update / remove / clear イベント) もQMLレンダラーレジストリもありません。以下はすべて静的なプレビューデータです。'
-  deferredTip: 'Qtビルドのウィジェットブリッジ (fetch + render/update/remove/clear イベント) が必要です。'
+  deferredNotice: 'Slintビルドにはまだウィジェットブリッジ (widgets.fetch / render / update / remove / clear イベント) もSlintレンダラーレジストリもありません。以下はすべて静的なプレビューデータです。'
+  deferredTip: 'Slintビルドのウィジェットブリッジ (fetch + render/update/remove/clear イベント) が必要です。'
   kinds:
     weather:
       name: '天気'
@@ -768,7 +768,7 @@ mcp:
   manage:
     runtimeStatus: 'ランタイム状態'
     storageLabel: 'ストレージ (未接続)'
-    configPathHint: "Electronのデフォルトは app.getPath('appData') + '/airi/mcp.json'。Qtブリッジも同じ規約に従います。表示されているパスは説明用で、ディスクから読み取られたものではありません。"
+    configPathHint: "Electronのデフォルトは app.getPath('appData') + '/airi/mcp.json'。Slintブリッジも同じ規約に従います。表示されているパスは説明用で、ディスクから読み取られたものではありません。"
     configuredServers: '設定済みサーバー'
     documentedExample: 'ドキュメント例'
     exampleNote: 'ドキュメントとして表示 — これはAIRI Desktop (Electron main) に組み込まれたデフォルト設定であり、AIRIが接続したサーバーではありません。'
@@ -810,7 +810,7 @@ mcp:
   discover:
     searchPlaceholder: 'MCPレジストリを検索 (例: fetch, weather, remote)…'
     emptyTitle: 'レジストリ探索は未接続です'
-    emptySubtitle: 'MCPレジストリの検索にはQtブリッジとレジストリクライアント (registry.modelcontextprotocol.io) が必要です。それまでは、管理タブで手動でサーバーを追加してください。'
+    emptySubtitle: 'MCPレジストリの検索にはSlintブリッジとレジストリクライアント (registry.modelcontextprotocol.io) が必要です。それまでは、管理タブで手動でサーバーを追加してください。'
   test:
     sectionCaption: '接続テスト'
     title: 'MCP接続テストベンチ'
@@ -834,7 +834,7 @@ discord:
   title: 'Discord'
   description: 'あなたのAIRIコンパニオンとDiscordサーバー・ダイレクトメッセージをつなぐメッセージングブリッジ。'
   deferredNotice: 'DiscordモジュールはまだRustゲートウェイに接続されていません。Bot接続、リレー動作、アクセスルーティングは構造プレビューとして表示されます — ゲートウェイブリッジが実装されるまで各操作は無効です。'
-  deferredTip: 'QtビルドにはDiscordゲートウェイブリッジ (websocketライフサイクル、トークンストア、Rustサービス) が必要です。'
+  deferredTip: 'SlintビルドにはDiscordゲートウェイブリッジ (websocketライフサイクル、トークンストア、Rustサービス) が必要です。'
   tabs:
     bot: 'Bot接続'
     acl: 'アクセス＆ルーティング'
@@ -877,7 +877,7 @@ discord:
     previewTitle: 'アクセス＆コンテキストルーティングインターフェース プレビュー'
     previewBody: 'このルーティングマトリックスとチャンネルアクセス制御インターフェースは、デモンストレーションとフィードバック専用の早期アーキテクチャプレビューです。基礎となるマルチチャンネルルーティングパイプラインとコンテキスト別分離レイヤーは現在積極的に改良されています。ライブルーティングエンジンが実装される前に、提案されたワークフローを探索し、このレイアウトがニーズに合うかどうかのフィードバックを得られるよう、これらの設定コントロールを早めに公開しました。'
     linkLabel: 'Discord'
-    linkTip: 'Qtビルドでは外部リンクは利用できません — ブラウザで discord.gg を開いてください。'
+    linkTip: 'Slintビルドでは外部リンクは利用できません — ブラウザで discord.gg を開いてください。'
     fallbackTitle: 'グローバルフォールバックモード'
     fallbackIgnoreTitle: '厳格なフォールバック (無視)'
     fallbackIgnoreBody: 'マッピングされていないチャンネルは破棄されます。(デフォルト / 最も安全)'
@@ -940,8 +940,8 @@ cloudSync:
   title: 'Cloud Sync'
   description: 'データベース、キャラクターカード、メモリセグメント、メディアアセットをデバイス間でバックアップ・同期します。'
   notWiredBadge: '未接続'
-  deferredNotice: 'Cloud SyncモジュールはまだQtビルドの同期エンジンに接続されていません。同期ターゲット、認証情報、スケジュール、復元は構造プレビューとして表示されます — 同期エンジンが実装されるまで各操作は無効です。'
-  deferredTip: 'Qtビルドには同期エンジン (S3 / local-FS トランスポート、IndexedDBスナップショット、コンフリクトガード) が必要です。'
+  deferredNotice: 'Cloud SyncモジュールはまだSlintビルドの同期エンジンに接続されていません。同期ターゲット、認証情報、スケジュール、復元は構造プレビューとして表示されます — 同期エンジンが実装されるまで各操作は無効です。'
+  deferredTip: 'Slintビルドには同期エンジン (S3 / local-FS トランスポート、IndexedDBスナップショット、コンフリクトガード) が必要です。'
   storage:
     title: 'ストレージターゲット'
     notWiredState: '未接続'
@@ -1062,8 +1062,8 @@ pluginHost:
   title: 'Plugin Host'
   description: 'AIRIプラグインを検査・管理します: 検出されたマニフェスト、有効化、読み込まれたセッション、公開された機能。'
   notWiredBadge: '未接続'
-  deferredTip: '未接続 — Qtビルドにはプラグインホストが存在しません。このプレビューはレイアウトのみを表示します。ここからプラグインを検出・読み込み・永続化することはありません。'
-  deferredNotice: 'このビルドではプラグインホストは未接続です。マニフェストはディスクから検出されず、プラグインは読み込まれず、下記の全コントロールはQtプラグインホスト (またはElectronスタイルのブリッジ) が実装されるまで無効です。'
+  deferredTip: '未接続 — Slintビルドにはプラグインホストが存在しません。このプレビューはレイアウトのみを表示します。ここからプラグインを検出・読み込み・永続化することはありません。'
+  deferredNotice: 'このビルドではプラグインホストは未接続です。マニフェストはディスクから検出されず、プラグインは読み込まれず、下記の全コントロールはSlintプラグインホスト (またはElectronスタイルのブリッジ) が実装されるまで無効です。'
   stats:
     discovered: '検出済み'
     enabled: '有効'
