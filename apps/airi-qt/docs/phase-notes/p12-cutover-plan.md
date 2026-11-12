@@ -184,3 +184,20 @@ Bottom line: v1 scope is now fully declared (every unchecked row is either
 Electron/web par-locked or consciously deferred to v1.1+), nothing ships
 before parity is user-confirmed, and any Qt release is dev-grade until the
 user flips it.
+### 2026-11-12 (wave ⑪ integration) — module-services port landed; approvals
+
+- Wave ⑪ (memory/speech/hearing/modules/card export) landed as `9824713f5`.
+  Manifest reclassified: **116 unchecked / 85 waived / 33 checked**.
+- The user approved (2026-11-12): (a) the recommended next-wave order —
+  **⑫ GUI-thread gateway dispatch → ⑬ lifetime-memory + memory-signals
+  pages → P1 daemon milestone** (system-embedding arc starts after).
+  (b) The system-embedding research posture **as written** (§I decisions
+  adopted as recommended): hybrid (b) posture; optional sudo mode for
+  v1.1+ (never default); L1 observe default / L2 polkit HITL = v1 ceiling /
+  L3 user-authored standing rules v1.1 after sudo-mode foundation /
+  L4 eBPF (aya) armed per-session, opt-in, design approved but P5 scope
+  is its own milestone later); no root daemon; never CAP_SYS_ADMIN;
+  multi-user machines out of scope for sudo mode.
+- L1→L4 means: AIRI is never PID 1; egress stays in the user-session
+  process alone; the root-*adjacent* helper (when it exists) carries no
+  network stack.
