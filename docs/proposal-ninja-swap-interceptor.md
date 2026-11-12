@@ -16,7 +16,7 @@
 
 Avatar interaction relies on two annotation systems that historically clash:
 
-1. **Physical blendshapes & gestures**: inline `<|ACT:emotion="smug",motion="lean_forward"|>` cues driving Live2D, VRM, and Stage-Mate rigs.
+1. **Physical blendshapes & gestures**: inline `<|ACT:emotion="smug",motion="lean_forward"|>` cues driving Live2D and VRM rigs.
 2. **Audio speech tags**: prepended expressive tags (`[whisper]`, `[giggle]`, `*sigh*`) driving inflection-aware TTS backends (`airi-audio-server` / Chatterbox, Fish Audio, IndexTTS-2.0, Higgs, OmniVoice).
 
 Forcing the primary conversational LLM (System 2) to generate both inline creates severe failure modes:
@@ -351,7 +351,7 @@ Provider setup is solved (global System1 config); what remains is per-character 
 - [ ] **Q1 — Stride-buffer placement**: `ControlStripHost.vue` vs `speech-pipeline.ts`? Constraint from the pacing doc: one queue/owner, no second audio driver in `speech.ts` (which remains the selected-provider/settings authority). Where does the stride buffer tap the token stream without violating the single-owner rule?
 - [ ] **Q2 — Whitelist schema & ownership**: confirm `extensions.airi.acting.compiledWhitelists` shape, defaults for cards without a compiled whitelist (passthrough unannotated vs Tier-1-on-first-use?), and migration for existing cards. Register the key in `docs/data-catalog.md`.
 - [ ] **Q3 — Tier 1 engine choice**: Needle 2 WASM vs local tiny LLM vs Jev schema query? Needs a shootout like the Nan0 43-case cleanroom (accuracy on natural-language acting guidelines → exact key subsets, with persona-violation counterexamples).
-- [ ] **Q4 — Latency budget**: is 110ms/stride absorbable in all surfaces (chat, DatingSim, Stage-Mate bridge)? Define per-surface degradation (skip annotation vs block) on Jev timeout.
+- [ ] **Q4 — Latency budget**: is 110ms/stride absorbable in all surfaces (chat, DatingSim)? Define per-surface degradation (skip annotation vs block) on Jev timeout.
 - [ ] **Q5 — Tag validity per provider**: which TTS providers honor `[tag]` prefixes vs strip/butcher them? `moss-audio-utils` sanitizes `[whisper]` → `whisper` (no brackets) — per-provider prefix/strip matrix needed so the interceptor prepends only what the active provider supports.
 - [ ] **Q6 — Intensity mapping**: how does the `intensity` score map onto ACT `intensity`/`duration` fields and provider-specific expressiveness knobs?
 - [ ] **Q7 — Test harness**: stride fixtures (sentence + persona + whitelist → expected tag+ACT pairs), persona-violation counterexamples (stoic character must never receive `happy`), voice-face coherence assertions. Mirror `system-one.test.ts` mock-Decisions-API pattern.

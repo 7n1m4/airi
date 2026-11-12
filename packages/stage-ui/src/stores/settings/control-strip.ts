@@ -37,7 +37,6 @@ export const DEFAULT_BUTTONS: ControlStripButton[] = [
   { id: 'gemini-schedule', enabled: false, label: 'Respect Schedule', icon: 'i-solar:calendar-linear' },
   { id: 'gemini-grounding', enabled: false, label: 'Google Search Grounding', icon: 'i-solar:global-linear' },
   { id: 'actor-selfies', enabled: false, label: 'Selfies', icon: 'i-solar:camera-linear' },
-  { id: 'actor-macaron', enabled: false, label: 'Macaron Floatie', icon: 'i-solar:donut-bold-duotone' },
   { id: 'workspace', enabled: true, label: 'Workspace', icon: 'i-solar:code-square-linear' },
   { id: 'actor-all-emotions', enabled: true, label: 'All Emotions', icon: 'i-solar:emoji-funny-square-linear' },
   { id: 'actor-vfx', enabled: true, label: 'VFX & Auras', icon: 'i-solar:fire-linear' },
@@ -92,7 +91,6 @@ export const useSettingsControlStrip = defineStore('settings-control-strip', () 
   const isAdvancedPositioningOpen = useLocalStorageManualReset<boolean>('settings/control-strip/advanced-positioning-open', false)
   const stageEnabled = useLocalStorageManualReset<boolean>('settings/stage-enabled', true)
   const stageDisabled = ref(false)
-  const stageMateEnabled = useLocalStorageManualReset<boolean>('settings/stage-mate-enabled', false)
   const chatOpen = useLocalStorageManualReset<boolean>('settings/chat-open', !isStageTamagotchi())
   const captionOpen = useLocalStorageManualReset<boolean>('settings/caption-open', false)
 
@@ -235,7 +233,6 @@ export const useSettingsControlStrip = defineStore('settings-control-strip', () 
     stageMode.reset()
     isAdvancedPositioningOpen.reset()
     stageEnabled.reset()
-    stageMateEnabled.reset()
     chatOpen.reset()
     captionOpen.reset()
     workspaceOpen.reset()
@@ -252,7 +249,6 @@ export const useSettingsControlStrip = defineStore('settings-control-strip', () 
     isAdvancedPositioningOpen,
     stageEnabled,
     stageDisabled,
-    stageMateEnabled,
     chatOpen,
     captionOpen,
     workspaceOpen,

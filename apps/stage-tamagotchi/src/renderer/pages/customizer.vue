@@ -215,15 +215,13 @@ const activeGroup = computed(() => {
 
 // Bound state resolvers (for items with a catalog binding field)
 // NOTICE: this union must mirror the `binding` union in `control-customizer.ts`.
-function isBoundActive(binding: 'chatOpen' | 'stageEnabled' | 'stageMateEnabled' | 'micEnabled' | 'captionOpen' | 'geminiSession' | 'headTetheredCaptionEnabled' | undefined): boolean {
+function isBoundActive(binding: 'chatOpen' | 'stageEnabled' | 'micEnabled' | 'captionOpen' | 'geminiSession' | 'headTetheredCaptionEnabled' | undefined): boolean {
   if (!binding)
     return false
   if (binding === 'chatOpen')
     return controlStripStore.chatOpen
   if (binding === 'stageEnabled')
     return controlStripStore.stageEnabled
-  if (binding === 'stageMateEnabled')
-    return controlStripStore.stageMateEnabled
   if (binding === 'captionOpen')
     return controlStripStore.captionOpen
   if (binding === 'micEnabled')
@@ -235,15 +233,13 @@ function isBoundActive(binding: 'chatOpen' | 'stageEnabled' | 'stageMateEnabled'
   return false
 }
 
-function toggleBoundState(binding: 'chatOpen' | 'stageEnabled' | 'stageMateEnabled' | 'micEnabled' | 'captionOpen' | 'geminiSession' | 'headTetheredCaptionEnabled' | undefined) {
+function toggleBoundState(binding: 'chatOpen' | 'stageEnabled' | 'micEnabled' | 'captionOpen' | 'geminiSession' | 'headTetheredCaptionEnabled' | undefined) {
   if (!binding)
     return
   if (binding === 'chatOpen')
     postControlStripAction('chat')
   else if (binding === 'stageEnabled')
     postControlStripAction('stage')
-  else if (binding === 'stageMateEnabled')
-    postControlStripAction('stage-mate')
   else if (binding === 'captionOpen')
     postControlStripAction('caption')
   else if (binding === 'micEnabled')

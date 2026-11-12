@@ -1,6 +1,6 @@
 /**
  * Polar coordinate and radial layout utilities for Stage Radial Menu.
- * Sourced from Stage-Mate CircleSelector.cs geometry and AIRI screen-space perspective.
+ * Geometry derived from the Stage Radial Menu design and AIRI screen-space perspective.
  */
 
 export interface PolarSliceLayout {
@@ -80,7 +80,7 @@ export function getHoveredSliceIndex(
 
 /**
  * Computes 3D parallax tilt angles towards the mouse cursor.
- * Port of Stage-Mate's `tiltTowardsMouse` (CircleSelector.cs:170-178).
+ * Port of the `tiltTowardsMouse` radial-menu parallax behaviour.
  */
 export function computeParallaxTilt(
   deltaX: number,

@@ -122,8 +122,6 @@ class AiriProcess:
             return "UTILITY", "Helper Utility"
         elif "server-filesystem" in cmd_lower:
             return "MCP", "Filesystem MCP Server"
-        elif "mate-engine" in cmd_lower or "stagemate" in cmd_lower:
-            return "SIDECAR", "Unity Stage-Mate"
         elif "electron-vite" in cmd_lower:
             return "VITE-DEV", "Vite Dev Server (Node)"
         elif "electron" in cmd_lower or "airi" in cmd_lower:
@@ -140,9 +138,6 @@ def is_airi_candidate(cmd: str) -> bool:
         return True
 
     if "stage-tamagotchi" in cmd_lower and ("electron" in cmd_lower or "electron-vite" in cmd_lower):
-        return True
-
-    if "mate-engine" in cmd_lower or "stagemate" in cmd_lower:
         return True
 
     return False
@@ -206,7 +201,7 @@ def find_airi_processes() -> List[AiriProcess]:
             continue
         airi_procs.append(AiriProcess(pid, ppid, rss_kb, vsz_kb, cpu_pct, cmd))
 
-    role_order = {"MAIN": 0, "RENDERER": 1, "GPU": 2, "UTILITY": 3, "MCP": 4, "SIDECAR": 5, "VITE-DEV": 6, "HELPER": 7}
+    role_order = {"MAIN": 0, "RENDERER": 1, "GPU": 2, "UTILITY": 3, "MCP": 4, "VITE-DEV": 5, "HELPER": 6}
     airi_procs.sort(key=lambda p: (role_order.get(p.role, 99), -p.rss_mb))
     return airi_procs
 

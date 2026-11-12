@@ -147,9 +147,6 @@ catalogs:
     '@types/unist':
       specifier: ^3.0.3
       version: 3.0.3
-    '@types/ws':
-      specifier: ^8.18.1
-      version: 8.18.1
     '@vueuse/core':
       specifier: ^14.2.1
       version: 14.2.1
@@ -737,19 +734,6 @@ importers:
         specifier: ^0.31.9
         version: 0.31.9
 
-  apps/stage-mate:
-    dependencies:
-      '@types/ws':
-        specifier: 'catalog:'
-        version: 8.18.1
-      ws:
-        specifier: 'catalog:'
-        version: 8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
-    devDependencies:
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
-
   apps/stage-pocket:
     dependencies:
       '@capacitor/android':
@@ -1104,19 +1088,6 @@ importers:
       vue-tsc:
         specifier: ^3.1.8
         version: 3.2.8(typescript@5.9.3)
-
-  apps/stage-qt:
-    dependencies:
-      '@types/ws':
-        specifier: 'catalog:'
-        version: 8.18.1
-      ws:
-        specifier: 'catalog:'
-        version: 8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
-    devDependencies:
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   apps/stage-tamagotchi:
     dependencies:

@@ -1840,7 +1840,7 @@
   - 💡 **Design Pattern Port: Zod Nullable Union Flattening from PR #2756 (`8f887ab743`)**: Avoid nested `anyOf` schema rejections from strict LLM providers by using `z.union([...variants, z.null()])` rather than `.nullable()` on unions.
   - 🔍 **PR #2762: `feat(ui): add shared dropdown menu` by @chiba233**: Track for potential adoption once merged to enrich `@proj-airi/ui` primitives.
   - ⚪ **Auto-Reject / Do Not Port**:
-    - **PR #2739 / Commit `671fbf0d33` (`apps/stage-tamagotchi-kirie`)**: Massive Godot 4.7.2 + CEF migration workspace that re-introduces deprecated `controls-island`. Our fork relies on decoupled Electron + Control Strip + Unity companion (`apps/stage-mate`).
+    - **PR #2739 / Commit `671fbf0d33` (`apps/stage-tamagotchi-kirie`)**: Massive Godot 4.7.2 + CEF migration workspace that re-introduces deprecated `controls-island`. Our fork relies on decoupled Electron + Control Strip.
     - **PR #2733 / Commit `7f750c88d0`**: Hosted cloud authentication and browser redirects for `server/apps/api`.
 * **Divergence / Collision Warnings**:
   - ⚠️ **`apps/stage-tamagotchi/src/main/index.ts` & window managers**: Touched by tray-only settings (PR #2700). Must be adapted to our decoupled `ControlStripHost` and `RendererStage` windows rather than upstream’s monolithic stage window.
@@ -3556,7 +3556,7 @@
 * **Divergence / Collision Warnings**:
   - ⚠️ **`packages/stage-ui/src/stores/modules/consciousness.ts` & `settings/modules/consciousness.vue` (Commit `f0fae90a0b`)**: Upstream adds opt-in sampling flags. Our fork contains customized provider key mappings (`composite provider keys`), onboarding grounding persistence, and model customizer integrations. Any port must splice the opt-in computed properties without overwriting fork-specific provider structures.
   - ⚠️ **`apps/stage-tamagotchi/src/renderer/components/InteractiveArea.vue` & `chat.vue` (Commit `eeea3a1a5a`)**: Upstream altered island dock placement and chat controls. Our fork completely decoupled chat and controls from the stage window. Do not merge.
-  - ⚠️ **`packages/stage-ui/src/stores/modules/hearing.ts` & `vad.ts` (Commit `40d6ffd8df` / PR #2651)**: Upstream is actively refactoring voice input stream binding. Our fork maintains custom audio pipelines (VoiceProfiles, UST speech transformers, and Stage-Mate audio bridge). Review changes against our audio pipeline before adopting.
+  - ⚠️ **`packages/stage-ui/src/stores/modules/hearing.ts` & `vad.ts` (Commit `40d6ffd8df` / PR #2651)**: Upstream is actively refactoring voice input stream binding. Our fork maintains custom audio pipelines (VoiceProfiles, UST speech transformers). Review changes against our audio pipeline before adopting.
 
 ### 📋 Upstream Commits
 - `3e8ea96075` fix(stage-ui-live2d): draw the resized frame before the compositor takes it (#2646) [#2646](https://github.com/moeru-ai/airi/pull/2646) _(蓝莓🫐, 2026-09-24)_

@@ -47,8 +47,6 @@ import {
   electronGetStageDisabled,
   electronOpenChat,
   electronOpenSettings,
-  electronStageMateSetViewportMode,
-  electronStageMateToggleVisibility,
   electronStageSetAlwaysOnTop,
   electronStageToggleVisibility,
   electronStartDraggingWindow,
@@ -118,10 +116,8 @@ const { live2dLookAtX, live2dLookAtY } = storeToRefs(useWindowStore())
 const settingsStore = useSettings()
 const positioningStore = usePositioningStore()
 const controlStripStore = useSettingsControlStrip()
-const { stageEnabled, stageMateEnabled, stageMode, captionOpen, collapsed, chatOpen } = storeToRefs(controlStripStore)
+const { stageEnabled, captionOpen, collapsed, chatOpen } = storeToRefs(controlStripStore)
 const toggleStageVisibility = useElectronEventaInvoke(electronStageToggleVisibility)
-const toggleStageMateVisibility = useElectronEventaInvoke(electronStageMateToggleVisibility)
-const setStageMateViewportMode = useElectronEventaInvoke(electronStageMateSetViewportMode)
 const liveSessionStore = useLiveSessionStore()
 
 const cardStore = useAiriCardStore()
@@ -139,14 +135,6 @@ watch(stageEnabled, (val) => {
   lastIpcStageEnabled = val
   toggleStageVisibility(val)
 }, { immediate: true })
-
-watch(stageMateEnabled, (val) => {
-  toggleStageMateVisibility(val)
-}, { immediate: true })
-
-watch(stageMode, (val) => {
-  setStageMateViewportMode(val)
-})
 
 watch(alwaysOnTop, (val) => {
   void setAlwaysOnTop(val)

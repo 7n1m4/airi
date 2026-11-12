@@ -24,13 +24,13 @@ Generated from `apps/stage-tamagotchi/src/**` (excluding tests).
 - [ ] `apps/stage-tamagotchi/src/main/windows/settings/rpc/index.electron.ts`
 - [ ] `apps/stage-tamagotchi/src/shared/eventa.ts`
 
-## shortcut / hotkey (14)
+## shortcut / hotkey (13)
 
 - [ ] `apps/stage-tamagotchi/src/main/configs/global.ts`
 - [ ] `apps/stage-tamagotchi/src/main/index.ts`
 - [ ] `apps/stage-tamagotchi/src/main/services/airi/i18n/index.ts`
 - [ ] `apps/stage-tamagotchi/src/main/services/airi/shortcuts/mic-toggle.ts`
-- [ ] `apps/stage-tamagotchi/src/main/services/airi/stage-mate/index.ts`
+- [ ] `apps/stage-tamagotchi/src/main/services/electron/process-spawner.ts`
 - [ ] `apps/stage-tamagotchi/src/main/services/shortcuts/mic-toggle.ts`
 - [ ] `apps/stage-tamagotchi/src/main/windows/caption/index.ts`
 - [ ] `apps/stage-tamagotchi/src/main/windows/chat/index.ts`
@@ -38,17 +38,15 @@ Generated from `apps/stage-tamagotchi/src/**` (excluding tests).
 - [ ] `apps/stage-tamagotchi/src/main/windows/stage/index.ts`
 - [ ] `apps/stage-tamagotchi/src/main/windows/widgets/index.ts`
 - [ ] `apps/stage-tamagotchi/src/renderer/splash.main.ts`
-- [ ] `apps/stage-tamagotchi/src/renderer/typed-router.d.ts`
 - [ ] `apps/stage-tamagotchi/src/shared/eventa.ts`
 
-## capture / screenshot / display (29)
+## capture / screenshot / display (27)
 
 - [ ] `apps/stage-tamagotchi/src/main/index.ts`
 - [ ] `apps/stage-tamagotchi/src/main/services/airi/agentic/companion.ts`
 - [ ] `apps/stage-tamagotchi/src/main/services/airi/discord/index.ts`
 - [ ] `apps/stage-tamagotchi/src/main/services/airi/libp2p/identity.ts`
 - [ ] `apps/stage-tamagotchi/src/main/services/airi/libp2p/pairing.ts`
-- [ ] `apps/stage-tamagotchi/src/main/services/airi/stage-mate/index.ts`
 - [ ] `apps/stage-tamagotchi/src/main/services/airi/transport-registry.ts`
 - [ ] `apps/stage-tamagotchi/src/main/services/airi/widgets/providers/base.ts`
 - [ ] `apps/stage-tamagotchi/src/main/services/electron/dock-mode.ts`
@@ -71,7 +69,6 @@ Generated from `apps/stage-tamagotchi/src/**` (excluding tests).
 - [ ] `apps/stage-tamagotchi/src/renderer/splash.main.ts`
 - [ ] `apps/stage-tamagotchi/src/renderer/stores/tools/builtin/generate-motion.ts`
 - [ ] `apps/stage-tamagotchi/src/renderer/stores/tools/builtin/image-journal.ts`
-- [ ] `apps/stage-tamagotchi/src/renderer/typed-router.d.ts`
 
 ## dialog / file (6)
 
@@ -98,7 +95,7 @@ Generated from `apps/stage-tamagotchi/src/**` (excluding tests).
 
 
 
-## notification / notice (34)
+## notification / notice (33)
 
 - [ ] `apps/stage-tamagotchi/src/main/app/migration.ts`
 - [ ] `apps/stage-tamagotchi/src/main/index.ts`
@@ -132,7 +129,6 @@ Generated from `apps/stage-tamagotchi/src/**` (excluding tests).
 - [ ] `apps/stage-tamagotchi/src/renderer/splash.main.ts`
 - [ ] `apps/stage-tamagotchi/src/renderer/stores/controls-island.ts`
 - [ ] `apps/stage-tamagotchi/src/renderer/stores/stage-window-lifecycle.ts`
-- [ ] `apps/stage-tamagotchi/src/renderer/typed-router.d.ts`
 - [ ] `apps/stage-tamagotchi/src/shared/eventa.ts`
 
 ## auto-launch / login item (0)

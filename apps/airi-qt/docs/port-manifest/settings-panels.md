@@ -45,7 +45,7 @@ Total: **45**
 - [ ] `packages/stage-ui/src/components/scenarios/settings/index.ts`
   - bindings: (no store bindings parsed)
 - [ ] `packages/stage-ui/src/components/scenarios/settings/model-settings/ModelCustomizer.vue`
-  - bindings: stores/display-models, stores/modules/airi-card, stores/settings/control-strip, useAiriCardStore, useCustomVrmAnimationsStore, useDisplayModelsStore, useDslIntimacyStore, useModelStore
+  - bindings: stores/display-models, stores/modules/airi-card, useAiriCardStore, useCustomVrmAnimationsStore, useDisplayModelsStore, useDslIntimacyStore, useModelStore
 - [ ] `packages/stage-ui/src/components/scenarios/settings/model-settings/audio-studio.vue`
   - bindings: stores/audio, stores/modules/speech, stores/providers, stores/providers/types, useProvidersStore, useSpeechStore
 - [ ] `packages/stage-ui/src/components/scenarios/settings/model-settings/components/ModelCustomizerSkeleton.vue`
@@ -150,7 +150,7 @@ Total: **14**
 - [ ] `packages/stage-ui/src/stores/settings/spine.ts`
   - bindings: (no store bindings parsed)
 - [ ] `packages/stage-ui/src/stores/settings/stage-model.ts`
-  - bindings: useDisplayModelsStore, usePositioningStore
+  - bindings: useDisplayModelsStore
 - [ ] `packages/stage-ui/src/stores/settings/theme.ts`
   - bindings: (no store bindings parsed)
 - [ ] `packages/stage-ui/src/stores/settings/user-profile.ts`

@@ -18,7 +18,7 @@ Guidelines and exact code paths for AIRI's stage overlay surfaces. The **Control
 - **Floating Electron windows** — managers in `apps/stage-tamagotchi/src/main/windows/` (`main/`, `stage/`, `chat/`, `settings/`, `widgets/`, `caption/`, `customizer/`, `inlay/`, `dashboard/`, …).
 
 ### Pinia stores
-- `packages/stage-ui/src/stores/settings/control-strip.ts` — `useSettingsControlStrip` (212 lines). Owns `orientation`, `stageMode`/`interactionMode`, `collapsed`, `dockedEdge` (`'left' | 'right' | 'top' | 'bottom'`, default `'right'`), `stageEnabled`, `stageMateEnabled`, `chatOpen`, `captionOpen`, `backgroundTint`, `selfieIncludeBg`, and the **button catalog** `buttons` (see §2.3).
+- `packages/stage-ui/src/stores/settings/control-strip.ts` — `useSettingsControlStrip` (212 lines). Owns `orientation`, `stageMode`/`interactionMode`, `collapsed`, `dockedEdge` (`'left' | 'right' | 'top' | 'bottom'`, default `'right'`), `stageEnabled`, `chatOpen`, `captionOpen`, `backgroundTint`, `selfieIncludeBg`, and the **button catalog** `buttons` (see §2.3).
 - `packages/stage-ui/src/stores/settings/controls-island.ts` — `useSettingsControlsIsland`: `alwaysOnTop`, `allowVisibleOnAllWorkspaces`, `controlsIslandIconSize`, and `fadeOnHoverEnabled` (shares the localStorage key `controls-island/fade-on-hover-enabled` with `apps/stage-tamagotchi/src/renderer/stores/controls-island.ts` on purpose — cross-package reactivity without importing app code).
 - `packages/stage-ui/src/stores/settings/stage-model.ts`, `settings/index.ts` — renderer choice and general settings (incl. `stageViewControlsEnabled`, caption followers).
 
@@ -35,7 +35,7 @@ Web/pocket never mount the strip inside `WidgetStage` (the `isElectron` guard is
 
 ### 2.2 Action dispatch chain
 `useControlStripAction()` — `packages/stage-ui/src/composables/use-control-strip-action.ts` (175 lines). `dispatchAction(actionId)`:
-1. Executes the local mutation (switch over ~20 action ids: `head-tethered-caption`, `viewport-cycle-modes` + per-mode setters syncing `settingsStore.stageViewControlsEnabled` and `useModelStore().interactionMode`, `gemini-session/tts/grounding`, `theme-mode`, `caption-docking` cycling `none → bottom → top → head`, `stage`, `stage-mate`, `chat`, `caption`, `mic`, `always-on-top`, `viewport-auto-hide`, `layout` …).
+1. Executes the local mutation (switch over ~20 action ids: `head-tethered-caption`, `viewport-cycle-modes` + per-mode setters syncing `settingsStore.stageViewControlsEnabled` and `useModelStore().interactionMode`, `gemini-session/tts/grounding`, `theme-mode`, `caption-docking` cycling `none → bottom → top → head`, `stage`, `chat`, `caption`, `mic`, `always-on-top`, `viewport-auto-hide`, `layout` …).
 2. Broadcasts on `BroadcastChannel('airi-control-strip-actions')` unless `skipBroadcast`.
 3. Fires `window.CustomEvent('control-strip:action', { detail: { action } })`.
 
@@ -45,7 +45,7 @@ Web/pocket never mount the strip inside `WidgetStage` (the `isElectron` guard is
 
 ### 2.3 Button catalog & platform defaults (`stores/settings/control-strip.ts`)
 
-- **Catalog**: `packages/stage-ui/src/constants/control-customizer.ts` — `CUSTOMIZER_CATALOG: CustomizerGroup[]`, 5 groups (`stage-view` Stage View, `system-window` System & Window, `captions` Captions, `actor-wardrobe` Actor & Wardrobe, `AI & Gemini`) totaling ~48 items. `CustomizerItem` schema: `{ id, label, description, icon, type: 'toggle'|'cycler'|'action'|'menu', defaultOnStrip, binding?, desktopOnly? }`. **18 items are `desktopOnly: true`** (window managers: always-on-top, audio input device, stage-mate, exit, selfies, presets, etc.).
+- **Catalog**: `packages/stage-ui/src/constants/control-customizer.ts` — `CUSTOMIZER_CATALOG: CustomizerGroup[]`, 5 groups (`stage-view` Stage View, `system-window` System & Window, `captions` Captions, `actor-wardrobe` Actor & Wardrobe, `AI & Gemini`) totaling ~43 items. `CustomizerItem` schema: `{ id, label, description, icon, type: 'toggle'|'cycler'|'action'|'menu', defaultOnStrip, binding?, desktopOnly? }`. **18 items are `desktopOnly: true`** (window managers: always-on-top, audio input device, exit, selfies, presets, etc.).
 - **Desktop defaults** `DEFAULT_BUTTONS` (:22-40): chat, actor-characters, mic, stage, caption, gemini-session, settings, layout, viewport-auto-hide **on**; gemini-witness/frequency/tts/voice/schedule/grounding, actor-selfies, actor-macaron off.
 - **Mobile defaults** `DEFAULT_MOBILE_BUTTONS` (:42-51), all on: `viewport-cycle-modes`, `head-tethered-caption`, `theme-mode`, `actor-characters`, `actor-avatars`, `actor-expressions`, `gemini-session`, `actor-wardrobe`.
 - **Platform selection**: `getDefaultControlStripButtons()` (:53-55) switches on `isStageTamagotchi()` (`packages/stage-shared/src/environment.ts:15`).

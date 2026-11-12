@@ -9,7 +9,6 @@ packages:
   - apps/**
   - '!apps/airi-qt/target/**'
   - '!**/dist/**'
-  - '!apps/stage-mate/mate-engine/**'
 overrides:
   '@libp2p/crypto': 5.1.8
   '@libp2p/record': 4.0.12

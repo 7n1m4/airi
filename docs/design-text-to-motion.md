@@ -273,7 +273,7 @@ To balance immediate on-device speed, zero external dependencies, and future cin
 * **Capabilities**:
   * Extends motion synthesis from humanoid VRMs to arbitrary 3D rigs: companion pets (dogs, cats), mythical creatures (dragons), mechanical sidecars (satellites, drones), and dynamic stage props (animated flowers, weapons).
   * Ingests any rigged 3D mesh + text prompt (*"cat arches back and hisses"*, *"satellite unfolds solar panels"*) and outputs kinematically valid joint animation tracks.
-  * Direct bridge to Stage-Mate Unity sidecars and Three.js stage companions.
+  * Direct bridge to Three.js stage companions.
 
 #### Tier 2: Sub-50ms Semantic Retrieval Cache (TMR-SOMA)
 * **Mechanism**: Leverages Text-to-Motion Retrieval ([`nvidia/TMR-SOMA-RP-v1`](https://huggingface.co/nvidia/TMR-SOMA-RP-v1), based on *TMR: Text-to-Motion Retrieval Using Contrastive 3D Human Motion Synthesis*, ICCV 2023).

@@ -72,11 +72,6 @@ echo " Renderer Port: $AIRI_RENDERER_PORT"
 echo " Log Location:  $LOG_FILE"
 echo "========================================================"
 
-# Fetch Stage-Mate companion runtime if needed
-if [ ! -d "apps/stage-mate/bin/StageMate.app" ] && [ ! -f "apps/stage-mate/bin/StageMate.x86_64" ] && [ ! -f "apps/stage-mate/bin/StageMate.exe" ]; then
-  pnpm -F @proj-airi/stage-mate run engine:fetch || true
-fi
-
 # Pass any extra arguments
 {
   if [ -f "apps/stage-tamagotchi/electron.vite.config.local.ts" ]; then

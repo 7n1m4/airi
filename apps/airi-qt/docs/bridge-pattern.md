@@ -6,7 +6,6 @@ Spike result: **cxx-qt 0.10 does not support Rust subclassing QAbstractListModel
 Evidence:
 - `cxx_qt::bridge` requires Rust QObjects to derive from `QObject`; there is no supported path to override `QAbstractListModel::roleNames`/`data`/`rowCount` from Rust in 0.10.
 - The generated vtable/constructor surface for `QAbstractListModel` is not exposed in a way that cxx-qt can emit safely.
-- stage-qt's existing pattern uses a C++ shell (`src/cpp/stage_qt_bridge.h/.cpp`) for the one Qt Quick 3D class cxx-qt could not express (`VrmGeometryShell`), confirming the same limitation class.
 
 ## Decision
 Use the planned fallback: **`QList<QObject*>` per-message QObjects appended on delta-complete + incremental signals**, never rebuild the whole list on every chunk.

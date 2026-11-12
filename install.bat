@@ -1,26 +1,14 @@
 @echo off
 setlocal
 
-echo [1/4] Installing pnpm globally...
+echo [1/3] Installing pnpm globally...
 call npm install -g pnpm
 
-echo [2/4] Installing project dependencies...
+echo [2/3] Installing project dependencies...
 call pnpm install
 
-echo [3/4] Building target packages...
+echo [3/3] Building target packages...
 call pnpm run build
-
-echo [Stage-Mate] Checking companion runtime...
-set "HAS_MATE="
-if exist "apps\stage-mate\bin\StageMate.exe" set HAS_MATE=1
-if exist "apps\stage-mate\bin\MateEngineX.exe" set HAS_MATE=1
-
-if not defined HAS_MATE (
-    echo [Stage-Mate] Companion runtime not detected in apps\stage-mate\bin. Fetching prebuilt release...
-    call pnpm -F @proj-airi/stage-mate run engine:fetch
-) else (
-    echo [Stage-Mate] Companion runtime already available. Skipping download.
-)
 
 echo.
 echo ===================================================

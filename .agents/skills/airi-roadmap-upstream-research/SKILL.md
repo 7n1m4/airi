@@ -43,8 +43,8 @@ This fork (`dasilva333/airi`) has undergone deep, structural architectural shift
    - Upstream actively develops hosted cloud services, remote database provider syncing (e.g. PR #2471), Stripe billing for Flux (PR #2533), Apple App Store IAP (PR #2339), and remote email verification (PR #2473).
 3. **Multi-Actor & `<|ACTOR|>` Dynamic Staging**:
    - This fork supports `<|ACTOR|>` tokens for mid-conversation dynamic character switching, LRU display model caching, and multi-actor character cards. Upstream is strictly 1:1 character cards.
-4. **Expanded Avatar Runtimes (4 Engines + Unity Companion)**:
-   - This fork natively supports 4 avatar engines (VRM, Live2D, MMD with PMX physics, Spine 2D) and a high-fidelity Unity C# sidecar (`apps/stage-mate`). Upstream focuses on VRM/Live2D and Godot 4 experiments.
+4. **Expanded Avatar Runtimes (4 Engines)**:
+   - This fork natively supports 4 avatar engines (VRM, Live2D, MMD with PMX physics, Spine 2D). Upstream focuses on VRM/Live2D and Godot 4 experiments.
 5. **Two-Layer Memory & Dreaming Subsystems**:
    - This fork features STMM daily summaries, LTMM immutable text journal with `text_journal` tool, Sacred Journal Rule, Dreaming Worker reflections, Echo chips, and Universe/storyline isolation.
 6. **Autonomous Artistry & BYOW**:

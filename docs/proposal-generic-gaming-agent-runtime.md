@@ -112,7 +112,7 @@ graph TD
         VLM[Vision LLM / Model Dispatch]
         BackseatComposer[Backseat Composer & Voice Ingestion]
         SpeechRuntime[Contextual Streaming TTS & Fillers]
-        StageMate[Live2D / VRM Stage Avatar]
+        Stage[Live2D / VRM Stage Avatar]
     end
 
     Sidebar --> ArcadeSurface
@@ -135,7 +135,7 @@ graph TD
     InputInjector --> HTML5Games
 
     VLM -.->|Dialogue & Emotion Cues| SpeechRuntime
-    SpeechRuntime --> StageMate
+    SpeechRuntime --> Stage
     SpeechRuntime -.->|Audio Ducking Control| AudioMixer
     SpeechRuntime -.->|Live Transcript & Badges| BackseatChat
 ```

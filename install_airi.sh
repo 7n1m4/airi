@@ -22,17 +22,11 @@ echo "========================================================"
 echo " [AIRI] Installing Workspace Dependencies & Building"
 echo "========================================================"
 
-echo "[1/3] Installing project dependencies (pnpm install)..."
+echo "[1/2] Installing project dependencies (pnpm install)..."
 pnpm install
 
-echo "[2/3] Building internal workspace packages..."
+echo "[2/2] Building internal workspace packages..."
 pnpm run build:packages
-
-echo "[3/3] Checking Stage-Mate companion runtime..."
-if [ ! -d "apps/stage-mate/bin/StageMate.app" ] && [ ! -f "apps/stage-mate/bin/StageMate.x86_64" ] && [ ! -f "apps/stage-mate/bin/StageMate.exe" ]; then
-  echo "[Stage-Mate] Prebuilt companion runtime not detected. Fetching runtime..."
-  pnpm -F @proj-airi/stage-mate run engine:fetch || echo "[Stage-Mate] Notice: Runtime fetch skipped. You can fetch later via 'pnpm run stage-mate:fetch'."
-fi
 
 echo "========================================================"
 echo " Installation complete!"

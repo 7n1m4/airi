@@ -153,11 +153,6 @@ apps/stage-pocket/ios/buildServer.json
 !.obsidian/appearance.json
 !.obsidian/core-plugins.json
 !.obsidian/graph.json
-apps/stage-mate/bin/
-apps/stage-qt/target/
-apps/stage-qt/bin/
-apps/stage-qt/test-model.vrm
-apps/stage-qt/qml/shaders/*.qsb
 
 # Scratch & recovery dumps
 recovery_artifacts/
@@ -172,4 +167,3 @@ personal_airi/
 # omp local config
 .omp/config.yml
 
-apps/stage-qt/.qmlls.ini

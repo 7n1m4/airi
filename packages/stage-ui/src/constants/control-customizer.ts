@@ -5,7 +5,7 @@ export interface CustomizerItem {
   icon: string
   type: 'toggle' | 'cycler' | 'action' | 'menu'
   defaultOnStrip: boolean
-  binding?: 'chatOpen' | 'stageEnabled' | 'stageMateEnabled' | 'micEnabled' | 'captionOpen' | 'geminiSession' | 'headTetheredCaptionEnabled'
+  binding?: 'chatOpen' | 'stageEnabled' | 'micEnabled' | 'captionOpen' | 'geminiSession' | 'headTetheredCaptionEnabled'
   /** If true, this item is specific to desktop multi-window managers and hidden on mobile */
   desktopOnly?: boolean
   disabled?: boolean
@@ -43,16 +43,6 @@ export const CUSTOMIZER_CATALOG: CustomizerGroup[] = [
         type: 'toggle',
         defaultOnStrip: true,
         binding: 'stageEnabled',
-        desktopOnly: true,
-      },
-      {
-        id: 'stage-mate',
-        label: 'Stage Mate',
-        description: 'Toggles the native high-performance VRM companion stage.',
-        icon: 'i-solar:box-minimalistic-linear',
-        type: 'toggle',
-        defaultOnStrip: false,
-        binding: 'stageMateEnabled',
         desktopOnly: true,
       },
       {
@@ -343,15 +333,6 @@ export const CUSTOMIZER_CATALOG: CustomizerGroup[] = [
         icon: 'i-solar:camera-linear',
         type: 'menu',
         defaultOnStrip: false,
-      },
-      {
-        id: 'actor-macaron',
-        label: 'Floaties & Treats',
-        description: 'Customize 3D companion floaties and snack props.',
-        icon: 'i-solar:donut-bold-duotone',
-        type: 'menu',
-        defaultOnStrip: false,
-        desktopOnly: true,
       },
       {
         id: 'actor-gunslinger',

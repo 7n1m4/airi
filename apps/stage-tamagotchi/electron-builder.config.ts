@@ -2,32 +2,11 @@
 
 import type { Configuration } from 'electron-builder'
 
-import fs from 'node:fs'
-import path from 'node:path'
 import process from 'node:process'
 
 import { execSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
 
 import { isMacOS } from 'std-env'
-
-const here = path.dirname(fileURLToPath(import.meta.url))
-const stageMateBinDir = path.resolve(here, '../stage-mate/bin')
-
-const stageMateMacCandidates = [
-  path.join(stageMateBinDir, 'StageMate.app'),
-  path.join(stageMateBinDir, 'StageMate', 'StageMate.app'),
-]
-const stageMateMacSource = stageMateMacCandidates.find(appPath => fs.existsSync(appPath))
-const hasStageMateMac = Boolean(stageMateMacSource)
-
-const stageMateWinCandidates = [
-  path.join(stageMateBinDir, 'Windows'),
-  path.join(stageMateBinDir, 'StageMate'),
-  stageMateBinDir,
-]
-const stageMateWinSource = stageMateWinCandidates.find(dir => fs.existsSync(path.join(dir, 'StageMate.exe')) || fs.existsSync(path.join(dir, 'MateEngineX.exe')))
-const hasStageMateWin = Boolean(stageMateWinSource)
 
 // Each target platform keeps only the matching `${arch}` native directory.
 const nativeAddonFilePatterns = {
@@ -50,9 +29,6 @@ const nativeAddonFilePatterns = {
     '!**/node_modules/koffi/build/koffi/!(win32_${arch}){,/**}',
   ],
 } as const
-
-console.info(`[electron-builder/config] Stage-Mate macOS App found: ${hasStageMateMac} (${stageMateMacSource})`)
-console.info(`[electron-builder/config] Stage-Mate Windows binary found: ${hasStageMateWin} (${stageMateWinSource})`)
 
 function hasXcode26OrAbove() {
   if (!isMacOS)
@@ -85,25 +61,6 @@ else {
 
 const isReleaseSigning = Boolean(process.env.CSC_LINK || process.env.APPLE_DEVELOPER_TEAM_ID)
 
-const STAGE_MATE_RESOURCE_FILTERS = [
-  '**/*',
-  '!StageMate.app/**/*',
-  '!*.app/**/*',
-  '!__MACOSX/**/*',
-  '!**/.DS_Store',
-  '!Build/**/*',
-  '!*.log',
-  '!*.dmp',
-  '!*.vrm',
-  '!*.me',
-  '!*.prefab',
-  '!test_run.log',
-  '!*_BurstDebugInformation_DoNotShip/**/*',
-  '!**/CustomAvatars/**/*',
-  '!**/CustomDances/**/*',
-  '!**/Mods/**/*',
-]
-
 export default {
   appId: 'ai.moeru.airi.dasilva333',
   productName: 'AIRI (dasilva333)',
@@ -116,21 +73,6 @@ export default {
     try {
       execSync(`xattr -cr "${context.appOutDir}"`)
       execSync(`find "${context.appOutDir}" -name ".DS_Store" -delete`)
-
-      // Deep-sign nested StageMate helper apps and frameworks so electron-builder signs successfully
-      const candidates = [
-        path.join(context.appOutDir, 'airi.app/Contents/Resources/StageMate/StageMate.app'),
-        path.join(context.appOutDir, 'AIRI.app/Contents/Resources/StageMate/StageMate.app'),
-        path.join(context.appOutDir, 'AIRI (dasilva333).app/Contents/Resources/StageMate/StageMate.app'),
-      ]
-      for (const cand of candidates) {
-        if (fs.existsSync(cand)) {
-          execSync(`rm -rf ${JSON.stringify(`${cand}/Build`)}`)
-          execSync(`xattr -cr ${JSON.stringify(cand)}`)
-          console.info(`  • deep signing nested StageMate bundle: ${cand}`)
-          execSync(`codesign --sign - --force --deep ${JSON.stringify(cand)}`)
-        }
-      }
     }
     catch (e) {
       console.warn(`  • warning: metadata cleanup failed: ${(e as Error).message}`)
@@ -221,15 +163,6 @@ export default {
     target: [
       'nsis',
     ],
-    extraResources: (hasStageMateWin && stageMateWinSource
-      ? [
-          {
-            from: stageMateWinSource,
-            to: 'StageMate',
-            filter: STAGE_MATE_RESOURCE_FILTERS,
-          },
-        ]
-      : []),
   },
   nsis: {
     artifactName: 'airi-dasilva333-${version}-windows-${arch}-setup.${ext}',
@@ -259,15 +192,6 @@ export default {
     hardenedRuntime: isReleaseSigning,
     notarize: isReleaseSigning,
     icon: useIconFormattedMacAppIcon ? 'icon.icon' : 'icon.icns',
-    extraResources: (hasStageMateMac
-      ? [
-          {
-            from: stageMateMacSource,
-            to: 'StageMate/StageMate.app',
-            filter: STAGE_MATE_RESOURCE_FILTERS,
-          },
-        ]
-      : []),
   },
   dmg: {
     artifactName: 'airi-dasilva333-${version}-darwin-${arch}.${ext}',

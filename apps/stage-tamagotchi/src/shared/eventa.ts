@@ -85,51 +85,6 @@ export const electronCustomizerToggleVisibility = defineInvokeEventa<void, boole
 export const electronGetCustomizerWindowState = defineInvokeEventa<boolean>('eventa:invoke:electron:windows:customizer:get-state')
 export const electronEnsureBeatSync = defineInvokeEventa<void, void>('eventa:invoke:electron:beat-sync:ensure')
 
-export interface StageMateEnsureModelPayload {
-  modelId: string
-  modelName?: string
-}
-
-export interface StageMateEnsureModelResult {
-  status: 'ready' | 'need_binary'
-  path?: string
-}
-
-export interface StageMateSaveModelPayload {
-  modelId: string
-  modelName?: string
-  data: Uint8Array | number[]
-}
-
-export interface StageMateSaveModelResult {
-  success: boolean
-  path: string
-}
-
-export interface StageMateSyncOutfitsEntry {
-  name: string
-  tag?: string
-  meshes: string[]
-}
-
-export interface StageMateSyncOutfitsPayload {
-  modelId: string
-  outfits: StageMateSyncOutfitsEntry[]
-  reload?: boolean
-}
-
-export interface StageMateSyncOutfitsResult {
-  success: boolean
-  path?: string
-}
-
-export const electronStageMateEnsureModel = defineInvokeEventa<StageMateEnsureModelResult, StageMateEnsureModelPayload>('eventa:invoke:electron:stage-mate:ensure-model')
-export const electronStageMateSaveModel = defineInvokeEventa<StageMateSaveModelResult, StageMateSaveModelPayload>('eventa:invoke:electron:stage-mate:save-model')
-export const electronStageMateSyncOutfits = defineInvokeEventa<StageMateSyncOutfitsResult, StageMateSyncOutfitsPayload>('eventa:invoke:electron:stage-mate:sync-outfits')
-export const electronStageMateToggleVisibility = defineInvokeEventa<void, boolean>('eventa:invoke:electron:stage-mate:toggle-visibility')
-export const electronStageMateSetViewportMode = defineInvokeEventa<void, string>('eventa:invoke:electron:stage-mate:set-viewport-mode')
-export const electronStageMateGetState = defineInvokeEventa<{ enabled: boolean, running: boolean }>('eventa:invoke:electron:stage-mate:get-state')
-
 export type RequestWindowActionDefault = 'confirm' | 'cancel' | 'close'
 export interface RequestWindowPayload {
   id?: string

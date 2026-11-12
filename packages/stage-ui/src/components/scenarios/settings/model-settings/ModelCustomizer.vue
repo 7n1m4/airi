@@ -25,7 +25,7 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from 'reka-ui'
-import { computed, ref, toRaw, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
@@ -35,7 +35,6 @@ import WardrobeMeshTreeNode from './components/WardrobeMeshTreeNode.vue'
 import { classifyExpression } from '../../../../libs/character/expression-noise-gate'
 import { DEFAULT_VFX_MAPPINGS, DisplayModelFormat, useDisplayModelsStore } from '../../../../stores/display-models'
 import { useAiriCardStore } from '../../../../stores/modules/airi-card'
-import { useSettingsControlStrip } from '../../../../stores/settings/control-strip'
 import { Container } from '../../../data-pane'
 
 interface Props {
@@ -63,7 +62,6 @@ const emit = defineEmits<{
 
 // Setup Stores
 const airiCardStore = useAiriCardStore()
-const controlStripStore = useSettingsControlStrip()
 const displayModelsStore = useDisplayModelsStore()
 
 const live2dStore = useLive2d()
@@ -73,7 +71,6 @@ const modelStore = useModelStore() // VRM
 const customVrmAnimationsStore = useCustomVrmAnimationsStore()
 
 const { activeCard, activeCardId } = storeToRefs(airiCardStore)
-const { stageMateEnabled } = storeToRefs(controlStripStore)
 
 // Resolve Model Format
 const currentModel = computed(() => {
@@ -514,74 +511,13 @@ function openEmotionCalibration() {
 }
 
 // === Inline Wardrobe Builder State ===
-const isElectron = computed(() => typeof window !== 'undefined' && !!(window as any).electron)
 const isBuildingOutfit = ref(false)
 const isSavingOutfit = ref(false)
-const isSyncingStageMate = ref(false)
 const selectedMeshes = ref(new Set<string>())
 const slotName = ref('')
 const slotTag = ref('')
 const slotIcon = ref('i-solar:t-shirt-bold-duotone')
 const searchMeshQuery = ref('')
-
-async function syncStageMateSidecar(reload = false) {
-  if (!isElectron.value || !props.modelId)
-    return false
-
-  try {
-    const { useElectronEventaInvoke } = await import('@proj-airi/electron-vueuse')
-    const { electronStageMateSyncOutfits } = await import('@proj-airi/stage-shared')
-    const syncOutfitsInvoke = useElectronEventaInvoke(electronStageMateSyncOutfits)
-
-    const rawOutfits = toRaw(modelOutfits.value) || []
-    const plainOutfits = rawOutfits.map((o) => {
-      const plainObj = toRaw(o)
-      const rawMeshes = plainObj.meshes ? toRaw(plainObj.meshes) : []
-      return {
-        name: String(plainObj.name || ''),
-        tag: String(plainObj.tag || ''),
-        meshes: Array.from(rawMeshes).map(m => String(m)),
-      }
-    })
-
-    const payload = JSON.parse(JSON.stringify({
-      modelId: String(props.modelId),
-      outfits: plainOutfits,
-      reload: Boolean(reload),
-    }))
-
-    const res = await syncOutfitsInvoke(payload)
-    return !!res?.success
-  }
-  catch (err) {
-    console.error('[ModelCustomizer] Failed to sync outfits with Stage-Mate:', err)
-    return false
-  }
-}
-
-async function handleManualStageMateSync() {
-  if (isSyncingStageMate.value)
-    return
-
-  isSyncingStageMate.value = true
-  const toastId = toast.loading('Syncing outfits with Stage-Mate…')
-
-  try {
-    const success = await syncStageMateSidecar(true)
-    if (success) {
-      toast.success('Stage-Mate synchronized successfully!', { id: toastId })
-    }
-    else {
-      toast.error('Failed to sync Stage-Mate outfits sidecar.', { id: toastId })
-    }
-  }
-  catch (err: any) {
-    toast.error(`Failed to sync Stage-Mate: ${err?.message || 'Unknown error'}`, { id: toastId })
-  }
-  finally {
-    isSyncingStageMate.value = false
-  }
-}
 
 const availableIcons = [
   'i-solar:t-shirt-bold-duotone',
@@ -714,10 +650,6 @@ async function saveOutfitSlot() {
     })
 
     await saveMetadata()
-
-    // Auto-export sidecar to Stage-Mate disk cache
-    void syncStageMateSidecar(false)
-
     cancelBuildingOutfit()
     toast.success('Wardrobe slot saved.', { id: toastId })
   }
@@ -733,7 +665,6 @@ async function saveOutfitSlot() {
 async function deleteSlot(id: string) {
   modelOutfits.value = modelOutfits.value.filter(o => o.id !== id)
   await saveMetadata()
-  void syncStageMateSidecar(false)
   toast.success('Wardrobe slot removed.')
 }
 
@@ -793,14 +724,6 @@ function triggerExpressionEffect(key: string) {
   }
   else if (modelType.value === 'vrm') {
     modelStore.triggerEmotion(key, 1.0)
-    if (stageMateEnabled.value && isElectron.value) {
-      import('@proj-airi/electron-vueuse').then(({ useElectronEventaInvoke }) => {
-        import('@proj-airi/stage-shared').then(({ electronStageMateTriggerExpression }) => {
-          const triggerExpr = useElectronEventaInvoke(electronStageMateTriggerExpression)
-          triggerExpr({ name: key, weight: 1.0, durationMs: 2500 })
-        })
-      }).catch(() => {})
-    }
   }
   else if (modelType.value === 'mmd') {
     mmdStore.previewExpression = key
@@ -930,14 +853,6 @@ function triggerVfxEffect(key: string) {
   if (modelType.value === 'vrm') {
     modelStore.triggerVfx(key, 4.0)
     modelStore.triggerEmotion(key, 1.0)
-    if (stageMateEnabled.value && isElectron.value) {
-      import('@proj-airi/electron-vueuse').then(({ useElectronEventaInvoke }) => {
-        import('@proj-airi/stage-shared').then(({ electronStageMateTriggerExpression }) => {
-          const triggerExpr = useElectronEventaInvoke(electronStageMateTriggerExpression)
-          triggerExpr({ name: key, weight: 1.0, durationMs: 4000 })
-        })
-      }).catch(() => {})
-    }
   }
   else if (modelType.value === 'mmd') {
     modelStore.triggerVfx(key, 4.0)
@@ -1646,16 +1561,6 @@ function toggleMotionCycle(key: string) {
                 Wardrobe Slots ({{ modelOutfits.length }} / 8)
               </span>
               <div class="flex items-center gap-1.5">
-                <button
-                  v-if="isElectron"
-                  class="flex items-center gap-1 rounded-md bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600 font-medium transition-colors dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 disabled:opacity-50 dark:hover:bg-neutral-700"
-                  :disabled="isSyncingStageMate"
-                  title="Export outfits sidecar JSON and reload model in Stage-Mate"
-                  @click="handleManualStageMateSync"
-                >
-                  <div :class="isSyncingStageMate ? 'i-solar:spinner-bold animate-spin' : 'i-solar:bolt-bold-duotone text-amber-500'" class="size-3.5" />
-                  <span>{{ isSyncingStageMate ? 'Syncing…' : 'Sync Stage-Mate' }}</span>
-                </button>
                 <button
                   class="rounded-md bg-primary-500/10 px-2.5 py-1 text-xs text-primary-600 font-medium transition-colors hover:bg-primary-500/20 dark:text-primary-400 disabled:opacity-50"
                   :disabled="modelOutfits.length >= 8"

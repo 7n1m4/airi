@@ -86,7 +86,7 @@ Hooks directly into the TTS, STT, and playback subsystems:
 * **`hook:speech:interrupt`**: Triggered when user barge-in or high-priority alerts abort active speech playback.
 
 ### 3.5 Visual & Avatar Staging Hooks
-Hooks into Three.js, VRM, Live2D, and Stage-Mate Unity rendering:
+Hooks into Three.js, VRM, and Live2D rendering:
 * **`hook:stage:actor_swapped`**: Dispatched when mid-conversation `<|ACTOR|>` tokens or user controls switch the active stage character.
 * **`hook:stage:expression_override`**: Permits external triggers (e.g., game health critical) to enforce a persistent facial expression or posture.
 * **`hook:stage:outfit_change`**: Dispatched when an outfit or wardrobe preset is toggled.

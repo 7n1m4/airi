@@ -5,8 +5,6 @@
 > This comparison is authored and maintained by the creator of the `dasilva333/airi` fork. It was born out of frustration with superficial marketing checklists (e.g. *"Supports VRM: Yes/No"* or *"Has Memory: Yes/No"*) that conceal fundamental architectural differences—such as whether speech synthesis runs in-process on WebGPU versus requiring an external background server daemon, or whether memory is a flat sliding context window versus a structured temporal hierarchy.
 >
 > All assessments are anchored in commit-pinned primary source code, local repository checkouts, and runtime logs audited as of **September 2026**. This is a living comparison: **corrections, clarifications, and pull requests from users and maintainers of all featured projects are actively welcomed.**
->
-> *For line-by-line repository citations, factory implementation cases, and latency benchmark methodologies, see the canonical [Forensic Deep-Dive Dossier](docs/project-companion-comparisons.md).*
 
 ---
 
@@ -69,7 +67,7 @@
 | :--- | :--- | :---: | :---: | :---: | :--- |
 | **AITuberKit** | VRM 0.0/1.0, Live2D, MotionPNGTuber | ❌ | ❌ | ❌ | Next.js Web / Custom Source-Available (v2.0+) |
 | **Amica** | 3D VRM (0.0 / 1.0) | ❌ | ❌ | ❌ | MIT Open Source · Web / Tauri |
-| **dasilva333/airi** (This Fork) | VRM 0.0/1.0, Live2D, Spine 2D, MMD, Unity Stage-Mate C# | ✅ (`<\|ACTOR\|>` tokens) | ✅ Text-to-VRMA Diffusion | ✅ V-HACK Avatar Studio (Mesh & AI Textures) | MIT Open Source · Electron Desktop / Web |
+| **dasilva333/airi** (This Fork) | VRM 0.0/1.0, Live2D, Spine 2D, MMD | ✅ (`<\|ACTOR\|>` tokens) | ✅ Text-to-VRMA Diffusion | ✅ V-HACK Avatar Studio (Mesh & AI Textures) | MIT Open Source · Electron Desktop / Web |
 | **Komorebi** | Live2D Cubism | ❌ | ❌ | ❌ | Open Source · Tauri 2 / Rust Desktop |
 | **NekoGPT** | Live2D Cubism | ❌ | ❌ | ❌ | Commercial Steam Product (`Shinobu`) |
 | **Open-LLM-VTuber** | Live2D, VRM | ❌ | ❌ | ❌ | MIT Open Source · Python Backend + Web/Desktop Client |
@@ -88,7 +86,7 @@ Every companion in this ecosystem was built to solve a specific problem. Underst
 ### 🐾 VPet (Virtual Pet Simulator)
 - **Where it shines:** Unrivaled desktop presence and physics simulation. VPet features true Win32 desktop window physics—gravity, collision, climbing, throwing, and active pet state/hunger simulation. Its Steam Workshop modding community is the largest in the desktop companion space with thousands of user-created sprites and animations.
 - **Architectural trade-off:** LLM conversational intelligence and speech are community plugin wrappers layered onto a classic 2D sprite engine, rather than an integrated multimodal cognitive loop.
-- **How AIRI Approaches This:** VPet delivers classic 2D desktop pet physics; AIRI provides the **Stage-Mate Unity sidecar**—bringing 3D physics, procedural IK dangling, macarons, toy guns, dancing, sitting on window borders, and edge peeking—paired with an in-app AI character creator that synthesizes custom companion personalities, voice bindings, and story prompts.
+- **How AIRI Approaches This:** VPet delivers classic 2D desktop pet physics; AIRI provides an in-app AI character creator that synthesizes custom companion personalities, voice bindings, and story prompts.
 
 ### 🦀 Komorebi (Interactive Assistant)
 - **Where it shines:** Native Rust efficiency, instant boot times, and minimal memory footprint. Built on Tauri 2, it runs completely offline using local Piper ONNX and llama.cpp. It is the only companion with a local training engine that adapts character personality LoRAs directly from user response feedback.
@@ -139,7 +137,7 @@ Every companion in this ecosystem was built to solve a specific problem. Underst
   - **BYOS Sovereignty**: Zero online accounts; backup and sync directly to user-owned S3, Cloudflare R2, or KV storage.
 
 ### 💫 AIRI (`dasilva333/airi`)
-- **Where it shines:** Deep multimodal integration, user-first custody, and zero-friction accessibility. Features 3 in-process WebGPU/WASM neural speech engines running offline without background server daemons, reference voice cloning, 4-tier temporal memory (`text_journal` semantic RAG + System 1 nan0 consciousness + Lifetime artifacts + Echoes), context-toggleable `image_journal` (preventing prompt pollution), per-character MCP tool scoping, an Autonomous Visual Director, the Stage-Mate Unity companion with tactile window physics, and bundled one-click root launchers.
+- **Where it shines:** Deep multimodal integration, user-first custody, and zero-friction accessibility. Features 3 in-process WebGPU/WASM neural speech engines running offline without background server daemons, reference voice cloning, 4-tier temporal memory (`text_journal` semantic RAG + System 1 nan0 consciousness + Lifetime artifacts + Echoes), context-toggleable `image_journal` (preventing prompt pollution), per-character MCP tool scoping, an Autonomous Visual Director, and bundled one-click root launchers.
 - **Trade-off:** The sheer breadth of the runtime creates a steeper initial learning curve and higher configuration surface than single-purpose desktop pets or web-only viewers.
 
 ---

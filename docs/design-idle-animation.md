@@ -1,8 +1,8 @@
 # Idle Animation Design & Reference Manual
 
-> **Status**: Reference / design document. Source of truth for how idle animation is modeled, resolved, and played across AIRI (WebGL) and the Mate-Engine sidecar (Unity). If code and this doc disagree, code wins — fix the doc.
+> **Status**: Reference / design document. Source of truth for how idle animation is modeled, resolved, and played across AIRI (WebGL). If code and this doc disagree, code wins — fix the doc.
 
-This document exists so the idle-animation knowledge isn't lost in chat. It covers: the two distinct idle mechanisms in AIRI, the data model (`acting.idleAnimations` vs per-visual-asset override), the control surface, the renderer playback semantics, and the planned Mate-Engine sidecar extension.
+This document exists so the idle-animation knowledge isn't lost in chat. It covers: the two distinct idle mechanisms in AIRI, the data model (`acting.idleAnimations` vs per-visual-asset override), the control surface, and the renderer playback semantics.
 
 ---
 
@@ -31,7 +31,7 @@ There are **two distinct concepts** that share the word "idle". Do not conflate 
 
 ### 2b. Idle cycle — `acting.idleAnimations` (list, per-card, auto-random)
 
-- **What**: a `string[]` of motion keys the character treats as its idle pool. The renderer plays one at a time and, on completion, randomly advances (may repeat the same clip). This is the behavior being ported to Mate-Engine.
+- **What**: a `string[]` of motion keys the character treats as its idle pool. The renderer plays one at a time and, on completion, randomly advances (may repeat the same clip).
 - **Where (data model)**: `packages/stage-ui/src/types/card.schema.ts:333-347`:
 
   ```ts
@@ -51,7 +51,7 @@ There are **two distinct concepts** that share the word "idle". Do not conflate 
 
 ### Key insight
 
-`vrmIdleAnimation` (base idle) and `acting.idleAnimations` (cycle) are **independent**. The cycle is what auto-rotates; the base idle is the single fallback/ambient. The Mate-Engine sidecar maps the **cycle** semantics (the list + random advance), not the base-idle cycler.
+`vrmIdleAnimation` (base idle) and `acting.idleAnimations` (cycle) are **independent**. The cycle is what auto-rotates; the base idle is the single fallback/ambient.
 
 ---
 
@@ -84,41 +84,7 @@ There are **two distinct concepts** that share the word "idle". Do not conflate 
 - `isMotionInCycle(key)` (`:546`) / `toggleMotionCycle(key)` (`:553`): toggles a motion key into/out of `acting.idleAnimations`, namespacing non-VRM keys with `{format}:` prefix; VRM keys are bare.
 - So "idle pool" membership is edited here; the Control Strip Cycler edits the *base* idle.
 
----
-
-## 4. Mate-Engine sidecar extension (✅ implemented)
-
-Goal: mirror AIRI's **idle cycle** semantics in the Unity/VRM 0.x sidecar, driven over the WebSocket harness.
-
-### Data & assets (the fork)
-
-- The fork (`apps/stage-mate/mate-engine/`, gitignored) ships **162 `.anim` clips**, of which **35 are idle-relevant** under `Assets/MATE ENGINE - Animations/PET_IDLE/` (`PET_IDLE`, `PET_IDLE 1`, `PET_IDLE_2..22`, `PET_IDLE_NON_1`, `HUS_IDLE01..09`, `HUS_SITTING`, `HUS_DRAG`, `CUSTOM_DANCE`).
-- **These are `.anim` (Unity `AnimationClip`) files, NOT `.vrma`.** `.vrma` is the VRM 1.0 animation format used only on the WebGL stack (`@pixiv/three-vrm-animation`); the fork contains zero `.vrma`. The current test model is **VRM 0.x**, which Unity plays via the `Animator` + humanoid avatar, not VRMA.
-- Existing runtime clip-swap pattern mirrored: `Assets/MATE ENGINE - Scripts/AvatarHandlers/AvatarDancePlayer.cs` uses `new AnimatorOverrideController(defaultController)` + placeholder-state overrides (`:696`, `:710`).
-
-### Implementation
-
-- **Harness** (`apps/stage-mate/harness/index.ts`): env `MATE_IDLE_ANIMATIONS="PET_IDLE 1,PET_IDLE_2"`; on connect (and reconnect) emit `{ type: 'stage:vrm:idle', data: { idleAnimations: string[] } }`.
-- **Unity** (`Assets/StageMate/MateSidecar.cs` + `MateSidecarBuild.cs`):
-  - Build script bakes all 35 PET_IDLE clips into a serialized `IdleClipEntry[]` (name + `AnimationClip` + `loopTime`) on `MateSidecar`, and creates `StageMateIdleController.controller` with **two Idle states** (`IdleA`/`IdleB`) + placeholder clips. Two states are required for cross-fade (Unity's `Animator.CrossFade` blends *between states*); the sidecar ping-pongs the active state to cross-fade clips.
-  - At runtime, `MateSidecar` wraps the base controller in an `AnimatorOverrideController` to swap the active clip (fork pattern).
-  - `stage:vrm:idle` sets the idle pool (a `List<IdleClipEntry>`, arbitrary length) and (re)starts the cycle. Playback mirrors §3:
-    - 1 entry → loop forever (relying on the clip's own `loopTime`).
-    - N > 1 → play one, on completion pick next randomly (exclude current when alternatives exist, else fall back to full pool = self-repeat allowed), cross-fade **0.8s** (parity with AIRI).
-  - **The two `IdleA`/`IdleB` states are a cross-fade mechanism, not a hard-coded 2-animation limit** — the pool is a list of arbitrary length, driven by the harness array.
-  - Unknown keys → `Debug.LogWarning` + skipped (safe no-op fallback; never crashes).
-
-### Test plan (harness-config-driven) — all passed
-
-| Test | Harness config | Expected | Result |
-| :--- | :--- | :--- | :--- |
-| T1 | `MATE_IDLE_ANIMATIONS="PET_IDLE 1"` | App plays exactly that idle, looping. | ✅ |
-| T2 | switch to a different single key | App meaningfully switches idle clip. | ✅ |
-| T3 | `"PET_IDLE 1,PET_IDLE_2"` | After one finishes, next is picked randomly (self-repeat allowed). | ✅ (observed `PET_IDLE 1 → PET_IDLE_2 → …`) |
-
----
-
-## 5. File path index
+## 4. File path index
 
 ### AIRI (WebGL) — idle cycle & base idle
 
@@ -137,22 +103,10 @@ Goal: mirror AIRI's **idle cycle** semantics in the Unity/VRM 0.x sidecar, drive
 | Model Customizer (cycle membership toggles) | `packages/stage-ui/src/components/scenarios/settings/model-settings/ModelCustomizer.vue` |
 | Control Strip catalog (Idle Animations = Cycler) | `docs/catalog-control-strip.md` |
 
-### Mate-Engine (Unity) sidecar
-
-| Concern | Path |
-| :--- | :--- |
-| Idle clips (35) | `Assets/MATE ENGINE - Animations/PET_IDLE/*.anim` |
-| Fork runtime clip-swap reference pattern | `Assets/MATE ENGINE - Scripts/AvatarHandlers/AvatarDancePlayer.cs` |
-| Sidecar WS client + VRM loader + status dot + orbit | `Assets/StageMate/MateSidecar.cs` |
-| Build script (scene + catalog + controller) | `Assets/StageMate/MateSidecarBuild.cs` |
-| Mock harness | `apps/stage-mate/harness/index.ts` |
-
 ---
 
-## 6. Known failure modes / gotchas
+## 5. Known failure modes / gotchas
 
-- **`.vrma` vs `.anim` confusion**: VRM 1.0 animations are `.vrma`; VRM 0.x plays Unity `.anim` clips through the `Animator`. The fork has only `.anim`. Do not attempt VRMA loading for VRM 0.x models.
 - **Renderer loop completion on WebGL**: Three.js `finished` events must not synchronously trigger `clipAction()`/`play()` — use the `setTimeout(0)` deferral (see `VRMModel.vue:438-443`).
-- **Two idles, two controls**: base idle (`vrmIdleAnimation`, Control Strip Cycler) ≠ idle cycle (`acting.idleAnimations`, Model Customizer toggles). The sidecar ports the cycle only.
+- **Two idles, two controls**: base idle (`vrmIdleAnimation`, Control Strip Cycler) ≠ idle cycle (`acting.idleAnimations`, Model Customizer toggles).
 - **Key namespacing**: non-VRM idle keys are `{format}:` prefixed (`live2d:`, `spine:`, `mmd:`); VRM keys are bare; custom VRM animations are `custom-vrma:`. The resolver handles the prefix fallback.
-- **Clip asset name ≠ filename intuition**: the fork's idle clips use a *space* in the name (`PET_IDLE 1`), not `PET_IDLE_1`. Keys resolve against `AnimationClip.name` (asset name), case-insensitively; a mismatched key logs `idle clip not found in catalog` and is skipped.

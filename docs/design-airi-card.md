@@ -342,7 +342,7 @@ In accordance with [`docs/data-catalog.md`](./data-catalog.md) (§3.2) and `pack
 
 3. **Explicit Clarification: No Tachie in `dasilva333/airi`**:
    - Upstream includes `tachie-zip` in `MODEL_EXT` (a legacy visual-novel sprite format).
-   - **`dasilva333/airi` does NOT support Tachie**. Our avatar manifestation architecture focuses exclusively on the four supported engines (VRM, Live2D, Spine, and MMD) plus the Unity C# companion (`apps/stage-mate`).
+   - **`dasilva333/airi` does NOT support Tachie**. Our avatar manifestation architecture focuses exclusively on the four supported engines (VRM, Live2D, Spine, and MMD).
    - **Agent Invariant**: Never attempt to wire, parse, or export `tachie-zip` models in this fork.
 
 ### 4.5 Upstream UI/UX Constraints

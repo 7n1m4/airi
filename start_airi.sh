@@ -38,12 +38,6 @@ if [ ! -d "node_modules" ] || [ ! -f "node_modules/.bin/turbo" ] || [ ! -f "node
   pnpm install || { echo "Error: pnpm install failed."; exit 1; }
 fi
 
-# Ensure Stage-Mate companion runtime is available
-if [ ! -d "apps/stage-mate/bin/StageMate.app" ] && [ ! -f "apps/stage-mate/bin/StageMate.x86_64" ] && [ ! -f "apps/stage-mate/bin/StageMate.exe" ]; then
-  echo "[Stage-Mate] Prebuilt companion runtime not detected in apps/stage-mate/bin/. Fetching runtime..."
-  pnpm -F @proj-airi/stage-mate run engine:fetch || echo "[Stage-Mate] Notice: Runtime fetch skipped. You can fetch later via 'pnpm run stage-mate:fetch'."
-fi
-
 # Default to 5173. If your settings/model vanished after an update,
 # try entering 5174 to recover your local storage from previous versions.
 PORT_NUM=${AIRI_RENDERER_PORT:-}

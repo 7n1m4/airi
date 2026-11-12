@@ -67,14 +67,14 @@ export function useExpressionCuration() {
   const modelStore = useModelStore()
 
   const { activeCard, activeCardId } = storeToRefs(airiCardStore)
-  const { stageEnabled, stageMateEnabled } = storeToRefs(controlStripStore)
+  const { stageEnabled } = storeToRefs(controlStripStore)
 
   const isCurating = ref(false)
   const isGeneratingPrompt = ref(false)
   const curationError = ref<string | null>(null)
   const curationResult = ref<CurationResult | null>(null)
 
-  const isStageOpen = computed(() => Boolean(stageEnabled.value || stageMateEnabled.value))
+  const isStageOpen = computed(() => Boolean(stageEnabled.value))
 
   async function curateExpressions(
     _modelId: string,
@@ -290,14 +290,6 @@ Please draft the comprehensive Acting Directive instructing ${charName} how to u
       }
       else if (modelType === 'vrm') {
         modelStore.triggerEmotion(rawKey, 1.0)
-        if (stageMateEnabled.value && typeof window !== 'undefined' && (window as any).electron) {
-          import('@proj-airi/electron-vueuse').then(({ useElectronEventaInvoke }) => {
-            import('@proj-airi/stage-shared').then(({ electronStageMateTriggerExpression }) => {
-              const triggerExpr = useElectronEventaInvoke(electronStageMateTriggerExpression)
-              triggerExpr({ name: rawKey, weight: 1.0, durationMs: 2500 })
-            })
-          }).catch(() => {})
-        }
       }
       else if (modelType === 'mmd') {
         mmdStore.previewExpression = rawKey
