@@ -590,6 +590,10 @@ awareness:
     body: 'Effacer le journal d’audit ? Cette action est irréversible.'
     confirm: 'Effacer'
     cancel: 'Annuler'
+  wake:
+    title: 'Briefing au réveil'
+    caption: 'Une fiche de faits d’une ligne sur votre bureau après chaque reprise : durée de veille et pannes d’unités depuis. Entièrement déterministe — sans LLM, sans tokens, sans réseau.'
+    pausedNote: 'Ne s’affiche que si awareness est activé et le daemon en cours d’exécution ; rien ne s’affiche en pause.'
 widgets:
   title: 'Widgets'
   previewBadge: 'Aperçu'

@@ -589,6 +589,10 @@ awareness:
     body: '監査ログを消去しますか？これは元に戻せません。'
     confirm: '消去'
     cancel: 'キャンセル'
+  wake:
+    title: 'ウェイク・ブリーフィング'
+    caption: '復帰ごとのデスクトップに一行のファクトシート：スリープ時間と、それ以降のユニット障害。完全に決定論的 — LLM・トークン・ネットワークは一切使いません。'
+    pausedNote: 'awareness が有効で daemon が動作しているときのみ表示されます。一時停止中は何も表示されません。'
 widgets:
   title: 'ウィジェット'
   previewBadge: 'プレビュー'

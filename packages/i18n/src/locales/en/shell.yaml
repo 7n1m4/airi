@@ -590,6 +590,10 @@ awareness:
     body: 'Clear the audit log? This cannot be undone.'
     confirm: 'Clear'
     cancel: 'Cancel'
+  wake:
+    title: 'Wake briefing'
+    caption: 'A one-line fact sheet on your desktop after each wake: how long you slept, and any unit failures since. Fully deterministic — no LLM, no tokens, no network.'
+    pausedNote: 'Only fires when awareness is enabled and the daemon is running; nothing is shown while paused.'
 widgets:
   title: 'Widgets'
   previewBadge: 'Preview'

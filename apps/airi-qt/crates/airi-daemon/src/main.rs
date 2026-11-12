@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! airi-daemon — AIRI user-session awareness daemon.
 //!
-//! Owns `org.moeru.airi.Daemon1` on the session bus, watches five T0 sources
+//! Owns `org.moeru.airi.Daemon1` on the session bus, watches six T0 sources
 //! (logind sleep, screensaver lock, MPRIS playback, NetworkManager state,
-//! UPower on-battery) plus one strictly opt-in AT-SPI screen source
-//! (`screen`, focus metadata only, digest on demand), keeps an in-memory
+//! UPower on-battery, systemd1 unit failure watch via `units`) plus one
+//! strictly opt-in AT-SPI screen source (`screen`, focus metadata only,
+//! digest on demand), keeps an in-memory
 //! ring (cap 200), appends to a redacted audit JSONL (7-day retention,
 //! pruned at startup), and answers control RPCs on `org.moeru.airi.Daemon1`.
 //!
@@ -24,6 +25,7 @@ mod redact;
 mod ring;
 mod screen;
 mod state;
+mod wake_facts;
 
 use std::collections::HashMap;
 use std::process::exit;
@@ -41,6 +43,7 @@ use control::{
 use observe::{Bus, LockdownChange};
 use ring::{Ring, RingEvent};
 use state::{Awareness, LockdownReason, Source};
+use wake_facts::WakeFacts;
 
 const RATE_LIMIT_WINDOW_MS: u64 = 250;
 const RATE_LIMIT_AUDIT_PERIOD: Duration = Duration::from_secs(60);
@@ -145,18 +148,19 @@ fn run() {
 
     let mut system: Option<Connection> = match Connection::new_system() {
         Ok(c) => {
-            eprintln!("airi-daemon: connected to the system bus (read-only eyes: logind, NetworkManager, UPower)");
+            eprintln!("airi-daemon: connected to the system bus (read-only eyes: logind, NetworkManager, UPower, systemd1)");
             Some(c)
         }
         Err(e) => {
             eprintln!(
-                "airi-daemon: no system bus ({e}); sleep/network/power sources stay unavailable"
+                "airi-daemon: no system bus ({e}); sleep/network/power/units sources stay unavailable"
             );
             None
         }
     };
 
     let mut awareness = Awareness::new();
+    let mut wake = WakeFacts::new();
     let mut ring = Ring::with_default_cap();
     let mut session_ok = true;
     let mut system_ok = system.is_some();
@@ -245,6 +249,7 @@ fn run() {
                     audit_pruned,
                     digest: &digest_fn,
                     exclusions: &mut exclusions,
+                    wake: &mut wake,
                 };
                 handle_message(Bus::Session, msg, &session, &mut ctx);
             }
@@ -288,6 +293,7 @@ fn run() {
                         audit_pruned,
                         digest: &digest_fn,
                         exclusions: &mut exclusions,
+                        wake: &mut wake,
                     };
                     handle_message(Bus::System, msg, sys, &mut ctx);
                 }
@@ -348,7 +354,7 @@ fn run() {
             audit.append(
                 "system",
                 "rate-limited",
-                &format!("dropped {rate_limited_drops} debounced property-change signals"),
+                &format!("dropped {rate_limited_drops} debounced change signals"),
             );
             rate_limited_drops = 0;
             last_rate_limit_audit = Instant::now();
@@ -405,6 +411,8 @@ struct LoopCtx<'a> {
     audit_pruned: u64,
     digest: &'a dyn Fn(&screen::Exclusions) -> String,
     exclusions: &'a mut screen::Exclusions,
+    /// Wake/suspend facts for the morning briefing (in-memory only).
+    wake: &'a mut WakeFacts,
 }
 
 fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut LoopCtx<'_>) {
@@ -413,6 +421,8 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
             if bus != Bus::Session {
                 return; // method calls are answered where we own the name
             }
+            // Snapshot the wake facts for the status closure (small owned copy).
+            let wake_snapshot = ctx.wake.clone();
             let reply = handle_method_call(
                 &msg,
                 ctx.awareness,
@@ -426,6 +436,7 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
                         session_bus: ctx.session_ok,
                         system_bus: ctx.system_ok,
                         audit_pruned: ctx.audit_pruned,
+                        wake: &wake_snapshot,
                     })
                 },
                 ctx.digest,
@@ -437,6 +448,17 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
             }
         }
         MessageType::Signal => {
+            let now = now_ms();
+
+            // systemd1 `JobRemoved` is outcome-bearing (done vs. failure) and
+            // bypasses the generic parser entirely — see `handle_unit_job`.
+            if bus == Bus::System {
+                if let Some(job) = observe::systemd1::parse(&msg) {
+                    handle_unit_job(job, ctx);
+                    return;
+                }
+            }
+
             let Some(observed) = observe::parse_signal(bus, &msg) else {
                 return;
             };
@@ -450,7 +472,6 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
                     msg.path().map(|p| p.to_string()).unwrap_or_default(),
                     observed.source.name().to_string(),
                 );
-                let now = now_ms();
                 match ctx.debounce.get(&key) {
                     Some(&last) if now.saturating_sub(last) < RATE_LIMIT_WINDOW_MS => {
                         *ctx.rate_limited_drops += 1;
@@ -466,11 +487,20 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
             // even while paused/locked — they are the re-arm hinge.
             let lockdown_transition = observed.lockdown;
 
+            // Record wake/suspend facts for the morning briefing regardless
+            // of the lockdown outcome — they are facts about the machine,
+            // not about the lock state (a user-paused wake is still a wake).
+            match lockdown_transition {
+                Some(LockdownChange::Sleep) => ctx.wake.on_suspend(now),
+                Some(LockdownChange::Wake) => ctx.wake.on_wake(now),
+                _ => {}
+            }
+
             // Trigger events for the lockdown rail are always recorded:
             // they are the audit evidence for the disarm itself.
             if lockdown_transition.is_some() || ctx.awareness.effective_armed(observed.source) {
                 let ev = RingEvent {
-                    ts_ms: now_ms(),
+                    ts_ms: now,
                     source: observed.source.name().to_string(),
                     event: observed.text.clone(),
                 };
@@ -536,6 +566,52 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
             }
         }
         _ => {}
+    }
+}
+
+/// systemd1 `JobRemoved` — outcome-bearing, handled before the generic
+/// parser. **All** jobs feed a per-unit debounce (250 ms, shared map);
+/// successful jobs (`result == "done"`) are counted and never audited;
+/// failures always land in ring + audit and are never debounced away.
+/// The arm/pause/lockdown gates apply exactly as they do to every source.
+fn handle_unit_job(job: observe::systemd1::UnitJob, ctx: &mut LoopCtx<'_>) {
+    let now = now_ms();
+    let text = job.event_text(); // Some only for failures
+
+    // Every job feeds the per-unit debounce window.
+    let key = (job.unit().to_string(), Source::Units.name().to_string());
+    let within_window = ctx
+        .debounce
+        .get(&key)
+        .copied()
+        .map(|last| now.saturating_sub(last) < RATE_LIMIT_WINDOW_MS)
+        .unwrap_or(false);
+    ctx.debounce.insert(key, now);
+
+    match job {
+        observe::systemd1::UnitJob::Done { .. } => {
+            // Counted-but-not-audited: storms of successful jobs count as
+            // debounced drops (aggregate-audited once a minute); a lone `done`
+            // in the window is silently seen and nothing more.
+            if within_window {
+                *ctx.rate_limited_drops += 1;
+            }
+        }
+        observe::systemd1::UnitJob::Failed { unit, .. } => {
+            if !ctx.awareness.effective_armed(Source::Units) {
+                // Disarmed / paused / locked: observe nothing, remember nothing.
+                return;
+            }
+            let text = text.unwrap_or_else(|| format!("unit: {unit} failed"));
+            let ev = RingEvent {
+                ts_ms: now,
+                source: Source::Units.name().to_string(),
+                event: text.clone(),
+            };
+            ctx.ring.push(ev);
+            ctx.audit.append(Source::Units.name(), &text, &text);
+            ctx.wake.on_unit_failure(unit);
+        }
     }
 }
 
@@ -641,6 +717,7 @@ fn selftest() {
                 "org.freedesktop.login1",
                 "org.freedesktop.NetworkManager",
                 "org.freedesktop.UPower",
+                "org.freedesktop.systemd1",
             ] {
                 match name_has_owner(&conn, name) {
                     Some(true) => println!("  [info] system name owned: {name}"),
@@ -651,7 +728,7 @@ fn selftest() {
         }
         Err(e) => {
             println!("system bus: ABSENT ({e})");
-            println!("  sleep/network/power sources would stay unavailable; session-bus sources still arm");
+            println!("  sleep/network/power/units sources would stay unavailable; session-bus sources still arm");
         }
     }
     println!();

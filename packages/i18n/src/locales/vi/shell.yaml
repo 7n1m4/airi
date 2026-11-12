@@ -590,6 +590,10 @@ awareness:
     body: 'Xoá nhật ký kiểm toán? Không thể hoàn tác.'
     confirm: 'Xoá'
     cancel: 'Huỷ'
+  wake:
+    title: 'Bản tóm tắt khi thức dậy'
+    caption: 'Một dòng dữ kiện trên desktop sau mỗi lần thức: bạn đã ngủ bao lâu và các lỗi unit từ đó. Hoàn toàn tất định — không LLM, không token, không mạng.'
+    pausedNote: 'Chỉ hiện khi awareness bật và daemon đang chạy; không hiển thị gì khi tạm dừng.'
 widgets:
   title: 'Tiện ích'
   previewBadge: 'Bản xem trước'

@@ -17,7 +17,9 @@
 //! automatic re-arm. Per-source `armed=false` survives both transitions.
 
 #[cfg(test)]
-pub const SOURCE_NAMES: [&str; 6] = ["sleep", "lock", "media", "network", "power", "screen"];
+pub const SOURCE_NAMES: [&str; 7] = [
+    "sleep", "lock", "media", "network", "power", "screen", "units",
+];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Source {
@@ -27,16 +29,18 @@ pub enum Source {
     Network,
     Power,
     Screen,
+    Units,
 }
 
 impl Source {
-    pub const ALL: [Source; 6] = [
+    pub const ALL: [Source; 7] = [
         Source::Sleep,
         Source::Lock,
         Source::Media,
         Source::Network,
         Source::Power,
         Source::Screen,
+        Source::Units,
     ];
 
     pub fn name(self) -> &'static str {
@@ -47,6 +51,7 @@ impl Source {
             Source::Network => "network",
             Source::Power => "power",
             Source::Screen => "screen",
+            Source::Units => "units",
         }
     }
 
@@ -58,6 +63,7 @@ impl Source {
             "network" => Some(Source::Network),
             "power" => Some(Source::Power),
             "screen" => Some(Source::Screen),
+            "units" => Some(Source::Units),
             _ => None,
         }
     }
@@ -70,6 +76,7 @@ impl Source {
             Source::Network => 3,
             Source::Power => 4,
             Source::Screen => 5,
+            Source::Units => 6,
         }
     }
 }
@@ -82,7 +89,7 @@ pub enum LockdownReason {
 
 #[derive(Debug)]
 pub struct Awareness {
-    armed: [bool; 6],
+    armed: [bool; 7],
     user_paused: bool,
     lockdown: Option<LockdownReason>,
 }
@@ -96,7 +103,7 @@ impl Default for Awareness {
 impl Awareness {
     pub fn new() -> Self {
         Awareness {
-            armed: [true; 6],
+            armed: [true; 7],
             user_paused: false,
             lockdown: None,
         }
@@ -119,7 +126,7 @@ impl Awareness {
     }
 
     /// Flip one source. Returns Err(unknown source) for anything outside the
-    /// six; Ok(true) if the flag changed, Ok(false) if it was already set.
+    /// seven; Ok(true) if the flag changed, Ok(false) if it was already set.
     pub fn set_source(&mut self, source: Source, enabled: bool) -> bool {
         let idx = source.index();
         let changed = self.armed[idx] != enabled;
@@ -277,6 +284,33 @@ mod tests {
         a.lockdown_end();
         assert!(!a.effective_armed(Source::Power));
         assert!(a.effective_armed(Source::Media));
+    }
+
+    #[test]
+    fn units_source_toggles_and_survives_lockdown_and_pause_cycles() {
+        let mut a = Awareness::new();
+        assert!(Source::from_name("units").is_some());
+        assert!(Source::from_name("unitss").is_none());
+        assert!(a.effective_armed(Source::Units));
+        // Toggle off: disarm is honest, others untouched.
+        assert!(a.set_source(Source::Units, false));
+        assert!(!a.effective_armed(Source::Units));
+        assert!(a.effective_armed(Source::Power));
+        assert!(!a.set_source(Source::Units, false));
+        // Re-arm, then lockdown (sleep) disarms, wake re-arms.
+        assert!(a.set_source(Source::Units, true));
+        a.lockdown_begin(LockdownReason::Sleep);
+        assert!(!a.effective_armed(Source::Units));
+        assert!(a.lockdown_end());
+        assert!(a.effective_armed(Source::Units));
+        // Pause (kill switch) disarms; unlock/wake must not override it.
+        a.pause(true);
+        assert!(!a.effective_armed(Source::Units));
+        a.lockdown_begin(LockdownReason::Locked);
+        a.lockdown_end();
+        assert!(!a.effective_armed(Source::Units));
+        a.pause(false);
+        assert!(a.effective_armed(Source::Units));
     }
 
     #[test]

@@ -590,6 +590,10 @@ awareness:
     body: '¿Borrar el registro de auditoría? Esto no se puede deshacer.'
     confirm: 'Borrar'
     cancel: 'Cancelar'
+  wake:
+    title: 'Informe al despertar'
+    caption: 'Una hoja de datos de una línea en tu escritorio tras cada reanudación: cuánto dormiste y los fallos de unidades desde entonces. Totalmente determinista — sin LLM, sin tokens, sin red.'
+    pausedNote: 'Solo se muestra cuando awareness está activado y el daemon está en ejecución; no se muestra nada mientras esté en pausa.'
 widgets:
   title: 'Widgets'
   previewBadge: 'Vista previa'

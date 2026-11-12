@@ -3,8 +3,11 @@
 //! `/org/moeru/airi/Daemon1`).
 //!
 //! Methods:
-//!   GetStatus() -> s   JSON: {protocol, version, paused, sources{sleep,lock,media,network,power,screen},
-//!                      ring_count, audit_path, session_bus, system_bus, audit_pruned, paused_by}
+//!   GetStatus() -> s   JSON: {protocol, version, paused, sources{sleep,lock,media,network,power,screen,units},
+//!                      ring_count, audit_path, session_bus, system_bus, audit_pruned, paused_by,
+//!                      last_suspend_ms, last_wake_ms, units_failed_since_wake, recent_failed_units[]}
+//!                      (the last four are additive in protocol 1; 0 / [] when never observed —
+//!                      wake/suspend facts are in-memory only, restart resets them)
 //!   SetSource(source: s, enabled: b) -> s   JSON: {ok: bool, error?: string}
 //!   Pause(p: b)                             no output; flips the global kill switch
 //!   GetFocusDigest() -> s                    JSON: {ok:true, app, title, lines, text_length,
@@ -25,6 +28,7 @@ use crate::audit::AuditLog;
 use crate::ring::Ring;
 use crate::screen::Exclusions;
 use crate::state::{Awareness, Source};
+use crate::wake_facts::WakeFacts;
 
 pub const BUS_NAME: &str = "org.moeru.airi.Daemon1";
 pub const INTERFACE: &str = "org.moeru.airi.Daemon1";
@@ -41,6 +45,8 @@ pub struct StatusContext<'a> {
     pub session_bus: bool,
     pub system_bus: bool,
     pub audit_pruned: u64,
+    /// Wake/suspend facts (in-memory only; see `wake_facts`).
+    pub wake: &'a WakeFacts,
 }
 
 pub fn get_status_json(ctx: &StatusContext) -> String {
@@ -55,6 +61,11 @@ pub fn get_status_json(ctx: &StatusContext) -> String {
         "system_bus": ctx.system_bus,
         "audit_pruned": ctx.audit_pruned,
         "paused_by": ctx.awareness.paused_by(),
+        // Additive, protocol 1: wake/suspend facts for the morning briefing.
+        "last_suspend_ms": ctx.wake.last_suspend_ms,
+        "last_wake_ms": ctx.wake.last_wake_ms,
+        "units_failed_since_wake": ctx.wake.units_failed_since_wake,
+        "recent_failed_units": ctx.wake.recent_failed_units,
     });
     v.to_string()
 }
@@ -81,7 +92,7 @@ pub fn set_source_json(
         }
         None => serde_json::json!({
             "ok": false,
-            "error": format!("unknown source '{source}' (expected one of: sleep, lock, media, network, power, screen)"),
+            "error": format!("unknown source '{source}' (expected one of: sleep, lock, media, network, power, screen, units)"),
         })
         .to_string(),
     }
@@ -262,7 +273,7 @@ mod tests {
         r#"{"ok":true,"app":"test-app","title":"t","lines":["label: hi"],"text_length":10,"skipped_password_nodes":0}"#.to_string()
     }
 
-    fn ctx<'a>(awareness: &'a Awareness) -> StatusContext<'a> {
+    fn ctx<'a>(awareness: &'a Awareness, wake: &'a WakeFacts) -> StatusContext<'a> {
         StatusContext {
             awareness,
             ring_count: 7,
@@ -270,14 +281,16 @@ mod tests {
             session_bus: true,
             system_bus: false,
             audit_pruned: 3,
+            wake,
         }
     }
 
     #[test]
     fn get_status_json_has_exact_spec_keys() {
         let a = Awareness::new();
+        let wake = WakeFacts::new();
         let v: serde_json::Value =
-            serde_json::from_str(&get_status_json(&ctx(&a))).expect("valid JSON");
+            serde_json::from_str(&get_status_json(&ctx(&a, &wake))).expect("valid JSON");
         assert_eq!(v["protocol"], 1);
         assert_eq!(v["version"], "0.1.0");
         assert_eq!(v["paused"], false);
@@ -293,17 +306,44 @@ mod tests {
         assert_eq!(v["system_bus"], false);
         assert_eq!(v["audit_pruned"], 3);
         assert_eq!(v["paused_by"], "");
+        assert_eq!(v["sources"]["units"], true);
+        // Wake/suspend facts (additive): zeroed when never observed.
+        assert_eq!(v["last_suspend_ms"], 0);
+        assert_eq!(v["last_wake_ms"], 0);
+        assert_eq!(v["units_failed_since_wake"], 0);
+        assert_eq!(v["recent_failed_units"], serde_json::json!([]));
+        assert_eq!(v["protocol"], 1, "protocol stays 1 — additive only");
+    }
+
+    #[test]
+    fn get_status_json_reports_wake_facts_verbatim() {
+        let a = Awareness::new();
+        let mut wake = WakeFacts::new();
+        wake.on_suspend(111_000);
+        wake.on_wake(222_000);
+        wake.on_unit_failure("nginx.service".to_string());
+        wake.on_unit_failure("backup.service".to_string());
+        let v: serde_json::Value =
+            serde_json::from_str(&get_status_json(&ctx(&a, &wake))).expect("valid JSON");
+        assert_eq!(v["last_suspend_ms"], 111_000);
+        assert_eq!(v["last_wake_ms"], 222_000);
+        assert_eq!(v["units_failed_since_wake"], 2);
+        assert_eq!(
+            v["recent_failed_units"],
+            serde_json::json!(["backup.service", "nginx.service"])
+        );
     }
 
     #[test]
     fn paused_status_reports_lockdown_and_user() {
         let mut a = Awareness::new();
+        let wake = WakeFacts::new();
         a.lockdown_begin(LockdownReason::Locked);
-        let v: serde_json::Value = serde_json::from_str(&get_status_json(&ctx(&a))).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&get_status_json(&ctx(&a, &wake))).unwrap();
         assert_eq!(v["paused"], true);
         assert_eq!(v["paused_by"], "lockdown");
         a.pause(true); // user wins the label
-        let v: serde_json::Value = serde_json::from_str(&get_status_json(&ctx(&a))).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&get_status_json(&ctx(&a, &wake))).unwrap();
         assert_eq!(v["paused_by"], "user");
     }
 
@@ -334,6 +374,7 @@ mod tests {
             &dbus::strings::Interface::new(INTERFACE).unwrap(),
             &dbus::strings::Member::new("GetStatus").unwrap(),
         );
+        let wake = WakeFacts::new();
         let status = |awareness: &Awareness, ring_count: u64| {
             get_status_json(&StatusContext {
                 awareness,
@@ -342,6 +383,7 @@ mod tests {
                 session_bus: true,
                 system_bus: true,
                 audit_pruned: 0,
+                wake: &wake,
             })
         };
         let mut a = a;
@@ -369,6 +411,7 @@ mod tests {
     fn method_call_pause_and_unknown_source_and_unknown_method() {
         let mut a = Awareness::new();
         let (log, path) = audit();
+        let wake = WakeFacts::new();
         let status = |awareness: &Awareness, ring_count: u64| {
             get_status_json(&StatusContext {
                 awareness,
@@ -377,6 +420,7 @@ mod tests {
                 session_bus: true,
                 system_bus: true,
                 audit_pruned: 0,
+                wake: &wake,
             })
         };
         let call = |member: &str| {
@@ -466,6 +510,7 @@ mod tests {
     fn get_focus_digest_roundtrip_via_dispatch() {
         let mut a = Awareness::new();
         let (log, path) = audit();
+        let wake = WakeFacts::new();
         let status = |awareness: &Awareness, ring_count: u64| {
             get_status_json(&StatusContext {
                 awareness,
@@ -474,6 +519,7 @@ mod tests {
                 session_bus: true,
                 system_bus: true,
                 audit_pruned: 0,
+                wake: &wake,
             })
         };
         let call = |member: &str| {
@@ -512,6 +558,7 @@ mod tests {
         let excl_path = tmpdir.join("awareness-exclusions.json");
         let mut a = Awareness::new();
         let (log, audit_path) = audit();
+        let wake = WakeFacts::new();
         let status = |awareness: &Awareness, ring_count: u64| {
             get_status_json(&StatusContext {
                 awareness,
@@ -520,6 +567,7 @@ mod tests {
                 session_bus: true,
                 system_bus: true,
                 audit_pruned: 0,
+                wake: &wake,
             })
         };
         let call = |member: &str| {

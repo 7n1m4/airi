@@ -66,7 +66,8 @@ Window {
 
     // Client for the opt-in airi-daemon awareness service (session bus).
     // Used by the tray "toggle-awareness" action to pause/resume all
-    // observers; the Awareness settings page polls it once a second.
+    // observers; the Awareness settings page polls it once a second; this
+    // window's 5 s Timer drives checkWakeBriefingTick() for the wake sheet.
     DaemonController {
         id: daemonCtl
     }
@@ -362,6 +363,23 @@ Window {
                     desktopController.notify(I18n.tr("shell.app.name"), I18n.tr("shell.notify.replyReady"))
             }
             strip.lastChatStatus = chatStatus
+        }
+    }
+
+    // Wake briefing pump (5 s, separate from the 33 ms desktop pump):
+    // edge-detects logind PrepareForSleep(false) via the daemon's
+    // last_wake_ms (GetStatus) and, only when the user opted in
+    // (settings/awareness.wakeBriefing, default off) and awareness is not
+    // paused, shows the one-line deterministic fact sheet as a desktop
+    // notification — at most once per wake edge. The first tick after
+    // launch primes silently.
+    Timer {
+        interval: 5000
+        repeat: true
+        running: true
+        onTriggered: {
+            if (daemonCtl.checkWakeBriefingTick())
+                console.log("[airi-qt] awareness: wake briefing shown")
         }
     }
 

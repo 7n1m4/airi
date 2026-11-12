@@ -589,6 +589,10 @@ awareness:
     body: '清除审计日志？此操作不可撤销。'
     confirm: '清除'
     cancel: '取消'
+  wake:
+    title: '唤醒简报'
+    caption: '每次唤醒后在桌面显示的一行事实清单：睡了多久，以及此后的单元故障。完全确定性——无 LLM、无 token、无网络。'
+    pausedNote: '仅在 awareness 开启且 daemon 运行时显示；暂停时不显示任何内容。'
 widgets:
   title: '小组件'
   previewBadge: '预览'

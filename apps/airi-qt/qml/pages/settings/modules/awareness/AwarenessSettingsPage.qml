@@ -4,7 +4,9 @@
 // `DaemonController` bridge (crates/airi-qt/src/bridges/daemon.rs), which
 // talks D-Bus (`org.moeru.airi.Daemon1` on the session bus) — never Rust
 // types from the daemon crate. What WORKS in this slice: status display,
-// per-source switches, the master kill switch, the local audit viewer
+// per-source switches, the master kill switch, the wake-briefing opt-in
+// (settings/awareness.wakeBriefing; the sheet is composed and shown by the
+// bridge on the session bus, at most once per wake), the local audit viewer
 // (recent events from the shared JSONL file) and "Clear audit" (truncate
 // to zero bytes; the daemon's in-memory ring buffer is NOT cleared).
 // The daemon is dev-run only and is NOT auto-installed; when it is absent
@@ -36,6 +38,10 @@ Item {
     // GetExcludedApps, so this starts empty and saving replaces the
     // daemon's user list with exactly what is shown here.
     property var excludedApps: []
+    // Wake briefing opt-in (settings/awareness.wakeBriefing). Persisted by
+    // the bridge; this page only edits the persisted flag. Refreshed from
+    // the bridge on completion.
+    property bool wakeBriefing: false
     property string digestInlineError: ""
     // Latched when GetFocusDigest reports the a11y bus is unusable on this
     // desktop; the Preview row is then swapped for the unavailable state.
@@ -170,6 +176,7 @@ Item {
     Component.onCompleted: {
         controller.refresh()
         page.refreshAudit()
+        page.wakeBriefing = controller.wakeBriefingEnabled()
     }
 
     // Poll once per second: one D-Bus GetStatus plus one small JSONL read.
@@ -292,6 +299,63 @@ Item {
                             text: I18n.tr("shell.awareness.killSwitch.caption")
                             font.family: Theme.fontBody
                             font.pixelSize: 12
+                            color: Theme.textSecondary
+                        }
+                    }
+                }
+            }
+
+            // ══ Wake briefing ═════════════════════════════════════════════
+            // One-line deterministic fact sheet on wake (opt-in; local
+            // flag persisted by the bridge in settings/awareness — no
+            // daemon round-trip needed for persistence, but the sheet
+            // itself needs airi-daemon up and awareness unpaused).
+            ACard {
+                Layout.fillWidth: true
+
+                RowLayout {
+                    width: parent ? parent.width : implicitWidth
+                    spacing: Theme.spacingM
+
+                    ASwitch {
+                        id: wakeBriefingSwitch
+                        checked: page.wakeBriefing
+                        onToggled: {
+                            const ok = controller.setWakeBriefing(checked)
+                            if (ok)
+                                page.wakeBriefing = checked
+                            else
+                                checked = page.wakeBriefing // snap back to persisted truth
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+
+                        Text {
+                            text: I18n.tr("shell.awareness.wake.title")
+                            font.family: Theme.fontBody
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: Theme.textPrimary
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: I18n.tr("shell.awareness.wake.caption")
+                            font.family: Theme.fontBody
+                            font.pixelSize: 12
+                            color: Theme.textSecondary
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: I18n.tr("shell.awareness.wake.pausedNote")
+                            font.family: Theme.fontBody
+                            font.pixelSize: 11
                             color: Theme.textSecondary
                         }
                     }

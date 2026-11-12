@@ -589,6 +589,10 @@ awareness:
     body: '清除稽核日誌？此操作不可復原。'
     confirm: '清除'
     cancel: '取消'
+  wake:
+    title: '喚醒簡報'
+    caption: '每次喚醒後在工作階段顯示的一行事實清單：睡了多久，以及此後的單元故障。完全確定性——無 LLM、無 token、無網路。'
+    pausedNote: '僅在 awareness 開啟且 daemon 執行時顯示；暫停時不顯示任何內容。'
 widgets:
   title: '小工具'
   previewBadge: '預覽'

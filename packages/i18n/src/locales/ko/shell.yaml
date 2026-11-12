@@ -590,6 +590,10 @@ awareness:
     body: '감사 로그를 지우시겠습니까? 되돌릴 수 없습니다.'
     confirm: '지우기'
     cancel: '취소'
+  wake:
+    title: '웨이크 브리핑'
+    caption: '각 복귀 후 데스크톱에 표시되는 한 줄 사실 시트: 수면 시간과 그 이후의 유닛 실패. 완전히 결정적 — LLM, 토큰, 네트워크를 사용하지 않습니다.'
+    pausedNote: 'awareness가 활성화되고 daemon이 실행 중일 때만 표시됩니다. 일시 중지 중에는 아무것도 표시되지 않습니다.'
 widgets:
   title: '위젯'
   previewBadge: '미리보기'

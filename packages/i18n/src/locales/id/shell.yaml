@@ -591,6 +591,10 @@ awareness:
     body: 'Hapus log audit? Ini tidak bisa dibatalkan.'
     confirm: 'Hapus'
     cancel: 'Batal'
+  wake:
+    title: 'Rangkuman saat bangun'
+    caption: 'Selembar fakta satu baris di desktop Anda setelah setiap bangun: berapa lama Anda tidur, dan kegagalan unit sejak itu. Sepenuhnya deterministik — tanpa LLM, tanpa token, tanpa jaringan.'
+    pausedNote: 'Hanya muncul saat awareness aktif dan daemon berjalan; tidak ada yang ditampilkan saat dijeda.'
 widgets:
   title: 'Widgets'
   previewBadge: 'Pratinjau'

@@ -8,6 +8,7 @@
 
 pub mod mpris;
 pub mod network;
+pub mod systemd1;
 pub mod upower;
 
 pub mod logind;
@@ -37,6 +38,8 @@ pub const MATCH_RULES: &[(Source, Bus, &str)] = &[
     (Source::Network, Bus::System, network::MATCH_RULE),
     // 5. UPower on-battery (system)
     (Source::Power, Bus::System, upower::MATCH_RULE),
+    // 6. systemd1 unit job removal (system) — failure watch, read-only
+    (Source::Units, Bus::System, systemd1::MATCH_RULE),
 ];
 
 /// A parsed, metadata-only observation.
@@ -60,6 +63,11 @@ pub enum LockdownChange {
 
 /// Dispatch a signal to the per-source parser. `None` = not ours / not of
 /// interest / malformed — caller drops silently.
+///
+/// Note: `units` (systemd1 `JobRemoved`) is deliberately **not** dispatched
+/// here. It is outcome-bearing (done vs. failure) rather than a plain
+/// metadata verb, so the caller handles it via [`systemd1::parse`] before the
+/// generic dispatch — see `main.rs`.
 pub fn parse_signal(bus: Bus, msg: &Message) -> Option<Observed> {
     match bus {
         Bus::Session => {
