@@ -12,18 +12,14 @@ import process from 'node:process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import clickDragPlugin from 'electron-click-drag-plugin'
-
-import { defineInvokeHandler } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/electron/main'
 import { app, BrowserWindow as ElectronBrowserWindow, ipcMain, screen } from 'electron'
 import { throttle } from 'es-toolkit'
 import { isLinux } from 'std-env'
 
-import icon from '../../../../resources/icon.png?asset'
-
 import { electronStartDraggingWindow } from '../../../shared/eventa'
-import { baseUrl, load, withHashRoute } from '../../libs/electron/location'
+import { APP_ICON as icon } from '../../assets'
+import { baseUrl, load, withHashRoute } from '../../libs/electrobun/location'
 import { ensureWindowInVisibleBounds } from '../shared/display'
 import { setupBaseWindowElectronInvokes, transparentWindowConfig } from '../shared/window'
 
@@ -251,19 +247,11 @@ export function setupActorStageWindowManager(params: {
     const { context } = createContext(ipcMain, window)
     await setupBaseWindowElectronInvokes({ context, window, serverChannel: params.serverChannel, i18n: params.i18n })
 
-    if (!isLinux) {
-      defineInvokeHandler(context, electronStartDraggingWindow, (_payload, handlerOptions: any) => {
-        try {
-          const sender = handlerOptions?.raw?.ipcMainEvent?.sender
-          const win = sender ? (ElectronBrowserWindow.fromWebContents(sender) ?? window) : window
-          const windowId = win.getNativeWindowHandle()
-          clickDragPlugin.startDrag(windowId)
-        }
-        catch (error) {
-          console.error(error)
-        }
-      })
-    }
+    // shortcut: window dragging is pure CSS now — the renderer's `-webkit-app-region: drag`
+    // regions are honoured by CEF, so the native `electron-click-drag-plugin` drag call is gone.
+    // TODO(port): wave 3 ports this surface; until then the stage RPC is not registered at all.
+    void electronStartDraggingWindow
+    void isLinux
 
     function restoreBounds() {
       const config = getConfig()

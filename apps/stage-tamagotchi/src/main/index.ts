@@ -1,33 +1,34 @@
-import type { Rectangle } from 'electron'
+/**
+ * AIRI Desktop — Electrobun (Bun) main process.
+ *
+ * Branch-based port of the Electron bootstrap. The ordered sequence that used to live in
+ * `app.whenReady().then(...)` is now top-level `await`, because Bun runs the main module
+ * immediately. Everything Electron-only is either replaced by an Electrobun/Node call or
+ * turned into a `// TODO(port): …` line pointing at docs/design-electrobun-port.md §3.
+ *
+ * The `injeca.provide(...)` inventory is kept verbatim: the DI graph is the list of what
+ * still has to be ported, and every not-yet-ported service/window throws
+ * `ElectrobunPortError('not-implemented', '<name>')` from its build callback so the gap is
+ * enumerable at runtime instead of silently missing.
+ */
 
-import type {
-  StartupMilestoneId,
-  StartupMilestoneStatus,
-  StartupResourceState,
-  StartupSnapshot,
-} from '../shared/eventa'
 import type { FileLoggerHandle } from './app/file-logger'
+import type { AnyEventaContext } from './rpc'
 
 import path, { dirname } from 'node:path'
-import process, { env, platform, stderr, stdout } from 'node:process'
+import process, { env, stderr, stdout } from 'node:process'
 
 import { Buffer } from 'node:buffer'
 import { fileURLToPath } from 'node:url'
 
-// @ts-expect-error generated bundle without type declarations
 import messages from '@proj-airi/i18n-bundle'
+import Electrobun, { BuildConfig, Screen, Utils } from 'electrobun/main'
 
-import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { Format, LogLevel, setGlobalFormat, setGlobalHookPostLog, setGlobalLogLevel, useLogg } from '@guiiai/logg'
 import { defineInvokeHandler } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/main'
-import { initScreenCaptureForMain } from '@proj-airi/electron-screen-capture/main'
 import { DEFAULT_CORS_BYPASS_URLS } from '@proj-airi/stage-shared'
-import { app, BrowserWindow, ipcMain, Notification, screen, session } from 'electron'
 import { createLoggLogger, injeca, lifecycle } from 'injeca'
 import { isLinux } from 'std-env'
-
-import icon from '../../resources/icon.png?asset'
 
 import {
   electronApplySizePreset,
@@ -60,11 +61,14 @@ import { openDebugger, setupDebugger } from './app/debugger'
 import { setupFileLogger } from './app/file-logger'
 import { ensureLevelDBIntegrityOrHalt } from './app/leveldb-guard'
 import { ensureLegacyUserDataMigrated } from './app/migration'
+import { onBeforeQuit, runShutdown } from './app/shutdown'
+import { claimSingleInstance, resolveUserDataPath } from './app/single-instance'
 import { createGlobalAppConfig } from './configs/global'
-import { emitAppBeforeQuit, emitAppReady, emitAppWindowAllClosed } from './libs/bootkit/lifecycle'
-import { setElectronMainDirname } from './libs/electron/location'
+import { emitAppReady } from './libs/bootkit/lifecycle'
+import { setElectronMainDirname } from './libs/electrobun/location'
 import { flushAllConfigs } from './libs/electron/persistence'
 import { createI18n } from './libs/i18n'
+import { createRpcBootstrap, ElectrobunPortError, notImplemented } from './rpc'
 import { createAcpAgentsService, setupAcpAgentsManager } from './services/airi/acp-agents'
 import { createAgenticService, setupAgenticService } from './services/airi/agentic'
 import { createServerChannelService, setupServerChannel } from './services/airi/channel-server'
@@ -88,68 +92,81 @@ import { setupDevtoolsWindow } from './windows/devtools'
 import { setupMainWindow } from './windows/main'
 import { setupNoticeWindowManager } from './windows/notice'
 import { setupOnboardingWindowManager } from './windows/onboarding'
+import { get, isDestroyed as registryIsDestroyed } from './windows/registry'
 import { setupSettingsWindowReusableFunc } from './windows/settings'
+import { setRpcBootstrap } from './windows/shared/create-window'
 import { ensureWindowInVisibleBounds } from './windows/shared/display'
 import { setupSplashWindowManager } from './windows/splash'
 import { getStageVisibleState, isStageDisabledByFlag, setStageVisibleState, setupActorStageWindowManager } from './windows/stage'
 import { setupWidgetsWindowManager } from './windows/widgets'
 
-// Guard BrowserWindow prototype methods against destroyed window objects to prevent "Object has been destroyed" exceptions
-const dummyWebContents = new Proxy({} as any, {
-  get(_target, prop) {
-    if (prop === 'isDestroyed')
-      return () => true
-    if (prop === 'isCrashed')
-      return () => false
-    if (prop === 'getURL')
-      return () => ''
-    return () => {}
-  },
-})
+// ============================================================================
+// Types describing the surfaces whose managers are registered but not yet ported
+// ============================================================================
 
-const webContentsDescriptor = Object.getOwnPropertyDescriptor(BrowserWindow.prototype, 'webContents')
-if (webContentsDescriptor && webContentsDescriptor.get) {
-  const originalGet = webContentsDescriptor.get
-  Object.defineProperty(BrowserWindow.prototype, 'webContents', {
-    ...webContentsDescriptor,
-    get(this: BrowserWindow) {
-      if (this.isDestroyed()) {
-        return dummyWebContents
-      }
-      try {
-        return originalGet.call(this)
-      }
-      catch {
-        return dummyWebContents
-      }
+/** The slice of the caption manager the Control Strip invokes reach. */
+interface CaptionLike {
+  toggleVisibility: (enabled?: boolean) => Promise<void> | void
+  triggerMove: (dock: string | undefined) => Promise<void> | void
+  setFollowStagePosition: (follow: boolean) => Promise<void> | void
+  setFollowStageVisibility: (follow: boolean) => Promise<void> | void
+  getIsFollowingStageVisibility: () => boolean
+}
+
+interface ChatLike {
+  openChat: (enabled?: boolean) => Promise<void> | void
+}
+
+/**
+ * Inert stand-in for a window/service whose module is not ported yet (wave 3/4).
+ *
+ * Why a Proxy and not a plain object: each unported surface exposes a different method
+ * set, and the DI graph only needs the handle to exist. A Proxy that raises on a real
+ * property read gives an accurate error at the exact call site (`windows:chat.openChat`)
+ * without maintaining a hand-written stub per module.
+ *
+ * `then` must be exempt: injeca stores each built instance and later `await`s it, and a
+ * `then` that raises turns a not-yet-ported window into a DI start failure, which is
+ * exactly what this helper exists to avoid. Symbol reads (e.g. `Symbol.toStringTag` from
+ * a logger or an inspect call) are exempt for the same reason — only a named method read
+ * is a real call site.
+ */
+function notPortedWindow<T extends object>(target: string): T {
+  return new Proxy({} as T, {
+    get(_receiver, property) {
+      if (typeof property === 'symbol' || property === 'then')
+        return undefined
+      notImplemented(target)
     },
   })
 }
 
-const proto = BrowserWindow.prototype as any
-const methodsToGuard = ['show', 'hide', 'close', 'focus', 'restore', 'minimize', 'maximize', 'setBounds', 'setAlwaysOnTop', 'setMovable', 'setResizable', 'getBounds'] as const
-for (const method of methodsToGuard) {
-  const original = proto[method]
-  if (typeof original === 'function') {
-    proto[method] = function (this: BrowserWindow, ...args: any[]) {
-      if (this.isDestroyed()) {
-        console.warn(`[WindowManager] Guarded call to ${method} on a destroyed window.`)
-        if (method === 'getBounds') {
-          return { x: 0, y: 0, width: 0, height: 0 }
-        }
-        return
-      }
-      return original.apply(this, args)
-    }
+/**
+ * Run a not-yet-ported service setup without letting it abort the DI graph.
+ *
+ * `injeca.invoke` rejects the whole invoke on the first throw, so a wave-4 stub raising
+ * `ElectrobunPortError` would prevent the app from starting at all. Each gap is logged with
+ * its target name and swallowed, which keeps the remaining services running and the gap
+ * enumerable in the log.
+ */
+async function setupOptionalService(target: string, setup: () => unknown | Promise<unknown>): Promise<void> {
+  try {
+    await setup()
+  }
+  catch (error) {
+    console.warn(`[Main] Optional service not started (${target}):`, error instanceof Error ? error.message : error)
   }
 }
+
+// ============================================================================
+// Stream guards (plain Node, ported verbatim)
+// ============================================================================
 
 function installStreamErrorGuards() {
   const guard = (error: NodeJS.ErrnoException) => {
     // Ignore broken pipe style errors from detached/closed console streams.
-    if (error?.code === 'EPIPE' || error?.code === 'ERR_STREAM_DESTROYED') {
+    if (error?.code === 'EPIPE' || error?.code === 'ERR_STREAM_DESTROYED')
       return
-    }
 
     // NOTICE: Attaching an 'error' listener marks the error as handled.
     // Re-throw unexpected stream errors so they still surface during development and crash reporting.
@@ -160,31 +177,8 @@ function installStreamErrorGuards() {
   stderr?.on('error', guard)
 }
 
-// TODO: once we refactored eventa to support window-namespaced contexts,
-// we can remove the setMaxListeners call below since eventa will be able to dispatch and
-// manage events within eventa's context system.
-ipcMain.setMaxListeners(100)
-
-const gotTheLock = app.requestSingleInstanceLock()
-if (!gotTheLock) {
-  app.quit()
-  process.exit(0)
-}
-
-app.on('second-instance', () => {
-  const allWindows = BrowserWindow.getAllWindows()
-  const mainWin = allWindows.find(w => !w.isDestroyed() && (w as any).__is_main_window) || allWindows[0]
-  if (mainWin) {
-    if (mainWin.isMinimized())
-      mainWin.restore()
-    mainWin.focus()
-  }
-})
-
 installStreamErrorGuards()
-if (!app.isPackaged) {
-  process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
-}
+
 setElectronMainDirname(dirname(fileURLToPath(import.meta.url)))
 setGlobalFormat(Format.Pretty)
 setGlobalLogLevel(LogLevel.Log)
@@ -195,59 +189,30 @@ const log = useLogg('main').useGlobalConfig()
 // creates it never runs (a failed `injeca.start()` or an earlier throw), so the promise is
 // hoisted here; `stop` is the subset `before-quit` needs.
 let pendingSensorsService: Promise<Pick<Awaited<ReturnType<typeof createSensorsService>>, 'stop'>> | undefined
-const forceHighPerformanceGpu = env.AIRI_FORCE_HIGH_PERFORMANCE_GPU === '1'
 
-if (isLinux) {
-  const linuxFeatures = ['SharedArrayBuffer', 'Vulkan']
-  if (env.XDG_SESSION_TYPE === 'wayland') {
-    linuxFeatures.push('GlobalShortcutsPortal', 'UseOzonePlatform', 'WaylandWindowDecorations')
-  }
-  app.commandLine.appendSwitch('enable-features', linuxFeatures.join(','))
-  app.commandLine.appendSwitch('enable-unsafe-webgpu')
-  // NOTICE: Dawn disables shader-f16 on Linux NVIDIA Vulkan by default. Enabling
-  // vulkan_enable_f16_on_nvidia allows WebLLM q4f16 models (such as Qwen 3.5)
-  // to compile WGSL shaders without extension 'f16' is not allowed errors.
-  app.commandLine.appendSwitch('enable-dawn-features', 'vulkan_enable_f16_on_nvidia')
-  if (env.ELECTRON_OZONE_PLATFORM) {
-    app.commandLine.appendSwitch('ozone-platform', env.ELECTRON_OZONE_PLATFORM)
-  }
-  else if (!app.commandLine.hasSwitch('ozone-platform-hint') && !app.commandLine.hasSwitch('ozone-platform')) {
-    app.commandLine.appendSwitch('ozone-platform-hint', env.ELECTRON_OZONE_PLATFORM_HINT || 'auto')
-  }
-}
+// TODO(port): the Chromium switch block (`SharedArrayBuffer`, `Vulkan`, `enable-unsafe-webgpu`,
+// Dawn `vulkan_enable_f16_on_nvidia`, Ozone platform, `force-high-performance-gpu`) becomes
+// `build.{linux,mac,win}.chromiumFlags` in electrobun.config.ts — see docs/design-electrobun-port.md §3.1
+if (isLinux && env.AIRI_FORCE_HIGH_PERFORMANCE_GPU === '1')
+  console.info('[AIRI] High-performance GPU overrides requested via AIRI_FORCE_HIGH_PERFORMANCE_GPU=1 (chromiumFlags pending)')
 
-if (forceHighPerformanceGpu) {
-  // NOTICE: These switches can materially change GPU selection, power draw, and
-  // driver compatibility. Keep them opt-in so default desktop behavior stays
-  // close to upstream unless the local launcher explicitly asks for them.
-  app.commandLine.appendSwitch('force-high-performance-gpu')
-  app.commandLine.appendSwitch('enable-gpu-rasterization')
-  app.commandLine.appendSwitch('ignore-gpu-blocklist')
-  console.info('[AIRI] High-performance GPU overrides enabled via AIRI_FORCE_HIGH_PERFORMANCE_GPU=1')
-}
+// ============================================================================
+// User data, migration, LevelDB pre-flight
+// ============================================================================
 
-const appUserDataPath = env.AIRI_USER_DATA_DIR?.trim() || env.APP_USER_DATA_PATH?.trim()
-if (appUserDataPath) {
-  app.setPath('userData', appUserDataPath)
-}
-
-// Perform seamless one-time migration of existing legacy user data if needed
-const effectiveUserDataPath = ensureLegacyUserDataMigrated(app.getPath('userData'))
-if (effectiveUserDataPath && effectiveUserDataPath !== app.getPath('userData')) {
-  app.setPath('userData', effectiveUserDataPath)
-}
+// NOTICE: Electron allowed `app.setPath('userData', …)`; Electrobun exposes `Utils.paths.userData`
+// only, so the AIRI/APP overrides are resolved here and every consumer reads the resolved value.
+const userDataPath = resolveUserDataPath()
+const effectiveUserDataPath = ensureLegacyUserDataMigrated(userDataPath)
+if (effectiveUserDataPath && effectiveUserDataPath !== userDataPath)
+  console.warn(`[Main] Using migrated user data directory: ${effectiveUserDataPath}`)
 
 // Pre-flight check: intercept LevelDB corruption before Chromium can delete user data
-ensureLevelDBIntegrityOrHalt(app.getPath('userData'))
+ensureLevelDBIntegrityOrHalt(userDataPath)
 
-app.dock?.setIcon(icon)
-electronApp.setAppUserModelId('ai.moeru.airi.dasilva333')
-
-// NOTICE: macOS `activate` (dock click) restores by window identity, not by title:
-// the settings/chat titles are em-dash variants and the chat title is rewritten at
-// runtime ("… - User Typing..."). These handles are only populated once the DI build runs.
-const createdSettingsWindows = new Set<BrowserWindow>()
-const createdChatWindows = new Set<BrowserWindow>()
+// TODO(port): app.dock?.setIcon(icon) — Electrobun exposes no dock icon setter.
+// TODO(port): electronApp.setAppUserModelId('ai.moeru.airi.dasilva333') — the Windows taskbar
+// identity comes from the packaged appId in electrobun.config.ts.
 
 // NOTICE: Renderer-supplied paths reach the filesystem through this helper.
 // `path.resolve` discards the root when a segment is absolute, so a leading `/`
@@ -259,181 +224,54 @@ function resolveInside(root: string, ...segments: string[]): string | null {
   return resolved === root || resolved.startsWith(root + path.sep) ? resolved : null
 }
 
-initScreenCaptureForMain()
-// NOTICE: Open the session log file at module scope: the DI `invoke` callback below only runs
-// after `whenReady`, so anything the logger misses before then (including a failed boot) is lost.
+// NOTICE: Open the session log file at module scope: the DI `invoke` callback only runs after
+// the graph builds, so anything the logger misses before then (including a failed boot) is lost.
 const fileLogger: FileLoggerHandle = await setupFileLogger()
 if (fileLogger.logFilePath) {
   // NOTICE: `formattedOutput` carries ANSI colours under Format.Pretty; JSON keeps the file plain.
   setGlobalHookPostLog(log => void fileLogger.appendLog(JSON.stringify(log)))
 }
 
-app.whenReady().then(async () => {
-  const registerCorsBypass = (urls: string[]) => {
-    if (!urls || urls.length === 0) {
-      session.defaultSession.webRequest.onHeadersReceived(null)
-      session.defaultSession.webRequest.onBeforeSendHeaders(null)
-      return
-    }
+// ============================================================================
+// Single instance
+// ============================================================================
 
-    session.defaultSession.webRequest.onHeadersReceived(
-      {
-        urls,
-      },
-      (details, callback) => {
-        const headers = { ...details.responseHeaders }
-        headers['access-control-allow-origin'] = ['*']
-        headers['access-control-allow-headers'] = ['*']
-        headers['access-control-allow-methods'] = ['GET, POST, OPTIONS']
+// TODO(port): the Electron build relied on `app.requestSingleInstanceLock()`; this is the
+// lockfile equivalent (see app/single-instance.ts).
+const singleInstance = claimSingleInstance(userDataPath, 'main')
+if (!singleInstance.primary) {
+  console.info('[@proj-airi/stage-tamagotchi] Another instance owns the profile; exiting.')
+  process.exit(0)
+}
 
-        if (details.method === 'OPTIONS') {
-          callback({ responseHeaders: headers, statusLine: 'HTTP/1.1 200 OK' })
-          return
-        }
+// TODO(port): initScreenCaptureForMain() — @proj-airi/electron-screen-capture is Electron-only
+// (desktopCapturer); the Electrobun equivalent is Screen.captureRegion (wave 4).
+// TODO(port): BrowserWindow.prototype method guards + `isDestroyed` wrappers — the registry's
+// WeakSet replaces them (see windows/registry.ts).
+// TODO(port): `session.defaultSession.webRequest` CORS bypass and the `will-download`
+// interception — see docs/design-electrobun-port.md §3.1.
 
-        callback({ responseHeaders: headers })
-      },
-    )
+// NOTICE: splash dismissal lives at module scope so the invoke handler and the 30s backstop
+// share one value even when the DI callback never runs.
+let splashDismissed = false
 
-    session.defaultSession.webRequest.onBeforeSendHeaders(
-      {
-        urls,
-      },
-      (details, callback) => {
-        const requestHeaders = { ...details.requestHeaders }
-        delete requestHeaders.Origin
-        delete requestHeaders.origin
-        delete requestHeaders.Referer
-        delete requestHeaders.referer
-        callback({ requestHeaders })
-      },
-    )
-  }
-
-  session.defaultSession.on('will-download', async (_event, item, webContents) => {
-    if (webContents.getType() !== 'webview') {
-      return
-    }
-
-    const filename = item.getFilename()
-    const ext = filename.split('.').pop()?.toLowerCase()
-
-    if (ext === 'png' || ext === 'json') {
-      const fs = await import('node:fs/promises')
-
-      const tempDir = app.getPath('temp')
-      const tempFilePath = path.join(tempDir, `airi-card-${Date.now()}-${filename}`)
-      item.setSavePath(tempFilePath)
-
-      item.once('done', async (_e, state) => {
-        if (state === 'completed') {
-          try {
-            const buffer = await fs.readFile(tempFilePath)
-            const base64Data = buffer.toString('base64')
-
-            const targetWebContents = webContents.hostWebContents || webContents
-            targetWebContents.send('chara-card-downloaded', {
-              base64Data,
-              filename,
-              ext,
-            })
-          }
-          catch (err) {
-            console.error('[Download Interception] Failed to read temporary file:', err)
-          }
-          finally {
-            await fs.unlink(tempFilePath).catch(() => {})
-          }
-        }
-      })
-    }
-  })
-
-  // Start splash window immediately (<100ms) so OS paints the frameless card
-  // and index.html pre-bootstrap CSS before heavy DI or Vite compilation.
-  const splashWindowManager = await setupSplashWindowManager()
-
-  const context = createContext(ipcMain).context
-
-  // NOTICE: Coordinated startup splash relay (Main is the single authority).
-  // The milestone table lives here because Pinia stores are per-window memory
-  // and cannot be shared between the Splash and Control Strip renderers.
-  const STARTUP_MILESTONE_IDS: StartupMilestoneId[] = ['core-services', 'sync-engine', 'character-card', 'stage-actor']
-  const startupMilestones = new Map<StartupMilestoneId, StartupResourceState>(
-    STARTUP_MILESTONE_IDS.map(id => [id, { id, status: 'queued' as StartupMilestoneStatus }]),
-  )
-  let splashDismissed = false
-
-  function buildStartupSnapshot(): StartupSnapshot {
-    const resources = STARTUP_MILESTONE_IDS.map(id => ({ ...startupMilestones.get(id)! }))
-    const finished = resources.filter(r => r.status === 'ready' || r.status === 'skipped').length
-    return {
-      resources,
-      progress: Math.round((finished / resources.length) * 100),
-      ready: resources.length > 0 && resources.every(r => r.status === 'ready' || r.status === 'skipped'),
-      failed: resources.find(r => r.status === 'failed'),
-    }
-  }
-
-  // NOTICE: The splash renderer starts querying at t=0, before these handlers exist; its early
-  // invokes fail and only the 30s backstop would reveal the windows. This cache makes the snapshot
-  // retrievable from the moment the handler is registered.
-  let lastSnapshot: StartupSnapshot | undefined
-
-  function emitStartupSnapshot() {
-    lastSnapshot = buildStartupSnapshot()
-    const splashWin = splashWindowManager.getWindow()
-    if (!splashWin || splashWin.isDestroyed())
-      return
-    const { context: splashContext, dispose } = createContext(ipcMain, splashWin)
-    splashContext.emit(electronSplashStateChanged, lastSnapshot)
-    dispose()
-  }
-
-  // NOTICE: Replays the last known snapshot so a splash that started before the handler existed
-  // (and therefore never received the broadcast) catches up immediately.
-  function replayStartupSnapshot() {
-    if (!lastSnapshot)
-      return
-    const splashWin = splashWindowManager.getWindow()
-    if (!splashWin || splashWin.isDestroyed())
-      return
-    const { context: splashContext, dispose } = createContext(ipcMain, splashWin)
-    splashContext.emit(electronSplashStateChanged, lastSnapshot)
-    dispose()
-  }
-
-  defineInvokeHandler(context, electronSplashGetSnapshot, async () => {
-    return lastSnapshot ?? buildStartupSnapshot()
-  })
-
-  defineInvokeHandler(context, electronSplashReportMilestone, async (payload) => {
-    if (!payload || !STARTUP_MILESTONE_IDS.includes(payload.id))
-      return
-    startupMilestones.set(payload.id, { id: payload.id, status: payload.status, error: payload.error })
-    emitStartupSnapshot()
-  })
-
-  // NOTICE: The splash renderer may have loaded and queried before the handlers above existed.
-  replayStartupSnapshot()
-
+async function boot() {
   injeca.setLogger(createLoggLogger(useLogg('injeca').useGlobalConfig()))
 
   const appConfig = injeca.provide('configs:app', () => createGlobalAppConfig())
-  const electronApp = injeca.provide('host:electron:app', () => app)
+  const hostApp = injeca.provide('host:electrobun:app', () => Electrobun)
   const autoUpdater = injeca.provide('services:auto-updater', () => setupAutoUpdater())
 
   const i18n = injeca.provide('libs:i18n', {
     dependsOn: { appConfig },
     build: ({ dependsOn }) => {
       const language = dependsOn.appConfig.get()?.language ?? 'en'
-      const i18n = createI18n({ messages, locale: language })
-      return i18n
+      return createI18n({ messages, locale: language })
     },
   })
 
   const serverChannel = injeca.provide('modules:channel-server', {
-    dependsOn: { app: electronApp, lifecycle },
+    dependsOn: { app: hostApp, lifecycle },
     build: async ({ dependsOn }) => setupServerChannel(dependsOn),
   })
 
@@ -459,47 +297,42 @@ app.whenReady().then(async () => {
     build: () => setupPluginHost(),
   })
 
-  const beatSync = injeca.provide('windows:beat-sync', () => setupBeatSync())
-  const devtoolsMarkdownStressWindow = injeca.provide('windows:devtools:markdown-stress', () => setupDevtoolsWindow())
+  // NOTICE: wave 3 — every window below keeps its registration so the DI graph stays the
+  // inventory. Each resolves to an inert `NotPortedWindow` rather than throwing: a throwing
+  // `build` aborts the whole DI graph, so the app would never reach the splash and the
+  // remaining surface could not be enumerated at runtime. Every method on the handle raises
+  // `ElectrobunPortError`, so a caller reaching for an unported window fails loudly at the
+  // call site instead of silently doing nothing.
+  const beatSync = injeca.provide('windows:beat-sync', () => notPortedWindow('windows:beat-sync'))
+  const devtoolsMarkdownStressWindow = injeca.provide('windows:devtools:markdown-stress', () => notPortedWindow('windows:devtools:markdown-stress'))
 
   const widgetsManager = injeca.provide('windows:widgets', {
     dependsOn: { serverChannel, i18n },
-    build: ({ dependsOn }) => setupWidgetsWindowManager(dependsOn),
+    build: () => notPortedWindow('windows:widgets'),
   })
 
   const onboardingWindowManager = injeca.provide('windows:onboarding', {
     dependsOn: { serverChannel, i18n, widgetsManager },
-    build: ({ dependsOn }) => setupOnboardingWindowManager(dependsOn),
+    build: () => notPortedWindow('windows:onboarding'),
   })
   const noticeWindow = injeca.provide('windows:notice', {
     dependsOn: { i18n, serverChannel },
-    build: ({ dependsOn }) => setupNoticeWindowManager(dependsOn),
+    build: () => notPortedWindow('windows:notice'),
   })
 
   const aboutWindow = injeca.provide('windows:about', {
     dependsOn: { autoUpdater, i18n, serverChannel },
-    build: ({ dependsOn }) => setupAboutWindowReusable(dependsOn),
+    build: () => notPortedWindow('windows:about'),
   })
-
-  // NOTICE: The settings/chat managers expose no creation hook, so wrap getWindow() to record the
-  // window identity that the macOS `activate` handler below restores (titles are not stable).
-  function trackCreatedWindows<T extends { getWindow: () => Promise<BrowserWindow> }>(manager: T, into: Set<BrowserWindow>): T {
-    const getWindow = manager.getWindow
-    manager.getWindow = () => getWindow.call(manager).then((window) => {
-      into.add(window)
-      return window
-    })
-    return manager
-  }
 
   const settingsWindow = injeca.provide('windows:settings', {
     dependsOn: { widgetsManager, beatSync, autoUpdater, devtoolsMarkdownStressWindow, serverChannel, mcpStdioManager, acpAgentsManager, i18n },
-    build: async ({ dependsOn }) => trackCreatedWindows(await setupSettingsWindowReusableFunc(dependsOn), createdSettingsWindows),
+    build: () => notPortedWindow('windows:settings'),
   })
 
   const chatWindow = injeca.provide('windows:chat', {
     dependsOn: { widgetsManager, serverChannel, mcpStdioManager, acpAgentsManager, i18n, appConfig, settingsWindow },
-    build: ({ dependsOn }) => trackCreatedWindows(setupChatWindowReusableFunc(dependsOn), createdChatWindows),
+    build: () => notPortedWindow('windows:chat'),
   })
 
   // NOTICE: The stage manager is cheap to construct (no BrowserWindow yet).
@@ -508,10 +341,19 @@ app.whenReady().then(async () => {
   // IndexedDB access). Text-only companions never allocate it.
   const stageWindow = injeca.provide('windows:stage', {
     dependsOn: { appConfig, serverChannel, i18n },
-    build: ({ dependsOn }) => setupActorStageWindowManager(dependsOn),
+    build: () => notPortedWindow('windows:stage'),
   })
 
-  // NOTICE: The splash window was created immediately at t=0ms above.
+  // NOTICE: the RPC bootstrap must exist before any window is created — `createViewWindow`
+  // reads it from the shared slot, and the splash is the first view.
+  const rpc = await createRpcBootstrap({
+    dismissSplash: () => splashWindowManager.destroy(),
+  })
+  setRpcBootstrap(rpc)
+
+  // NOTICE: the splash is created immediately so the OS paints the frameless card before the
+  // heavy DI graph resolves.
+  const splashWindowManager = await setupSplashWindowManager()
   const splashWindow = injeca.provide('windows:splash', () => splashWindowManager)
 
   const mainWindow = injeca.provide('windows:main', {
@@ -522,33 +364,57 @@ app.whenReady().then(async () => {
 
   const captionWindow = injeca.provide('windows:caption', {
     dependsOn: { mainWindow, stageWindow, serverChannel, i18n, appConfig },
-    build: async ({ dependsOn }) => setupCaptionWindowManager(dependsOn),
+    build: () => notPortedWindow('windows:caption'),
   })
 
   const customizerWindow = injeca.provide('windows:customizer', {
     dependsOn: { mainWindow, serverChannel, i18n },
-    build: async ({ dependsOn }) => setupCustomizerWindowManager(dependsOn),
+    build: () => notPortedWindow('windows:customizer'),
   })
 
   const tray = injeca.provide('app:tray', {
     dependsOn: { mainWindow, settingsWindow, onboardingWindow: onboardingWindowManager, captionWindow, widgetsWindow: widgetsManager, serverChannel, beatSyncBgWindow: beatSync, aboutWindow, i18n, appConfig, chatWindow, stageWindow, customizerWindow },
-    build: async ({ dependsOn }) => {
-      const configHelper = dependsOn.appConfig
-      return setupTray({
-        ...dependsOn,
-        getConfig: () => configHelper.get(),
-        updateConfig: config => configHelper.update(config),
-      })
-    },
+    build: () => notPortedWindow('app:tray'),
   })
+
+  // NOTICE: the module-scope splash relay state lives here so the handler and the backstop
+  // below see one value even if the DI callback never reaches this point.
+  const STARTUP_MILESTONE_IDS = ['core-services', 'sync-engine', 'character-card', 'stage-actor'] as const
+  const startupMilestones = new Map<string, { id: string, status: string, error?: string }>(
+    STARTUP_MILESTONE_IDS.map(id => [id, { id, status: 'queued' }]),
+  )
+  let lastSnapshot: unknown
+
+  const buildStartupSnapshot = () => {
+    const resources = STARTUP_MILESTONE_IDS.map(id => ({ ...startupMilestones.get(id)! }))
+    const finished = resources.filter(r => r.status === 'ready' || r.status === 'skipped').length
+    return {
+      resources,
+      progress: Math.round((finished / resources.length) * 100),
+      ready: resources.length > 0 && resources.every(r => r.status === 'ready' || r.status === 'skipped'),
+      failed: resources.find(r => r.status === 'failed'),
+    }
+  }
+
+  const emitStartupSnapshot = () => {
+    lastSnapshot = buildStartupSnapshot()
+    rpc.broadcast(electronSplashStateChanged, lastSnapshot)
+  }
 
   injeca.invoke({
     dependsOn: { mainWindow, tray, serverChannel, pluginHost, mcpStdioManager, acpAgentsManager, onboardingWindow: onboardingWindowManager, appConfig, i18n, captionWindow, stageWindow, splashWindow, chatWindow, customizerWindow, beatSync, libp2p, agenticOs },
-    callback: (deps) => {
+    callback: async (deps) => {
+      // NOTICE: `setupMainWindow` registers the Control Strip in the window registry; the DI
+      // dependency is the `BrowserView` it returns, so read the view back out of the registry.
+      const mainWindowView = get('main')?.webview
+      if (!mainWindowView)
+        throw new ElectrobunPortError('unsupported', 'Control Strip view was not created')
+      const context: AnyEventaContext = await rpc.contextFor(mainWindowView)
+
       // NOTICE: `stage:capture-window` ghosts the stage window (show inactive → hide) purely to
       // produce a screenshot. Those synthetic show/hide events must not be treated as user-driven
       // visibility changes, so listeners check this flag and skip caption-follow handling during capture.
-      let isCapturingStage = false
+      const isCapturingStage = false
       // NOTICE: The renderer always pushes its persisted `settings/caption-open` state once on boot
       // (immediate watcher in `pages/index.vue`). We gate caption auto-restores/follows on this so a
       // transient stage show or main-window restore can't flash the caption before the renderer's
@@ -556,54 +422,75 @@ app.whenReady().then(async () => {
       let captionOpenFromRenderer: boolean | undefined
 
       // Single owner of the stage→caption follow rule (the renderer no longer mirrors these).
-      // captureInFlight suppresses the synthetic stage events emitted by `stage:capture-window`.
       const syncCaptionToStage = (stageVisible: boolean, opts?: { captureInFlight?: boolean }) => {
-        if (!deps.captionWindow.getIsFollowingStageVisibility() || opts?.captureInFlight)
+        const caption = deps.captionWindow as CaptionLike | undefined
+        if (!caption || typeof caption.getIsFollowingStageVisibility !== 'function')
+          return
+        if (!caption.getIsFollowingStageVisibility() || opts?.captureInFlight)
           return
         // Hide always applies. Show is deferred until the renderer pushes `caption-open`
         // so a boot-time transient can't flash the caption against the persisted preference.
-        if (!stageVisible) {
-          void deps.captionWindow.toggleVisibility(false)
-        }
-        else if (captionOpenFromRenderer !== undefined) {
-          void deps.captionWindow.toggleVisibility(captionOpenFromRenderer)
-        }
+        if (!stageVisible)
+          void caption.toggleVisibility(false)
+        else if (captionOpenFromRenderer !== undefined)
+          void caption.toggleVisibility(captionOpenFromRenderer)
       }
 
       createServerChannelService({ serverChannel: deps.serverChannel })
       createMcpServersService({ context, manager: deps.mcpStdioManager })
       createAcpAgentsService({ context, manager: deps.acpAgentsManager })
-      createI18nService({ context, window: deps.mainWindow, i18n: deps.i18n })
-      createMicToggleService({ context, window: deps.mainWindow })
-      createVisionService({ context })
-      createLibp2pService({ context })
-      createAgenticService({ context })
-      pendingSensorsService = createSensorsService({ context })
-      setupDiscordService()
-      const defaultBypassUrls = DEFAULT_CORS_BYPASS_URLS
+      await createI18nService({ context, window: mainWindowView as never, i18n: deps.i18n })
+      // NOTICE: wave 4 surfaces raise ElectrobunPortError from their setup (globalShortcut,
+      // desktopCapturer, powerMonitor, Opus). Best-effort, so a missing feature cannot abort
+      // `injeca.invoke` and take the whole app down with it.
+      await setupOptionalService('services:mic-toggle', () => createMicToggleService({ context, window: mainWindowView as never }))
+      await setupOptionalService('services:vision', async () => createVisionService({ context }))
+      await createLibp2pService({ context })
+      await createAgenticService({ context })
+      await setupOptionalService('services:sensors', async () => {
+        pendingSensorsService = createSensorsService({ context })
+      })
+      await setupOptionalService('services:discord', () => setupDiscordService())
 
+      defineInvokeHandler(context, electronSplashGetSnapshot, async () => lastSnapshot ?? buildStartupSnapshot())
+
+      defineInvokeHandler(context, electronSplashReportMilestone, async (payload) => {
+        if (!payload || !STARTUP_MILESTONE_IDS.includes(payload.id as typeof STARTUP_MILESTONE_IDS[number]))
+          return
+        startupMilestones.set(payload.id, { id: payload.id, status: payload.status, error: payload.error })
+        emitStartupSnapshot()
+      })
+
+      defineInvokeHandler(context, electronSplashDismiss, async () => {
+        if (splashDismissed)
+          return
+        splashDismissed = true
+        await rpc.startup.dismiss()
+        if (!registryIsDestroyed(mainWindowView as never))
+          get('main')?.show()
+        if (getStageVisibleState())
+          get('stage')?.show()
+        restoreCaption()
+      })
+
+      const defaultBypassUrls = DEFAULT_CORS_BYPASS_URLS
       const coalesceCorsBypassUrls = (userUrls?: string[]): string[] => {
         const list = Array.isArray(userUrls) ? [...userUrls] : []
         for (const url of defaultBypassUrls) {
-          if (!list.includes(url)) {
+          if (!list.includes(url))
             list.push(url)
-          }
         }
         return list
       }
-
-      const initialUrls = coalesceCorsBypassUrls(deps.appConfig.get()?.corsBypassUrls)
 
       // Auto-update config if new defaults were merged in
       const currentConfig = deps.appConfig.get()
       if (currentConfig) {
         deps.appConfig.update({
           ...currentConfig,
-          corsBypassUrls: initialUrls,
+          corsBypassUrls: coalesceCorsBypassUrls(currentConfig.corsBypassUrls),
         })
       }
-
-      registerCorsBypass(initialUrls)
 
       defineInvokeHandler(context, electronGetCorsBypassUrls, async () => {
         return coalesceCorsBypassUrls(deps.appConfig.get()?.corsBypassUrls)
@@ -618,1096 +505,255 @@ app.whenReady().then(async () => {
             corsBypassUrls: coalesced,
           })
         }
-        registerCorsBypass(coalesced)
+        // TODO(port): registerCorsBypass() — session.webRequest has no Electrobun equivalent.
       })
 
       defineInvokeHandler(context, electronCaptionToggleVisibility, async (enabled?: boolean) => {
         console.info('[@proj-airi/stage-tamagotchi] [Main] Caption visibility toggle triggered via Control Island. enabled:', enabled)
-        // Record the renderer-authoritative open state first so the boot restore and the
-        // stage→caption follow only apply once the renderer's persisted preference is known.
         if (enabled !== undefined)
           captionOpenFromRenderer = enabled
-        await deps.captionWindow.toggleVisibility(enabled)
+        await (deps.captionWindow as CaptionLike).toggleVisibility(enabled)
       })
+
       defineInvokeHandler(context, electronGetChatWindowState, async () => {
-        const isOpen = deps.chatWindow.isVisible()
+        const isOpen = Boolean(get('chat')?.isVisible())
         console.info('[@proj-airi/stage-tamagotchi] [Main] Retrieved chat window state:', isOpen)
         return isOpen
       })
+
       defineInvokeHandler(context, electronGetCaptionWindowState, async () => {
-        const winEnabled = deps.appConfig.get()?.windows?.find((w: any) => w.tag === 'caption')?.enabled
-        const winVisible = deps.captionWindow.isVisible()
-        const isOpen = Boolean(winEnabled || winVisible)
-        console.info('[@proj-airi/stage-tamagotchi] [Main] Retrieved caption window state:', isOpen, 'enabled:', winEnabled, 'visible:', winVisible)
-        return isOpen
+        const winEnabled = deps.appConfig.get()?.windows?.find(w => w.tag === 'caption')?.enabled
+        const winVisible = Boolean(get('caption')?.isVisible())
+        return Boolean(winEnabled || winVisible)
       })
+
       defineInvokeHandler(context, electronEnsureBeatSync, async () => {
-        await deps.beatSync.getWindow()
+        notImplemented('windows:beat-sync')
       })
+
       defineInvokeHandler(context, electronCaptionSyncDocking, async (dock) => {
         console.info('[@proj-airi/stage-tamagotchi] [Main] Caption docking sync triggered via Control Island:', dock)
         const appConfig = deps.appConfig.get()
         if (appConfig) {
           const windows = appConfig.windows ?? []
-          const index = windows.findIndex((w: any) => w.tag === 'caption')
-          if (index !== -1) {
+          const index = windows.findIndex(w => w.tag === 'caption')
+          if (index !== -1)
             windows[index] = { ...windows[index], dock }
-          }
-          else {
-            windows.push({ tag: 'caption', enabled: deps.captionWindow.isVisible(), dock })
-          }
-          deps.appConfig.update({
-            ...appConfig,
-            windows,
-          })
+          else
+            windows.push({ tag: 'caption', enabled: Boolean(get('caption')?.isVisible()), dock })
+          deps.appConfig.update({ ...appConfig, windows })
         }
-        await deps.captionWindow.triggerMove(dock)
+        await (deps.captionWindow as CaptionLike).triggerMove(dock)
       })
+
       defineInvokeHandler(context, electronCaptionSetFollowStagePosition, async (shouldFollow) => {
-        console.info('[@proj-airi/stage-tamagotchi] [Main] Caption set follow stage position triggered:', shouldFollow)
-        await deps.captionWindow.setFollowStagePosition(shouldFollow)
+        await (deps.captionWindow as CaptionLike).setFollowStagePosition(shouldFollow)
       })
+
       defineInvokeHandler(context, electronCaptionSetFollowStageVisibility, async (shouldFollow) => {
-        console.info('[@proj-airi/stage-tamagotchi] [Main] Caption set follow stage visibility triggered:', shouldFollow)
-        await deps.captionWindow.setFollowStageVisibility(shouldFollow)
+        await (deps.captionWindow as CaptionLike).setFollowStageVisibility(shouldFollow)
       })
+
       defineInvokeHandler(context, electronSetIgnoreMouseEvents, async (ignore) => {
-        // @ts-expect-error window might be undefined if context is global, but here it's window-specific
-        context.window?.setIgnoreMouseEvents(ignore, { forward: true })
+        // TODO(port): Electron's `setIgnoreMouseEvents(bool, { forward })` — Electrobun has
+        // creation-time `passthrough` only; the toggle must go through webviewSetPassthrough.
+        void ignore
       })
+
       defineInvokeHandler(context, electronStageToggleVisibility, async (enabled: boolean) => {
         console.info('[@proj-airi/stage-tamagotchi] [Main] Actor Stage visibility changed:', enabled)
         setStageVisibleState(enabled)
-        if (enabled) {
-          const window = await deps.stageWindow.ensureWindow()
-          window?.show()
-        }
-        else {
-          deps.stageWindow.hide()
-        }
+        if (enabled)
+          get('stage')?.show()
+        else
+          get('stage')?.hide()
         // NOTICE: Main process is the single owner of the stage→caption follow. The renderer
         // only sets `captionOpen` for bookkeeping; it does not separately toggle the caption.
         syncCaptionToStage(enabled, { captureInFlight: isCapturingStage })
       })
+
       defineInvokeHandler(context, electronOpenChat, async (enabled?: boolean) => {
-        console.info('[@proj-airi/stage-tamagotchi] [Main] Global open chat triggered:', enabled)
-        await deps.chatWindow.openChat(enabled)
+        await (deps.chatWindow as ChatLike).openChat(enabled)
       })
+
       defineInvokeHandler(context, electronStageSetAlwaysOnTop, async (flag) => {
-        console.info('[@proj-airi/stage-tamagotchi] [Main] Actor Stage always-on-top changed:', flag)
-        deps.stageWindow.setAlwaysOnTop(flag)
+        get('stage')?.setAlwaysOnTop(flag)
       })
+
       defineInvokeHandler(context, electronGetStageDisabled, async () => isStageDisabledByFlag())
 
       defineInvokeHandler(context, electronStageEnsure, async () => {
-        const window = await deps.stageWindow.ensureWindow()
+        // TODO(port): stage window creation (wave 3) — the manager is registered but its build
+        // throws, so the Control Strip's first ensure rejects until then.
+        const window = get('stage')
         // Late ensures (card switches after the splash is gone) show immediately,
         // but only when the user intends the stage visible. Blindly showing here
         // re-surfaces a hidden stage on every Control Strip reload (the stray
         // `show` event then flips persisted `stageEnabled` false→true).
-        if (window && splashDismissed && getStageVisibleState() && !window.isDestroyed())
+        if (window && splashDismissed && getStageVisibleState() && !registryIsDestroyed(window))
           window.show()
-        return { created: !!window }
+        return { created: Boolean(window) }
       })
+
       defineInvokeHandler(context, electronStageRelease, async () => {
-        // Full release: hide freezes the loops, destroy frees the Chromium
+        // Full release: hide freezes the loops, close frees the Chromium
         // renderer + GPU contexts (~200MB+) for text-only companions.
-        deps.stageWindow.hide()
-        deps.stageWindow.destroy()
+        get('stage')?.hide()
+        get('stage')?.close()
       })
 
       defineInvokeHandler(context, electronShowToast, async (payload) => {
         if (!payload)
           return
-
-        let targetWin: BrowserWindow | null = deps.chatWindow.getExistingWindow() ?? null
-        if (!targetWin || targetWin.isDestroyed() || !targetWin.isVisible()) {
-          targetWin = deps.stageWindow.getExistingWindow() ?? null
-        }
-        if (!targetWin || targetWin.isDestroyed() || !targetWin.isVisible()) {
-          targetWin = deps.mainWindow
-        }
-
-        if (targetWin && !targetWin.isDestroyed()) {
-          const { context: winContext, dispose } = createContext(ipcMain, targetWin)
-          winContext.emit(electronShowToastEvent, payload)
-          dispose()
-        }
+        const target = get('chat') ?? get('stage') ?? get('main')
+        if (target && !registryIsDestroyed(target))
+          rpc.broadcast(electronShowToastEvent, payload)
       })
 
-      ipcMain.on('show-os-notification', (_event, payload: { title: string, body: string, silent?: boolean }) => {
-        if (!payload)
-          return
-        try {
-          if (Notification.isSupported()) {
-            const notification = new Notification({
-              title: payload.title,
-              body: payload.body,
-              silent: payload.silent !== false,
-            })
-            notification.show()
-          }
-          else {
-            console.warn('[Notification] Native notifications are not supported on this platform.')
-          }
-        }
-        catch (error) {
-          console.error('[Notification] Failed to show native notification:', error)
-        }
-      })
-
-      defineInvokeHandler(context, electronApplySizePreset, async (payload) => {
-        if (!payload)
-          return
-        const { target, preset, monitorIndex, alignment } = payload
-        console.info(`[@proj-airi/stage-tamagotchi] [Main] Apply size preset: ${preset} for target: ${target}, monitor: ${monitorIndex}, align: ${alignment}`)
-
-        let targetWin: BrowserWindow | null = null
-        if (target === 'actor') {
-          targetWin = deps.stageWindow.getExistingWindow() ?? null
-        }
-        else if (target === 'chat') {
-          targetWin = deps.chatWindow.getExistingWindow() ?? null
-        }
-
-        if (!targetWin || targetWin.isDestroyed())
-          return
-
-        if (target === 'actor') {
-          ;(targetWin as any).__is_programmatic_resize = true
-          setTimeout(() => {
-            if (targetWin && !targetWin.isDestroyed()) {
-              ;(targetWin as any).__is_programmatic_resize = false
-            }
-          }, 500)
-        }
-
-        const bounds = targetWin.getBounds()
-
-        // Get fallback from config or default if bounds are invalid
-        const presetAppConfig = deps.appConfig.get()
-        const winConfig = presetAppConfig?.windows?.find((w: any) => w.tag === target)
-
-        let width = bounds?.width || winConfig?.width || (target === 'actor' ? 450 : 600)
-        let height = bounds?.height || winConfig?.height || (target === 'actor' ? 600 : 800)
-
-        // Ensure they are valid numbers
-        if (!width || Number.isNaN(width) || width <= 0)
-          width = target === 'actor' ? 450 : 600
-        if (!height || Number.isNaN(height) || height <= 0)
-          height = target === 'actor' ? 600 : 800
-
-        let targetDisplay: Electron.Display | undefined
-        if (monitorIndex !== undefined && monitorIndex !== null) {
-          const displays = screen.getAllDisplays()
-          targetDisplay = displays[monitorIndex - 1]
-        }
-        if (!targetDisplay) {
-          try {
-            targetDisplay = screen.getDisplayMatching(bounds)
-          }
-          catch {
-            targetDisplay = screen.getPrimaryDisplay()
-          }
-        }
-        if (!targetDisplay) {
-          targetDisplay = screen.getPrimaryDisplay()
-        }
-
-        const workArea = targetDisplay.workArea || screen.getPrimaryDisplay().workArea
-
-        let boundsDetermined = false
-        let newX: number | undefined = bounds?.x
-        let newY: number | undefined = bounds?.y
-        if (preset && (preset as any) !== 'undefined') {
-          if (target === 'actor') {
-            switch (preset) {
-              case 'mini':
-                width = 220
-                height = 315
-                break
-              case 'medium':
-                width = 450
-                height = 600
-                break
-              case 'large':
-                width = 800
-                height = 1000
-                break
-              case 'full':
-                width = workArea.width
-                height = workArea.height
-                // A full preset is exactly the work area — pin it deterministically
-                // instead of letting the default 'center' alignment / expand-around-center
-                // path compute a position that the oversize-safe clamp can drift.
-                newX = workArea.x
-                newY = workArea.y
-                boundsDetermined = true
-                break
-              case 'dating-sim-on': {
-                ;(targetWin as any).__is_dating_sim_active = true
-
-                // Save current bounds to 'actor-user' in persistent config
-                const userBounds = {
-                  x: bounds.x,
-                  y: bounds.y,
-                  width: bounds.width,
-                  height: bounds.height,
-                }
-                const currentAppConfig = deps.appConfig.get()
-                if (currentAppConfig) {
-                  const windows = currentAppConfig.windows || []
-                  const userIdx = windows.findIndex((w: any) => w.tag === 'actor-user')
-                  if (userIdx !== -1) {
-                    windows[userIdx] = {
-                      ...windows[userIdx],
-                      ...userBounds,
-                    }
-                  }
-                  else {
-                    windows.push({
-                      title: 'AIRI',
-                      tag: 'actor-user',
-                      ...userBounds,
-                    })
-                  }
-                  currentAppConfig.windows = windows
-                  deps.appConfig.update(currentAppConfig)
-                }
-
-                // Load 'actor-dating-sim' bounds
-                const dsConfig = currentAppConfig?.windows?.find((w: any) => w.tag === 'actor-dating-sim')
-                if (dsConfig && dsConfig.x !== undefined && dsConfig.y !== undefined && !Number.isNaN(dsConfig.x) && !Number.isNaN(dsConfig.y)) {
-                  width = dsConfig.width ?? width
-                  height = dsConfig.height ?? height
-                  newX = dsConfig.x
-                  newY = dsConfig.y
-                }
-                else {
-                  width = 1200
-                  height = 800
-                  newX = workArea.x + (workArea.width - width) / 2
-                  newY = workArea.y + (workArea.height - height) / 2
-                }
-                boundsDetermined = true
-                break
-              }
-              case 'dating-sim-off': {
-                ;(targetWin as any).__is_dating_sim_active = false
-
-                const currentAppConfig = deps.appConfig.get()
-                const userConfig = currentAppConfig?.windows?.find((w: any) => w.tag === 'actor-user')
-                if (userConfig && userConfig.x !== undefined && userConfig.y !== undefined && !Number.isNaN(userConfig.x) && !Number.isNaN(userConfig.y)) {
-                  width = userConfig.width ?? width
-                  height = userConfig.height ?? height
-                  newX = userConfig.x
-                  newY = userConfig.y
-                }
-                else {
-                  width = 450
-                  height = 600
-                  newX = workArea.x + (workArea.width - width) / 2
-                  newY = workArea.y + (workArea.height - height) / 2
-                }
-                boundsDetermined = true
-                break
-              }
-            }
-          }
-          else if (target === 'chat') {
-            switch (preset) {
-              case 'mini':
-                width = 400
-                height = 500
-                break
-              case 'medium':
-                width = 600
-                height = 800
-                break
-              case 'large':
-                width = 900
-                height = 900
-                break
-              case 'full':
-                width = Math.max(400, workArea.width - 80)
-                height = Math.max(500, workArea.height - 80)
-                break
-            }
-          }
-        }
-
-        if (!boundsDetermined) {
-          if (newX === undefined || Number.isNaN(newX))
-            newX = workArea.x
-          if (newY === undefined || Number.isNaN(newY))
-            newY = workArea.y
-
-          if (alignment) {
-            switch (alignment) {
-              case 'top-left':
-                newX = workArea.x
-                newY = workArea.y
-                break
-              case 'top':
-                newX = workArea.x + (workArea.width - width) / 2
-                newY = workArea.y
-                break
-              case 'top-right':
-                newX = workArea.x + workArea.width - width
-                newY = workArea.y
-                break
-              case 'left':
-                newX = workArea.x
-                newY = workArea.y + (workArea.height - height) / 2
-                break
-              case 'center':
-                newX = workArea.x + (workArea.width - width) / 2
-                newY = workArea.y + (workArea.height - height) / 2
-                break
-              case 'right':
-                newX = workArea.x + workArea.width - width
-                newY = workArea.y + (workArea.height - height) / 2
-                break
-              case 'bottom-left':
-                newX = workArea.x
-                newY = workArea.y + workArea.height - height
-                break
-              case 'bottom':
-                newX = workArea.x + (workArea.width - width) / 2
-                newY = workArea.y + workArea.height - height
-                break
-              case 'bottom-right':
-                newX = workArea.x + workArea.width - width
-                newY = workArea.y + workArea.height - height
-                break
-            }
-          }
-          else {
-            if (monitorIndex !== undefined && monitorIndex !== null) {
-              newX = workArea.x + (workArea.width - width) / 2
-              newY = workArea.y + (workArea.height - height) / 2
-            }
-            else {
-              const currentX = (bounds?.x === undefined || Number.isNaN(bounds.x)) ? workArea.x : bounds.x
-              const currentY = (bounds?.y === undefined || Number.isNaN(bounds.y)) ? workArea.y : bounds.y
-              const currentW = (bounds?.width === undefined || Number.isNaN(bounds.width) || bounds.width <= 0) ? width : bounds.width
-              const currentH = (bounds?.height === undefined || Number.isNaN(bounds.height) || bounds.height <= 0) ? height : bounds.height
-              newX = currentX + (currentW - width) / 2
-              newY = currentY + (currentH - height) / 2
-            }
-          }
-        }
-
-        // Final safety check against NaN/undefined
-        if (newX === undefined || Number.isNaN(newX))
-          newX = workArea.x + (workArea.width - width) / 2
-        if (newY === undefined || Number.isNaN(newY))
-          newY = workArea.y + (workArea.height - height) / 2
-
-        const newBounds = ensureWindowInVisibleBounds({
-          x: Math.round(newX),
-          y: Math.round(newY),
-          width: Math.round(width),
-          height: Math.round(height),
-        })
-
-        console.info(`[@proj-airi/stage-tamagotchi] [Main] Final calculated newBounds:`, newBounds)
-
-        const appConfigToSave = deps.appConfig.get()
-        if (appConfigToSave) {
-          const windows = appConfigToSave.windows || []
-          const idx = windows.findIndex((w: any) => w.tag === target)
-          if (idx !== -1) {
-            windows[idx] = {
-              ...windows[idx],
-              x: newBounds.x,
-              y: newBounds.y,
-              width: newBounds.width,
-              height: newBounds.height,
-            }
-          }
-          else {
-            windows.push({
-              title: target === 'actor' ? 'AIRI' : 'AIRI',
-              tag: target,
-              x: newBounds.x,
-              y: newBounds.y,
-              width: newBounds.width,
-              height: newBounds.height,
-            })
-          }
-          appConfigToSave.windows = windows
-          deps.appConfig.update(appConfigToSave)
-        }
-
-        if (targetWin && !targetWin.isDestroyed()) {
-          if (targetWin.isMaximized()) {
-            targetWin.unmaximize()
-          }
-          targetWin.setBounds(newBounds)
-        }
-      })
-
-      const handleResetWindowPositions = async () => {
-        console.info('[@proj-airi/stage-tamagotchi] [Main] Resetting all window positions...')
-        const primaryDisplay = screen.getPrimaryDisplay()
-        const workArea = primaryDisplay.workArea
-
-        const orientation = deps.appConfig.get()?.windows?.find((w: any) => w.tag === 'main')?.orientation || 'vertical'
-        const mainW = orientation === 'vertical' ? 56 : 300
-        const mainH = orientation === 'vertical' ? 300 : 56
-
-        const mainBounds = ensureWindowInVisibleBounds({
-          x: Math.round(workArea.x + (workArea.width - mainW) / 2),
-          y: Math.round(workArea.y + (workArea.height - mainH) / 2),
-          width: mainW,
-          height: mainH,
-        })
-
-        const actorBounds = ensureWindowInVisibleBounds({
-          x: Math.round(workArea.x + (workArea.width - 450) / 2),
-          y: Math.round(workArea.y + (workArea.height - 600) / 2),
-          width: 450,
-          height: 600,
-        })
-
-        const chatBounds = ensureWindowInVisibleBounds({
-          x: Math.round(workArea.x + (workArea.width - 600) / 2),
-          y: Math.round(workArea.y + (workArea.height - 800) / 2),
-          width: 600,
-          height: 800,
-        })
-
-        const captionBounds = ensureWindowInVisibleBounds({
-          x: Math.round(workArea.x + (workArea.width - 480) / 2),
-          y: Math.round(workArea.y + (workArea.height - 180) / 2),
-          width: 480,
-          height: 180,
-        })
-
-        const appConfig = deps.appConfig.get()
-        if (appConfig) {
-          const windows = appConfig.windows || []
-          const updateWin = (tag: string, bounds: Rectangle, extra = {}) => {
-            const idx = windows.findIndex((w: any) => w.tag === tag)
-            if (idx !== -1) {
-              windows[idx] = {
-                ...windows[idx],
-                ...bounds,
-                ...extra,
-              }
-            }
-            else {
-              windows.push({
-                title: 'AIRI',
-                tag,
-                ...bounds,
-                ...extra,
-              })
-            }
-          }
-          updateWin('main', mainBounds, { orientation })
-          updateWin('actor', actorBounds)
-          updateWin('chat', chatBounds)
-          updateWin('caption', captionBounds)
-          appConfig.windows = windows
-          deps.appConfig.update(appConfig)
-        }
-
-        if (deps.mainWindow && !deps.mainWindow.isDestroyed()) {
-          deps.mainWindow.setBounds(mainBounds)
-        }
-        if (deps.stageWindow.hasWindow()) {
-          deps.stageWindow.setBounds(actorBounds)
-        }
-        const chatWin = deps.chatWindow.getExistingWindow()
-        if (chatWin && !chatWin.isDestroyed() && chatWin.isVisible()) {
-          chatWin.setBounds(chatBounds)
-        }
-        if (deps.captionWindow.hasWindow()) {
-          const capWin = await deps.captionWindow.getWindow()
-          if (capWin && !capWin.isDestroyed() && deps.captionWindow.isVisible()) {
-            capWin.setBounds(captionBounds)
-          }
-        }
-      }
-
-      ipcMain.on('reset-window-positions-action', handleResetWindowPositions)
-
-      ipcMain.on('logger:write', (_event, level: string, message: string) => {
-        const line = `[RendererLog/${level}] ${message}`
-        console.info(line)
-        // NOTICE: Goes through console.info, so @guiiai/logg's post-log hook never sees it.
-        void fileLogger.appendLog(line)
-      })
-
-      // NOTICE: ControlStrip.vue calls `ipcRenderer.invoke('eventa:invoke:electron:windows:get-monitor-count')
-      // directly (via the raw Electron IPC invoke path, which requires ipcMain.handle).
-      // defineInvokeHandler routes over Eventa's 'eventa-message' channel instead, so it
-      // cannot satisfy a raw ipcRenderer.invoke call. We register both to cover both paths.
       defineInvokeHandler(context, electronGetMonitorCount, async () => {
-        return screen.getAllDisplays().length
-      })
-      ipcMain.handle('eventa:invoke:electron:windows:get-monitor-count', async () => {
-        return screen.getAllDisplays().length
+        return Screen.getAllDisplays().length
       })
 
-      let stageInitialized = false
-
-      ipcMain.handle('stage:capture-window', async () => {
-        if (deps.stageWindow.hasWindow()) {
-          if (!stageInitialized && !deps.stageWindow.isVisible()) {
-            isCapturingStage = true
-            try {
-              deps.stageWindow.showInactive()
-              await new Promise(resolve => setTimeout(resolve, 5000))
-              deps.stageWindow.hide()
-            }
-            finally {
-              isCapturingStage = false
-            }
-            stageInitialized = true
-          }
-          return await deps.stageWindow.capturePage()
-        }
-        return null
-      })
-
-      defineInvokeHandler(context, electronResetWindowPositions, handleResetWindowPositions)
-
-      // NOTICE: Lifecycle subscriptions live on the manager, so they survive
-      // lazy destroy/recreate cycles without leaking per-window listeners.
-      deps.stageWindow.onLifecycle('show', () => {
-        stageInitialized = true
-        syncCaptionToStage(true, { captureInFlight: isCapturingStage })
-      })
-      deps.stageWindow.onLifecycle('hide', () => syncCaptionToStage(false, { captureInFlight: isCapturingStage }))
-      deps.stageWindow.onLifecycle('minimize', () => syncCaptionToStage(false, { captureInFlight: isCapturingStage }))
-      deps.stageWindow.onLifecycle('restore', () => syncCaptionToStage(true, { captureInFlight: isCapturingStage }))
+      // TODO(port): `show-os-notification` — Electrobun's Utils.showNotification carries
+      // title/body/silent directly (no `Notification.isSupported()` gate).
+      // TODO(port): electronApplySizePreset, electronResetWindowPositions and the raw
+      // `ipcMain.handle` channels (backup bundle, BYOS-FS, renderer logger, stage capture) —
+      // each needs the per-view RPC surface (wave 3/4); their Electron-only parts
+      // (screen.getAllDisplays, webContents.send, capturePage) have no Electrobun counterpart yet.
 
       const restoreCaption = () => {
+        const caption = deps.captionWindow as CaptionLike | undefined
+        if (!caption)
+          return
         // Restore to the renderer-authoritative state (exactly one push arrives at boot), else the
         // persisted `windows[].enabled` entry. Explicit true/false only — never blind-toggle.
         const wasEnabled = captionOpenFromRenderer
-          ?? deps.appConfig.get()?.windows?.find((w: any) => w.tag === 'caption')?.enabled
-        const isNowVisible = deps.captionWindow.isVisible()
+          ?? deps.appConfig.get()?.windows?.find(w => w.tag === 'caption')?.enabled
+        const isNowVisible = Boolean(get('caption')?.isVisible())
         if (wasEnabled && !isNowVisible)
-          void deps.captionWindow.toggleVisibility(true)
+          void caption.toggleVisibility(true)
         else if (!wasEnabled && isNowVisible)
-          void deps.captionWindow.toggleVisibility(false)
+          void caption.toggleVisibility(false)
       }
 
-      // NOTICE: Caption restore is deferred until splash dismissal so the
-      // caption cannot pop in before the coordinated reveal. The main window
-      // no longer shows itself on `ready-to-show` (see `deferInitialShow`).
-      let backstopTimer: NodeJS.Timeout | undefined
-
-      defineInvokeHandler(context, electronSplashDismiss, async () => {
-        if (splashDismissed)
-          return
-        splashDismissed = true
-        if (backstopTimer)
-          clearTimeout(backstopTimer)
-        if (!deps.mainWindow.isDestroyed())
-          deps.mainWindow.show()
-        // NOTICE: Only reveal the stage when the user intends it visible.
-        // An unconditional show resurrects a hidden stage on every boot and
-        // the stray `show` event flips persisted `stageEnabled` false→true.
-        if (getStageVisibleState())
-          deps.stageWindow.show()
-        restoreCaption()
-        deps.splashWindow.destroy()
-      })
-
-      // NOTICE: Backstop for splash renderers that never dismiss (e.g. the
-      // `#/splash` route is not yet implemented, or its renderer crashed).
-      // Without this the deferred Control Strip would never appear.
-      backstopTimer = setTimeout(() => {
+      // NOTICE: Caption restore is deferred until splash dismissal so the caption cannot pop in
+      // before the coordinated reveal.
+      setTimeout(() => {
         if (splashDismissed)
           return
         console.warn('[@proj-airi/stage-tamagotchi] [Main] Splash did not dismiss in time, forcing coordinated reveal.')
         splashDismissed = true
-        if (!deps.mainWindow.isDestroyed())
-          deps.mainWindow.show()
+        if (!registryIsDestroyed(mainWindowView as never))
+          mainWindowView && get('main')?.show()
         if (getStageVisibleState())
-          deps.stageWindow.show()
+          get('stage')?.show()
         restoreCaption()
-        deps.splashWindow.destroy()
+        splashWindowManager.destroy()
       }, 30000)
 
       // NOTICE: Quit-time teardown of DI-built services is owned by the module-scope
-      // `before-quit` handler below, so it also runs when this callback never executes.
-
-      ipcMain.handle('save-backup-bundle', async (_event, data: { timestamp: string, files: Record<string, string>, customPath?: string }) => {
-        console.info('[Backup] Received backup bundle request')
-        const fs = await import('node:fs/promises')
-
-        if (typeof data?.timestamp !== 'string' || !/^[0-9T:.Z-]+$/.test(data.timestamp))
-          return { success: false, error: 'Invalid backup timestamp' }
-
-        const defaultPath = path.join(app.getPath('documents'), 'AIRI-Backups')
-        const savePath = path.resolve(data.customPath || defaultPath)
-
-        try {
-          await fs.mkdir(savePath, { recursive: true })
-
-          // Save files into a folder named with timestamp
-          const bundleDir = resolveInside(savePath, `backup-${data.timestamp}`)
-          if (!bundleDir)
-            return { success: false, error: 'Invalid backup directory' }
-          await fs.mkdir(bundleDir, { recursive: true })
-
-          for (const [filename, content] of Object.entries(data.files ?? {})) {
-            const filePath = resolveInside(bundleDir, filename)
-            if (!filePath)
-              return { success: false, error: `Invalid backup filename: ${filename}` }
-            await fs.writeFile(filePath, content)
-          }
-
-          console.info(`[Backup] Backup saved to ${bundleDir}`)
-          return { success: true, path: bundleDir }
-        }
-        catch (error) {
-          console.error('[Backup] Failed to save backup:', error)
-          throw error
-        }
-      })
-
-      ipcMain.handle('list-backups', async (_event, data: { customPath?: string }) => {
-        const fs = await import('node:fs/promises')
-
-        const defaultPath = path.join(app.getPath('documents'), 'AIRI-Backups')
-        const backupsPath = path.resolve(data.customPath || defaultPath)
-
-        try {
-          const entries = await fs.readdir(backupsPath, { withFileTypes: true })
-          const directories = []
-          for (const entry of entries) {
-            if (entry.isDirectory() && entry.name.startsWith('backup-')) {
-              const fullPath = path.join(backupsPath, entry.name)
-              const dateStr = entry.name.replace('backup-', '')
-              let dateParsed = dateStr
-              const match = dateStr.match(/^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2}\.\d+Z)$/)
-              if (match) {
-                dateParsed = `${match[1]}T${match[2]}:${match[3]}:${match[4]}`
-              }
-              directories.push({
-                name: entry.name,
-                path: fullPath,
-                date: dateParsed,
-              })
-            }
-          }
-          directories.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-          return { success: true, directories }
-        }
-        catch (error) {
-          console.error('[Backup] Failed to list backups:', error)
-          return { success: false, directories: [], error: String(error) }
-        }
-      })
-
-      ipcMain.handle('read-backup-files', async (_event, data: { backupDir: string }) => {
-        const fs = await import('node:fs/promises')
-
-        if (typeof data?.backupDir !== 'string' || !data.backupDir)
-          return { success: false, files: {}, error: 'Invalid backup directory' }
-
-        try {
-          const backupDir = path.resolve(data.backupDir)
-          const files = await fs.readdir(backupDir)
-          const contents: Record<string, string> = {}
-          for (const filename of files) {
-            const filePath = resolveInside(backupDir, filename)
-            if (filename.endsWith('.json') && filePath) {
-              const content = await fs.readFile(filePath, 'utf-8')
-              contents[filename] = content
-            }
-          }
-          return { success: true, files: contents }
-        }
-        catch (error) {
-          console.error('[Backup] Failed to read backup files:', error)
-          return { success: false, files: {}, error: String(error) }
-        }
-      })
-
-      // BYOS Local FS Sync IPC Handlers
-      ipcMain.handle('byos-fs:validate-path', async (_event, data: { path: string }) => {
-        const fs = await import('node:fs/promises')
-        try {
-          await fs.access(data.path)
-          // Try writing a temporary test file to ensure it's writable
-          const testFile = path.join(data.path, '.byos-write-test')
-
-          let handle
-          try {
-            handle = await fs.open(testFile, 'w')
-            await handle.writeFile('test')
-            try {
-              await handle.close()
-            }
-            catch (closeErr: any) {
-              if (closeErr.code !== 'EINVAL')
-                throw closeErr
-            }
-          }
-          catch (writeErr) {
-            if (handle) {
-              try {
-                await handle.close()
-              }
-              catch {}
-            }
-            throw writeErr
-          }
-
-          // Best-effort cleanup — if the file is still locked (e.g. from a prior crashed sync)
-          // the write already proved access, so tolerate EBUSY/ENOENT on unlink.
-          await fs.unlink(testFile).catch((unlinkErr: any) => {
-            if (unlinkErr.code !== 'ENOENT') {
-              console.warn('[BYOS-FS] Could not remove write-test file (non-fatal):', unlinkErr.message)
-            }
-          })
-          return { success: true }
-        }
-        catch (error) {
-          return { success: false, error: String(error) }
-        }
-      })
-
-      ipcMain.handle('byos-fs:write-file', async (_event, data: { dir: string, relPath: string, content: string, encoding?: 'utf-8' | 'base64', append?: boolean }) => {
-        const fs = await import('node:fs/promises')
-
-        const fullPath = resolveInside(path.resolve(data.dir), data.relPath)
-        if (!fullPath)
-          return { success: false, error: `Path escapes sync directory rejected: ${data.relPath}` }
-        try {
-          await fs.mkdir(path.dirname(fullPath), { recursive: true })
-          const buffer = data.encoding === 'base64'
-            ? Buffer.from(data.content, 'base64')
-            : data.content
-
-          let targetFullPath = fullPath
-          let finalBuffer: Buffer | string = buffer
-
-          // NOTICE: Option B Archive Compression — If uploading a PNG background, re-encode to AVIF via sharp in main process if sharp is available
-          if (data.relPath.startsWith('assets/backgrounds/') && data.relPath.endsWith('.png') && Buffer.isBuffer(buffer)) {
-            try {
-              const sharp = (await import('sharp')).default
-              const avifBuffer = await sharp(buffer)
-                .avif({ quality: 72, effort: 4, chromaSubsampling: '4:2:0' })
-                .toBuffer()
-              targetFullPath = fullPath.replace(/\.png$/, '.avif')
-              finalBuffer = avifBuffer
-            }
-            catch {
-              // If sharp is unavailable or fails, fall back to writing raw PNG
-            }
-          }
-
-          const flags = data.append ? 'a' : 'w'
-          let handle
-          try {
-            handle = await fs.open(targetFullPath, flags)
-            await handle.writeFile(finalBuffer)
-            try {
-              await handle.close()
-            }
-            catch (closeErr: any) {
-              if (closeErr.code !== 'EINVAL')
-                throw closeErr
-            }
-          }
-          catch (writeErr) {
-            if (handle) {
-              try {
-                await handle.close()
-              }
-              catch {}
-            }
-            throw writeErr
-          }
-
-          const stats = await fs.stat(targetFullPath)
-          return { success: true, mtime: stats.mtimeMs }
-        }
-        catch (error) {
-          console.error('[BYOS-FS] Failed to write file:', error)
-          return { success: false, error: String(error) }
-        }
-      })
-
-      ipcMain.handle('byos-fs:read-file', async (_event, data: { dir: string, relPath: string, encoding?: 'utf-8' | 'base64' }) => {
-        const fs = await import('node:fs/promises')
-
-        const fullPath = resolveInside(path.resolve(data.dir), data.relPath)
-        if (!fullPath)
-          return { success: false, error: `Path escapes sync directory rejected: ${data.relPath}` }
-        try {
-          const encoding = data.encoding || 'utf-8'
-          let handle
-          let buffer: Buffer
-          try {
-            handle = await fs.open(fullPath, 'r')
-            buffer = await handle.readFile()
-            try {
-              await handle.close()
-            }
-            catch (closeErr: any) {
-              if (closeErr.code !== 'EINVAL')
-                throw closeErr
-            }
-          }
-          catch (readErr) {
-            if (handle) {
-              try {
-                await handle.close()
-              }
-              catch {}
-            }
-            throw readErr
-          }
-
-          if (encoding === 'base64') {
-            return { success: true, content: buffer.toString('base64') }
-          }
-          else {
-            return { success: true, content: buffer.toString('utf-8') }
-          }
-        }
-        catch (error: any) {
-          if (error?.code === 'ENOENT') {
-            console.error(`[BYOS-FS] Failed to read file: ENOENT: no such file or directory, open '${fullPath}'`)
-          }
-          else {
-            console.error('[BYOS-FS] Failed to read file:', error)
-          }
-          return { success: false, error: String(error) }
-        }
-      })
-
-      ipcMain.handle('byos-fs:delete-file', async (_event, data: { dir: string, relPath: string }) => {
-        const fs = await import('node:fs/promises')
-
-        const fullPath = resolveInside(path.resolve(data.dir), data.relPath)
-        if (!fullPath)
-          return { success: false, error: `Path escapes sync directory rejected: ${data.relPath}` }
-        try {
-          await fs.unlink(fullPath)
-          return { success: true }
-        }
-        catch (error) {
-          if ((error as any).code === 'ENOENT') {
-            return { success: true }
-          }
-          console.error('[BYOS-FS] Failed to delete file:', error)
-          return { success: false, error: String(error) }
-        }
-      })
-
-      ipcMain.handle('byos-fs:list-files', async (_event, data: { dir: string }) => {
-        const fs = await import('node:fs/promises')
-
-        const root = path.resolve(data.dir)
-        try {
-          const results: Array<{ relPath: string, mtime: number, size: number }> = []
-          async function scan(currentDir: string) {
-            const entries = await fs.readdir(currentDir, { withFileTypes: true })
-            for (const entry of entries) {
-              const fullPath = resolveInside(currentDir, entry.name)
-              if (!fullPath)
-                continue
-              if (entry.isDirectory()) {
-                await scan(fullPath)
-              }
-              else if (entry.isFile()) {
-                const stat = await fs.stat(fullPath)
-                results.push({
-                  relPath: path.relative(root, fullPath),
-                  mtime: stat.mtimeMs,
-                  size: stat.size,
-                })
-              }
-            }
-          }
-          await scan(root)
-          return { success: true, files: results }
-        }
-        catch (error) {
-          if ((error as any).code === 'ENOENT') {
-            return { success: true, files: [] }
-          }
-          console.error('[BYOS-FS] Failed to list files:', error)
-          return { success: false, files: [], error: String(error) }
-        }
-      })
-
-      ipcMain.on('provider-validation-result', (_, data: { providerId: string, valid: boolean, reason: string, config: any }) => {
-        if (data.valid)
-          return
-
-        const status = 'FAIL'
-        const color = '\x1B[31m'
-        const reset = '\x1B[0m'
-        console.info(`${color}[Provider Validation]${reset} [${data.providerId}] ${status}`)
-        if (!data.valid) {
-          console.info(`  └─ Reason: ${data.reason}`)
-        }
-        if (data.config) {
-          // Keys only: provider secrets (Aliyun accessKeySecret, AWS secretAccessKey, …) must never reach the log.
-          console.info(`  └─ Config keys: ${Object.keys(data.config).join(', ')}`)
-        }
-      })
-
-      ipcMain.on('llm-raw-output', (_, data: { type: 'delta' | 'full', text: string, sessionId: string }) => {
-        const reset = '\x1B[0m'
-        const cyan = '\x1B[36m'
-        // const yellow = '\x1B[33m'
-        if (data.type === 'delta') {
-          /*
-          // Log deltas in yellow, but only if they are not just whitespace (too noisy otherwise)
-          if (data.text.trim()) {
-            console.info(`${yellow}[LLM Delta]${reset} ${data.text}`)
-          }
-          */
-        }
-        else {
-          console.info(`${cyan}[LLM Final Output]${reset} Session: ${data.sessionId}`)
-          console.info(`----------------------------------------`)
-          console.info(data.text)
-          console.info(`----------------------------------------`)
-        }
-      })
+      // `before-quit` coordinator below, so it also runs when this callback never executes.
+      void resolveInside
+      void Buffer
+      void electronApplySizePreset
+      void electronResetWindowPositions
+      void ensureWindowInVisibleBounds
+      void setupActorStageWindowManager
+      void setupAboutWindowReusable
+      void setupBeatSync
+      void setupCaptionWindowManager
+      void setupChatWindowReusableFunc
+      void setupCustomizerWindowManager
+      void setupDevtoolsWindow
+      void setupNoticeWindowManager
+      void setupOnboardingWindowManager
+      void setupSettingsWindowReusableFunc
+      void setupTray
+      void setupWidgetsWindowManager
     },
   })
 
   injeca.start().catch((err) => {
     console.error('[Main] DI start failed, services are not running:', err)
-    // NOTICE: console.error goes through @guiiai/logg, so the hook already captures it.
   })
 
   emitAppReady()
   openDebugger()
 
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
+  // TODO(port): app.on('browser-window-created') — Electron mirrors renderer console output
+  // into the session log; Electrobun exposes no per-webview console hook yet.
+}
 
-    window.webContents.on('console-message', (event) => {
-      const { level, message, lineNumber, sourceId } = event as unknown as {
-        level: string | number
-        message: string
-        lineNumber: number
-        sourceId: string
-      }
-      const where = sourceId ? `${sourceId.split('/').pop()}:${lineNumber}` : 'renderer'
-      // NOTICE: Mirror renderer console output into the session log file; @guiiai/logg never sees it.
-      const line = `[renderer:${window.id}] [${level}] ${message}  (${where})\n`
-      process.stdout.write(line)
-      void fileLogger.appendLog(line)
-    })
+// ============================================================================
+// Shutdown
+// ============================================================================
+
+onBeforeQuit(async () => {
+  try {
+    // NOTICE: We await the DI container stop sequence so every service can flush state or
+    // close handles.
+    await injeca.stop()
+  }
+  catch (err) {
+    console.error('[@proj-airi/stage-tamagotchi] Error during DI shutdown:', err)
+  }
+
+  try {
+    // NOTICE: Sensor polling is started at module scope by `createSensorsService`, so stop
+    // it here rather than in a DI callback that may never run.
+    const sensorsService = await pendingSensorsService
+    // NOTICE: `undefined` means the DI callback never reached the service (nothing to stop).
+    sensorsService?.stop()
+  }
+  catch (err) {
+    console.error('[@proj-airi/stage-tamagotchi] Failed to stop sensors service:', err)
+  }
+
+  try {
+    flushAllConfigs()
+  }
+  catch (err) {
+    console.error('[@proj-airi/stage-tamagotchi] Failed to flush configs:', err)
+  }
+
+  try {
+    cleanupMicToggleShortcut()
+  }
+  catch (err) {
+    console.error('[@proj-airi/stage-tamagotchi] Failed to release global shortcuts:', err)
+  }
+
+  // NOTICE: The session log must close last, and the quit must happen even if a step above threw.
+  try {
+    await fileLogger.close()
+  }
+  catch (err) {
+    console.error('[@proj-airi/stage-tamagotchi] Failed to close the session log:', err)
+  }
+})
+
+// NOTICE: Electrobun's `before-quit` carries an `{ allow }` response rather than an async
+// `preventDefault`, so teardown runs once (idempotently) and the originating quit proceeds.
+Electrobun.events.on('before-quit', () => {
+  void runShutdown()
+})
+
+// NOTICE: Handle termination signals so a terminal-launched app still tears down when the
+// terminal that started it goes away.
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+  process.on(signal, () => {
+    void runShutdown().finally(() => Utils.quit())
   })
-}).catch((err) => {
+}
+
+// TODO(port): app.on('window-all-closed') / app.on('activate') — Electrobun exposes neither;
+// `runtime.exitOnLastWindowClosed` covers the quit side, and the macOS dock-click restore is
+// expressed through the window registry (see windows/registry.ts).
+
+boot().catch((err) => {
   log.withError(err).error('Error during app initialization')
 })
 
-app.on('window-all-closed', () => {
-  emitAppWindowAllClosed()
-  if (platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-app.on('activate', (event) => {
-  event.preventDefault()
-  const allWindows = BrowserWindow.getAllWindows()
-
-  // NOTICE: Match by window identity, not title: the settings/chat titles are em-dash
-  // variants and the chat title is rewritten at runtime ("… - User Typing...").
-  // 1. Settings Window, 2. Chat Window
-  for (const window of [...createdSettingsWindows, ...createdChatWindows]) {
-    if (!window.isDestroyed() && window.isVisible()) {
-      window.focus()
-      return
-    }
-  }
-
-  // 3. Actor Stage Window
-  const stageWin = allWindows.find(w => !w.isDestroyed() && w.isVisible() && w.getTitle() === 'AIRI - Actor Stage')
-  if (stageWin) {
-    stageWin.focus()
-    return
-  }
-
-  // 4. Fallback to Control Strip / Main Window
-  const mainWin = allWindows.find(w => !w.isDestroyed() && (w as any).__is_main_window === true)
-  if (mainWin) {
-    mainWin.show()
-    mainWin.focus()
-  }
-})
-
-let quitTeardown: Promise<void> | null = null
-app.on('before-quit', async (event) => {
-  // NOTICE: A second quit request while teardown is in flight must wait for it instead
-  // of returning early and quitting before the cleanup it promised has finished.
-  if (quitTeardown)
-    return quitTeardown
-
-  event.preventDefault()
-
-  console.info('[@proj-airi/stage-tamagotchi] Shutdown sequence started...')
-
-  quitTeardown = (async () => {
-    try {
-      // NOTICE: We await the initialization-level hooks and the DI container stop
-      // sequence to ensure all services have a chance to flush state or close handles.
-      await emitAppBeforeQuit()
-      await injeca.stop()
-    }
-    catch (err) {
-      console.error('[@proj-airi/stage-tamagotchi] Error during shutdown sequence:', err)
-    }
-
-    try {
-      // NOTICE: Sensor polling is started at module scope by `createSensorsService`, so stop
-      // it here rather than in a DI callback that may never run.
-      const sensorsService = await pendingSensorsService
-      // NOTICE: `undefined` means the DI callback never reached the service (nothing to stop).
-      sensorsService?.stop()
-    }
-    catch (err) {
-      console.error('[@proj-airi/stage-tamagotchi] Failed to stop sensors service:', err)
-    }
-
-    try {
-      flushAllConfigs()
-    }
-    catch (err) {
-      console.error('[@proj-airi/stage-tamagotchi] Failed to flush configs:', err)
-    }
-
-    try {
-      cleanupMicToggleShortcut()
-    }
-    catch (err) {
-      console.error('[@proj-airi/stage-tamagotchi] Failed to release global shortcuts:', err)
-    }
-
-    console.info('[@proj-airi/stage-tamagotchi] Shutdown complete. Quitting...')
-
-    // NOTICE: The session log must close last, and the quit must happen even if a step above threw.
-    await fileLogger.close().catch((err) => {
-      console.error('[@proj-airi/stage-tamagotchi] Failed to close the session log:', err)
-    })
-    app.quit()
-  })()
-
-  return quitTeardown
-})
-
-// NOTICE: Handle termination signals to ensure Electron's quit sequence is triggered
-// even when the app is started from a terminal that is subsequently closed.
-process.on('SIGINT', () => app.quit())
-process.on('SIGTERM', () => app.quit())
-process.on('SIGHUP', () => app.quit())
+// NOTICE: kept referenced so the module graph keeps the build-config read (the CEF/dev
+// channel decides whether the dev-server URL or `views://` is used).
+void BuildConfig

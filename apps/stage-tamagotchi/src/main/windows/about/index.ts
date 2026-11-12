@@ -6,9 +6,8 @@ import { join, resolve } from 'node:path'
 
 import { BrowserWindow } from 'electron'
 
-import icon from '../../../../resources/icon.png?asset'
-
-import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electron/location'
+import { APP_ICON as icon } from '../../assets'
+import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
 import { createReusableWindow } from '../../libs/electron/window-manager'
 import { openExternalSafely } from '../shared/open-external'
 import { setupAboutWindowElectronInvokes } from './rpc/index.electron'

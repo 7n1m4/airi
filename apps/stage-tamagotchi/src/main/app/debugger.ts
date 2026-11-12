@@ -2,7 +2,7 @@ import http from 'node:http'
 
 import { env } from 'node:process'
 
-import { app, shell } from 'electron'
+import { Utils } from 'electrobun/main'
 
 export function setupDebugger() {
   if (/^true$/i.test(env.APP_REMOTE_DEBUG || '')) {
@@ -11,8 +11,9 @@ export function setupDebugger() {
       throw new Error(`Invalid remote debug port: ${env.APP_REMOTE_DEBUG_PORT}`)
     }
 
-    app.commandLine.appendSwitch('remote-debugging-port', String(remoteDebugPort))
-    app.commandLine.appendSwitch('remote-allow-origins', `http://localhost:${remoteDebugPort}`)
+    // TODO(port): `app.commandLine.appendSwitch` has no Electrobun equivalent — the remote
+    // debugging port belongs in `build.<platform>.chromiumFlags` (see electrobun.config.ts).
+    console.warn(`[Remote Debugging] APP_REMOTE_DEBUG=1 is set; add 'remote-debugging-port' to chromiumFlags to enable it (port ${remoteDebugPort})`)
   }
 }
 
@@ -39,7 +40,7 @@ export function openDebugger() {
 
           wsUrl = wsUrl.substring(5)
           console.info(`Inspect remotely: ${remoteDebugEndpoint}/devtools/inspector.html?ws=${wsUrl}`)
-          shell.openExternal(`${remoteDebugEndpoint}/devtools/inspector.html?ws=${wsUrl}`)
+          Utils.openExternal(`${remoteDebugEndpoint}/devtools/inspector.html?ws=${wsUrl}`)
         }
         catch (err) {
           console.error('[Remote Debugging] Failed to parse metadata from /json:', err)

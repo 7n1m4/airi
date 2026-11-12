@@ -1,12 +1,31 @@
-import type { BrowserWindow, Rectangle } from 'electron'
+import type { BrowserWindow, Rectangle } from 'electrobun/main'
 
-import { screen } from 'electron'
+import { Screen } from 'electrobun/main'
+
+/**
+ * Electrobun has no `getDisplayMatching`; pick the display with the most bounds overlap.
+ * Returns the primary display when nothing overlaps (mirrors Electron's fallback).
+ */
+export function displayMatching(bounds: Rectangle) {
+  const displays = Screen.getAllDisplays()
+  let best = displays[0] ?? Screen.getPrimaryDisplay()
+  let bestOverlap = 0
+  for (const display of displays) {
+    const db = display.bounds
+    const overlapX = Math.max(0, Math.min(bounds.x + bounds.width, db.x + db.width) - Math.max(bounds.x, db.x))
+    const overlapY = Math.max(0, Math.min(bounds.y + bounds.height, db.y + db.height) - Math.max(bounds.y, db.y))
+    const overlap = overlapX * overlapY
+    if (overlap > bestOverlap) {
+      bestOverlap = overlap
+      best = display
+    }
+  }
+  return best
+}
 
 export function currentDisplayBounds(window: BrowserWindow) {
-  const bounds = window.getBounds()
-  const nearbyDisplay = screen.getDisplayMatching(bounds)
-
-  return nearbyDisplay.bounds
+  const { width, height, x, y } = window.getFrame()
+  return displayMatching({ x, y, width, height }).bounds
 }
 
 interface SizeActual { actual: number }
@@ -165,8 +184,8 @@ export function heightFrom(bounds: Rectangle, sizeOptions: Size & { min?: Size, 
 }
 
 export function ensureWindowInVisibleBounds(bounds: Rectangle): Rectangle {
-  const displays = screen.getAllDisplays()
-  const primaryDisplay = screen.getPrimaryDisplay()
+  const displays = Screen.getAllDisplays()
+  const primaryDisplay = Screen.getPrimaryDisplay()
   const workArea = primaryDisplay.workArea
 
   let width = bounds.width

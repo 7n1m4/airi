@@ -10,10 +10,9 @@ import { defineInvokeHandler } from '@moeru/eventa'
 import { safeClose } from '@proj-airi/electron-vueuse/main'
 import { BrowserWindow as ElectronBrowserWindow } from 'electron'
 
-import icon from '../../../../resources/icon.png?asset'
-
 import { noticeWindowEventa } from '../../../shared/eventa'
-import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electron/location'
+import { APP_ICON as icon } from '../../assets'
+import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
 import { openExternalSafely } from '../shared/open-external'
 import { createReferencedWindowManager } from '../shared/referenced-window'
 

@@ -22,7 +22,7 @@ import process from 'node:process'
 
 import { Buffer } from 'node:buffer'
 
-import { dialog } from 'electron'
+import { Utils } from 'electrobun/main'
 
 // ============================================================================
 // Castagnoli CRC32C Engine (Matching LevelDB specification)
@@ -320,10 +320,13 @@ export function ensureLevelDBIntegrityOrHalt(userDataPath: string): boolean {
           console.error(`[LevelDBGuard] Diagnostic snapshot preserved at: ${diagDir}`)
           console.error(`${'='.repeat(70)}\n`)
 
-          try {
-            dialog.showErrorBox('Database Corruption Intercepted', message)
-          }
-          catch {}
+          // NOTICE: Electron's blocking `dialog.showErrorBox` is now `Utils.showMessageBox`,
+          // which is async; the process halts immediately after either way.
+          void Utils.showMessageBox({
+            type: 'error',
+            title: 'Database Corruption Intercepted',
+            message,
+          }).catch(() => {})
 
           process.exit(1)
         }

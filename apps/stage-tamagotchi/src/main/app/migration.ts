@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-import { app } from 'electron'
+import { Utils } from 'electrobun/main'
 
 const ESSENTIAL_DATA_DIRS = [
   'IndexedDB',
@@ -34,7 +34,7 @@ const TRANSIENT_PREFIXES = [
  */
 function getLegacyCandidatePaths(currentAppUserData: string): string[] {
   const platform = process.platform
-  const home = app.getPath('home')
+  const home = Utils.paths.home
   const candidates: string[] = []
 
   if (platform === 'linux') {
@@ -196,7 +196,7 @@ function copyDirectoryFiltered(srcDir: string, destDir: string): void {
 /**
  * Performs seamless one-time migration of existing AIRI databases and configurations
  * from legacy data directories into the new isolated target directory.
- * Returns the effective userData path that Electron should use.
+ * Returns the effective userData path the app should use.
  */
 export function ensureLegacyUserDataMigrated(targetUserDataPath: string): string {
   try {

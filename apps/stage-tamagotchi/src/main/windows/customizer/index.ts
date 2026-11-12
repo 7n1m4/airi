@@ -10,10 +10,9 @@ import { createContext } from '@moeru/eventa/adapters/electron/main'
 import { BrowserWindow as ElectronBrowserWindow, ipcMain } from 'electron'
 import { isMacOS } from 'std-env'
 
-import icon from '../../../../resources/icon.png?asset'
-
 import { electronCustomizerToggleVisibility, electronGetCustomizerWindowState } from '../../../shared/eventa'
-import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electron/location'
+import { APP_ICON as icon } from '../../assets'
+import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
 import { createReusableWindow } from '../../libs/electron/window-manager'
 import { showWindowOnAllWorkspaces } from '../shared/app-icon'
 import { openExternalSafely } from '../shared/open-external'

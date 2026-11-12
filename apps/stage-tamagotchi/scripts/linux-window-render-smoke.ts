@@ -1,24 +1,18 @@
 /**
- * Boots the real, built Electron app and asserts that the main window
+ * Boots the real, built Electrobun (CEF) app and asserts that the main window
  * actually renders content — not just that the process starts.
  *
  * This exists because Linux desktop breakage (frameless/transparent window
- * config, the Ozone/X11 vs Wayland command-line switches in
- * `src/main/index.ts` and `src/main/app/ozone.ts`, GPU sandboxing under
- * Xvfb) has historically only surfaced when a contributor happened to run
- * the app on their own Linux desktop. CI only compiled the app; nothing
- * launched it. Run this under `xvfb-run` in CI so it exercises the same
- * X11/Ozone code path most Linux users hit through XWayland.
+ * config, CEF flag plumbing in `electrobun.config.ts`, GPU init under a
+ * headless display) has historically only surfaced when a contributor happened
+ * to run the app on their own Linux desktop. CI only compiled the app; nothing
+ * launched it. Run this under `xvfb-run` (X11) or weston (Wayland) in CI so it
+ * exercises the display backend most Linux users hit.
  *
- * This intentionally does not drive the app through `computer_use` MCP the
- * way `desktop-overlay-live-window-smoke.ts` does — that requires a
- * platform executor (only `macos-local` and a remote SSH-bound
- * `linux-x11` runner exist today) that a plain CI runner cannot satisfy.
- * The bar here is lower and cheaper to keep green: did a window appear and
- * did the renderer mount real DOM. It also confirms the native
- * `BrowserWindow` itself became visible, not only that its renderer
- * mounted — a hidden window (`show: false`, `ready-to-show` never firing)
- * still exposes a CDP target and would otherwise pass the DOM check alone.
+ * The bar is deliberately low and cheap to keep green: did a window appear and
+ * did the renderer mount real DOM. It also confirms the window is *visible*,
+ * not only that its renderer mounted — a hidden window still exposes a CDP
+ * target and would otherwise pass the DOM check alone.
  */
 
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
@@ -27,7 +21,7 @@ import type { WriteStream } from 'node:fs'
 import { Buffer } from 'node:buffer'
 import { spawn } from 'node:child_process'
 import { createWriteStream } from 'node:fs'
-import { access, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import { access, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import { arch, platform, release } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { env, exit, kill as killProcess, version as nodeVersion } from 'node:process'
@@ -55,97 +49,247 @@ const runId = new Date().toISOString().replaceAll(':', '-').replaceAll('.', '-')
 const reportDir = env.SMOKE_REPORT_DIR?.trim()
   ? resolve(env.SMOKE_REPORT_DIR.trim())
   : resolve(repoDir, '.temp', `linux-window-render-smoke-${runId}`)
-const userDataDir = resolve(reportDir, 'stage-user-data')
 const screenshotPath = resolve(reportDir, 'main-window.png')
 const stageLogPath = resolve(reportDir, 'stage.log')
 const reportPath = resolve(reportDir, 'report.json')
 
 /**
- * Ozone backend the caller expects Chromium to pick (`x11` or `wayland`).
- * When set, the smoke fails unless every Electron child process that
- * carries `--ozone-platform` uses this value, so the Wayland job cannot pass
- * through an XWayland fallback and the X11 job cannot drift to Wayland.
+ * Display server the caller expects the app to run on (`x11` or `wayland`).
+ * CEF picks its own backend (Electrobun's Linux defaults pin `ozone-platform=x11`
+ * plus `use-x11`, so a Wayland session only reaches CEF through XWayland when
+ * `DISPLAY` is set). When this is set, the smoke fails unless the session the
+ * app was launched in matches, so the Wayland job cannot silently pass through
+ * XWayland and the X11 job cannot drift.
  */
-const expectedOzonePlatform = env.SMOKE_EXPECT_OZONE_PLATFORM?.trim() || undefined
+const expectedSessionType = env.SMOKE_EXPECT_SESSION_TYPE?.trim() || undefined
+
+/** Prebuilt app bundle to launch instead of building one (e.g. `build/dev-linux-x64/AIRI-dev`). */
+const appDirOverride = env.SMOKE_APP_DIR?.trim() || undefined
 
 /**
  * Time budget for the renderer to mount `#app` and become visible after its
- * CDP target appears. Vue mounts asynchronously and cold GPU init under
+ * CDP target appears. Vue mounts asynchronously and cold CEF init under
  * Xvfb/Weston is slow on shared runners, so this polls instead of sleeping
  * for a fixed interval.
  */
 const renderCheckTimeoutMs = 60_000
 const renderCheckIntervalMs = 500
 
-const requiredWorkspaceBuildOutputs = [
-  'packages/electron-screen-capture/dist/main.mjs',
-  'packages/electron-vueuse/dist/main/index.mjs',
-  'packages/server-runtime/dist/server.mjs',
+/** Hutch's own build script (`hutch.config.ts` → `build`), in order. */
+const buildSteps: { label: string, command: string, args: string[], env?: Record<string, string> }[] = [
+  { label: 'electrobun prepare', command: 'hutch', args: ['electrobun', 'prepare'] },
+  // The renderer bundle needs a large V8 heap: Vite OOMs at Node's ~2 GB default.
+  {
+    label: 'vite build',
+    command: 'hutch',
+    args: ['pm', 'exec', '--', 'vite', 'build'],
+    env: { NODE_OPTIONS: '--max-old-space-size=12288' },
+  },
+  { label: 'electrobun build', command: 'hutch', args: ['electrobun', 'build', '--env=stable'] },
 ]
 
-const stageTamagotchiEntryOutputs = [
-  'apps/stage-tamagotchi/out/launcher/index.mjs',
-  'apps/stage-tamagotchi/out/main/index.js',
-]
-
-async function ensureSmokePrerequisites() {
-  if (typeof WebSocket !== 'function') {
-    throw new TypeError('APP_START_FAILED: WebSocket is unavailable in this Node runtime. Run through the package script or set NODE_OPTIONS=--experimental-websocket.')
-  }
-
-  const missingOutputs: string[] = []
-  for (const relativePath of requiredWorkspaceBuildOutputs) {
+/**
+ * Resolves the `hutch` launcher and the dir to prepend to PATH so nested
+ * `hutch` invocations resolve too. CI installs the `electrobun`
+ * devDependency (whose bin forwards to a cached Hutch) but Hutch itself lives
+ * in `~/.hutch/bin`, so PATH alone is not enough.
+ */
+async function resolveHutch(): Promise<{ command: string, pathPrepend: string }> {
+  const home = env.HOME?.trim() || env.USERPROFILE?.trim()
+  const bundled = home ? join(home, '.hutch', 'bin', 'hutch') : undefined
+  if (bundled) {
     try {
-      await access(resolve(repoDir, relativePath))
-    }
-    catch {
-      missingOutputs.push(relativePath)
-    }
-  }
-
-  let hasStageEntry = false
-  for (const relativePath of stageTamagotchiEntryOutputs) {
-    try {
-      await access(resolve(repoDir, relativePath))
-      hasStageEntry = true
-      break
+      await access(bundled)
+      return { command: bundled, pathPrepend: join(home, '.hutch', 'bin') }
     }
     catch {}
   }
-  if (!hasStageEntry) {
-    missingOutputs.push(stageTamagotchiEntryOutputs[0])
+  return { command: env.HUTCH?.trim() || 'hutch', pathPrepend: join(home ?? '.', '.hutch', 'bin') }
+}
+
+/** Hutch's per-target output dir: `build/<env>-<platform>-<arch>/<Name>/`. */
+async function findBuiltAppDirs(): Promise<string[]> {
+  const buildRoot = resolve(packageDir, 'build')
+  let targets: string[]
+  try {
+    targets = await readdir(buildRoot)
+  }
+  catch {
+    return []
   }
 
-  if (missingOutputs.length === 0)
-    return
+  const found: string[] = []
+  for (const target of targets) {
+    if (!/-linux-(x64|arm64)$/.test(target))
+      continue
+    const appRoot = join(buildRoot, target)
+    let entries: string[]
+    try {
+      entries = await readdir(appRoot)
+    }
+    catch {
+      continue
+    }
+    for (const entry of entries) {
+      const candidate = join(appRoot, entry)
+      if (await isLaunchableAppDir(candidate))
+        found.push(candidate)
+    }
+  }
+  return found
+}
+
+/** A launchable bundle is a dir whose `bin/launcher` sits next to CEF's `libcef.so`. */
+async function isLaunchableAppDir(candidate: string): Promise<boolean> {
+  for (const relative of ['bin/launcher', 'bin/libcef.so', 'bin/cef/libcef.so']) {
+    try {
+      await access(join(candidate, relative))
+    }
+    catch {
+      return false
+    }
+  }
+  return true
+}
+
+/**
+ * `hutch electrobun build --env=stable` ships the runnable tree as a
+ * `.tar.zst` under `artifacts/` (the `build/` copy only holds the installer
+ * stub), so unpack it into the report dir and launch from there.
+ */
+async function extractPackagedApp(): Promise<string | undefined> {
+  const artifactRoot = resolve(packageDir, 'artifacts')
+  let entries: string[]
+  try {
+    entries = await readdir(artifactRoot)
+  }
+  catch {
+    return undefined
+  }
+
+  const archive = entries.find(name => /^stable-linux-x64-.*\.tar\.zst$/.test(name))
+  if (!archive)
+    return undefined
+
+  const destination = resolve(reportDir, 'app')
+  await rm(destination, { recursive: true, force: true })
+  await mkdir(destination, { recursive: true })
+  const extracted = spawn('tar', ['--zstd', '-xf', join(artifactRoot, archive), '-C', destination], {
+    cwd: repoDir,
+    stdio: 'pipe',
+  })
+  const { promise, resolve: resolveExit } = Promise.withResolvers<string>()
+  let text = ''
+  extracted.stdout.on('data', chunk => (text = (text + String(chunk)).slice(-2000)))
+  extracted.stderr.on('data', chunk => (text = (text + String(chunk)).slice(-2000)))
+  extracted.once('exit', () => resolveExit(text))
+  const tail = await promise
+  if (extracted.exitCode !== 0)
+    throw new Error(`APP_START_FAILED: could not unpack ${archive}: ${tail}`)
+
+  for (const entry of await readdir(destination)) {
+    const candidate = join(destination, entry)
+    if (await isLaunchableAppDir(candidate))
+      return candidate
+  }
+  return undefined
+}
+
+/**
+ * Resolves the app bundle to launch: an explicit override wins, then an
+ * already-built tree, then a Hutch build (followed by unpacking the packaged
+ * archive). Throws with the build command when nothing runnable is found.
+ */
+async function ensureAppDir(onStep: (label: string) => void): Promise<string> {
+  if (appDirOverride) {
+    if (!await isLaunchableAppDir(appDirOverride))
+      throw new Error(`APP_START_FAILED: SMOKE_APP_DIR is not a launchable bundle (needs bin/launcher and bin/cef/libcef.so): ${appDirOverride}`)
+    return appDirOverride
+  }
+
+  const existing = await findBuiltAppDirs()
+  if (existing.length > 0)
+    return existing[0]
+
+  const { command: hutchCommand, pathPrepend } = await resolveHutch()
+  const path = env.PATH ? `${pathPrepend}:${env.PATH}` : pathPrepend
+  for (const step of buildSteps) {
+    onStep(step.label)
+    const command = step.command === 'hutch' ? hutchCommand : step.command
+    const child = spawn(command, step.args, {
+      cwd: packageDir,
+      env: { ...env, PATH: path, ...step.env },
+      stdio: 'pipe',
+    })
+    const { promise, resolve: resolveExit, reject: rejectExit } = Promise.withResolvers<string>()
+    let text = ''
+    child.stdout.on('data', chunk => (text = (text + String(chunk)).slice(-4000)))
+    child.stderr.on('data', chunk => (text = (text + String(chunk)).slice(-4000)))
+    child.once('exit', (code, signal) => {
+      if (code === 0)
+        resolveExit(text)
+      else
+        rejectExit(new Error(`APP_START_FAILED: build step "${step.label}" exited with code=${String(code)} signal=${String(signal)}\n${text}`))
+    })
+    console.info(`[build] ${step.label} ok\n${await promise}`)
+  }
+
+  const built = await findBuiltAppDirs()
+  if (built.length > 0)
+    return built[0]
+
+  const unpacked = await extractPackagedApp()
+  if (unpacked)
+    return unpacked
 
   throw new Error([
-    'APP_START_FAILED: required workspace build outputs are missing.',
-    `Missing: ${missingOutputs.join(', ')}`,
-    'Build stage-tamagotchi dependencies before this smoke.',
-    'Suggested command: pnpm -F \'@proj-airi/stage-tamagotchi^...\' --if-present build',
+    'APP_START_FAILED: Hutch build finished but no launchable bundle was found.',
+    `Looked for bin/launcher + bin/cef/libcef.so under ${resolve(packageDir, 'build')}/<env>-linux-<arch>/ and ${resolve(packageDir, 'artifacts')}.`,
+    `Build manually with: cd apps/stage-tamagotchi && ${buildSteps.map(step => [step.command, ...step.args].join(' ')).join(' && ')}`,
   ].join(' '))
 }
 
-function startStage(debugPort: number): ChildProcessWithoutNullStreams {
-  // Keeps the run hermetic: a fresh user-data dir per run means no persisted
-  // onboarding state, window bounds, or provider config leak between runs.
-  const ozonePlatform = expectedOzonePlatform || env.ELECTRON_OZONE_PLATFORM
-  const ozoneHint = ozonePlatform || env.ELECTRON_OZONE_PLATFORM_HINT || 'auto'
-  return spawn('pnpm', ['-F', '@proj-airi/stage-tamagotchi', 'start'], {
-    cwd: repoDir,
+/** Owns the spawned launcher plus the process group it leads, so cleanup can signal the whole tree. */
+interface StageProcess {
+  child: ChildProcessWithoutNullStreams
+  /** `child.pid` is the group leader; kept separately so the narrowed value survives into cleanup. */
+  processGroupId?: number
+}
+
+/**
+ * Starts the packaged app. Keeps the run hermetic by pointing `HOME` and the
+ * XDG data/state/cache/config roots at the per-run report dir: CEF derives its
+ * `root_cache_path` from `$HOME/.cache/<identifier>/<channel>/CEF`
+ * (nativeWrapper.cpp) and Electrobun's `appDataRoot()` from
+ * `$XDG_DATA_HOME`/`HOME`, and Electrobun exposes no `--user-data-dir`
+ * equivalent, so redirecting the roots is the only way to keep state from
+ * leaking between runs.
+ *
+ * `XDG_RUNTIME_DIR` is deliberately inherited: that is where the Wayland
+ * compositor's socket lives, so overriding it would break the Wayland job.
+ */
+function startStage(appDir: string, debugPort: number): StageProcess {
+  const child = spawn(join(appDir, 'bin', 'launcher'), [], {
+    cwd: appDir,
     detached: true,
     env: {
       ...env,
-      ELECTRON_OZONE_PLATFORM_HINT: ozoneHint,
-      ...(ozonePlatform ? { ELECTRON_OZONE_PLATFORM: ozonePlatform } : {}),
-      APP_REMOTE_DEBUG: 'true',
-      APP_REMOTE_DEBUG_PORT: String(debugPort),
-      APP_REMOTE_DEBUG_NO_OPEN: 'true',
-      APP_USER_DATA_PATH: userDataDir,
+      // Electrobun reads the CEF debug port from `chromiumFlags['remote-debugging-port']`
+      // baked into Resources/build.json at build time; this env var overrides it per launch
+      // (see chromium_flags.h resolveRemoteDebugging), which is what lets each run use a
+      // freshly allocated free port instead of scanning 9222-9232.
+      ELECTROBUN_CEF_REMOTE_DEBUGGING_PORT: String(debugPort),
+      HOME: reportDir,
+      XDG_DATA_HOME: join(reportDir, 'xdg-data'),
+      XDG_STATE_HOME: join(reportDir, 'xdg-state'),
+      XDG_CACHE_HOME: join(reportDir, 'xdg-cache'),
+      XDG_CONFIG_HOME: join(reportDir, 'xdg-config'),
+      // Inherited (not overridden): the Wayland job's compositor socket lives here.
+      ...(env.XDG_RUNTIME_DIR ? {} : { XDG_RUNTIME_DIR: join(reportDir, 'xdg-runtime') }),
     },
     stdio: 'pipe',
   })
+  return { child, processGroupId: child.pid }
 }
 
 function isProcessGroupAlive(pid: number): boolean {
@@ -158,22 +302,22 @@ function isProcessGroupAlive(pid: number): boolean {
   }
 }
 
-async function stopStage(stageProcess: ChildProcessWithoutNullStreams | undefined) {
-  if (!stageProcess)
+async function stopStage(stage: StageProcess | undefined) {
+  if (!stage)
     return
 
+  const { child, processGroupId } = stage
   // NOTICE:
-  // The pnpm wrapper can exit while Electron children still run in its
-  // process group (CI logged "Terminate orphan process: electron"). Check
-  // the group, not the wrapper's exit code, so no Electron outlives the smoke.
-  const groupAlive = stageProcess.pid !== undefined && isProcessGroupAlive(stageProcess.pid)
-  if (stageProcess.exitCode !== null && !groupAlive)
+  // The launcher re-execs itself to set LD_PRELOAD and CEF spawns helpers, all
+  // inside this process group. Check the group, not the wrapper's exit code,
+  // so no CEF child outlives the smoke.
+  if (child.exitCode !== null && (processGroupId === undefined || !isProcessGroupAlive(processGroupId)))
     return
 
   const signalStageProcessGroup = (signal: NodeJS.Signals) => {
     try {
-      if (stageProcess.pid) {
-        killProcess(-stageProcess.pid, signal)
+      if (processGroupId !== undefined) {
+        killProcess(-processGroupId, signal)
         return
       }
     }
@@ -182,20 +326,17 @@ async function stopStage(stageProcess: ChildProcessWithoutNullStreams | undefine
       // is unavailable on this platform.
     }
 
-    stageProcess.kill(signal)
+    child.kill(signal)
   }
 
   signalStageProcessGroup('SIGTERM')
-  const pid = stageProcess.pid
-  if (pid === undefined) {
-    await Promise.race([
-      new Promise(resolve => stageProcess.once('exit', resolve)),
-      sleep(5_000).then(() => signalStageProcessGroup('SIGKILL')),
-    ])
+  if (processGroupId === undefined) {
+    const { promise, resolve } = Promise.withResolvers<void>()
+    child.once('exit', () => resolve())
+    await Promise.race([promise, sleep(5_000).then(() => signalStageProcessGroup('SIGKILL'))])
     return
   }
-
-  await waitFor('stage process group exit', () => isProcessGroupAlive(pid) ? undefined : true, 5_000, 100)
+  await waitFor('stage process group exit', () => isProcessGroupAlive(processGroupId) ? undefined : true, 5_000, 100)
     .catch(() => signalStageProcessGroup('SIGKILL'))
 }
 
@@ -204,18 +345,17 @@ async function stopStage(stageProcess: ChildProcessWithoutNullStreams | undefine
  * artifact) and rejects if the stage exits before the smoke finishes. Only
  * the tail is inlined into the error so the job log stays readable.
  */
-function rejectWhenStageExits(stageProcess: ChildProcessWithoutNullStreams, log: WriteStream): Promise<never> {
-  const promise = new Promise<never>((_, reject) => {
-    let tail = ''
-    const collect = (chunk: Buffer) => {
-      log.write(chunk)
-      tail = (tail + chunk.toString('utf-8')).slice(-4000)
-    }
-    stageProcess.stdout.on('data', collect)
-    stageProcess.stderr.on('data', collect)
-    stageProcess.once('exit', (code, signal) => {
-      reject(new Error(`stage-tamagotchi exited with code=${String(code)} signal=${String(signal)}\n${tail}`))
-    })
+function rejectWhenStageExits(stage: StageProcess, log: WriteStream): Promise<never> {
+  const { promise, reject } = Promise.withResolvers<never>()
+  let tail = ''
+  const collect = (chunk: Buffer) => {
+    log.write(chunk)
+    tail = (tail + chunk.toString('utf-8')).slice(-4000)
+  }
+  stage.child.stdout.on('data', collect)
+  stage.child.stderr.on('data', collect)
+  stage.child.once('exit', (code, signal) => {
+    reject(new Error(`stage-tamagotchi exited with code=${String(code)} signal=${String(signal)}\n${tail}`))
   })
   // Callers race this against each phase; a late exit during cleanup must
   // not surface as an unhandled rejection.
@@ -224,13 +364,13 @@ function rejectWhenStageExits(stageProcess: ChildProcessWithoutNullStreams, log:
 }
 
 async function findMainWindowTarget(debugPort: number) {
-  // The main window is the only eagerly-created window loaded at its
-  // hash-router root ('/'); every other window (settings, chat, onboarding,
-  // desktop-overlay, ...) loads a nested route.
+  // The main window is the only eagerly-created window loaded at the renderer
+  // root (`views://main/index.html`, optionally with the hash-router's `#/`);
+  // every other window (settings, chat, onboarding, ...) loads a nested route.
   return await findDebugTarget(
     debugPort,
     'main window debug target',
-    target => target.type === 'page' && /#\/?$/.test(target.url),
+    target => target.type === 'page' && /(index\.html)?#?\/?$/.test(target.url),
   )
 }
 
@@ -267,10 +407,8 @@ function renderCheckFailure(check: RenderCheck): string | undefined {
     return `document.readyState=${check.readyState}`
   if (check.appRootChildCount <= 0)
     return `#app root has no children (appRootChildCount=${check.appRootChildCount}). The window likely came up blank.`
-  // A hidden window (ready-to-show never fired) still passes the DOM checks
-  // over CDP, but Chromium reports it as visibilityState='hidden'. The
-  // main-process BrowserWindow.isVisible() is unreachable: its inspector
-  // cannot import() the ESM main bundle.
+  // A hidden window (the native window never shown) still passes the DOM
+  // checks over CDP, but Chromium reports it as visibilityState='hidden'.
   if (check.visibilityState !== 'visible')
     return `document.visibilityState=${check.visibilityState}; the window is not visible`
   if (check.innerWidth <= 0 || check.innerHeight <= 0)
@@ -311,61 +449,6 @@ async function collectRendererDiagnostics(client: CdpClient, diagnostics: Render
   await client.send('Runtime.enable')
 }
 
-interface StageProcess {
-  pid: number
-  executable: string
-  /** Chromium `--type=` (gpu-process, renderer, zygote, utility); absent for the browser process and wrappers. */
-  type?: string
-  ozonePlatform?: string
-}
-
-/**
- * Lists the processes in the stage process group with the Chromium switches
- * that identify which display backend each one ran. The browser process
- * resolves `ozone-platform-hint=auto` and forwards a concrete
- * `--ozone-platform` to its children, so this shows the backend that was
- * actually used rather than the one requested. Linux-only (`/proc`);
- * returns an empty list when nothing could be read.
- */
-async function readStageProcesses(processGroupId: number): Promise<StageProcess[]> {
-  let entries: string[]
-  try {
-    entries = await readdir('/proc')
-  }
-  catch {
-    return []
-  }
-
-  const processes: StageProcess[] = []
-  for (const entry of entries) {
-    if (!/^\d+$/.test(entry))
-      continue
-    try {
-      // /proc/<pid>/stat is "pid (comm) state ppid pgrp ...". comm may
-      // contain spaces or ')', so split after the last ')': index 2 is pgrp.
-      const stat = await readFile(join('/proc', entry, 'stat'), 'utf-8')
-      const fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ')
-      if (Number(fields[2]) !== processGroupId)
-        continue
-      // Chromium rewrites its process title, so child cmdlines are one
-      // space-joined string instead of NUL-separated argv. Split on both;
-      // the switches read here never contain spaces.
-      const argv = (await readFile(join('/proc', entry, 'cmdline'), 'utf-8')).split(/[\0 ]/).filter(Boolean)
-      const switchValue = (name: string) => argv.find(arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3)
-      processes.push({
-        pid: Number(entry),
-        executable: argv[0] ?? '',
-        type: switchValue('type'),
-        ozonePlatform: switchValue('ozone-platform'),
-      })
-    }
-    catch {
-      // The process exited between readdir and read; skip it.
-    }
-  }
-  return processes.sort((left, right) => left.pid - right.pid)
-}
-
 async function readBrowserVersion(debugPort: number): Promise<Record<string, unknown> | undefined> {
   try {
     return await fetchJson<Record<string, unknown>>(`http://127.0.0.1:${debugPort}/json/version`)
@@ -376,28 +459,40 @@ async function readBrowserVersion(debugPort: number): Promise<Record<string, unk
 }
 
 /**
+ * The display server the app actually ran on, read from the session the smoke
+ * itself was launched in (CEF picks its GDK backend from these, not from a
+ * Chromium switch this script could set).
+ */
+function describeSession() {
+  const wayland = env.WAYLAND_DISPLAY?.trim() || undefined
+  const x11 = env.DISPLAY?.trim() || undefined
+  const declared = env.XDG_SESSION_TYPE?.trim() || undefined
+  const actual = wayland ? 'wayland' : (x11 ? 'x11' : undefined)
+  return { actual, declared, display: x11, waylandDisplay: wayland, xdgSessionType: declared }
+}
+
+/**
  * Runtime facts that decide which Linux code path ran. Recorded in every
  * report so a CI failure can be replayed locally with the same display
  * server, session type, and toolchain.
  */
-function describeEnvironment() {
+function describeEnvironment(appDir: string, debugPort: number) {
   return {
     node: nodeVersion,
     platform: platform(),
     arch: arch(),
     kernel: release(),
-    display: env.DISPLAY,
-    waylandDisplay: env.WAYLAND_DISPLAY,
-    xdgSessionType: env.XDG_SESSION_TYPE,
-    electronDisableSandbox: env.ELECTRON_DISABLE_SANDBOX,
+    appDir,
+    cefRemoteDebuggingPort: debugPort,
+    session: describeSession(),
+    expectedSessionType,
     lang: env.LANG,
     tz: env.TZ,
-    expectedOzonePlatform,
   }
 }
 
 async function main() {
-  let stageProcess: ChildProcessWithoutNullStreams | undefined
+  let stage: StageProcess | undefined
   let client: CdpClient | undefined
   let stageLog: WriteStream | undefined
 
@@ -406,20 +501,28 @@ async function main() {
     ok: false,
     phase: 'prerequisites',
     reportDir,
-    environment: describeEnvironment(),
   }
   const rendererDiagnostics: RendererDiagnostic[] = []
   report.rendererDiagnostics = rendererDiagnostics
 
   try {
-    await ensureSmokePrerequisites()
+    if (typeof WebSocket !== 'function') {
+      throw new TypeError('APP_START_FAILED: WebSocket is unavailable in this Node runtime. Run through the package script or set NODE_OPTIONS=--experimental-websocket.')
+    }
+
     await mkdir(reportDir, { recursive: true })
     stageLog = createWriteStream(stageLogPath)
 
+    report.phase = 'build'
+    const appDir = await ensureAppDir(label => (report.buildStep = label))
+    report.appDir = appDir
+    report.environment = describeEnvironment(appDir, 0)
+
     report.phase = 'launch'
     const debugPort = await findAvailablePort()
-    stageProcess = startStage(debugPort)
-    const stageExited = rejectWhenStageExits(stageProcess, stageLog)
+    report.environment = describeEnvironment(appDir, debugPort)
+    stage = startStage(appDir, debugPort)
+    const stageExited = rejectWhenStageExits(stage, stageLog)
 
     await Promise.race([waitForRemoteDebug(debugPort), stageExited]).catch((error) => {
       throw new Error(`APP_START_FAILED: ${errorMessageFromValue(error)}`)
@@ -432,6 +535,7 @@ async function main() {
     })
     if (!mainWindowTarget.webSocketDebuggerUrl)
       throw new Error('APP_START_FAILED: main window target missing webSocketDebuggerUrl')
+    report.mainWindowUrl = mainWindowTarget.url
 
     client = await CdpClient.connect(mainWindowTarget.webSocketDebuggerUrl)
     await collectRendererDiagnostics(client, rendererDiagnostics)
@@ -454,24 +558,15 @@ async function main() {
     })
     report.check = check
 
-    report.phase = 'ozone-platform'
-    const stageProcesses = stageProcess.pid !== undefined ? await readStageProcesses(stageProcess.pid) : []
-    const ozonePlatforms = [...new Set(stageProcesses.flatMap(process => process.ozonePlatform ? [process.ozonePlatform] : []))].sort()
-    report.stageProcesses = stageProcesses
-    report.ozonePlatforms = ozonePlatforms
-    // Under both Wayland and X11, native display server may run without explicit child switch injection
-    // if Chromium runs through hint auto-detection or Weston headless.
-    if (expectedOzonePlatform) {
-      if (ozonePlatforms.length > 0) {
-        if (ozonePlatforms.length !== 1 || ozonePlatforms[0] !== expectedOzonePlatform)
-          throw new Error(`OZONE_PLATFORM_MISMATCH: expected ${expectedOzonePlatform}, Electron child processes ran with [${ozonePlatforms.join(', ')}]`)
-      }
-      else if (expectedOzonePlatform === 'wayland' && env.DISPLAY && !env.WAYLAND_DISPLAY) {
-        throw new Error(`OZONE_PLATFORM_MISMATCH: expected ${expectedOzonePlatform}, Electron child processes ran with [] and session is not pure Wayland`)
-      }
-      else if (expectedOzonePlatform !== 'x11' && expectedOzonePlatform !== 'wayland') {
-        throw new Error(`OZONE_PLATFORM_MISMATCH: expected ${expectedOzonePlatform}, Electron child processes ran with []`)
-      }
+    report.phase = 'session-type'
+    // CEF has no Ozone switch of its own to assert on: Electrobun's Linux
+    // defaults pin `ozone-platform=x11`/`use-x11`, so a Wayland session only
+    // reaches CEF through XWayland. Assert on the session that is actually
+    // running instead, which is what decides that code path.
+    if (expectedSessionType) {
+      const session = describeSession()
+      if (session.actual !== expectedSessionType)
+        throw new Error(`SESSION_TYPE_MISMATCH: expected ${expectedSessionType}, app ran in ${session.actual ?? 'no display'}`)
     }
 
     report.phase = 'screenshot'
@@ -491,7 +586,7 @@ async function main() {
   }
   finally {
     client?.close()
-    await stopStage(stageProcess)
+    await stopStage(stage)
     stageLog?.end()
     // Create the dir in case prerequisites failed before it existed. A
     // failed report write must not mask the smoke's own error.

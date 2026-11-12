@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { initScreenCaptureForWindow } from '@proj-airi/electron-screen-capture/main'
 import { BrowserWindow } from 'electron'
 
-import { baseUrl, getElectronMainDirname, load } from '../../libs/electron/location'
+import { baseUrl, getElectronMainDirname, load } from '../../libs/electrobun/location'
 import { createReusableWindow } from '../../libs/electron/window-manager'
 
 export interface BeatSyncWindowManager {

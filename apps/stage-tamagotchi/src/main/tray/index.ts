@@ -20,10 +20,8 @@ import { app, ipcMain, Menu, nativeImage, Tray } from 'electron'
 import { debounce, once } from 'es-toolkit'
 import { isMacOS } from 'std-env'
 
-import icon from '../../../resources/icon.png?asset'
-import macOSTrayIcon from '../../../resources/tray-icon-macos.png?asset'
-
 import { electronAppIconGet, electronAppIconSet } from '../../shared/eventa'
+import { APP_ICON as icon, TRAY_ICON_MACOS as macOSTrayIcon } from '../assets'
 import { onAppBeforeQuit } from '../libs/bootkit/lifecycle'
 import { AppIconVisibility } from '../windows/shared/app-icon'
 import { toggleWindowShow } from '../windows/shared/window'

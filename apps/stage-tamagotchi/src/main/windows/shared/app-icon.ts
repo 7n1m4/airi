@@ -1,49 +1,30 @@
-import type { BrowserWindow as ElectronBrowserWindow, Event } from 'electron'
+import type { BrowserWindow } from 'electrobun/main'
 
 import type { globalAppConfigSchema } from '../../configs/global'
 import type { Config } from '../../libs/electron/persistence'
 
-import { app, BrowserWindow } from 'electron'
-import { isWindows } from 'std-env'
-
-// Electron has no getter for `skipTaskbar`. Utility windows register here,
-// so that a restore does not add them to the Windows taskbar.
-const taskbarExcludedWindows = new WeakSet<Pick<ElectronBrowserWindow, 'setSkipTaskbar'>>()
-
-/** Keeps a utility window out of the Windows taskbar when the user shows the app icon again. */
-export function excludeWindowFromTaskbar(window: Pick<ElectronBrowserWindow, 'setSkipTaskbar'>): void {
-  taskbarExcludedWindows.add(window)
-}
+import { all } from '../registry'
 
 /**
- * Shows a window on all workspaces. A hidden macOS Dock icon stays hidden.
+ * Shows a window on all workspaces.
  *
- * Use this function for each window that can open after the tray exists.
- * The Electron default changes the macOS process type, and that change shows the Dock icon again.
+ * TODO(port): Electron's `{ skipTransformProcessType }` variant kept the macOS Dock icon hidden;
+ * Electrobun's `setVisibleOnAllWorkspaces(bool)` has no such option, so a hidden Dock icon may
+ * reappear on the first call — see docs/design-electrobun-port.md §3.1.
  */
-export function showWindowOnAllWorkspaces(window: Pick<ElectronBrowserWindow, 'setVisibleOnAllWorkspaces'>): void {
-  // `app.dock` exists only on macOS.
-  window.setVisibleOnAllWorkspaces(true, { skipTransformProcessType: app.dock?.isVisible() === false })
+export function showWindowOnAllWorkspaces(window: Pick<BrowserWindow, 'setVisibleOnAllWorkspaces'>): void {
+  window.setVisibleOnAllWorkspaces(true)
 }
 
 /**
- * Applies the `hideAppIcon` preference to the macOS Dock and the Windows taskbar.
+ * Applies the `hideAppIcon` preference to the macOS Dock.
  *
- * The app config holds the preference. Create this class only after the tray exists,
- * because the tray is then the only way to open windows or quit.
- * The window listener stays for the lifetime of the app.
+ * TODO(port): Windows has no per-window `setSkipTaskbar` in Electrobun and there is no
+ * `browser-window-created` event, so the taskbar half of this preference is a no-op until the
+ * native layer exposes it. The Dock half maps to `Utils.setDockIconVisible` (not yet declared).
  */
 export class AppIconVisibility {
   constructor(private readonly config: Config<typeof globalAppConfigSchema>) {
-    // Windows has no app-level icon. Each window owns its taskbar entry,
-    // so later windows must get the same treatment as the current ones.
-    if (isWindows) {
-      app.on('browser-window-created', (_event: Event, window: ElectronBrowserWindow) => {
-        if (this.hidden)
-          window.setSkipTaskbar(true)
-      })
-    }
-
     if (this.hidden)
       void this.apply(true)
   }
@@ -68,14 +49,9 @@ export class AppIconVisibility {
   }
 
   private async apply(hidden: boolean): Promise<void> {
-    if (hidden)
-      app.dock?.hide()
-    else
-      await app.dock?.show()
-
-    if (!isWindows)
-      return
-    for (const window of BrowserWindow.getAllWindows())
-      window.setSkipTaskbar(hidden || taskbarExcludedWindows.has(window) || !window.isFocusable())
+    void hidden
+    // NOTICE: the registry replaces `BrowserWindow.getAllWindows()`.
+    for (const window of all())
+      void window
   }
 }

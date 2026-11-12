@@ -65,8 +65,13 @@ createApp(App)
 
 if (typeof window !== 'undefined') {
   const win = window as any
+  // NOTICE: these two used raw `ipcRenderer.invoke(channel, payload)`, which bypasses
+  // eventa's invoke correlation (a nanoid plus a per-invoke reply channel) and therefore
+  // cannot work over the Electrobun bridge. They are the only two such call sites left in
+  // the renderer, so they are folded into eventa here rather than widening the bridge with a
+  // second, incompatible invoke mechanism.
   win.spawnSticker = (stickerId: string, options: { weight?: number, pos?: string, ttlMs?: number } = {}) => {
-    return win.electron?.ipcRenderer?.invoke('eventa:invoke:electron:windows:widgets:add', [{
+    return win.__airiInvoke('eventa:invoke:electron:windows:widgets:add', [{
       componentName: 'sticker',
       componentProps: {
         stickerId,
@@ -77,6 +82,6 @@ if (typeof window !== 'undefined') {
     }])
   }
   win.clearStickers = () => {
-    return win.electron?.ipcRenderer?.invoke('eventa:invoke:electron:windows:widgets:clear')
+    return win.__airiInvoke('eventa:invoke:electron:windows:widgets:clear')
   }
 }

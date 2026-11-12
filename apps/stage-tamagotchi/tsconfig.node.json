@@ -8,11 +8,34 @@
       "ESNext"
     ],
     "useDefineForClassFields": true,
+    "baseUrl": ".",
+    "paths": {
+      "@proj-airi/i18n-bundle": [
+        "../../packages/i18n/src/dist-lite/messages.mjs"
+      ],
+      "@proj-airi/server-runtime": [
+        "../../packages/server-runtime/src"
+      ],
+      "electrobun": [
+        "./.hutch/devkit/api/sdks/main/index.ts"
+      ],
+      "electrobun/main": [
+        "./.hutch/devkit/api/sdks/main/index.ts"
+      ],
+      "electrobun/view": [
+        "./.hutch/devkit/api/browser/index.ts"
+      ],
+      "electron": [
+        "./src/main/electron-shim.ts"
+      ],
+      "electron/*": [
+        "./src/main/electron-shim.ts"
+      ]
+    },
     "resolveJsonModule": true,
     "types": [
       "vitest",
       "vite/client",
-      "electron-vite/node",
       "unplugin-info/client",
       "node"
     ],
@@ -24,8 +47,9 @@
     "src/env.d.ts",
     "../../uno.config.ts",
     "uno.config.ts",
-    "electron.vite.config.ts",
-
+    "electrobun.config.ts",
+    "hutch.config.ts",
+    "vite.config.ts",
     "src/main/**/*.ts",
     "src/main/**/*.d.ts",
     "src/main/**/*.tsx",

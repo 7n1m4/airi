@@ -1,0 +1,13 @@
+# Electrobun bundles the main process with Bun and ships no node_modules copy.
+node_modules/
+
+# Hutch project + generated build output. `build/` also holds the committed app icons and
+# entitlements electrobun.config.ts points at, so only Hutch's per-target output directory
+# (`build/<env>-<platform>-<arch>/`) is ignored, not the whole folder.
+/.hutch/
+/.cottontail-tmp/
+/build/*/
+/artifacts/
+/dist/
+/out/
+*.tsbuildinfo

@@ -2,19 +2,25 @@ name: 'CI: Linux Window Smoke'
 
 # Compiling stage-tamagotchi on Linux (see the `build-test` job in ci.yml)
 # only proves the code type-checks and bundles. It never launches the app,
-# so regressions in the Ozone/X11 vs Wayland switches
-# (src/main/index.ts, src/main/app/ozone.ts), the frameless transparent
-# window config, or GPU init under a headless display have historically
-# only surfaced when a contributor happened to run the app on their own
-# Linux desktop. These jobs launch the real built app under a real
-# (headless) display server and assert the main window renders.
+# so regressions in the Electrobun/CEF runtime (chromiumFlags in
+# electrobun.config.ts, the frameless transparent window config, CEF init
+# under a headless display) have historically only surfaced when a
+# contributor happened to run the app on their own Linux desktop. These jobs
+# build and launch the real packaged app under a real (headless) display
+# server and assert the main window renders.
+#
+# The runtime is Electrobun 2.0.6 with a bundled CEF (Chromium 156). Hutch
+# resolves from ~/.hutch/bin (or the `electrobun` devDependency); the smoke
+# script builds via `hutch electrobun build --env=stable`, unpacks the
+# packaged `artifacts/stable-linux-x64-*.tar.zst`, and launches
+# `<app>/bin/launcher` with `ELECTROBUN_CEF_REMOTE_DEBUGGING_PORT` pointing
+# at a free port so CDP discovery is deterministic.
 #
 # Reproduce a failure locally with the same inputs the job records in
 # report.json (artifact `linux-window-render-smoke-*`):
 #
 #   pnpm install --frozen-lockfile && pnpm run build:packages
-#   pnpm -F @proj-airi/stage-tamagotchi run build
-#   SMOKE_EXPECT_OZONE_PLATFORM=x11 \
+#   SMOKE_EXPECT_SESSION_TYPE=x11 \
 #     xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
 #     pnpm -F @proj-airi/stage-tamagotchi run smoke:linux-window-render
 
@@ -44,11 +50,10 @@ env:
   # not depend on the runner image defaults.
   LANG: C.UTF-8
   TZ: UTC
-  # CI runners cannot set up the setuid chrome-sandbox helper; disable
-  # Chromium's OS sandbox instead of chasing SUID errors that are unrelated
-  # to the app-level `webPreferences.sandbox` setting used for the renderer.
-  ELECTRON_DISABLE_SANDBOX: '1'
-  ELECTRON_OZONE_PLATFORM_HINT: 'auto'
+  # Electrobun's Linux CEF defaults already append `no-sandbox` (see
+  # ElectrobunApp::OnBeforeCommandLineProcessing in electrobun's
+  # nativeWrapper.cpp), so CI's missing setuid chrome-sandbox helper is a
+  # non-issue and nothing here needs ELECTRON_DISABLE_SANDBOX.
   # Non-hidden on purpose: actions/upload-artifact skips hidden paths such
   # as `.temp/`, which left earlier failed runs without any artifact.
   SMOKE_REPORT_DIR: ${{ github.workspace }}/smoke-report
@@ -82,64 +87,44 @@ jobs:
           node-version: 26.7.0
           cache: pnpm
 
-      - name: Install Xvfb system dependencies
+      # CEF's own runtime deps (the `NEEDED` set of the bundled
+      # libcef.so: libnss3/libnspr4, libatk-1.0-0, libatk-bridge2.0-0,
+      # libcups2, libdrm2, libgbm1, libxkbcommon0, libxcomposite1,
+      # libxdamage1, libxfixes3, libxrandr2, libpango-1.0-0, libcairo2,
+      # libasound2, libatspi2.0-0, libx11-xcb1) plus GTK 3 (Electrobun's
+      # native wrapper links libgtk-3.so.0) and Xvfb.
+      - name: Install Xvfb and CEF system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             xvfb \
             xauth \
             libgtk-3-0 \
-            libnotify4 \
             libnss3 \
-            libxss1 \
-            libxtst6 \
-            libatspi2.0-0 \
+            libnspr4 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
             libdrm2 \
             libgbm1 \
-            libasound2t64
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libpango-1.0-0 \
+            libcairo2 \
+            libasound2t64 \
+            libatspi2.0-0 \
+            libx11-xcb1
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
-      # NOTICE: Do NOT use `pnpm rebuild electron` here. Bare rebuild matches
-      # nothing (silent 0.4s no-op), and even scoped, electron's install.js
-      # repeatedly exited 0 without populating dist (silent skip), deferring
-      # the failure to the build step. Download + verify explicitly instead:
-      # every stage below fails loudly (curl -f, sha256sum -c, test -x).
-      - name: Provision Electron binary
+      # Resolves the Hutch toolchain (the `electrobun` devDependency's bin
+      # forwards to a cached Hutch under ~/.hutch) before any hutch call.
+      - name: Provision Electrobun toolchain
         working-directory: ./apps/stage-tamagotchi
-        run: |
-          ELECTRON_DIR=$(node -p "require('node:path').dirname(require('node:module').createRequire(process.cwd() + '/package.json').resolve('electron/package.json'))")
-          ELECTRON_VERSION=$(node -p "require('${ELECTRON_DIR}/package.json').version")
-          case "$(uname -m)" in
-            x86_64) ELECTRON_ARCH=x64 ;;
-            aarch64|arm64) ELECTRON_ARCH=arm64 ;;
-            *) echo "Unsupported arch: $(uname -m)" >&2; exit 1 ;;
-          esac
-          ZIP="electron-v${ELECTRON_VERSION}-linux-${ELECTRON_ARCH}.zip"
-          curl -fSL --retry 3 "https://github.com/electron/electron/releases/download/v${ELECTRON_VERSION}/${ZIP}" -o "/tmp/${ZIP}"
-          curl -fSL --retry 3 "https://github.com/electron/electron/releases/download/v${ELECTRON_VERSION}/SHASUMS256.txt" -o /tmp/SHASUMS256.txt
-          (cd /tmp && grep "${ZIP}\$" SHASUMS256.txt | sha256sum -c -)
-          rm -rf "${ELECTRON_DIR}/dist" "${ELECTRON_DIR}/path.txt"
-          unzip -q -o "/tmp/${ZIP}" -d "${ELECTRON_DIR}/dist"
-          printf 'electron' > "${ELECTRON_DIR}/path.txt"
-          test -x "${ELECTRON_DIR}/dist/electron"
-
-      # Fail fast here (with the resolved package dir in the log) instead of
-      # minutes later inside the app build. ensure-electron.js self-heals via
-      # forced re-download when the binary is missing.
-      - name: Verify Electron binary
-        run: node apps/stage-tamagotchi/scripts/ensure-electron.js
-
-      # Console-only pre-build diagnostics: the artifact step below only runs
-      # after a successful build, so a failed build would otherwise leave no
-      # toolchain trace in the log.
-      - name: Record pre-build toolchain
-        run: |
-          echo "node: $(node --version)"
-          echo "pnpm: $(pnpm --version)"
-          echo "electron: $(node -p "require('./apps/stage-tamagotchi/node_modules/electron/package.json').version")"
-          echo "electron dist:"
-          ls apps/stage-tamagotchi/node_modules/electron/dist || echo "ELECTRON DIST MISSING"
+        run: hutch electrobun prepare
 
       - run: pnpm run build:packages
       - run: pnpm -F @proj-airi/stage-tamagotchi run build
@@ -151,12 +136,14 @@ jobs:
             echo "runner: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
             echo "node: $(node --version)"
             echo "pnpm: $(pnpm --version)"
-            dpkg-query -W -f='${Package} ${Version}\n' xvfb libgtk-3-0 libnss3 libgbm1 libdrm2 mesa-libgallium 2>/dev/null || true
+            echo "electrobun: $(node -p "require('./apps/stage-tamagotchi/node_modules/electrobun/package.json').version")"
+            echo "hutch: $(hutch --version 2>&1)"
+            dpkg-query -W -f='${Package} ${Version}\n' xvfb libgtk-3-0 libnss3 libgbm1 libdrm2 libasound2t64 mesa-libgallium 2>/dev/null || true
           } | tee "${SMOKE_REPORT_DIR}/toolchain.txt"
 
       - name: Run window-render smoke under Xvfb
         env:
-          SMOKE_EXPECT_OZONE_PLATFORM: x11
+          SMOKE_EXPECT_SESSION_TYPE: x11
         # Pin the screen instead of relying on the xvfb-run/Xvfb default,
         # which differs across releases. The transparent frameless main
         # window needs a 24-bit visual, and a fixed size keeps window
@@ -173,6 +160,8 @@ jobs:
           path: |
             ${{ env.SMOKE_REPORT_DIR }}/*
             !${{ env.SMOKE_REPORT_DIR }}/stage-user-data/**
+            !${{ env.SMOKE_REPORT_DIR }}/app/**
+            !${{ env.SMOKE_REPORT_DIR }}/xdg-*/**
           if-no-files-found: warn
           retention-days: 14
 
@@ -198,63 +187,37 @@ jobs:
           node-version: 26.7.0
           cache: pnpm
 
-      - name: Install Weston system dependencies
+      # Same CEF runtime set as the X11 job, plus weston for the headless
+      # Wayland compositor.
+      - name: Install Weston and CEF system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             weston \
             libgtk-3-0 \
-            libnotify4 \
             libnss3 \
-            libxss1 \
-            libxtst6 \
-            libatspi2.0-0 \
+            libnspr4 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
             libdrm2 \
             libgbm1 \
-            libasound2t64
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libpango-1.0-0 \
+            libcairo2 \
+            libasound2t64 \
+            libatspi2.0-0 \
+            libx11-xcb1
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
-      # NOTICE: Do NOT use `pnpm rebuild electron` here. Bare rebuild matches
-      # nothing (silent 0.4s no-op), and even scoped, electron's install.js
-      # repeatedly exited 0 without populating dist (silent skip), deferring
-      # the failure to the build step. Download + verify explicitly instead:
-      # every stage below fails loudly (curl -f, sha256sum -c, test -x).
-      - name: Provision Electron binary
+      - name: Provision Electrobun toolchain
         working-directory: ./apps/stage-tamagotchi
-        run: |
-          ELECTRON_DIR=$(node -p "require('node:path').dirname(require('node:module').createRequire(process.cwd() + '/package.json').resolve('electron/package.json'))")
-          ELECTRON_VERSION=$(node -p "require('${ELECTRON_DIR}/package.json').version")
-          case "$(uname -m)" in
-            x86_64) ELECTRON_ARCH=x64 ;;
-            aarch64|arm64) ELECTRON_ARCH=arm64 ;;
-            *) echo "Unsupported arch: $(uname -m)" >&2; exit 1 ;;
-          esac
-          ZIP="electron-v${ELECTRON_VERSION}-linux-${ELECTRON_ARCH}.zip"
-          curl -fSL --retry 3 "https://github.com/electron/electron/releases/download/v${ELECTRON_VERSION}/${ZIP}" -o "/tmp/${ZIP}"
-          curl -fSL --retry 3 "https://github.com/electron/electron/releases/download/v${ELECTRON_VERSION}/SHASUMS256.txt" -o /tmp/SHASUMS256.txt
-          (cd /tmp && grep "${ZIP}\$" SHASUMS256.txt | sha256sum -c -)
-          rm -rf "${ELECTRON_DIR}/dist" "${ELECTRON_DIR}/path.txt"
-          unzip -q -o "/tmp/${ZIP}" -d "${ELECTRON_DIR}/dist"
-          printf 'electron' > "${ELECTRON_DIR}/path.txt"
-          test -x "${ELECTRON_DIR}/dist/electron"
-
-      # Fail fast here (with the resolved package dir in the log) instead of
-      # minutes later inside the app build. ensure-electron.js self-heals via
-      # forced re-download when the binary is missing.
-      - name: Verify Electron binary
-        run: node apps/stage-tamagotchi/scripts/ensure-electron.js
-
-      # Console-only pre-build diagnostics: the artifact step below only runs
-      # after a successful build, so a failed build would otherwise leave no
-      # toolchain trace in the log.
-      - name: Record pre-build toolchain
-        run: |
-          echo "node: $(node --version)"
-          echo "pnpm: $(pnpm --version)"
-          echo "electron: $(node -p "require('./apps/stage-tamagotchi/node_modules/electron/package.json').version")"
-          echo "electron dist:"
-          ls apps/stage-tamagotchi/node_modules/electron/dist || echo "ELECTRON DIST MISSING"
+        run: hutch electrobun prepare
 
       - run: pnpm run build:packages
       - run: pnpm -F @proj-airi/stage-tamagotchi run build
@@ -266,8 +229,10 @@ jobs:
             echo "runner: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
             echo "node: $(node --version)"
             echo "pnpm: $(pnpm --version)"
+            echo "electrobun: $(node -p "require('./apps/stage-tamagotchi/node_modules/electrobun/package.json').version")"
+            echo "hutch: $(hutch --version 2>&1)"
             echo "weston: $(weston --version 2>&1)"
-            dpkg-query -W -f='${Package} ${Version}\n' weston libgtk-3-0 libnss3 libgbm1 libdrm2 mesa-libgallium 2>/dev/null || true
+            dpkg-query -W -f='${Package} ${Version}\n' weston libgtk-3-0 libnss3 libgbm1 libdrm2 libasound2t64 mesa-libgallium 2>/dev/null || true
           } | tee "${SMOKE_REPORT_DIR}/toolchain.txt"
 
       - name: Start headless Weston compositor
@@ -297,14 +262,13 @@ jobs:
           echo "weston did not create its wayland-1 socket in time" >&2
           exit 1
 
-      - name: Run window-render smoke against the Wayland Ozone backend
+      - name: Run window-render smoke against the Wayland session
         env:
           XDG_SESSION_TYPE: wayland
           WAYLAND_DISPLAY: wayland-1
-          SMOKE_EXPECT_OZONE_PLATFORM: wayland
-        # No DISPLAY is set, so an XWayland fallback cannot connect anywhere;
-        # SMOKE_EXPECT_OZONE_PLATFORM additionally asserts the child
-        # processes really ran the Wayland backend.
+          SMOKE_EXPECT_SESSION_TYPE: wayland
+        # No DISPLAY is set, so the app cannot fall back to X11; the smoke
+        # asserts the session type it actually ran in matches.
         run: |
           unset DISPLAY
           pnpm -F @proj-airi/stage-tamagotchi run smoke:linux-window-render
@@ -321,5 +285,7 @@ jobs:
           path: |
             ${{ env.SMOKE_REPORT_DIR }}/*
             !${{ env.SMOKE_REPORT_DIR }}/stage-user-data/**
+            !${{ env.SMOKE_REPORT_DIR }}/app/**
+            !${{ env.SMOKE_REPORT_DIR }}/xdg-*/**
           if-no-files-found: warn
           retention-days: 14

@@ -17,11 +17,10 @@ import { debounce, throttle } from 'es-toolkit'
 import { isMacOS } from 'std-env'
 import { boolean, number, object, optional, record, string } from 'valibot'
 
-import icon from '../../../../resources/icon.png?asset'
-
 import { captionFollowStagePositionChanged, captionFollowStageVisibilityChanged, captionGetFollowStagePosition, captionGetFollowStageVisibility } from '../../../shared/eventa'
+import { APP_ICON as icon } from '../../assets'
 import { onAppBeforeQuit } from '../../libs/bootkit/lifecycle'
-import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electron/location'
+import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
 import { createConfig } from '../../libs/electron/persistence'
 import { createReusableWindow } from '../../libs/electron/window-manager'
 import { showWindowOnAllWorkspaces } from '../shared/app-icon'

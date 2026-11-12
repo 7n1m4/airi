@@ -1,0 +1,43 @@
+{
+  "name": "@proj-airi/electrobun-eventa",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Eventa adapters for Electrobun RPC",
+  "author": {
+    "name": "Moeru AI Project AIRI Team",
+    "email": "airi@moeru.ai",
+    "url": "https://github.com/moeru-ai"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/moeru-ai/airi.git",
+    "directory": "packages/electrobun-eventa"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./main": {
+      "types": "./src/main.ts",
+      "default": "./src/main.ts"
+    },
+    "./view": {
+      "types": "./src/view.ts",
+      "default": "./src/view.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@moeru/eventa": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vitest": "catalog:vitest"
+  }
+}

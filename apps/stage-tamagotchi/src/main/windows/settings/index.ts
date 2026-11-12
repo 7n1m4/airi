@@ -11,10 +11,9 @@ import { join, resolve } from 'node:path'
 import { initScreenCaptureForWindow } from '@proj-airi/electron-screen-capture/main'
 import { BrowserWindow } from 'electron'
 
-import icon from '../../../../resources/icon.png?asset'
-
 import { electronSettingsNavigate } from '../../../shared/eventa'
-import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electron/location'
+import { APP_ICON as icon } from '../../assets'
+import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
 import { createReusableWindow } from '../../libs/electron/window-manager'
 import { toggleWindowShow } from '../shared'
 import { openExternalSafely } from '../shared/open-external'

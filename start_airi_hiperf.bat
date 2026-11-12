@@ -14,12 +14,4 @@ set AIRI_RENDERER_PORT=%PORT_NUM%
 set AIRI_FORCE_HIGH_PERFORMANCE_GPU=1
 set ELECTRON_RUN_AS_NODE=
 
-:: Ensure electron path is configured
-call node apps\stage-tamagotchi\scripts\ensure-electron.js
-
-:: Note: This uses the local config shim that is gitignored to force the renderer port.
-if exist "apps\stage-tamagotchi\electron.vite.config.local.ts" (
-    call pnpm -F @proj-airi/stage-tamagotchi exec electron-vite dev --config electron.vite.config.local.ts
-) else (
-    call pnpm -F @proj-airi/stage-tamagotchi exec electron-vite dev
-)
+call pnpm -F @proj-airi\stage-tamagotchi run dev

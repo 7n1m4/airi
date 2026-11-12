@@ -1,4 +1,4 @@
-import type { Rectangle } from 'electron'
+import type { BrowserView, Rectangle } from 'electrobun/main'
 import type { InferOutput } from 'valibot'
 
 import type { globalAppConfigSchema } from '../../configs/global'
@@ -14,19 +14,38 @@ import type { OnboardingWindowManager } from '../onboarding'
 import type { SettingsWindowManager } from '../settings'
 import type { WidgetsWindowManager } from '../widgets'
 
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-import { BrowserWindow, ipcMain, screen } from 'electron'
+import { Screen } from 'electrobun/main'
 import { debounce, throttle } from 'es-toolkit'
 
-import icon from '../../../../resources/icon.png?asset'
-
-import { baseUrl, load } from '../../libs/electron/location'
-import { transparentWindowConfig } from '../shared'
+import { isDestroyed } from '../registry'
+import { createViewWindow, setWindowFrame } from '../shared/create-window'
 import { ensureWindowInVisibleBounds } from '../shared/display'
-import { openExternalSafely } from '../shared/open-external'
-import { setupMainWindowElectronInvokes } from './rpc/index.electron'
+// TODO(port): the Control Strip RPC surface — `./rpc/index.electron.ts` still imports `electron`.
+// import { setupMainWindowElectronInvokes } from './rpc/index.electron'
+
+/** Electrobun has no `getDisplayMatching`; pick the display with the most bounds overlap. */
+function displayForBounds(bounds: Rectangle) {
+  try {
+    const displays = Screen.getAllDisplays()
+    let best = displays[0]
+    let bestOverlap = 0
+    for (const display of displays) {
+      const db = display.bounds
+      const overlapX = Math.max(0, Math.min(bounds.x + bounds.width, db.x + db.width) - Math.max(bounds.x, db.x))
+      const overlapY = Math.max(0, Math.min(bounds.y + bounds.height, db.y + db.height) - Math.max(bounds.y, db.y))
+      const overlap = overlapX * overlapY
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap
+        best = display
+      }
+    }
+    return best ?? Screen.getPrimaryDisplay()
+  }
+  catch (err) {
+    console.warn('[MainWindow] Failed to resolve the display for bounds:', err)
+    return null
+  }
+}
 
 export async function setupMainWindow(params: {
   settingsWindow: SettingsWindowManager
@@ -34,7 +53,6 @@ export async function setupMainWindow(params: {
   widgetsManager: WidgetsWindowManager
   noticeWindow: NoticeWindowManager
   autoUpdater: AutoUpdater
-  onWindowCreated?: (window: BrowserWindow) => void
   serverChannel: ServerChannel
   mcpStdioManager: McpStdioManager
   acpAgentsManager: AcpAgentsManager
@@ -49,7 +67,7 @@ export async function setupMainWindow(params: {
   const getConfig = (): InferOutput<typeof globalAppConfigSchema> => params.appConfig.get() ?? { language: 'en', windows: [], microphoneToggleHotkey: 'Scroll' }
   const updateConfig = (newData: InferOutput<typeof globalAppConfigSchema>) => params.appConfig.update(newData)
 
-  const mainWindowConfig = getConfig().windows?.find((w: any) => w.title === 'AIRI' && w.tag === 'main')
+  const mainWindowConfig = getConfig().windows?.find(w => w.title === 'AIRI' && w.tag === 'main')
   const orientation = mainWindowConfig?.orientation || 'vertical'
   let width = mainWindowConfig?.width ?? mainWindowConfig?.snapshot?.width ?? (orientation === 'vertical' ? 56.0 : 300.0)
   let height = mainWindowConfig?.height ?? mainWindowConfig?.snapshot?.height ?? (orientation === 'vertical' ? 300.0 : 56.0)
@@ -69,8 +87,7 @@ export async function setupMainWindow(params: {
   }
   else {
     try {
-      const primaryDisplay = screen.getPrimaryDisplay()
-      const workArea = primaryDisplay.workArea
+      const workArea = Screen.getPrimaryDisplay().workArea
       x = workArea.x + 24
       y = workArea.y + Math.round((workArea.height - height) / 2)
     }
@@ -79,109 +96,53 @@ export async function setupMainWindow(params: {
     }
   }
 
-  const window = new BrowserWindow({
+  // shortcut: Electrobun's `setAlwaysOnTop(true)` has no level, so the Control Strip cannot be
+  // pinned above the Stage window the way `setAlwaysOnTop(true, 'screen-saver', 2)` did.
+  const window = await createViewWindow({
+    tag: 'main',
     title: 'AIRI',
-    width,
-    height,
-    x,
-    y,
-    show: false,
-    icon,
-    webPreferences: {
-      preload: resolve(dirname(fileURLToPath(import.meta.url)), '../preload/index.cjs'),
-      sandbox: true,
-    },
-    type: 'panel',
+    html: 'index.html',
+    frame: { x, y, width, height },
+    transparent: true,
+    passthrough: false,
+    hidden: true,
+    activate: false,
     alwaysOnTop: true,
-    ...transparentWindowConfig(),
   })
 
-  // Elevate Control Strip window layering above the Stage window
-  window.setAlwaysOnTop(true, 'screen-saver', 2)
+  // NOTICE: the registry is the identity map now that Electron's `__is_main_window` expando
+  // has no equivalent (window objects are plain JS, so it would still work, but the registry
+  // is what `single-instance` and the macOS activate path read).
+  void mainWindowConfig
 
-  // Attach config for RPC sync
-  ;(window as any).__airi_config = mainWindowConfig
-  ;(window as any).__is_main_window = true
-
-  window.setMovable(!mainWindowConfig?.locked)
-  window.setResizable(false)
-
-  if (params.onWindowCreated) {
-    params.onWindowCreated(window)
-  }
-
-  ipcMain.on('main-window-config-updated', (_event, config) => {
-    window.webContents.send('eventa:event:electron:windows:main:config-changed', config)
-  })
-
-  // NOTICE: Disabled automatic DevTools on startup for Control Strip to avoid interfering with Splash debugging
-  // if (is.dev || env.MAIN_APP_DEBUG || env.APP_DEBUG) {
-  //   try {
-  //     window.webContents.openDevTools({ mode: 'detach' })
-  //   }
-  //   catch {}
-  // }
+  // TODO(port): window.setMovable()/setResizable() — creation-time styleMask options.
+  // TODO(port): webContents.setWindowOpenHandler() — replaced by Electrobun `navigationRules`.
 
   function restoreBounds() {
-    const mainWindow = getConfig().windows?.find((w: any) => w.title === 'AIRI' && w.tag === 'main')
-    // console.log('[MainWindow] restoreBounds read config:', JSON.stringify(mainWindow, null, 2))
-    const x = mainWindow?.x ?? mainWindow?.snapshot?.x
-    const y = mainWindow?.y ?? mainWindow?.snapshot?.y
-    const orientation = mainWindow?.orientation || 'vertical'
-    const width = mainWindow?.width ?? (orientation === 'vertical' ? 56.0 : 300.0)
-    const height = mainWindow?.height ?? (orientation === 'vertical' ? 300.0 : 56.0)
-    if (x !== undefined && y !== undefined && !Number.isNaN(x) && !Number.isNaN(y)) {
-      const valid = ensureWindowInVisibleBounds({
-        x: Math.round(x),
-        y: Math.round(y),
-        width: Math.round(width),
-        height: Math.round(height),
-      })
-      // console.log('[MainWindow] restoreBounds applying visible bounds:', JSON.stringify(valid, null, 2))
-      window.setBounds(valid)
-    }
+    const saved = getConfig().windows?.find(w => w.title === 'AIRI' && w.tag === 'main')
+    const x = saved?.x ?? saved?.snapshot?.x
+    const y = saved?.y ?? saved?.snapshot?.y
+    const orientation = saved?.orientation || 'vertical'
+    const width = saved?.width ?? (orientation === 'vertical' ? 56.0 : 300.0)
+    const height = saved?.height ?? (orientation === 'vertical' ? 300.0 : 56.0)
+    if (x === undefined || y === undefined || Number.isNaN(x) || Number.isNaN(y))
+      return
+    setWindowFrame(window, ensureWindowInVisibleBounds({
+      x: Math.round(x),
+      y: Math.round(y),
+      width: Math.round(width),
+      height: Math.round(height),
+    }))
   }
 
-  window.on('ready-to-show', () => {
-    restoreBounds()
-    // NOTICE: Initial show is deferred until the Splash window signals completion
-    // (`electronSplashDismiss`). Without deferral the Control Strip would pop in
-    // before coordinated milestones finish.
-    if (!params.deferInitialShow) {
-      window.show()
-    }
-    // NOTICE: on some platforms/transparency settings, first bounds application might be ignored
-    setTimeout(() => restoreBounds(), 500)
-  })
+  if (!params.deferInitialShow)
+    window.show()
 
-  window.webContents.on('did-finish-load', () => {
-    restoreBounds()
-  })
-
-  window.webContents.setWindowOpenHandler((details) => {
-    openExternalSafely(details.url)
-    return { action: 'deny' }
-  })
-
-  load(window, baseUrl(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'renderer')))
-
-  await setupMainWindowElectronInvokes({
-    window,
-    settingsWindow: params.settingsWindow,
-    chatWindow: params.chatWindow,
-    widgetsManager: params.widgetsManager,
-    noticeWindow: params.noticeWindow,
-    autoUpdater: params.autoUpdater,
-    serverChannel: params.serverChannel,
-    mcpStdioManager: params.mcpStdioManager,
-    acpAgentsManager: params.acpAgentsManager,
-    i18n: params.i18n,
-    onboardingWindowManager: params.onboardingWindowManager,
-    appConfig: params.appConfig,
-  })
+  // NOTICE: on some platforms/transparency settings the first bounds application is ignored.
+  setTimeout(() => restoreBounds(), 500)
 
   function handleNewBounds(newBounds: Rectangle) {
-    if (window.isDestroyed())
+    if (isDestroyed(window))
       return
 
     const config = getConfig()
@@ -189,14 +150,17 @@ export async function setupMainWindow(params: {
       config.windows = []
     }
 
-    const existingConfigIndex = config.windows.findIndex((w: any) => w.title === 'AIRI' && w.tag === 'main')
+    const existingConfigIndex = config.windows.findIndex(w => w.title === 'AIRI' && w.tag === 'main')
     const existingConfig = existingConfigIndex !== -1 ? config.windows[existingConfigIndex] : null
 
-    if (existingConfig?.locked) {
+    if (existingConfig?.locked)
       return
-    }
 
-    const state = (window as any).__control_strip_state
+    // NOTICE: the renderer's synced Control Strip state was stored on the window object by
+    // the Electron RPC handler. Electrobun's BrowserView is a different object, so read the
+    // expando off the view's JS handle (same object identity the RPC handler writes to).
+    const expando: unknown = (window.webview as BrowserView & { __control_strip_state?: unknown }).__control_strip_state
+    const state = isControlStripState(expando) ? expando : undefined
     if (!state) {
       // Skip saving bounds if the renderer hasn't synced the control strip state yet.
       // This prevents startup and shutdown bounds-changed events from overwriting
@@ -225,14 +189,8 @@ export async function setupMainWindow(params: {
       }
     }
 
-    // console.log('[MainWindow] handleNewBounds: bounds change detected.', {
-    //   newBounds,
-    //   state,
-    //   calculated: { x: savedX, y: savedY, w: savedW, h: savedH },
-    // })
-
     if (existingConfigIndex === -1) {
-      const newWin = {
+      const created = {
         title: 'AIRI',
         tag: 'main',
         x: Math.round(savedX),
@@ -243,13 +201,11 @@ export async function setupMainWindow(params: {
         collapsed: state.collapsed,
         backgroundColor: state.backgroundColor,
       }
-      config.windows.push(newWin)
-      ;(window as any).__airi_config = newWin
+      config.windows.push(created)
     }
     else {
-      const currentConfig = config.windows[existingConfigIndex]
-      const updatedWin = {
-        ...currentConfig,
+      config.windows[existingConfigIndex] = {
+        ...config.windows[existingConfigIndex],
         x: Math.round(savedX),
         y: Math.round(savedY),
         width: Math.round(savedW),
@@ -258,23 +214,23 @@ export async function setupMainWindow(params: {
         collapsed: state.collapsed,
         backgroundColor: state.backgroundColor,
       }
-      config.windows[existingConfigIndex] = updatedWin
-      ;(window as any).__airi_config = updatedWin
     }
 
-    // console.log('[MainWindow] handleNewBounds saving updated config:', JSON.stringify((window as any).__airi_config, null, 2))
     updateConfig(config)
-    window.webContents.send('eventa:event:electron:windows:main:config-changed', (window as any).__airi_config)
   }
 
   const throttledHandleNewBounds = throttle(handleNewBounds, 200)
+  void throttledHandleNewBounds
 
   const debouncedSnap = debounce(() => {
-    if (window.isDestroyed())
+    if (isDestroyed(window))
       return
 
-    const bounds = window.getBounds()
-    const display = screen.getDisplayMatching(bounds)
+    const bounds = window.getFrame()
+    const display = displayForBounds(bounds)
+    if (!display)
+      return
+
     const workArea = display.workArea
     const displayBounds = display.bounds
 
@@ -298,7 +254,6 @@ export async function setupMainWindow(params: {
     ]
 
     if (isVertical) {
-      // Check left edge snap
       let minDiffLeft = Infinity
       let targetLeft = bounds.x
       for (const tx of snapTargetsX) {
@@ -309,7 +264,6 @@ export async function setupMainWindow(params: {
         }
       }
 
-      // Check right edge snap
       let minDiffRight = Infinity
       let targetRight = bounds.x
       for (const tx of snapTargetsX) {
@@ -330,7 +284,6 @@ export async function setupMainWindow(params: {
       }
     }
     else if (isHorizontal) {
-      // Check top edge snap
       let minDiffTop = Infinity
       let targetTop = bounds.y
       for (const ty of snapTargetsY) {
@@ -341,7 +294,6 @@ export async function setupMainWindow(params: {
         }
       }
 
-      // Check bottom edge snap
       let minDiffBottom = Infinity
       let targetBottom = bounds.y
       const snapTargetsBottom = [
@@ -386,7 +338,7 @@ export async function setupMainWindow(params: {
     }
 
     if (snapped && (Math.round(newX) !== bounds.x || Math.round(newY) !== bounds.y)) {
-      window.setBounds({
+      setWindowFrame(window, {
         x: Math.round(newX),
         y: Math.round(newY),
         width: bounds.width,
@@ -395,17 +347,26 @@ export async function setupMainWindow(params: {
     }
   }, 150)
 
-  window.on('resize', () => {
-    if (!window.isDestroyed()) {
-      throttledHandleNewBounds(window.getBounds())
-    }
-  })
-  window.on('move', () => {
-    if (!window.isDestroyed()) {
-      throttledHandleNewBounds(window.getBounds())
-      debouncedSnap()
-    }
-  })
+  void debouncedSnap
+
+  // TODO(port): window.on('resize'|'move') — Electrobun emits no per-window move/resize event,
+  // so bounds persistence must hook the native layer (docs/design-electrobun-port.md §3.1).
+  // TODO(port): setupMainWindowElectronInvokes — the Control Strip RPC surface lands in wave 1
+  // only as far as the splash + strip handlers; the remaining invokes are ported per surface.
 
   return window
+}
+
+interface ControlStripState {
+  orientation?: 'vertical' | 'horizontal'
+  stripLength?: number
+  collapsed?: boolean
+  backgroundColor?: string
+  activePopover?: string | null
+  lastPlacement?: string
+}
+
+/** The renderer writes this expando from its RPC handler; only its shape matters here. */
+function isControlStripState(value: unknown): value is ControlStripState {
+  return typeof value === 'object' && value !== null
 }

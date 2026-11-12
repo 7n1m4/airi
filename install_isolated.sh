@@ -74,11 +74,7 @@ echo "========================================================"
 
 # Pass any extra arguments
 {
-  if [ -f "apps/stage-tamagotchi/electron.vite.config.local.ts" ]; then
-    pnpm -F @proj-airi/stage-tamagotchi run dev --config electron.vite.config.local.ts -- "$@"
-  else
-    pnpm -F @proj-airi/stage-tamagotchi run dev -- "$@"
-  fi
+  pnpm -F @proj-airi/stage-tamagotchi run dev -- "$@"
 } 2>&1 | tee "$LOG_FILE"
 START_EOF
 

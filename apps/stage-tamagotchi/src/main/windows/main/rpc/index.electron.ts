@@ -1,3 +1,5 @@
+import type { BrowserWindow } from 'electron'
+
 import type { I18n } from '../../../libs/i18n'
 import type { AcpAgentsManager } from '../../../services/airi/acp-agents'
 import type { ServerChannel } from '../../../services/airi/channel-server'
@@ -9,12 +11,9 @@ import type { OnboardingWindowManager } from '../../onboarding'
 import type { SettingsWindowManager } from '../../settings'
 import type { WidgetsWindowManager } from '../../widgets'
 
-import clickDragPlugin from 'electron-click-drag-plugin'
-
 import { defineInvokeHandler } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/electron/main'
-import { BrowserWindow, ipcMain } from 'electron'
-import { isLinux } from 'std-env'
+import { ipcMain } from 'electron'
 
 import {
   electronControlStripSyncState,
@@ -108,19 +107,10 @@ export async function setupMainWindowElectronInvokes(params: {
     }
   })
 
-  if (!isLinux) {
-    defineInvokeHandler(context, electronStartDraggingWindow, (_payload, handlerOptions: any) => {
-      try {
-        const sender = handlerOptions?.raw?.ipcMainEvent?.sender
-        const win = sender ? (BrowserWindow.fromWebContents(sender) ?? params.window) : params.window
-        const windowId = win.getNativeWindowHandle()
-        clickDragPlugin.startDrag(windowId)
-      }
-      catch (error) {
-        console.error(error)
-      }
-    })
-  }
+  // shortcut: window dragging is pure CSS now — the renderer's `-webkit-app-region: drag`
+  // regions are honoured by CEF, so the native `electron-click-drag-plugin` drag call is gone.
+  // Drop the invoke entirely rather than re-implementing it over `Utils`/native FFI.
+  void electronStartDraggingWindow
 
   ipcMain.on('main-window-config-updated', (_event, config) => {
     params.window.webContents.send('eventa:event:electron:windows:main:config-changed', config)

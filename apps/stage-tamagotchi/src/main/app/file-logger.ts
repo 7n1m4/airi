@@ -25,7 +25,7 @@
 import { mkdir, open, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import { app } from 'electron'
+import { Utils } from 'electrobun/main'
 
 // ============================================================================
 // Constants
@@ -88,7 +88,7 @@ function createLogFilePath(logsDir: string, timestamp: number): string {
  */
 async function ensureLogsDirectory(): Promise<string | null> {
   try {
-    const logsDir = join(app.getPath('userData'), 'logs')
+    const logsDir = join(Utils.paths.userData, 'logs')
     await mkdir(logsDir, { recursive: true })
     return logsDir
   }

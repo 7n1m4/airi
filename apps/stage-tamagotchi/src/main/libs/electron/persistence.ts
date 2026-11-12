@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 import { pid as processPid } from 'node:process'
 
 import { safeDestr } from 'destr'
-import { app } from 'electron'
+import { Utils } from 'electrobun/main'
 import { throttle } from 'es-toolkit'
 import { safeParse } from 'valibot'
 
@@ -35,7 +35,7 @@ const configRegistry = new Set<Config<any>>()
 
 function getUserDataPath() {
   try {
-    return app.getPath('userData')
+    return Utils.paths.userData
   }
   catch (e) {
     // Fallback or early access might fail on some platforms/versions if called too early

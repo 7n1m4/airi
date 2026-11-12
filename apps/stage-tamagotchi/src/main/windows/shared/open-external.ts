@@ -1,4 +1,4 @@
-import { shell } from 'electron'
+import { Utils } from 'electrobun/main'
 
 // Model-authored markdown links must never reach OS scheme handlers (ms-msdt:, smb:, file:).
 export function openExternalSafely(url: string): void {
@@ -16,5 +16,5 @@ export function openExternalSafely(url: string): void {
     return
   }
 
-  shell.openExternal(url)
+  Utils.openExternal(url)
 }
