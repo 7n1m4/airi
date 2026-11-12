@@ -42,7 +42,9 @@ pub enum McpError {
     /// The HTTP transport received a non-success status code (anything
     /// outside 2xx, except the `202 Accepted` "no body" notification
     /// response, which is treated as success). The response body is
-    /// preserved verbatim (lossy UTF-8) for diagnostics.
+    /// preserved verbatim (lossy UTF-8) for diagnostics, except that on the
+    /// streamable-HTTP path occurrences of a configured bearer token are
+    /// replaced with `***`.
     #[error("HTTP {status} from MCP endpoint: {body}")]
     HttpStatus {
         /// The HTTP status code returned by the server.

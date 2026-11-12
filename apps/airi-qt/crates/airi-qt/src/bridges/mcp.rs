@@ -11,16 +11,24 @@
 //! disk or is empty — never a fabricated default. When no config file
 //! exists, the page shows the documented Electron default as a suggestion
 //! with an explicit "add it" action; nothing is persisted until the user
-//! acts. Remote (streamable HTTP) servers connect without auth headers —
-//! servers that require them are not reachable from this build.
+//! acts. Remote (streamable HTTP) servers connect with the optional static
+//! bearer token from their `authToken` entry field; servers that require
+//! OAuth (or any non-static-token scheme) are not reachable from this build.
 //!
 //! Boundary contract (same as cards/providers/data bridges): JSON document
-//! strings cross the boundary.
+//! strings cross the boundary. Remote (streamable HTTP) servers connect
+//! with the optional static bearer token from the `authToken` field of
+//! their `mcp.json` remote entry — sent only to the configured `url` as
+//! `Authorization: Bearer <token>`, never logged, never returned by any
+//! QML-invokable (the `serversJson` view-model never contains the token;
+//! sensitive `headers` values are redacted to `***`), redacted in `Debug`,
+//! and scrubbed from error strings by `airi-mcp`.
 
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::QString;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::fmt;
 use std::pin::Pin;
 use std::time::Instant;
 
@@ -38,8 +46,75 @@ fn mcp_config_path() -> std::path::PathBuf {
         .unwrap_or_else(|| std::path::PathBuf::from("mcp.json"))
 }
 
+/// Redaction sentinel used for sensitive values in the `serversJson`
+/// view-model. Values equal to this sentinel in an incoming `saveServers`
+/// payload are restored from (or dropped in favour of) the on-disk entry —
+/// a redacted placeholder must never be persisted as if it were a real
+/// secret.
+const REDACTED: &str = "***";
+
+/// Header names whose values are considered credentials. Matched
+/// case-insensitively as a substring of the header name.
+fn is_sensitive_header(name: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
+    const NEEDLES: &[&str] = &[
+        "auth",
+        "token",
+        "secret",
+        "password",
+        "credential",
+        "api-key",
+        "apikey",
+    ];
+    NEEDLES.iter().any(|needle| lower.contains(needle))
+}
+
+/// Returns a copy of `headers` with sensitive values replaced by
+/// [`REDACTED`]. Non-sensitive values pass through unchanged.
+fn redact_headers(headers: &BTreeMap<String, String>) -> BTreeMap<String, String> {
+    headers
+        .iter()
+        .map(|(k, v)| {
+            if is_sensitive_header(k) {
+                (k.clone(), REDACTED.to_string())
+            } else {
+                (k.clone(), v.clone())
+            }
+        })
+        .collect()
+}
+
+/// Restores on-disk values for headers whose values are the [`REDACTED`]
+/// sentinel (round-trip protection); drops sentinel values that have no
+/// on-disk counterpart so a sentinel never lands in `mcp.json`.
+fn restore_redacted_headers(
+    incoming: BTreeMap<String, String>,
+    disk: Option<&McpServerEntry>,
+) -> BTreeMap<String, String> {
+    incoming
+        .into_iter()
+        .filter_map(|(k, v)| {
+            if v != REDACTED {
+                return Some((k, v));
+            }
+            disk.and_then(|d| d.headers.get(&k).cloned())
+                .map(|restored| (k, restored))
+        })
+        .collect()
+}
+
+/// Extracts the optional bearer token from a remote entry, trimmed.
+/// Empty/whitespace-only tokens are treated as absent.
+fn bearer_token(entry: &McpServerEntry) -> Option<&str> {
+    entry
+        .auth_token
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+}
+
 /// One configured server entry (mirrors the Electron `mcpConfigSchema`).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct McpServerEntry {
     /// Command to spawn for stdio servers (e.g. `npx`).
     #[serde(default)]
@@ -50,15 +125,36 @@ pub struct McpServerEntry {
     /// Environment overrides for the server process.
     #[serde(default)]
     pub env: BTreeMap<String, String>,
-    /// Remote streamable-HTTP endpoint URL (parsed, not connectable yet).
+    /// Remote streamable-HTTP endpoint URL.
     #[serde(default)]
     pub url: Option<String>,
-    /// Remote HTTP headers (parsed, not connectable yet).
+    /// Remote HTTP headers (sent to the configured `url` only, currently
+    /// unused by the transport; see `authToken` for credentials).
     #[serde(default)]
     pub headers: BTreeMap<String, String>,
+    /// Static bearer token for remote servers that require authorization.
+    /// Plaintext in the user's own `mcp.json` (same posture as the gateway
+    /// `authToken`). **Never** emitted to QML, redacted in `Debug`,
+    /// scrubbed from error strings by `airi-mcp`.
+    #[serde(default, rename = "authToken", skip_serializing_if = "Option::is_none")]
+    pub auth_token: Option<String>,
     /// Whether the server is enabled.
     #[serde(default = "default_enabled")]
     pub enabled: bool,
+}
+
+impl fmt::Debug for McpServerEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("McpServerEntry")
+            .field("command", &self.command)
+            .field("args", &self.args)
+            .field("env", &self.env)
+            .field("url", &self.url)
+            .field("headers", &redact_headers(&self.headers))
+            .field("auth_token", &self.auth_token.as_ref().map(|_| "***"))
+            .field("enabled", &self.enabled)
+            .finish()
+    }
 }
 
 fn default_enabled() -> bool {
@@ -124,7 +220,12 @@ fn servers_value(config: Option<&McpConfigFile>) -> Vec<serde_json::Value> {
                         "args": entry.args,
                         "env": entry.env,
                         "url": entry.url,
-                        "headers": entry.headers,
+                        "headers": redact_headers(&entry.headers),
+                        // The view-model never carries secrets: sensitive
+                        // header values are redacted to `***` and the
+                        // bearer token itself is never emitted — only a
+                        // boolean "is one configured" flag.
+                        "authConfigured": entry.auth_token.is_some(),
                     })
                 })
                 .collect()
@@ -173,9 +274,10 @@ fn probe(entry: &McpServerEntry, name: &str) -> Result<serde_json::Value, String
             .is_some();
     let (tools, duration_ms) = if is_remote {
         let url = entry.url.as_deref().unwrap_or_default().to_string();
-        // No auth headers — see module docs.
-        let mut client =
-            McpHttpClient::connect(&url).map_err(|e| format!("cannot connect to {url}: {e}"))?;
+        let token = bearer_token(entry);
+        // Static bearer token only, sent solely to the configured `url`.
+        let mut client = McpHttpClient::connect_with_auth(&url, token)
+            .map_err(|e| format!("cannot connect to {url}: {e}"))?;
         client
             .initialize()
             .map_err(|e| format!("initialize failed: {e}"))?;
@@ -234,8 +336,9 @@ fn call_tool(
             .is_some();
     let result: McpToolResult = if is_remote {
         let url = entry.url.as_deref().unwrap_or_default().to_string();
-        let mut client =
-            McpHttpClient::connect(&url).map_err(|e| format!("cannot connect to {url}: {e}"))?;
+        let token = bearer_token(entry);
+        let mut client = McpHttpClient::connect_with_auth(&url, token)
+            .map_err(|e| format!("cannot connect to {url}: {e}"))?;
         client
             .initialize()
             .map_err(|e| format!("initialize failed: {e}"))?;
@@ -442,6 +545,12 @@ impl qobject::McpController {
             self.set_error("servers payload must be a JSON array".into());
             return false;
         };
+        // The QML view-model never carries secrets, so the payload we get
+        // back may hold redacted placeholders (`***`) for sensitive header
+        // values and omit `authToken` entirely. Merge with the on-disk
+        // config to avoid destroying real secrets on save (see
+        // restore_redacted_headers).
+        let disk = load_config().ok().flatten();
         let mut config = McpConfigFile::default();
         for item in array {
             let Some(name) = item.get("name").and_then(|v| v.as_str()) else {
@@ -452,6 +561,24 @@ impl qobject::McpController {
                 self.set_error("server names must not be empty".into());
                 return false;
             }
+            let disk_entry = disk.as_ref().and_then(|c| c.mcp_servers.get(name));
+            let incoming_headers = item
+                .get("headers")
+                .and_then(|v| v.as_object())
+                .map(|o| {
+                    o.iter()
+                        .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+                        .collect::<BTreeMap<_, _>>()
+                })
+                .unwrap_or_default();
+            // Explicit `authToken` strings in the payload overwrite the
+            // disk value; anything else (absent key / null) preserves it.
+            // There is intentionally no way to *clear* a token from QML —
+            // remove it by editing mcp.json directly.
+            let auth_token = match item.get("authToken") {
+                Some(serde_json::Value::String(s)) if !s.trim().is_empty() => Some(s.to_string()),
+                _ => disk_entry.and_then(|d| d.auth_token.clone()),
+            };
             let entry = McpServerEntry {
                 command: item
                     .get("command")
@@ -476,15 +603,8 @@ impl qobject::McpController {
                     })
                     .unwrap_or_default(),
                 url: item.get("url").and_then(|v| v.as_str()).map(str::to_string),
-                headers: item
-                    .get("headers")
-                    .and_then(|v| v.as_object())
-                    .map(|o| {
-                        o.iter()
-                            .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
-                            .collect()
-                    })
-                    .unwrap_or_default(),
+                headers: restore_redacted_headers(incoming_headers, disk_entry),
+                auth_token,
                 enabled: item
                     .get("enabled")
                     .and_then(|v| v.as_bool())
@@ -539,6 +659,7 @@ impl qobject::McpController {
                 env: BTreeMap::new(),
                 url: None,
                 headers: BTreeMap::new(),
+                auth_token: None,
                 enabled: true,
             },
         );
@@ -663,4 +784,91 @@ impl qobject::McpController {
 
 fn json_ok(value: serde_json::Value) -> QString {
     QString::from(value.to_string().as_str())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TOKEN: &str = "bridge-test-token-9f8e7d6c5b4a";
+
+    fn entry_with_token() -> McpServerEntry {
+        McpServerEntry {
+            command: None,
+            args: Vec::new(),
+            env: BTreeMap::new(),
+            url: Some("https://mcp.example.com/mcp".to_string()),
+            headers: BTreeMap::new(),
+            auth_token: Some(TOKEN.to_string()),
+            enabled: true,
+        }
+    }
+
+    #[test]
+    fn auth_token_serializes_as_camel_case_auth_token_key() {
+        let entry = entry_with_token();
+        let json = serde_json::to_value(&entry).unwrap();
+        assert_eq!(json["authToken"], TOKEN);
+        assert!(json.get("auth_token").is_none());
+    }
+
+    #[test]
+    fn missing_auth_token_deserializes_to_none_and_omits_the_key() {
+        let value = serde_json::json!({ "url": "https://mcp.example.com/mcp" });
+        let entry: McpServerEntry = serde_json::from_value(value).unwrap();
+        assert!(entry.auth_token.is_none());
+        let json = serde_json::to_value(&entry).unwrap();
+        assert!(json.get("authToken").is_none());
+    }
+
+    #[test]
+    fn debug_output_redacts_the_token() {
+        let entry = entry_with_token();
+        let debug = format!("{entry:?}");
+        assert!(debug.contains("***"));
+        assert!(!debug.contains(TOKEN));
+    }
+
+    #[test]
+    fn sensitive_headers_are_redacted_case_insensitively() {
+        let mut headers = BTreeMap::new();
+        headers.insert("Authorization".to_string(), "Bearer abc".to_string());
+        headers.insert("X-Api-Key".to_string(), "key-123".to_string());
+        headers.insert("X-Custom".to_string(), "visible".to_string());
+        let redacted = redact_headers(&headers);
+        assert_eq!(redacted["Authorization"], "***");
+        assert_eq!(redacted["X-Api-Key"], "***");
+        assert_eq!(redacted["X-Custom"], "visible");
+    }
+
+    #[test]
+    fn redacted_sentinels_are_restored_from_disk_on_save() {
+        let mut disk = entry_with_token();
+        disk.headers
+            .insert("Authorization".to_string(), "real-secret".to_string());
+        let mut incoming = BTreeMap::new();
+        incoming.insert("Authorization".to_string(), REDACTED.to_string());
+        incoming.insert("X-Custom".to_string(), "kept".to_string());
+        let restored = restore_redacted_headers(incoming, Some(&disk));
+        assert_eq!(restored["Authorization"], "real-secret");
+        assert_eq!(restored["X-Custom"], "kept");
+    }
+
+    #[test]
+    fn redacted_sentinel_without_disk_counterpart_is_dropped() {
+        let mut incoming = BTreeMap::new();
+        incoming.insert("Authorization".to_string(), REDACTED.to_string());
+        let restored = restore_redacted_headers(incoming, None);
+        assert!(restored.is_empty());
+    }
+
+    #[test]
+    fn bearer_token_trims_and_rejects_whitespace() {
+        let mut entry = entry_with_token();
+        assert_eq!(bearer_token(&entry), Some(TOKEN));
+        entry.auth_token = Some("   ".to_string());
+        assert_eq!(bearer_token(&entry), None);
+        entry.auth_token = None;
+        assert_eq!(bearer_token(&entry), None);
+    }
 }

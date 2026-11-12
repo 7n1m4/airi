@@ -13,9 +13,14 @@
 //!   endpoint; the response is either `application/json` (one JSON-RPC
 //!   response) or `text/event-stream` (SSE frames; the first JSON-RPC
 //!   response whose `id` matches this client's request is used). Session
-//!   management via the `Mcp-Session-Id` header on `initialize`. Blocking
-//!   `reqwest`, no tokio. See the module docs for the exact wire semantics,
-//!   header names and scope limits (no OAuth, no SSE resume/reconnect).
+//!   management via the `Mcp-Session-Id` header on `initialize`. An optional
+//!   *static* bearer token can be supplied via
+//!   [`McpHttpClient::connect_with_auth`] and is then sent as
+//!   `Authorization: Bearer <token>` on every request to the endpoint; the
+//!   token is never logged, redacted in `Debug` and scrubbed from errors.
+//!   Blocking `reqwest`, no tokio. See the module docs for the exact wire
+//!   semantics, header names and scope limits (static bearer only — no
+//!   OAuth, no SSE resume/reconnect, no redirects).
 //!
 //! Both transports share the same behaviour: `initialize()` negotiates
 //! protocol version `"2024-11-05"` with empty capabilities and this crate as
@@ -34,7 +39,9 @@
 //!
 //! # Not implemented
 //!
-//! * OAuth / bearer authentication for HTTP MCP servers.
+//! * OAuth for HTTP MCP servers (a *static* bearer token is supported via
+//!   [`McpHttpClient::connect_with_auth`]; there is no OAuth flow, no
+//!   `WWW-Authenticate` handling and no token refresh).
 //! * SSE resume (`Last-Event-ID`) and automatic reconnection (the SSE
 //!   `retry:` field is parsed and ignored).
 //! * Server-initiated requests over the HTTP transport (they are ignored).

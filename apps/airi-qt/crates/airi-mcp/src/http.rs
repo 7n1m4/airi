@@ -30,11 +30,31 @@
 //!   with `202 Accepted`). Any other non-2xx status is
 //!   [`McpError::HttpStatus`].
 //!
+//! Authorization: a *static* bearer token can be supplied per endpoint via
+//! [`McpHttpClient::connect_with_auth`]. When set, every request to the
+//! endpoint — the JSON-RPC POSTs, the `notifications/initialized`
+//! notification and the best-effort `DELETE` in [`McpHttpClient::close`] —
+//! carries `Authorization: Bearer <token>`. The token is stored privately,
+//! redacted in [`fmt::Debug`] output, never exposed through an accessor,
+//! and **scrubbed out of every [`McpError`] value this client produces** on
+//! the request path (server-supplied response bodies, transport errors and
+//! JSON-RPC error fields all have occurrences of the token replaced with
+//! `***`). There is no OAuth flow, no token refresh and no `WWW-Authenticate`
+//! handling — see the not-implemented list below.
+//!
+//! Redirects are not followed: the underlying `reqwest` client is built with
+//! [`reqwest::redirect::Policy::none`]. MCP streamable-HTTP endpoints are
+//! expected to answer requests directly; following a redirect could forward
+//! the `Authorization` header to a different origin. A `3xx` response is
+//! therefore surfaced as [`McpError::HttpStatus`] (an error), never chased.
+//! This applies whether or not a token is configured.
+//!
 //! Session management: the `Mcp-Session-Id` response header on the
 //! `initialize` response is captured and re-sent as the `Mcp-Session-Id`
 //! request header on every subsequent request, per the spec. When the
 //! server does not assign one, no header is sent. Header names used by this
-//! client are exactly `Accept`, `Content-Type` and `Mcp-Session-Id` — no
+//! client are exactly `Accept`, `Content-Type`, `Mcp-Session-Id` and (only
+//! when a bearer token is configured) `Authorization` — no
 //! `MCP-Protocol-Version` header is sent (the in-repo documentation does
 //! not carry the spec text that defines it, and this crate does not invent
 //! header names). `DELETE <endpoint>` is sent by [`McpHttpClient::close`]
@@ -43,13 +63,14 @@
 //! to answer `405 Method Not Allowed` / `501 Not Implemented` for
 //! unsupported session termination.
 //!
-//! What is intentionally **not** implemented: OAuth/bearer authentication
-//! (no `Authorization` header is ever set by this client), SSE resume via
+//! What is intentionally **not** implemented: OAuth (only a static bearer
+//! token is supported), token refresh, SSE resume via
 //! `Last-Event-ID`, reconnect/backoff (the SSE `retry:` field is parsed
 //! and ignored), server-initiated requests over SSE (they are ignored), and
 //! any form of automatic re-initialization when a server answers `404` for
 //! an unknown session (surfaced as [`McpError::HttpStatus`]).
 
+use std::fmt;
 use std::io::Read;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
@@ -98,6 +119,20 @@ pub struct McpHttpClient {
     session_id: Mutex<Option<String>>,
     next_id: AtomicU64,
     timeout: Duration,
+    /// Static bearer token sent as `Authorization: Bearer <token>` on every
+    /// request to the configured endpoint. Never logged, never returned by
+    /// any accessor, redacted in `Debug`, scrubbed from all errors.
+    bearer_token: Option<String>,
+}
+
+impl fmt::Debug for McpHttpClient {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("McpHttpClient")
+            .field("endpoint", &self.endpoint)
+            .field("bearer_token", &self.bearer_token.as_ref().map(|_| "***"))
+            .field("timeout", &self.timeout)
+            .finish()
+    }
 }
 
 impl McpHttpClient {
@@ -107,7 +142,31 @@ impl McpHttpClient {
     /// absolute with an `http`/`https` scheme) and builds the underlying
     /// HTTP client. The MCP handshake happens in
     /// [`McpHttpClient::initialize`].
+    ///
+    /// Equivalent to [`McpHttpClient::connect_with_auth`] with no token; a
+    /// client created this way sends exactly the same requests as before
+    /// the `Authorization` support landed.
     pub fn connect(url: &str) -> Result<Self, McpError> {
+        Self::connect_with_auth(url, None)
+    }
+
+    /// Creates a client for `endpoint` with an optional static bearer token.
+    ///
+    /// When `bearer_token` is `Some` (and not empty/whitespace after
+    /// trimming), every request to `endpoint` — including
+    /// `notifications/initialized` and the `close()` `DELETE` — carries
+    /// `Authorization: Bearer <token>`. The token is used **only** for the
+    /// configured endpoint; it is never sent anywhere else (redirects are
+    /// not followed at all; see the module docs), never logged, never
+    /// returned by an accessor, redacted in `Debug` and scrubbed out of
+    /// every [`McpError`] this client produces.
+    ///
+    /// An empty or whitespace-only token is treated as no token. A token
+    /// containing characters invalid in an HTTP header value is rejected
+    /// with [`McpError::Transport`] (without echoing the token).
+    ///
+    /// This performs **no network I/O**.
+    pub fn connect_with_auth(url: &str, bearer_token: Option<&str>) -> Result<Self, McpError> {
         let parsed = reqwest::Url::parse(url)
             .map_err(|e| McpError::Transport(format!("invalid MCP endpoint URL `{url}`: {e}")))?;
         match parsed.scheme() {
@@ -119,8 +178,27 @@ impl McpHttpClient {
             }
         }
 
+        let bearer_token = bearer_token
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .map(str::to_string);
+        if let Some(token) = &bearer_token {
+            // Reject tokens that cannot form a valid header value, without
+            // echoing the token into the error.
+            reqwest::header::HeaderValue::from_str(token).map_err(|_| {
+                McpError::Transport(
+                    "bearer token contains characters invalid in an HTTP header value".to_string(),
+                )
+            })?;
+        }
+
+        // NOTICE: redirects are disabled entirely. MCP endpoints answer
+        // requests directly, and reqwest forwards header values on redirect;
+        // a cross-origin redirect would leak `Authorization`. Surfacing 3xx
+        // as `McpError::HttpStatus` is the honest failure mode.
         let client = reqwest::blocking::Client::builder()
             .connect_timeout(DEFAULT_REQUEST_TIMEOUT)
+            .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|e| McpError::Transport(format!("failed to build HTTP client: {e}")))?;
 
@@ -130,6 +208,7 @@ impl McpHttpClient {
             session_id: Mutex::new(None),
             next_id: AtomicU64::new(1),
             timeout: DEFAULT_REQUEST_TIMEOUT,
+            bearer_token,
         })
     }
 
@@ -170,7 +249,9 @@ impl McpHttpClient {
         let params = jsonrpc::initialize_params(CLIENT_NAME, env!("CARGO_PKG_VERSION"));
         let id = self.next_request_id();
         let request = JsonRpcRequest::new(id, "initialize", params);
-        let response = self.send_request(id, "initialize", &request)?;
+        let response = self
+            .send_request(id, "initialize", &request)
+            .map_err(|e| self.scrub_error(e))?;
 
         // Capture the session id, if the server assigned one.
         if let Some(value) = response.headers().get(SESSION_ID_HEADER) {
@@ -184,12 +265,15 @@ impl McpHttpClient {
             }
         }
 
-        let result = self.finish_response(id, response, "initialize")?;
+        let result = self
+            .finish_response(id, response, "initialize")
+            .map_err(|e| self.scrub_error(e))?;
         let parsed = parse_initialize_result(&result);
         self.send_notification(
             "notifications/initialized",
             Value::Object(Default::default()),
-        )?;
+        )
+        .map_err(|e| self.scrub_error(e))?;
         Ok(parsed)
     }
 
@@ -236,6 +320,7 @@ impl McpHttpClient {
             .client
             .delete(&self.endpoint)
             .header("Accept", ACCEPT_HEADER_VALUE);
+        request = self.with_auth(request);
         if let Some(session_id) = self.session_id() {
             request = request.header(SESSION_ID_HEADER, session_id);
         }
@@ -248,7 +333,8 @@ impl McpHttpClient {
                 );
             }
             Err(e) => {
-                tracing::debug!(target: "airi-mcp", "MCP session DELETE failed (ignored): {e}");
+                let message = self.scrub(&e.to_string());
+                tracing::debug!(target: "airi-mcp", "MCP session DELETE failed (ignored): {message}");
             }
         }
     }
@@ -257,12 +343,86 @@ impl McpHttpClient {
     fn call(&self, method: &str, params: Value) -> Result<Value, McpError> {
         let id = self.next_request_id();
         let request = JsonRpcRequest::new(id, method, params);
-        let response = self.send_request(id, method, &request)?;
+        let response = self
+            .send_request(id, method, &request)
+            .map_err(|e| self.scrub_error(e))?;
         self.finish_response(id, response, method)
+            .map_err(|e| self.scrub_error(e))
     }
 
     fn next_request_id(&self) -> u64 {
         self.next_id.fetch_add(1, Ordering::SeqCst)
+    }
+
+    /// Adds the `Authorization: Bearer <token>` header when a token is
+    /// configured; otherwise returns the builder unchanged.
+    fn with_auth(
+        &self,
+        builder: reqwest::blocking::RequestBuilder,
+    ) -> reqwest::blocking::RequestBuilder {
+        match &self.bearer_token {
+            Some(token) => {
+                builder.header(reqwest::header::AUTHORIZATION, format!("Bearer {token}"))
+            }
+            None => builder,
+        }
+    }
+
+    /// Replaces occurrences of the configured bearer token with `***`.
+    fn scrub(&self, text: &str) -> String {
+        match &self.bearer_token {
+            Some(token) if !token.is_empty() => text.replace(token.as_str(), "***"),
+            _ => text.to_string(),
+        }
+    }
+
+    /// Recursively replaces occurrences of the bearer token in a JSON value.
+    fn scrub_value(&self, value: &mut Value) {
+        match value {
+            Value::String(s) => *s = self.scrub(s),
+            Value::Array(items) => {
+                for item in items {
+                    self.scrub_value(item);
+                }
+            }
+            Value::Object(map) => {
+                for (_, item) in map.iter_mut() {
+                    self.scrub_value(item);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Scrubs the bearer token out of every server- or transport-supplied
+    /// string inside an [`McpError`]. A server that echoes the
+    /// `Authorization` header back in an error body, a JSON-RPC `error`
+    /// object or a transport failure message must not be able to smuggle
+    /// the token into AIRI's logs or UI.
+    fn scrub_error(&self, err: McpError) -> McpError {
+        match err {
+            McpError::Transport(s) => McpError::Transport(self.scrub(&s)),
+            McpError::Sse(s) => McpError::Sse(self.scrub(&s)),
+            McpError::Protocol(s) => McpError::Protocol(self.scrub(&s)),
+            McpError::UnsupportedTransport(s) => McpError::UnsupportedTransport(self.scrub(&s)),
+            McpError::HttpStatus { status, body } => McpError::HttpStatus {
+                status,
+                body: self.scrub(&body),
+            },
+            McpError::JsonRpc {
+                code,
+                message,
+                data,
+            } => McpError::JsonRpc {
+                code,
+                message: self.scrub(&message),
+                data: data.map(|mut value| {
+                    self.scrub_value(&mut value);
+                    value
+                }),
+            },
+            other => other,
+        }
     }
 
     fn send_request(
@@ -281,6 +441,7 @@ impl McpHttpClient {
             .header("Accept", ACCEPT_HEADER_VALUE)
             .body(body)
             .timeout(self.timeout);
+        builder = self.with_auth(builder);
         if let Some(session_id) = self.session_id() {
             builder = builder.header(SESSION_ID_HEADER, session_id);
         }
@@ -458,6 +619,7 @@ impl McpHttpClient {
             .header("Accept", ACCEPT_HEADER_VALUE)
             .body(body)
             .timeout(self.timeout);
+        builder = self.with_auth(builder);
         if let Some(session_id) = self.session_id() {
             builder = builder.header(SESSION_ID_HEADER, session_id);
         }
