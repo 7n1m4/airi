@@ -72,7 +72,8 @@ export function createGoogleDriveService(db: Database, env: Env) {
         return data.access_token
       }
       catch (err) {
-        console.error('[GDrive] Error refreshing Google OAuth token:', err)
+        logger.error(`[GDrive] Error refreshing Google OAuth token: ${err instanceof Error ? err.message : String(err)}`)
+        throw new Error('Failed to refresh Google access token. Re-link Google Drive in settings.', { cause: err })
       }
     }
 

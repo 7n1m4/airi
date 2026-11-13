@@ -14,7 +14,7 @@ export type Database = any
 
 export function createDrizzle(dsn: string) {
   // PGlite is opt-in only: set pglite://. Any other DSN is a real Postgres.
-  const usePglite = !dsn || dsn.startsWith('pglite://')
+  const usePglite = dsn?.startsWith('pglite://') ?? false // PGlite is opt-in only
 
   if (usePglite) {
     logger.log('[Database] Using local embedded PGlite database (no Postgres server required)')

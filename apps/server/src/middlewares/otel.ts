@@ -17,7 +17,9 @@ export function otelMiddleware(otelMetrics: {
   return async (c, next) => {
     const startTime = performance.now()
     const method = c.req.method
-    const path = c.req.path
+    // Route *pattern* (e.g. /api/characters/:id), never the raw path — keeps
+    // otel label/span cardinality bounded regardless of id space.
+    const path = (c.req as any).routePath ?? c.req.path
 
     otelMetrics.httpActiveRequests.add(1, { 'http.request.method': method, 'http.route': path })
 
@@ -25,7 +27,7 @@ export function otelMiddleware(otelMetrics: {
       attributes: {
         'http.request.method': method,
         'http.route': path,
-        'url.full': c.req.url,
+        'url.full': c.req.url.split('?')[0],
       },
     })
 

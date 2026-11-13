@@ -62,6 +62,8 @@ export function createProviderRoutes(providerService: ProviderService) {
         throw createForbiddenError()
 
       const updated = await providerService.updateUserConfig(id, result.output)
+      if (!updated)
+        throw createNotFoundError()
       return c.json(updated)
     })
 

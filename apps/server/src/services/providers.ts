@@ -96,8 +96,10 @@ export function createProviderService(db: Database) {
     },
 
     async updateUserConfig(id: string, data: Partial<schema.NewUserProviderConfig>) {
+      // Never let a PATCH body reassign identity or row ownership.
+      const { id: _id, ownerId: _owner, ...safe } = data as any
       const [updated] = await db.update(schema.userProviderConfigs)
-        .set({ ...data, updatedAt: new Date() })
+        .set({ ...safe, updatedAt: new Date() })
         .where(and(
           eq(schema.userProviderConfigs.id, id),
           isNull(schema.userProviderConfigs.deletedAt),

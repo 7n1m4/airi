@@ -4,14 +4,14 @@ import { env, exit } from 'node:process'
 
 import { useLogger } from '@guiiai/logg'
 import { injeca } from 'injeca'
-import { nonEmpty, object, optional, parse, pipe, string } from 'valibot'
+import { minLength, nonEmpty, object, optional, parse, pipe, string } from 'valibot'
 
 const EnvSchema = object({
   API_SERVER_URL: optional(string(), 'http://localhost:3000'),
 
   DATABASE_URL: pipe(string(), nonEmpty('DATABASE_URL is required')),
 
-  BETTER_AUTH_SECRET: pipe(string(), nonEmpty('BETTER_AUTH_SECRET is required')),
+  BETTER_AUTH_SECRET: pipe(string(), nonEmpty('BETTER_AUTH_SECRET is required'), minLength(32, 'BETTER_AUTH_SECRET must be at least 32 characters')),
 
   AUTH_GOOGLE_CLIENT_ID: pipe(string(), nonEmpty('AUTH_GOOGLE_CLIENT_ID is required')),
   AUTH_GOOGLE_CLIENT_SECRET: pipe(string(), nonEmpty('AUTH_GOOGLE_CLIENT_SECRET is required')),

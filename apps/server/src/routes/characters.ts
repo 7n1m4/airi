@@ -72,7 +72,9 @@ export function createCharacterRoutes(characterService: CharacterService) {
       if (existing.ownerId !== user.id)
         throw createForbiddenError()
 
-      const updated = await characterService.update(id, result.output)
+      const updated = await characterService.update(id, result.output as any)
+      if (!updated)
+        throw createNotFoundError('Character not found or not updatable')
       return c.json(updated)
     })
 

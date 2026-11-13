@@ -2,6 +2,8 @@ FROM node:24-alpine
 
 WORKDIR /app
 
+ENV NODE_ENV=production
+
 RUN corepack enable
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
@@ -16,6 +18,7 @@ RUN --mount=type=cache,id=s/fec8bf0d-37e0-4283-8202-5f1bd7e6cd0e-/root/.pnpm-sto
 
 RUN pnpm -F @proj-airi/server-schema run build
 
+USER node
 EXPOSE 3000
 
 CMD ["pnpm", "-F", "@proj-airi/server", "start"]

@@ -206,4 +206,36 @@ describe('characterRoutes', () => {
     const char = await characterService.findById(charId)
     expect(char).toBeUndefined()
   })
+
+  it('patch /:id ignores owner-managed fields and applies only whitelisted ones', async () => {
+    const [owned] = await db.insert(schema.character).values({
+      version: '1',
+      coverUrl: 'orig',
+      creatorId: testUser.id,
+      ownerId: testUser.id,
+      characterId: 'mass-test',
+      likesCount: 7,
+    }).returning()
+
+    const res = await app.fetch(new Request(`http://localhost/${owned.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ likesCount: 999, ownerId: 'other-user', createdAt: '2001-01-01T00:00:00.000Z', version: '2', coverUrl: 'cover-new' }),
+      headers: { 'Content-Type': 'application/json' },
+    }), { user: testUser } as any)
+
+    expect(res.status).toBe(200)
+    const updated = await characterService.findById(owned.id)
+    expect(updated.likesCount).toBe(7)
+    expect(updated.ownerId).toBe(testUser.id)
+    expect(updated.version).toBe('2')
+    expect(updated.coverUrl).toBe('cover-new')
+  })
+
+  it('post /:id/like on a nonexistent character returns 404, not 500', async () => {
+    const res = await app.fetch(new Request('http://localhost/does-not-exist/like', {
+      method: 'POST',
+    }), { user: testUser } as any)
+
+    expect(res.status).toBe(404)
+  })
 })

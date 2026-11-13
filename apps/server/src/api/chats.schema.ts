@@ -1,4 +1,4 @@
-import { array, literal, number, object, optional, string, union } from 'valibot'
+import { array, literal, maxLength, number, object, optional, pipe, string, union } from 'valibot'
 
 const ChatTypeSchema = union([
   literal('private'),
@@ -36,10 +36,10 @@ export const ChatSyncSchema = object({
     createdAt: optional(number()),
     updatedAt: optional(number()),
   }),
-  members: optional(array(object({
+  members: optional(pipe(array(object({
     type: ChatMemberTypeSchema,
     userId: optional(string()),
     characterId: optional(string()),
-  }))),
+  })), maxLength(64))), // Bound the per-member SELECT storm a full sync can trigger
   messages: array(ChatSyncMessageSchema),
 })

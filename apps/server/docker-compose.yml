@@ -6,9 +6,10 @@ services:
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=change-me
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set in .env before composing up}
     ports:
-      - '5435:5432'
+      # Admin access only from this host — the quickstart database holds no LAN contract.
+      - '127.0.0.1:5435:5432'
     volumes:
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
       - db_data:/var/lib/postgresql
@@ -33,7 +34,7 @@ services:
     ports:
       - '6112:3000'
     healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1']
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://localhost:3000/health || exit 1']
       interval: 10s
       timeout: 5s
       retries: 5

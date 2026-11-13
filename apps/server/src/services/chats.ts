@@ -101,6 +101,10 @@ export function createChatService(db: Database) {
         ]
 
         for (const member of desiredMembers) {
+          // Bots are not persisted rows (schema allows type 'bot' for future automation);
+          // treating them as member rows violates chat_members FK/NOT NULL and crashed the sync.
+          if (member.type !== 'user' && member.type !== 'character')
+            continue
           if (member.type === 'user' && !member.userId)
             continue
           if (member.type === 'character' && !member.characterId)

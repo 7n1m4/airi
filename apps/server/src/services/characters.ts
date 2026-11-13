@@ -2,8 +2,14 @@ import type { Database } from '../libs/db'
 
 import { and, eq, isNull, sql } from 'drizzle-orm'
 
+import { createNotFoundError } from '../utils/error'
+
 import * as schema from '../schemas/characters'
 import * as userCharacterSchema from '../schemas/user-character'
+
+// Client-writable columns only; server-managed counters, ownership, and
+// identity fields are never accepted from a PATCH body.
+const UPDATABLE_KEYS = ['version', 'coverUrl', 'avatarUrl', 'creatorRole'] as const
 
 export function createCharacterService(db: Database) {
   return {
@@ -56,6 +62,15 @@ export function createCharacterService(db: Database) {
 
     async like(userId: string, characterId: string) {
       return await db.transaction(async (tx: any) => {
+        const target = await tx.query.character.findFirst({
+          where: and(
+            eq(schema.character.id, characterId),
+            isNull(schema.character.deletedAt),
+          ),
+        })
+        if (!target)
+          throw createNotFoundError('Character not found')
+
         const existing = await tx.query.characterLikes.findFirst({
           where: and(
             eq(userCharacterSchema.characterLikes.userId, userId),
@@ -72,14 +87,17 @@ export function createCharacterService(db: Database) {
 
           await tx.update(schema.character)
             .set({
-              likesCount: sql`${schema.character.likesCount} - 1`,
+              likesCount: sql`GREATEST(0, ${schema.character.likesCount} - 1)`,
             })
             .where(eq(schema.character.id, characterId))
 
           return { liked: false }
         }
         else {
-          await tx.insert(userCharacterSchema.characterLikes).values({ userId, characterId })
+          // Lost a concurrent first-like race: keep {liked:true}, don't double-count.
+          const inserted = await tx.insert(userCharacterSchema.characterLikes).values({ userId, characterId }).onConflictDoNothing().returning({ userId: userCharacterSchema.characterLikes.userId })
+          if (inserted.length === 0)
+            return { liked: true }
 
           await tx.update(schema.character)
             .set({
@@ -94,6 +112,15 @@ export function createCharacterService(db: Database) {
 
     async bookmark(userId: string, characterId: string) {
       return await db.transaction(async (tx: any) => {
+        const target = await tx.query.character.findFirst({
+          where: and(
+            eq(schema.character.id, characterId),
+            isNull(schema.character.deletedAt),
+          ),
+        })
+        if (!target)
+          throw createNotFoundError('Character not found')
+
         const existing = await tx.query.characterBookmarks.findFirst({
           where: and(
             eq(userCharacterSchema.characterBookmarks.userId, userId),
@@ -110,14 +137,16 @@ export function createCharacterService(db: Database) {
 
           await tx.update(schema.character)
             .set({
-              bookmarksCount: sql`${schema.character.bookmarksCount} - 1`,
+              bookmarksCount: sql`GREATEST(0, ${schema.character.bookmarksCount} - 1)`,
             })
             .where(eq(schema.character.id, characterId))
 
           return { bookmarked: false }
         }
         else {
-          await tx.insert(userCharacterSchema.characterBookmarks).values({ userId, characterId })
+          const inserted = await tx.insert(userCharacterSchema.characterBookmarks).values({ userId, characterId }).onConflictDoNothing().returning({ userId: userCharacterSchema.characterBookmarks.userId })
+          if (inserted.length === 0)
+            return { bookmarked: true }
 
           await tx.update(schema.character)
             .set({
@@ -177,13 +206,21 @@ export function createCharacterService(db: Database) {
     },
 
     async update(id: string, data: Partial<schema.NewCharacter>) {
-      return await db.update(schema.character)
-        .set({ ...data, updatedAt: new Date() })
+      const patch: Record<string, unknown> = {}
+      for (const key of UPDATABLE_KEYS) {
+        if (data[key] !== undefined)
+          patch[key] = data[key]
+      }
+      if (Object.keys(patch).length === 0)
+        return undefined // Nothing the client is allowed to change
+      const rows = await db.update(schema.character)
+        .set({ ...patch, updatedAt: new Date() })
         .where(and(
           eq(schema.character.id, id),
           isNull(schema.character.deletedAt),
         ))
         .returning()
+      return rows[0]
     },
 
     async delete(id: string) {

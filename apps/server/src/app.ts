@@ -196,5 +196,26 @@ function handleError(error: unknown, type: string) {
   useLogger().withError(error).error(type)
 }
 
-process.on('uncaughtException', error => handleError(error, 'Uncaught exception'))
-process.on('unhandledRejection', error => handleError(error, 'Unhandled rejection'))
+async function shutdown(signal: string) {
+  useLogger().log(`Received ${signal}, draining and shutting down...`)
+  try {
+    await injeca.stop()
+  }
+  catch (err) {
+    handleError(err, 'Shutdown error')
+  }
+  process.exit(0)
+}
+
+process.once('SIGTERM', () => void shutdown('SIGTERM'))
+process.once('SIGINT', () => void shutdown('SIGINT'))
+// Node recommends restarting after an uncaught exception rather than serving
+// requests in an unknown state; docker/systemd will restart the process.
+process.on('uncaughtException', (error) => {
+  handleError(error, 'Uncaught exception')
+  process.exit(1)
+})
+process.on('unhandledRejection', (error) => {
+  handleError(error, 'Unhandled rejection')
+  process.exit(1)
+})

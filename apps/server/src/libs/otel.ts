@@ -10,7 +10,6 @@ import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http'
-import { IORedisInstrumentation } from '@opentelemetry/instrumentation-ioredis'
 import { PgInstrumentation } from '@opentelemetry/instrumentation-pg'
 import { RuntimeNodeInstrumentation } from '@opentelemetry/instrumentation-runtime-node'
 import { resourceFromAttributes } from '@opentelemetry/resources'
@@ -94,9 +93,9 @@ export function initOtel(env: Env) {
         },
       }),
       new PgInstrumentation({
-        enhancedDatabaseReporting: true,
+        // Never report bound parameters — they carry apiKeys and session tokens.
+        enhancedDatabaseReporting: false,
       }),
-      new IORedisInstrumentation(),
       new RuntimeNodeInstrumentation(),
     ],
   })
@@ -119,28 +118,6 @@ export function initOtel(env: Env) {
     description: 'Number of active HTTP requests',
   })
 
-  const dbQueryDuration = meter.createHistogram('db.client.operation.duration', {
-    description: 'Database operation duration in milliseconds',
-    unit: 'ms',
-  })
-
-  const redisCommandDuration = meter.createHistogram('redis.client.command.duration', {
-    description: 'Redis command duration in milliseconds',
-    unit: 'ms',
-  })
-
-  const authAttempts = meter.createCounter('auth.attempts', {
-    description: 'Number of authentication attempts',
-  })
-
-  const authFailures = meter.createCounter('auth.failures', {
-    description: 'Number of failed authentication attempts',
-  })
-
-  const stripeEvents = meter.createCounter('stripe.events', {
-    description: 'Number of Stripe webhook events processed',
-  })
-
   // Graceful shutdown
   const shutdown = async () => {
     try {
@@ -157,11 +134,6 @@ export function initOtel(env: Env) {
     meter,
     httpRequestDuration,
     httpActiveRequests,
-    dbQueryDuration,
-    redisCommandDuration,
-    authAttempts,
-    authFailures,
-    stripeEvents,
 
     shutdown,
   }
