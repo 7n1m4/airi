@@ -168,7 +168,6 @@ ignoredBuiltDependencies:
   - onnxruntime-node
 
 onlyBuiltDependencies:
-  - '@discordjs/opus'
   - '@ffmpeg-installer/darwin-arm64'
   - '@ffmpeg-installer/linux-x64'
   - '@napi-rs/image'
@@ -182,7 +181,6 @@ onlyBuiltDependencies:
   - electron-winstaller
   - es5-ext
   - esbuild
-  - ffmpeg-static
   - koffi
   - less
   - msw

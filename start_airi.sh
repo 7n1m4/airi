@@ -9,8 +9,10 @@ unset ELECTRON_RUN_AS_NODE
 # Prevent onnxruntime-node from attempting broken CUDA binary downloads on Linux
 export ONNXRUNTIME_NODE_INSTALL_CUDA=skip
 
-# On Linux, disable Electron sandbox if needed for dev environments
-if [ "$(uname -s)" = "Linux" ]; then
+# Dev fallback only if the SUID sandbox fails; do not ship.
+# ELECTRON_DISABLE_SANDBOX=1 is never set by default; opt in explicitly:
+#   AIRI_DISABLE_ELECTRON_SANDBOX=1 ./start_airi.sh
+if [ "$(uname -s)" = "Linux" ] && [ "${AIRI_DISABLE_ELECTRON_SANDBOX:-}" = "1" ]; then
   export ELECTRON_DISABLE_SANDBOX=1
 fi
 

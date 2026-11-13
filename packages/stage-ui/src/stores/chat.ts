@@ -3,7 +3,7 @@ import type { WebSocketEventInputs } from '@proj-airi/server-sdk'
 import type { ChatProvider } from '@xsai-ext/providers/utils'
 import type { CommonContentPart, CompletionToolCall, Message, ToolMessage } from '@xsai/shared-chat'
 
-import type { ChatAssistantMessage, ChatSlices, ChatStreamEventContext } from '../types/chat'
+import type { ChatAssistantMessage, ChatHistoryItem, ChatSlices, ChatStreamEventContext } from '../types/chat'
 import type { PacingMetrics } from '../types/pacing'
 import type { ChatInputBridgePayload } from './chat/input-bridge'
 import type { StreamEvent, StreamOptions } from './llm'
@@ -58,6 +58,7 @@ import {
   formatDreamPrompt,
   formatJournalPrompt,
 } from './chat/intrusions'
+import { extractMessageContent } from './chat/session-message-merge'
 import { useChatSessionStore } from './chat/session-store'
 import { useChatStreamStore } from './chat/stream-store'
 import { parseBridgeArguments, recognizeToolMarker, tryParseLenientJson } from './chat/tool-bridge'
@@ -1275,20 +1276,8 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           }
         }
 
-        const getMsgStringContent = (content: any): string => {
-          if (typeof content === 'string')
-            return content
-          if (Array.isArray(content)) {
-            return content.map((part) => {
-              if (typeof part === 'string')
-                return part
-              if (part && typeof part === 'object' && 'text' in part)
-                return String(part.text ?? '')
-              return ''
-            }).join('')
-          }
-          return ''
-        }
+        // Content is a chat-completion-ish shape, not necessarily a ChatHistoryItem; adapt to the canonical extractor.
+        const getMsgStringContent = (content: any): string => extractMessageContent({ content } as ChatHistoryItem)
 
         // Ensure that newMessages always starts with the active character's canonical system prompt (unless zero-prompt cartridge).
         const isZeroPromptCartridge = activeCard.value?.extensions?.airi?.rwkv?.zeroPromptVerified === true

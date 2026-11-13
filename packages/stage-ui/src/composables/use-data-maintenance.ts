@@ -20,6 +20,7 @@ import { storage, storageState } from '../database/storage'
 import { useBackgroundStore } from '../stores/background'
 import { useChatOrchestratorStore } from '../stores/chat'
 import { CHAT_STREAM_CHANNEL_NAME } from '../stores/chat/constants'
+import { extractMessageContent } from '../stores/chat/session-message-merge'
 import { useChatSessionStore } from '../stores/chat/session-store'
 import { useDisplayModelsStore } from '../stores/display-models'
 import { useMcpStore } from '../stores/mcp'
@@ -856,19 +857,7 @@ export function useDataMaintenance() {
             const messages = sessionRecord?.messages ?? []
             const lastMsg = messages[messages.length - 1]
             if (lastMsg) {
-              let text = ''
-              if (typeof lastMsg.content === 'string') {
-                text = lastMsg.content
-              }
-              else if (Array.isArray(lastMsg.content)) {
-                text = lastMsg.content.map((part: any) => {
-                  if (typeof part === 'string')
-                    return part
-                  if (part && typeof part === 'object' && 'text' in part)
-                    return String(part.text ?? '')
-                  return ''
-                }).join('')
-              }
+              const text = extractMessageContent(lastMsg)
               preview = text.length > 300 ? `...${text.slice(-300)}` : text
             }
           }

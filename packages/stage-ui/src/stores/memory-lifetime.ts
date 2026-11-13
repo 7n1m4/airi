@@ -401,7 +401,6 @@ export function buildBaseArchivePrompt(
 }
 
 function renderLifetimeArchiveMd(characterName: string, rawArchive: LifetimeArchive | Record<string, unknown> | undefined, docCount: number, chunkCount: number) {
-  console.log('[memory-lifetime] Rendering Lifetime Archive with raw data:', rawArchive)
   const archive = normalizeLifetimeArchive(rawArchive)
   return [
     `# Lifetime Archive: ${characterName}`,

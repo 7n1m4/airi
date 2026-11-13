@@ -26,7 +26,7 @@ import { useAuthStore } from './auth'
 import { useBackgroundStore } from './background'
 import { useChatOrchestratorStore } from './chat'
 import { useChatContextStore } from './chat/context-store'
-import { mergeLoadedSessionMessages } from './chat/session-message-merge'
+import { extractMessageContent, mergeLoadedSessionMessages } from './chat/session-message-merge'
 import { useChatSessionStore } from './chat/session-store'
 import { useEchoesStore } from './echo-chips'
 import { useEntityLedgerStore } from './entity-ledger'
@@ -687,19 +687,7 @@ export const useProactivityStore = defineStore('proactivity', () => {
 
         for (const msg of historyToInject) {
           if (msg.role === 'user' || msg.role === 'assistant') {
-            let msgContent = ''
-            if (typeof msg.content === 'string') {
-              msgContent = msg.content as string
-            }
-            else if (Array.isArray(msg.content)) {
-              msgContent = (msg.content as any[]).map((part: any) => {
-                if (typeof part === 'string')
-                  return part
-                if (part && typeof part === 'object' && 'text' in part)
-                  return String(part.text ?? '')
-                return ''
-              }).join('')
-            }
+            const msgContent = extractMessageContent(msg)
             if (msgContent) {
               messages.push({ role: msg.role as 'user' | 'assistant', content: msgContent })
             }

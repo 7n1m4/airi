@@ -13,6 +13,7 @@ import { chatSessionsRepo } from '../database/repos/chat-sessions.repo'
 import { echoChipsRepo } from '../database/repos/echo-chips.repo'
 import { layeredMemory } from '../libs/search/layered-memory'
 import { useAuthStore } from './auth'
+import { mergeById } from './chat/session-message-merge'
 import { useChatSessionStore } from './chat/session-store'
 import { useLLM } from './llm'
 import { useAiriCardStore } from './modules/airi-card'
@@ -132,6 +133,25 @@ export const useEchoesStore = defineStore('echo-chips', () => {
   const loading = ref(false)
   const initializedForUserId = ref<string | null>(null)
 
+  function normalizeChip(c: EchoChip, currentUserId: string): EchoChip {
+    return {
+      id: c.id,
+      userId: c.userId || currentUserId,
+      characterId: c.characterId,
+      date: c.date,
+      content: c.content,
+      type: (c.type || 'flavor') as EchoChipType,
+      relevanceScore: typeof c.relevanceScore === 'number' ? c.relevanceScore : 0.8,
+      evidenceIndices: c.evidenceIndices || [],
+      citedText: c.citedText || [],
+      claims: c.claims || [],
+      moodShift: c.moodShift,
+      createdAt: c.createdAt || Date.now(),
+      universeId: c.universeId,
+      sessionId: c.sessionId,
+    }
+  }
+
   function getCurrentUserId() {
     return userId.value || 'local'
   }
@@ -157,22 +177,7 @@ export const useEchoesStore = defineStore('echo-chips', () => {
     loading.value = true
     try {
       const raw = await echoChipsRepo.getAll(currentUserId) ?? []
-      chips.value = raw.map(c => ({
-        id: c.id,
-        userId: c.userId || currentUserId,
-        characterId: c.characterId,
-        date: c.date,
-        content: c.content,
-        type: (c.type || 'flavor') as EchoChipType,
-        relevanceScore: typeof c.relevanceScore === 'number' ? c.relevanceScore : 0.8,
-        evidenceIndices: c.evidenceIndices || [],
-        citedText: c.citedText || [],
-        claims: c.claims || [],
-        moodShift: c.moodShift,
-        createdAt: c.createdAt || Date.now(),
-        universeId: c.universeId,
-        sessionId: c.sessionId,
-      }))
+      chips.value = raw.map(c => normalizeChip(c, currentUserId))
       initializedForUserId.value = currentUserId
     }
     finally {
@@ -182,16 +187,24 @@ export const useEchoesStore = defineStore('echo-chips', () => {
 
   async function persist(nextChips: EchoChip[]) {
     const currentUserId = getCurrentUserId()
-    const serialized = JSON.parse(JSON.stringify(nextChips))
+    // NOTICE: Re-read the repo and union by id before writing — both the chat window and the
+    // main stage persist full snapshots, so blind last-write-wins would drop the other
+    // window's chips. Local deletes (ids in memory but filtered out here) are tombstoned so
+    // the re-read cannot resurrect them. Saves are still whole-array; no per-entry keys yet.
+    const nextIds = new Set(nextChips.map(c => c.id))
+    const removedIds = new Set(chips.value.map(c => c.id).filter(id => !nextIds.has(id)))
+    const stored = await echoChipsRepo.getAll(currentUserId).catch(() => null) ?? []
+    const merged = mergeById(stored, nextChips, removedIds).map(c => normalizeChip(c, currentUserId))
+    const serialized = JSON.parse(JSON.stringify(merged))
     await echoChipsRepo.saveAll(currentUserId, serialized)
-    chips.value = nextChips
+    chips.value = merged
     initializedForUserId.value = currentUserId
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('echo-chips-updated', {
         detail: {
           userId: currentUserId,
-          count: nextChips.length,
+          count: merged.length,
         },
       }))
     }

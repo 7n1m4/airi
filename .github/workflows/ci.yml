@@ -183,7 +183,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: danielroe/provenance-action@main
+      - uses: danielroe/provenance-action@cbddd3d14144ca5c2f841d8e51bfb72675a55224 # main, pinned 2026-11-13
         id: check
         with:
           fail-on-provenance-change: true # optional, default: false

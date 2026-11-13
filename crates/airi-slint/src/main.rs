@@ -81,9 +81,11 @@ fn main() {
         .expect("failed to build the async runtime");
     bridges::set_runtime_handle(runtime.handle().clone());
 
-    if let Some(port) = cli.gateway {
-        serve_gateway(&db, port);
-    }
+    // Held until the end of `main`: the spawned accept loop serves for the
+    // process lifetime.
+    let _gateway_handle = cli
+        .gateway
+        .and_then(|port| serve_gateway(&db, &profile, port));
 
     if let Some(path) = &cli.spine_model {
         let ok = with_controller(|c| c.load_model(path));
@@ -161,7 +163,7 @@ fn run_ui() -> Result<(), slint::PlatformError> {
     });
     let weak_chat_for_pump = weak_chat.clone();
     chat.on_pump_events(move || {
-        // The former 33 ms timer: apply whatever the service pushed.
+        // Driven by the 33 ms timer in ChatWindow.slint while streaming.
         bridges::chat::with_state(|state| {
             let _ = state.drain_events();
         });
@@ -276,16 +278,55 @@ fn sync_chat_view(window: &airi_slint::ChatWindow) {
 }
 
 /// Start the local RPC gateway on `port`, logging the bound address.
-fn serve_gateway(db: &airi_store::Database, port: u16) {
-    let config = airi_channel::ChannelConfig::healed();
+///
+/// Loads the persisted `server-channel/config.json` exactly like airi-daemon
+/// (`<profile>/server-channel/config.json`, healing it when missing/invalid),
+/// so loopback clients authenticate against the same token the daemon and
+/// the Electron build use. The returned handle must be held for the process
+/// lifetime; dropping it does not stop the accept thread, but holding it
+/// keeps the spawn honest and preserves the bound port.
+fn serve_gateway(
+    db: &airi_store::Database,
+    profile: &std::path::Path,
+    port: u16,
+) -> Option<airi_channel::ServerHandle> {
+    let config_path = profile.join("server-channel").join("config.json");
+    let config = match airi_channel::load_or_heal(&config_path) {
+        Ok(config) => config,
+        Err(error) => {
+            eprintln!(
+                "[airi-slint] gateway config load/heal failed ({}): {error}",
+                config_path.display()
+            );
+            return None;
+        }
+    };
     let handlers = gateway_handlers::build(db.clone());
-    match airi_channel::ChannelServer::bind_with_renderer(&config.hostname, port, &config, handlers)
-    {
-        Ok(server) => eprintln!(
-            "[airi-slint] gateway listening on {}",
-            server.local_addr().expect("bound address available"),
-        ),
-        Err(error) => eprintln!("[airi-slint] gateway failed to bind port {port}: {error}"),
+    let server = match airi_channel::ChannelServer::bind_with_renderer(
+        &config.hostname,
+        port,
+        &config,
+        handlers,
+    ) {
+        Ok(server) => server,
+        Err(error) => {
+            eprintln!("[airi-slint] gateway failed to bind port {port}: {error}");
+            return None;
+        }
+    };
+    match server.spawn() {
+        Ok(handle) => {
+            eprintln!(
+                "[airi-slint] gateway listening on {}:{}",
+                config.hostname,
+                handle.port()
+            );
+            Some(handle)
+        }
+        Err(error) => {
+            eprintln!("[airi-slint] gateway failed to spawn accept loop: {error}");
+            None
+        }
     }
 }
 

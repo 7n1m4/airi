@@ -386,13 +386,17 @@ impl Gateway {
         #[cfg(unix)]
         {
             use std::io::Write as _;
-            use std::os::unix::fs::OpenOptionsExt;
+            use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+            // mode(0o600) only applies at creation; a pre-existing 0644
+            // tmp would survive otherwise, and rename() would then hand
+            // the daemon a 0644 config.
             let mut file = fs::OpenOptions::new()
                 .write(true)
                 .create(true)
                 .truncate(true)
                 .mode(0o600)
                 .open(&tmp)?;
+            file.set_permissions(fs::Permissions::from_mode(0o600))?;
             file.write_all(json.as_bytes())?;
         }
         #[cfg(not(unix))]
@@ -533,6 +537,12 @@ fn adopt(source: &Path, dest: &Path) -> io::Result<PathBuf> {
     }
     let tmp = dest.with_extension("json.tmp");
     fs::write(&tmp, raw)?;
+    // fs::write is umask-dependent; never let the renamed copy be 0644.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600))?;
+    }
     fs::rename(&tmp, dest)?;
     Ok(source.to_path_buf())
 }
@@ -707,6 +717,51 @@ mod tests {
         let v = get_json(&gateway);
         assert_eq!(v["tlsEnabled"], false);
         assert_eq!(v["bound"], true);
+    }
+
+    #[test]
+    fn persist_tightens_preexisting_0644_tmp() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("config.json");
+        let tmp_path = path.with_extension("json.tmp");
+        fs::write(&tmp_path, "stale").unwrap();
+        fs::set_permissions(&tmp_path, fs::Permissions::from_mode(0o644)).unwrap();
+        fs::write(&path, "old").unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+
+        Gateway::persist(&path, &ChannelConfig::healed()).unwrap();
+        let mode = fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "persisted config must be owner-only");
+    }
+
+    #[test]
+    fn adoption_tightens_preexisting_0644_dest() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let source_dir = tmp.path().join("ai.moeru.airi.test");
+        fs::create_dir_all(&source_dir).unwrap();
+        let source = source_dir.join("server-channel-config.json");
+        fs::write(
+            &source,
+            r#"{ "hostname": "127.0.0.1", "authToken": "keep-me-123" }"#,
+        )
+        .unwrap();
+        let dest = tmp.path().join("daemon").join(CONFIG_FILE);
+        fs::create_dir_all(dest.parent().unwrap()).unwrap();
+        fs::write(&dest, "old").unwrap();
+        fs::set_permissions(&dest, fs::Permissions::from_mode(0o644)).unwrap();
+        // A stale 0644 tmp must not survive either.
+        fs::write(dest.with_extension("json.tmp"), "stale").unwrap();
+        fs::set_permissions(
+            dest.with_extension("json.tmp"),
+            fs::Permissions::from_mode(0o644),
+        )
+        .unwrap();
+
+        adopt(&source, &dest).expect("adopt");
+        let mode = fs::metadata(&dest).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "adopted config must be owner-only");
     }
 
     #[test]

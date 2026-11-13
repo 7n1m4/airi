@@ -159,6 +159,8 @@ plugins-development
 recovery_artifacts/
 recovery/
 personal_airi/
+reports/
+scratch/
 
 # Swift / SPM
 .build/

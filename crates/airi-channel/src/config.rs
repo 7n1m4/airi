@@ -161,9 +161,11 @@ fn write_config(path: &Path, cfg: &ChannelConfig) -> Result<(), ConfigError> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
+    // mode(0o600) only applies at creation; tighten explicitly so a
+    // pre-existing 0644 file is fixed on rewrite.
     #[cfg(unix)]
     {
-        use std::os::unix::fs::OpenOptionsExt;
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
         let json = serde_json::to_string_pretty(cfg)
             .map_err(|e| ConfigError::Io(io::Error::new(io::ErrorKind::InvalidData, e)))?;
         let mut file = fs::OpenOptions::new()
@@ -172,6 +174,7 @@ fn write_config(path: &Path, cfg: &ChannelConfig) -> Result<(), ConfigError> {
             .truncate(true)
             .mode(0o600)
             .open(path)?;
+        file.set_permissions(fs::Permissions::from_mode(0o600))?;
         io::Write::write_all(&mut file, json.as_bytes())?;
         Ok(())
     }
@@ -187,6 +190,19 @@ fn write_config(path: &Path, cfg: &ChannelConfig) -> Result<(), ConfigError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rewrite_tightens_preexisting_0644() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.json");
+        fs::write(&path, r#"{ "hostname": "127.0.0.1", "authToken": "keep" }"#).unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+
+        write_config(&path, &ChannelConfig::healed()).unwrap();
+        let mode = fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "rewritten config.json must be owner-only");
+    }
 
     #[test]
     fn config_file_is_owner_only() {
