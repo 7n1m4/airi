@@ -13,7 +13,10 @@ import { toast } from 'vue-sonner'
 import { storage, storageState } from '../database/storage'
 import { SERVER_URL } from '../libs/auth'
 import { isSecretStorageKey } from '../libs/secret-storage-keys'
-import { extractAllowedSessionIds, mergeChatSessions, mergeVoiceProfiles, shouldSkipMergeableKey } from './sync-engine-merge'
+import { extractAllowedSessionIds, mergeByIdLww, mergeChatSessions, mergeVoiceProfiles, shouldSkipMergeableKey } from './sync-engine-merge'
+import { getSyncTombstoneIds, markSyncTombstone } from './sync-tombstones'
+
+export { markSyncTombstone }
 
 // Mergeable keys use last-writer merges instead of file overwrite. Real keys carry the
 // better-auth user.id suffix (local:memory/text-journal/<userId>), so match by prefix.
@@ -1913,29 +1916,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     return ''
   }
 
-  function mergeArraysById(localArr: any[], remoteArr: any[]): any[] {
-    const mergedMap = new Map<string, any>()
-    for (const item of localArr) {
-      if (item && item.id) {
-        mergedMap.set(item.id, item)
-      }
-    }
-    for (const item of remoteArr) {
-      if (item && item.id) {
-        const existing = mergedMap.get(item.id)
-        if (existing) {
-          const existingTime = existing.updatedAt || existing.createdAt || 0
-          const remoteTime = item.updatedAt || item.createdAt || 0
-          if (remoteTime > existingTime) {
-            mergedMap.set(item.id, item)
-          }
-        }
-        else {
-          mergedMap.set(item.id, item)
-        }
-      }
-    }
-    return Array.from(mergedMap.values())
+  function mergeArraysById(localArr: any[], remoteArr: any[], tombstonedIds?: Set<string>): any[] {
+    return mergeByIdLww(localArr, remoteArr, tombstonedIds)
   }
 
   // Merges two airi-cards Map-entry arrays.
@@ -1973,8 +1955,9 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     }
   }
 
-  // Merges two chat-session indexes.
-  function mergeChatIndices(localVal: any, remoteVal: any): any {
+  // Merges two chat-session indexes. Tombstoned session ids (locally deleted) are dropped
+  // from the merged index so a delete cannot be undone by a merge.
+  function mergeChatIndices(localVal: any, remoteVal: any, tombstonedIds?: Set<string>): any {
     try {
       const localIdx = localVal && typeof localVal === 'object' && !Array.isArray(localVal) ? localVal : { characters: {} }
       const remoteIdx = remoteVal && typeof remoteVal === 'object' && !Array.isArray(remoteVal) ? remoteVal : { characters: {} }
@@ -1998,6 +1981,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         let activeSessionId = localChar.activeSessionId || remoteChar.activeSessionId || ''
 
         for (const sessId of allSessionIds) {
+          if (tombstonedIds?.has(sessId))
+            continue
           const localSess = localChar.sessions?.[sessId]
           const remoteSess = remoteChar.sessions?.[sessId]
 
@@ -2026,6 +2011,10 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         else if (localChar.activeSessionId) {
           activeSessionId = localChar.activeSessionId
         }
+
+        // NOTICE: never point at a session the merge dropped (e.g. tombstoned delete)
+        if (activeSessionId && !mergedSessions[activeSessionId])
+          activeSessionId = Object.keys(mergedSessions)[0] ?? ''
 
         mergedCharacters[charId] = {
           activeSessionId,
@@ -2308,14 +2297,15 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         if (readRes.success && readRes.content) {
           const remoteData = JSON.parse(readRes.content)
           const localData = await storage.getItemRaw(localKey)
+          const tombstonedIds = await getSyncTombstoneIds(localKey)
 
           let mergedData: any = null
 
           if (localKey.startsWith('local:chat/sessions/')) {
-            mergedData = mergeChatSessions(localData, remoteData)
+            mergedData = mergeChatSessions(localData, remoteData, tombstonedIds)
           }
           else if (localKey.startsWith('local:chat/index/')) {
-            mergedData = mergeChatIndices(localData, remoteData)
+            mergedData = mergeChatIndices(localData, remoteData, tombstonedIds)
           }
           else if (localKey === 'local:localstorage/settings/live2d/available-motions') {
             mergedData = mergeAvailableMotions(localData, remoteData)
@@ -2325,7 +2315,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
           }
           else {
             if (Array.isArray(localData) && Array.isArray(remoteData)) {
-              mergedData = mergeArraysById(localData, remoteData)
+              mergedData = mergeArraysById(localData, remoteData, tombstonedIds)
             }
             else {
               mergedData = localData || remoteData
@@ -2467,7 +2457,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
           }
 
           const localVal = await storage.getItemRaw<any>(localKey)
-          const mergedVal = mergeChatIndices(localVal, remoteVal)
+          const tombstonedIds = await getSyncTombstoneIds(localKey)
+          const mergedVal = mergeChatIndices(localVal, remoteVal, tombstonedIds)
           await storage.setItemRaw(localKey, mergedVal)
           const writeRes = await client.writeFile(remoteFile.relPath, JSON.stringify(mergedVal, null, 2))
           if (writeRes.success && writeRes.mtime) {
@@ -2561,7 +2552,14 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
 
           if (isMergeableKey) {
             const queueKey = `outbox:queue/${localKey.replace('local:', '')}`
-            const hasPendingOutbox = await storage.getItemRaw(queueKey).then(val => val !== null && val !== undefined)
+            const pendingOutbox = await storage.getItemRaw<{ action?: string }>(queueKey)
+            const hasPendingOutbox = pendingOutbox !== null && pendingOutbox !== undefined
+            // NOTICE: a pending local delete must win over a remote copy — merging here would
+            // re-create the deleted key and re-upload it before the outbox delete reaches remote.
+            if (pendingOutbox?.action === 'delete') {
+              await logDebug(`[SyncEngine] Skipping merge download for ${localKey} because a local delete is pending in the outbox.`)
+              return
+            }
             const storedEtag = await storage.getItemRaw<string>(`local:sync-metadata/etags/${localKey.replace('local:', '')}`)
 
             if (shouldSkipMergeableKey(localTime, remoteFile.mtime, hasPendingOutbox, storedEtag, remoteFile.etag)) {
@@ -2582,16 +2580,17 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             }
 
             const localVal = await storage.getItemRaw<any>(localKey)
+            const tombstonedIds = await getSyncTombstoneIds(localKey)
             let mergedVal: any = null
 
             if (localKey === 'local:airi-cards') {
               mergedVal = mergeAiriCards(localVal, remoteVal)
             }
             else if (localKey.startsWith('local:chat/sessions/')) {
-              mergedVal = mergeChatSessions(localVal, remoteVal)
+              mergedVal = mergeChatSessions(localVal, remoteVal, tombstonedIds)
             }
             else if (localKey.startsWith('local:chat/index/')) {
-              mergedVal = mergeChatIndices(localVal, remoteVal)
+              mergedVal = mergeChatIndices(localVal, remoteVal, tombstonedIds)
             }
             else if (localKey === 'local:localstorage/settings/live2d/available-motions') {
               mergedVal = mergeAvailableMotions(localVal, remoteVal)
@@ -2606,7 +2605,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
                 localArr = []
               if (!Array.isArray(remoteArr))
                 remoteArr = []
-              mergedVal = mergeArraysById(localArr, remoteArr)
+              mergedVal = mergeArraysById(localArr, remoteArr, tombstonedIds)
             }
 
             await storage.setItemRaw(localKey, mergedVal)
@@ -2938,16 +2937,17 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
               catch {}
             }
             const localVal = await storage.getItemRaw<any>(item.key)
+            const tombstonedIds = await getSyncTombstoneIds(item.key)
             let mergedVal: any = null
 
             if (item.key === 'local:airi-cards') {
               mergedVal = mergeAiriCards(localVal, remoteVal)
             }
             else if (item.key.startsWith('local:chat/sessions/')) {
-              mergedVal = mergeChatSessions(localVal, remoteVal)
+              mergedVal = mergeChatSessions(localVal, remoteVal, tombstonedIds)
             }
             else if (item.key.startsWith('local:chat/index/')) {
-              mergedVal = mergeChatIndices(localVal, remoteVal)
+              mergedVal = mergeChatIndices(localVal, remoteVal, tombstonedIds)
             }
             else if (item.key === 'local:localstorage/settings/live2d/available-motions') {
               mergedVal = mergeAvailableMotions(localVal, remoteVal)
@@ -2962,7 +2962,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
                 localArr = []
               if (!Array.isArray(remoteArr))
                 remoteArr = []
-              mergedVal = mergeArraysById(localArr, remoteArr)
+              mergedVal = mergeArraysById(localArr, remoteArr, tombstonedIds)
             }
 
             await storage.setItemRaw(item.key, mergedVal)

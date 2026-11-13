@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 
 import { describe, it } from 'vitest'
 
-import { mergeChatSessions, mergeVoiceProfiles } from './sync-engine-merge'
+import { mergeByIdLww, mergeChatSessions, mergeVoiceProfiles } from './sync-engine-merge'
 
 describe('mergeVoiceProfiles', () => {
   it('merges distinct voice profiles from local and remote without losing any', () => {
@@ -114,5 +114,43 @@ describe('mergeChatSessions', () => {
     const remote = { id: 's1', messages: [{ id: 'b', content: 'b', updatedAt: 200 }] }
     const merged = mergeChatSessions(local, remote)
     assert.deepEqual(merged.messages.map((m: any) => m.id).sort(), ['a', 'b'])
+  })
+
+  it('drops a tombstoned remote-only message id and keeps a non-tombstoned one', () => {
+    const local = { id: 's1', updatedAt: 1000, messages: [{ id: 'a', content: 'a', updatedAt: 100 }] }
+    const remote = { id: 's1', updatedAt: 5000, messages: [{ id: 'b', content: 'deleted', updatedAt: 200 }, { id: 'c', content: 'keep', updatedAt: 300 }] }
+    const merged = mergeChatSessions(local, remote, new Set(['b']))
+    assert.deepEqual(merged.messages.map((m: any) => m.id).sort(), ['a', 'c'])
+  })
+
+  it('merged updatedAt is the max of both sides, not wall-clock now', () => {
+    const local = { id: 's1', updatedAt: 1000, messages: [] }
+    const remote = { id: 's1', updatedAt: 9000, messages: [] }
+    const merged = mergeChatSessions(local, remote)
+    assert.equal(merged.updatedAt, 9000)
+  })
+})
+
+describe('mergeByIdLww', () => {
+  it('drops tombstoned ids that only exist remotely and never re-adds them', () => {
+    const local = [{ id: 'x', updatedAt: 1000 }]
+    const remote = [{ id: 'x', updatedAt: 1000 }, { id: 'y', updatedAt: 2000 }]
+    const merged = mergeByIdLww(local, remote, new Set(['y']))
+    assert.deepEqual(merged.map(m => m.id), ['x'])
+  })
+
+  it('drops a tombstoned id even when present locally', () => {
+    const merged = mergeByIdLww([{ id: 'x', updatedAt: 1000 }], [], new Set(['x']))
+    assert.deepEqual(merged, [])
+  })
+
+  it('passes a non-tombstoned remote-only id through', () => {
+    const merged = mergeByIdLww([{ id: 'x', updatedAt: 1000 }], [{ id: 'y', updatedAt: 2000 }], new Set(['unrelated']))
+    assert.deepEqual(merged.map(m => m.id).sort(), ['x', 'y'])
+  })
+
+  it('keeps last-writer-wins for ids present on both sides', () => {
+    const merged = mergeByIdLww([{ id: 'x', v: 'local', updatedAt: 1000 }], [{ id: 'x', v: 'remote', updatedAt: 2000 }])
+    assert.equal(merged[0].v, 'remote')
   })
 })

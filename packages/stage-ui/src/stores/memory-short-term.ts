@@ -21,6 +21,7 @@ import { useAiriCardStore } from './modules/airi-card'
 import { useConsciousnessStore } from './modules/consciousness'
 import { useLiveSessionStore } from './modules/live-session'
 import { useProvidersStore } from './providers'
+import { markSyncTombstone } from './sync-tombstones'
 
 interface RebuildResult {
   created: number
@@ -245,10 +246,13 @@ export const useShortTermMemoryStore = defineStore('short-term-memory', () => {
     const currentUserId = getCurrentUserId()
     // NOTICE: Re-read the repo and union by id before writing — both the chat window and the
     // main stage persist full snapshots, so blind last-write-wins would drop the other
-    // window's blocks. Local deletes (ids in memory but filtered out here) are tombstoned so
-    // the re-read cannot resurrect them. Saves are still whole-array; no per-entry keys yet.
+    // window's blocks. Local deletes (ids in memory but filtered out here) are mergeById-tombstoned
+    // for the repo re-read, and marked in the device-local sync tombstone store so the BYOS
+    // merge cannot resurrect them either. Saves are still whole-array; no per-entry keys yet.
     const nextIds = new Set(nextBlocks.map(b => b.id))
     const removedIds = new Set(blocks.value.map(b => b.id).filter(id => !nextIds.has(id)))
+    if (removedIds.size > 0)
+      await markSyncTombstone(`local:memory/short-term/${currentUserId}`, [...removedIds])
     const stored = await shortTermMemoryRepo.getAll(currentUserId).catch(() => null) ?? []
     const merged = mergeById(stored, nextBlocks, removedIds)
     const snapshot = normalizeBlocks(JSON.parse(JSON.stringify(merged)) as ShortTermMemoryBlock[])

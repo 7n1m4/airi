@@ -29,6 +29,7 @@ import { useLLM } from './llm'
 import { useAiriCardStore } from './modules/airi-card'
 import { useSystemOneStore } from './modules/system-one'
 import { useProvidersStore } from './providers'
+import { markSyncTombstone } from './sync-tombstones'
 
 export interface VectorIndexRebuildProgress {
   phase: 'idle' | 'discovering' | 'chunking' | 'embedding' | 'persisting' | 'completed' | 'cancelled' | 'error'
@@ -1036,10 +1037,13 @@ export const useTextJournalStore = defineStore('text-journal', () => {
     // NOTICE: Re-read the repo and union by id before writing — the chat window and the
     // main stage both persist full snapshots, so blind last-write-wins would drop the
     // other window's entries. Ids that were in memory but filtered out of `nextEntries`
-    // (local deletes) are tombstoned so they are not resurrected by the re-read.
-    // No per-entry keys / tombstone table yet — saves are still whole-array.
+    // (local deletes) are mergeById-tombstoned for the repo re-read, and marked in the
+    // device-local sync tombstone store so the BYOS merge cannot resurrect them either.
+    // Saves are still whole-array; no per-entry keys yet.
     const nextIds = new Set(nextEntries.map(e => e.id))
     const removedIds = new Set(entries.value.map(e => e.id).filter(id => !nextIds.has(id)))
+    if (removedIds.size > 0)
+      await markSyncTombstone(`local:memory/text-journal/${currentUserId}`, [...removedIds])
     const stored = await textJournalRepo.getAll(currentUserId).catch(() => null) ?? []
     const merged = mergeById(stored, nextEntries, removedIds)
     const snapshot = normalizeEntries(JSON.parse(JSON.stringify(merged)) as TextJournalEntry[])
