@@ -51,6 +51,11 @@ impl Database {
         }
         let conn = Connection::open(path)
             .with_context(|| format!("failed to open database {}", path.display()))?;
+        // Concurrent openers (multi-process tests, second instance) race on the
+        // WAL lock: `busy_timeout` makes SQLite retry instead of failing with
+        // `database is locked`.
+        conn.busy_timeout(std::time::Duration::from_secs(5))
+            .context("failed to set SQLite busy timeout")?;
         conn.pragma_update(None, "journal_mode", "WAL")
             .context("failed to enable WAL mode")?;
         conn.pragma_update(None, "foreign_keys", "ON")

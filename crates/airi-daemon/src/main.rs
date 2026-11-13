@@ -19,6 +19,7 @@
 //! kill switch drops everything pre-audit, user flag wins over lockdown.
 
 mod audit;
+mod core;
 mod control;
 mod gateway;
 mod observe;
@@ -232,12 +233,14 @@ fn run(gateway_enabled: bool) {
     // Gateway (WS on 6121, optional TLS). Always created so D-Bus callers
     // get an honest answer; failure is captured in `bound: false` +
     // `last_error`, never fatal to awareness.
+    let core_service = core::CoreService::open(None);
+    eprintln!("airi-daemon: core service available={}", core_service.available());
     let gateway = if gateway_enabled {
         eprintln!("airi-daemon: hosting the gateway (port from SERVER_CHANNEL_PORT, else 6121)");
-        gateway::Gateway::start()
+        gateway::Gateway::start_with_core(None, None, core_service.clone())
     } else {
         eprintln!("airi-daemon: gateway disabled (--no-gateway); awareness continues");
-        gateway::Gateway::start_disabled("disabled (--no-gateway)")
+        gateway::Gateway::start_disabled_with_core("disabled (--no-gateway)", core_service.clone())
     };
 
     let mut debounce: HashMap<(String, String), u64> = HashMap::new();

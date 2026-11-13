@@ -240,6 +240,9 @@ version = "0.1.0"
 dependencies = [
  "airi-a11y",
  "airi-channel",
+ "airi-core",
+ "airi-slint",
+ "airi-store",
  "dbus",
  "dirs 5.0.1",
  "serde",
@@ -374,6 +377,7 @@ dependencies = [
  "serde_json",
  "slint",
  "slint-build",
+ "tempfile",
  "tokio",
  "tracing",
  "tracing-subscriber",

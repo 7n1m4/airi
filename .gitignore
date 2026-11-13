@@ -169,6 +169,7 @@ scratch/
 
 # omp local config
 .omp/config.yml
+.omp/mcp.json
 
 
 # Local agent notes (not product docs)

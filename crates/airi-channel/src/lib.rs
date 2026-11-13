@@ -88,7 +88,7 @@ pub use session::{CloseInfo, Session, SessionOutcome, SessionState, CLOSE_POLICY
 pub use wire::{
     AuthenticatedData, GatewayAuthReply, GatewayClientFrame, GatewayConfigReply,
     GatewayServerFrame, HeartbeatData, HeartbeatKind, ModuleAuthData, RpcErrorObject,
-    RuntimePingReply, RuntimeStatusReply,
+    RuntimePingReply, RuntimeStatusReply, CoreStatusReply,
 };
 pub use ws::{accept_key, encode_frame, Frame, FrameDecoder, OP_CLOSE, OP_PING, OP_PONG, OP_TEXT};
 

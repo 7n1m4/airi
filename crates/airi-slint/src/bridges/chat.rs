@@ -1643,29 +1643,14 @@ mod tests {
     use airi_store::{MemoryEmbeddingRepo, SessionRepo};
 
     struct TestDb {
-        dir: PathBuf,
+        dir: tempfile::TempDir,
         db: Database,
     }
 
     fn temp_db() -> TestDb {
-        let unique = format!(
-            "airi-slint-chat-test-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_nanos())
-                .unwrap_or(0)
-        );
-        let dir = std::env::temp_dir().join(unique);
-        std::fs::create_dir_all(&dir).expect("create temp dir");
-        let db = Database::open(&dir.join("test.sqlite")).expect("open db");
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let db = Database::open(&dir.path().join("test.sqlite")).expect("open db");
         TestDb { dir, db }
-    }
-
-    impl Drop for TestDb {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.dir);
-        }
     }
 
     /// Canned embedder: records every `embed` call (one batched call per

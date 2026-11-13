@@ -32,10 +32,6 @@
 - Integration tests against the real `ChannelServer`, including TLS.
 - No reconnect policy, daemon wiring, UI, or token storage.
 
-## Next slices
-
-- **B.** Daemon owns `AppCore`; expose read-only core RPC/status; slint stays
-  unchanged except health.
-- **C.** Chat over WS (`chat.send` + streamed `chat.event` frames); slint
-  gains daemon mode with fallback.
-- **D.** Memory/settings/cards migrate; delete slint-side ownership.
+- **B (Slice B, implemented).** Daemon owns core state via `CoreService` (crates/airi-daemon/src/core.rs); `Gateway` holds it (gateway.rs); registers exactly one renderer handler `core.status`; `CoreStatusReply` (crates/airi-channel/src/wire.rs) additive/read-only/no secrets; `GatewayClient::core_status()` (client.rs); `DaemonMode`/`select_mode` (crates/airi-slint/src/daemon_mode.rs, pure, default Disabled). Mode selection NOT wired into GUI startup yet (pending). Slint-side ownership deletion NOT done (pending, Slice D).
+- **C (pending).** Chat over WS.
+- **D (pending).** Memory/settings/cards migrate; delete slint-side ownership.

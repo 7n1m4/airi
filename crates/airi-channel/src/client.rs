@@ -245,6 +245,14 @@ impl GatewayClient {
         })
     }
 
+    /// Call `core.status` and decode the typed reply.
+    pub fn core_status(&mut self) -> Result<crate::wire::CoreStatusReply, GatewayClientError> {
+        let value = self.rpc("core.status", None)?;
+        serde_json::from_value(value).map_err(|err| {
+            GatewayClientError::UnexpectedFrame(format!("invalid core.status reply: {err}"))
+        })
+    }
+
     /// Send a normal close frame. Repeated calls are no-ops.
     pub fn close(&mut self) -> Result<(), GatewayClientError> {
         if self.closed {

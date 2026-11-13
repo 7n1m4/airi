@@ -1220,7 +1220,9 @@ Persisted Three.js scene state — camera rig, model transform, lighting, and sk
 | `settings/backup/enabled` | `boolean` | `stores/backup.ts` |
 | `settings/backup/path` | `string` | `stores/backup.ts` |
 | `settings/backup/last-time` | `number` | `stores/backup.ts` |
-| `settings/connection/websocket-url` | `string` (empty = derive from gateway settings via `resolveWebSocketUrl`; non-empty wins verbatim. Resolution: override → `ws(s)://` + `settings/server-channel/tls-enabled`/`port` → `ws://localhost:6121/ws`) | `packages/stage-ui/src/stores/mods/api/channel-server.ts`, `packages/stage-pages/.../ConnectionSettings.vue` |
+| `settings/server-channel/hostname` | `string` (mirror of daemon `hostname`; fallback `127.0.0.1`) | `apps/stage-tamagotchi/src/renderer/stores/settings/server-channel.ts` |
+| `settings/server-channel/auth-token` | `string` (mirror of daemon `authToken`) | `apps/stage-tamagotchi/src/renderer/stores/settings/server-channel.ts` |
+| `settings/connection/websocket-url` | `string` (empty = derive from gateway settings via `resolveWebSocketUrl`; non-empty wins verbatim. Resolution: override → `ws(s)://` + `settings/server-channel/tls-enabled`/`port` → `ws://localhost:6121/ws`. Stage-web has no daemon, so this is the only way to point it at a gateway.) | `packages/stage-ui/src/stores/mods/api/channel-server.ts`, `packages/stage-pages/.../ConnectionSettings.vue` |
 | `settings/server-channel/tls-enabled` | `'true' \| 'false'` (mirror of daemon `tlsEnabled`; written by the Tamagotchi daemon-Get watcher) | `apps/stage-tamagotchi/src/renderer/stores/settings/server-channel.ts` |
 | `settings/server-channel/port` | `string` (mirror of daemon `port`; empty = default) | `apps/stage-tamagotchi/src/renderer/stores/settings/server-channel.ts` |
 | `settings/connection/auth-token` | `string` | `packages/stage-pages/.../ConnectionSettings.vue` |

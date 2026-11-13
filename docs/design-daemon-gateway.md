@@ -172,7 +172,6 @@ says otherwise.
 - LAN clients need the CA (`websocket-ca-cert.pem`) installed/trusted —
   distribution is a UX step not yet designed (show path/fingerprint in
   settings UI?).
-- `renderer.*` handlers: the daemon registers none; only the desktop app
-  surfaces (Slint control socket) can carry them.
+- `renderer.*` handlers: **Slice B (airi-uyz.8) registers exactly one: `core.status`.** `Gateway::renderer_handlers` (crates/airi-daemon/src/gateway.rs) builds a map containing only `"core.status"`, backed by `CoreService::status_reply()` (crates/airi-daemon/src/core.rs) and bound via `ChannelServer::bind_with_renderer`/`bind_with_renderer_tls`. It returns sanitized `CoreStatusReply` JSON on healthy or sanitized `Err("core unavailable: ...")` on unavailable. No embedder progress callbacks are registered in the daemon. Privileged/mutating verbs remain on D-Bus (`GetGatewayConfig`/`ApplyGatewayConfig`/`RegenerateGatewayToken`). All other `renderer.<method>` still reply `rpc_not_implemented`.
 - Slint native app's WS client is not built yet — that's the other consumer
   of the Rust-canonical wire types (`crates/airi-channel/src/wire.rs`).

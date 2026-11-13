@@ -6,6 +6,10 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 description = "AIRI user-session awareness daemon (owns org.moeru.airi.Daemon1 on the session bus)"
 
+[lib]
+name = "airi_daemon"
+path = "src/lib.rs"
+
 [[bin]]
 name = "airi-daemon"
 path = "src/main.rs"
@@ -17,6 +21,9 @@ serde = { workspace = true, features = [ "derive" ] }
 serde_json = { workspace = true }
 airi-a11y = { path = "../airi-a11y" }
 airi-channel = { path = "../airi-channel" }
+airi-core = { path = "../airi-core", default-features = false }
+airi-store = { path = "../airi-store" }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+airi-slint = { path = "../airi-slint" }

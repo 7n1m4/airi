@@ -10,6 +10,13 @@ AIRI is no longer "a desktop pet app". It is pivoting to the **agent-runtime cor
 - **Verify, don't believe:** `cargo test --workspace --locked`, the wire-types drift check, `pnpm -F @proj-airi/stage-ui typecheck`. Tamagotchi `typecheck:node` is env-red for pre-existing reasons; check whether changed files appear in the errors instead.
 - Mid-pivot state (merged increments, pending work, branch state) belongs in the tracker and the docs above, not in this file — check the tree and those docs before citing them from memory.
 
+## 0.5 User-Authorized Autonomy and Experimental Main
+
+- **Repository autonomy policy (user-authorized):** `main` is an experimental line of development, not a stable release surface. The user grants broad advance approval for ordinary, in-scope changes, including work directly on `main`; do not treat publication of `main` as requiring fresh approval for every routine edit.
+- **Efficiency policy:** prefer bounded, high-parallelism subagents for independent tasks with disjoint ownership. The parent agent remains responsible for preventing overlapping edits, reviewing results, running validation, and integrating the changes.
+- **Experimental does not mean unverified:** run the scoped checks that match the change before handing off or publishing. Main being experimental is not permission to push known-broken work or bypass tests.
+- **Still restricted:** force-pushes, history rewrites, deletion of user work, upstream writes, secret exposure, and other destructive or irreversible actions require explicit, current authorization.
+
 ## 1. Domain Skills and Project Context
 
 - **Start by identifying relevant domain skills.** At the beginning of a task, review the user's request and consult `.agents/skills/` and [`docs/project-specialized-skills.md`](./docs/project-specialized-skills.md) to identify the most relevant guidance. Read the associated `SKILL.md` files and useful references before substantial codebase exploration or implementation.

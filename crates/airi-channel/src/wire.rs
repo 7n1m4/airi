@@ -117,6 +117,38 @@ pub struct RuntimeStatusReply {
     pub protocol: String,
 }
 
+/// `data` payload of a `core.status` reply (read-only, additive).
+///
+/// Carries only coarse, secret-free health information. It MUST NOT contain
+/// auth tokens, D-Bus tokens, provider configs, API keys, secrets, prompts,
+/// secret-revealing paths, or raw memory.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+pub struct CoreStatusReply {
+    /// Application name (e.g. `airi-daemon`).
+    pub app: String,
+    /// Crate version the daemon was built from.
+    pub version: String,
+    /// Whether the core service is available.
+    #[serde(rename = "coreAvailable")]
+    pub core_available: bool,
+    /// Whether the underlying store is available.
+    #[serde(rename = "storeAvailable")]
+    pub store_available: bool,
+    /// Coarse store health (`"ok"` or `"unavailable"`).
+    #[serde(rename = "storeHealth")]
+    pub store_health: String,
+    /// Protocol identifier.
+    pub protocol: String,
+    /// Coarse count of persisted sessions.
+    #[serde(rename = "sessionCount")]
+    #[specta(type = specta_typescript::Number)]
+    pub session_count: u64,
+    /// Coarse count of persisted messages.
+    #[serde(rename = "messageCount")]
+    #[specta(type = specta_typescript::Number)]
+    pub message_count: u64,
+}
+
 /// `data` payload of a `gateway.config` reply.
 ///
 /// Never includes the auth token — the token stays server-side.
@@ -253,6 +285,7 @@ pub fn type_collection() -> specta::Types {
         .register::<GatewayServerFrame>()
         .register::<RuntimePingReply>()
         .register::<RuntimeStatusReply>()
+        .register::<CoreStatusReply>()
         .register::<GatewayConfigReply>()
         .register::<GatewayAuthReply>()
         .register::<crate::config::ChannelConfig>()
@@ -432,4 +465,27 @@ mod tests {
             json!({ "authenticated": true, "sessionStartedMs": 5 })
         );
     }
+
+    #[test]
+    fn core_status_reply_has_no_secret_bearing_fields() {
+        let value = serde_json::to_value(CoreStatusReply {
+            app: "airi-daemon".to_string(),
+            version: "0.1.0".to_string(),
+            core_available: true,
+            store_available: true,
+            store_health: "ok".to_string(),
+            protocol: "airi-channel/1".to_string(),
+            session_count: 0,
+            message_count: 0,
+        })
+        .unwrap();
+        let obj = value.as_object().unwrap();
+        for forbidden in [
+            "authToken", "auth_token", "dbusToken", "dbus_token", "apiKey",
+            "api_key", "secret", "prompt", "config", "token", "path",
+        ] {
+            assert!(!obj.contains_key(forbidden), "forbidden field present: {forbidden}");
+        }
+    }
+
 }

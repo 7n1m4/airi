@@ -1184,33 +1184,19 @@ mod tests {
 
     #[test]
     fn unique_capture_path_bumps_ms_on_collision() {
-        let unique = format!(
-            "airi-slint-capture-test-{}-{}",
-            std::process::id(),
-            system_time_millis(SystemTime::now())
-        );
-        let dir = std::env::temp_dir().join(unique);
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = tempfile::tempdir().unwrap();
         let base_ms = 1_700_000_000_000u64;
-        std::fs::write(dir.join(format!("capture-{base_ms}.png")), b"x").unwrap();
-        std::fs::write(dir.join(format!("capture-{}.png", base_ms + 1)), b"x").unwrap();
-        let picked = unique_capture_path(&dir, base_ms);
-        assert_eq!(picked, dir.join(format!("capture-{}.png", base_ms + 2)));
-        std::fs::remove_dir_all(&dir).unwrap();
+        std::fs::write(dir.path().join(format!("capture-{base_ms}.png")), b"x").unwrap();
+        std::fs::write(dir.path().join(format!("capture-{}.png", base_ms + 1)), b"x").unwrap();
+        let picked = unique_capture_path(dir.path(), base_ms);
+        assert_eq!(picked, dir.path().join(format!("capture-{}.png", base_ms + 2)));
     }
 
     #[test]
     fn unique_capture_path_uses_requested_ms_when_free() {
-        let unique = format!(
-            "airi-slint-capture-test-{}-{}",
-            std::process::id(),
-            system_time_millis(SystemTime::now()) + 1
-        );
-        let dir = std::env::temp_dir().join(unique);
-        std::fs::create_dir_all(&dir).unwrap();
-        let picked = unique_capture_path(&dir, 1_700_000_000_123);
-        assert_eq!(picked, dir.join("capture-1700000000123.png"));
-        std::fs::remove_dir_all(&dir).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let picked = unique_capture_path(dir.path(), 1_700_000_000_123);
+        assert_eq!(picked, dir.path().join("capture-1700000000123.png"));
     }
 
     #[test]

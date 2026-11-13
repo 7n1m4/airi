@@ -55,6 +55,16 @@ Concept-to-file-path index for rapid context retrieval. Use this to find where a
 
 ---
 
+## 1b. Daemon core (Slice B, airi-uyz.8)
+
+| Concept | Path | Notes |
+| :--- | :--- | :--- |
+| `CoreService` (daemon-owned core) | `crates/airi-daemon/src/core.rs` | Clone, Arc<Mutex<CoreInner>>; ONLY place daemon touches core state. `open(profile)` fails closed; `snapshot()`; `status_reply()`. |
+| `Gateway` (holds core) | `crates/airi-daemon/src/gateway.rs` | `renderer_handlers(&self.core)` registers only `core.status`. |
+| `CoreStatusReply` (wire DTO) | `crates/airi-channel/src/wire.rs` | additive, read-only, no secrets. |
+| `core.status` (RPC action) | `crates/airi-channel/src/dispatch.rs` | resolves via renderer-handler registry by exact action name. |
+| `GatewayClient::core_status` | `crates/airi-channel/src/client.rs` | mirrors `runtime_status`. |
+| `DaemonMode` / `select_mode` | `crates/airi-slint/src/daemon_mode.rs` | pure mode selection; default Disabled; NOT wired into GUI startup (pending). |
 ## 2. Core UI & Surfaces
 
 | Concept | Path |

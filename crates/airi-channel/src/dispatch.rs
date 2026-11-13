@@ -280,10 +280,19 @@ impl RpcRegistry {
             "runtime.status" => runtime_status(ctx, payload),
             "gateway.config" => gateway_config(ctx, payload),
             "gateway.auth" => gateway_auth(ctx, payload),
-            _ => match action.strip_prefix("renderer.") {
-                Some(method) => dispatch_renderer(renderer_handlers, method, payload),
-                None => Err(RpcError::unknown_method(action)),
-            },
+            _ => {
+                // Embedders (e.g. the daemon) may register handlers under their
+                // full action name (such as "core.status") in addition to the
+                // "renderer.<method>" namespace. Consult the registry for an
+                // exact match before reporting an unknown method.
+                if renderer_handlers.contains_key(action) {
+                    dispatch_renderer(renderer_handlers, action, payload)
+                } else if let Some(method) = action.strip_prefix("renderer.") {
+                    dispatch_renderer(renderer_handlers, method, payload)
+                } else {
+                    Err(RpcError::unknown_method(action))
+                }
+            }
         }
     }
 }

@@ -47,6 +47,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use crate::core::CoreService;
 use std::time::{Duration, Instant};
 
 use airi_channel::{
@@ -99,6 +100,7 @@ pub struct Gateway {
     /// Tests pass `Some(0)` for an ephemeral port.
     port_override: Option<u16>,
     inner: Mutex<Inner>,
+    core: CoreService,
 }
 
 impl Gateway {
@@ -111,16 +113,22 @@ impl Gateway {
 
     /// Same as [`Gateway::start`] with an explicit port (tests use `Some(0)`).
     pub fn start_with(port_override: Option<u16>, adopt_from: Option<PathBuf>) -> Self {
+        Self::start_with_core(port_override, adopt_from, CoreService::open(None))
+    }
+
+    pub fn start_with_core(port_override: Option<u16>, adopt_from: Option<PathBuf>, core: CoreService) -> Self {
         let Some(data_dir) = dirs::data_dir() else {
-            return Self::disabled(
+            return Self::disabled_with_core(
                 port_override,
                 "no data dir for this platform; gateway disabled",
+                core,
             );
         };
         Self::start_in(
             data_dir.join("airi-slint").join(SERVER_CHANNEL_DIR),
             port_override,
             adopt_from,
+            core,
         )
     }
 
@@ -128,6 +136,7 @@ impl Gateway {
         config_dir: PathBuf,
         port_override: Option<u16>,
         adopt_from: Option<PathBuf>,
+        core: CoreService,
     ) -> Self {
         let config_path = config_dir.join(CONFIG_FILE);
         let cert_dir = config_dir.join(CERTS_DIR);
@@ -169,6 +178,7 @@ impl Gateway {
             config_path,
             cert_dir,
             port_override,
+            core: core.clone(),
             inner: Mutex::new(Inner {
                 hostname: DEFAULT_HOSTNAME_PLACEHOLDER.to_string(),
                 auth_token: String::new(),
@@ -212,14 +222,23 @@ impl Gateway {
     /// on every D-Bus query. Used by `--no-gateway`; keeps the control
     /// interface honest while the desktop app (still) hosts the server.
     pub fn start_disabled(reason: &str) -> Self {
-        Self::disabled(port_from_env(), reason)
+        Self::start_disabled_with_core(reason, CoreService::open(None))
     }
 
-    fn disabled(port_override: Option<u16>, reason: &str) -> Self {
+    pub fn start_disabled_with_core(reason: &str, core: CoreService) -> Self {
+        Self::disabled(port_from_env(), reason, core)
+    }
+
+    fn disabled_with_core(port_override: Option<u16>, reason: &str, core: CoreService) -> Self {
+        Self::disabled(port_override, reason, core)
+    }
+
+    fn disabled(port_override: Option<u16>, reason: &str, core: CoreService) -> Self {
         Self {
             config_path: PathBuf::new(),
             cert_dir: PathBuf::new(),
             port_override,
+            core,
             inner: Mutex::new(Inner {
                 hostname: String::new(),
                 auth_token: String::new(),
@@ -421,6 +440,22 @@ impl Gateway {
     }
 
     /// Stop the current listener (if any) and bind a fresh one with `config`.
+
+    pub(crate) fn renderer_handlers(core: &CoreService) -> airi_channel::RendererHandlers {
+        let core = core.clone();
+        let mut m = std::collections::HashMap::new();
+        m.insert("core.status".to_string(), Box::new(move |_method: &str, _value: &serde_json::Value| {
+            if !core.available() {
+                let snap = core.snapshot();
+                let reason = snap.reason.unwrap_or_else(|| "unavailable".to_string());
+                return Err(format!("core unavailable: {reason}"));
+            }
+            let reply = core.status_reply();
+            Ok(serde_json::to_value(reply).map_err(|e| e.to_string())?)
+        }) as Box<dyn Fn(&str, &serde_json::Value) -> Result<serde_json::Value, String> + Send + Sync>);
+        m
+    }
+
     fn bind_once(&self, config: &ChannelConfig) {
         let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         inner.last_attempt = Instant::now();
@@ -465,7 +500,7 @@ impl Gateway {
                                 return;
                             }
                         };
-                    ChannelServer::bind_tls(&config.hostname, port, config, tls_config)
+                    ChannelServer::bind_with_renderer_tls(&config.hostname, port, config, Self::renderer_handlers(&self.core), tls_config)
                 }
                 Err(err) => {
                     inner.last_error = Some(format!("certificate management failed: {err}"));
@@ -474,7 +509,7 @@ impl Gateway {
                 }
             }
         } else {
-            ChannelServer::bind(&config.hostname, port, config)
+            ChannelServer::bind_with_renderer(&config.hostname, port, config, Self::renderer_handlers(&self.core))
         };
 
         match result {
@@ -605,6 +640,7 @@ mod tests {
             config_path: dir.join(CONFIG_FILE),
             cert_dir,
             port_override: Some(0),
+            core: CoreService::open(None),
             inner: Mutex::new(Inner {
                 hostname: DEFAULT_HOSTNAME_PLACEHOLDER.to_string(),
                 auth_token: String::new(),
@@ -867,4 +903,36 @@ mod tests {
         assert_eq!(v["authToken"], "keep-me-123");
         assert_eq!(v["tlsConfig"], serde_json::json!({}));
     }
+
+    #[test]
+    fn core_status_handler_reports_health_and_no_secrets() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("server-channel");
+        let gateway = test_gateway(dir.clone(), dir.join(CERTS_DIR));
+        let handlers = Gateway::renderer_handlers(&gateway.core);
+        let h = handlers.get("core.status").expect("core.status handler registered");
+        let reply = h("core.status", &serde_json::json!({})).expect("healthy core.status returns Ok");
+        let v: serde_json::Value = reply;
+        assert_eq!(v["coreAvailable"], true);
+        assert_eq!(v["storeAvailable"], true);
+        assert_eq!(v["storeHealth"], "ok");
+        assert_eq!(v["protocol"], "airi-channel/1");
+        assert!(v.get("authToken").is_none());
+        assert!(v.get("token").is_none());
+        assert!(v.get("path").is_none());
+
+        let dir2 = tempfile::tempdir().unwrap();
+        let db = dir2.path().join("airi.sqlite");
+        std::fs::create_dir_all(&db).unwrap();
+        let core = CoreService::open(Some(dir2.path().to_path_buf()));
+        assert!(!core.available());
+        let handlers = Gateway::renderer_handlers(&core);
+        let h = handlers.get("core.status").unwrap();
+        let err = h("core.status", &serde_json::json!({})).expect_err("unavailable must Err");
+        assert!(err.starts_with("core unavailable:"), "got: {err}");
+        assert!(!err.contains('/'));
+        assert!(!err.contains("tmp"));
+        assert!(!err.contains(".sqlite"));
+    }
+
 }

@@ -27,6 +27,32 @@ export type ChannelConfig = {
 	tlsConfig?: unknown,
 };
 
+/**
+ *  `data` payload of a `core.status` reply (read-only, additive).
+ * 
+ *  Carries only coarse, secret-free health information. It MUST NOT contain
+ *  auth tokens, D-Bus tokens, provider configs, API keys, secrets, prompts,
+ *  secret-revealing paths, or raw memory.
+ */
+export type CoreStatusReply = {
+	/**  Application name (e.g. `airi-daemon`). */
+	app: string,
+	/**  Crate version the daemon was built from. */
+	version: string,
+	/**  Whether the core service is available. */
+	coreAvailable: boolean,
+	/**  Whether the underlying store is available. */
+	storeAvailable: boolean,
+	/**  Coarse store health (`"ok"` or `"unavailable"`). */
+	storeHealth: string,
+	/**  Protocol identifier. */
+	protocol: string,
+	/**  Coarse count of persisted sessions. */
+	sessionCount: number,
+	/**  Coarse count of persisted messages. */
+	messageCount: number,
+};
+
 /**  `data` payload of a `gateway.auth` reply. */
 export type GatewayAuthReply = {
 	/**  Always `true` (only authenticated sessions can ask). */
