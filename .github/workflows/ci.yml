@@ -47,6 +47,26 @@ jobs:
       # and packages/server-shared/src/types/generated/airi-channel.ts disagree (D2).
       - run: cargo run -p airi-channel --example export-wire-types --locked -- --check
 
+  rust-test:
+    name: Rust Tests
+    runs-on: ubuntu-latest
+    # The unified workspace build carries both rustls CryptoProviders; TLS tests
+    # install aws-lc-rs explicitly (crates/airi-channel/src/lib.rs).
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/debug/deps
+            target/debug/.fingerprint
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-test-
+      - run: cargo test --workspace --locked
+
   build-test:
     name: Build Test (${{ matrix.app_name }})
     if: ${{ !(github.event_name == 'pull_request' && startsWith(github.event.pull_request.head.label, 'moeru-ai:i18n/')) }}
