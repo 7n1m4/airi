@@ -167,4 +167,24 @@ describe('byos sync engine outbox ledger', () => {
     const remainingOutbox = await storage.getItemRaw('outbox:queue/chat/sessions/retry-test')
     expect(remainingOutbox).toBeDefined()
   })
+
+  it('keeps pending deletes in the outbox when sync is disabled, dropping upserts', async () => {
+    const syncStore = useSyncEngineStore(pinia)
+    syncStore.activeProvider = 'local-fs'
+    localStorage.setItem('settings/sync/enabled', 'true')
+
+    // Seed one upsert and one delete directly so the watchers never see them as writes
+    await storage.setItemRaw('outbox:queue/chat/sessions/keep-delete', { key: 'local:chat/sessions/keep-delete', action: 'delete', timestamp: 1 })
+    await storage.setItemRaw('outbox:queue/chat/sessions/drop-upsert', { key: 'local:chat/sessions/drop-upsert', action: 'upsert', timestamp: 1 })
+
+    syncStore.syncEnabled = false
+    // The purge runs in a watcher; give its async body a chance to settle
+    await new Promise(resolve => setTimeout(resolve, 20))
+
+    // A pending delete is the only carrier for delete propagation, so it survives the purge
+    const keptDelete = await storage.getItemRaw('outbox:queue/chat/sessions/keep-delete')
+    expect(keptDelete).not.toBeNull()
+    // The stale upsert is dropped to reclaim disk space
+    expect(await storage.getItemRaw('outbox:queue/chat/sessions/drop-upsert')).toBeNull()
+  })
 })

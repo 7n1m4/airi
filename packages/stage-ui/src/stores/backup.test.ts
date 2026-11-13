@@ -207,19 +207,19 @@ describe('useBackupStore', () => {
     const res = await store.restoreBackup('/dir', { characters: false, sessions: false, memory: false, localStorage: false })
     expect(res).toEqual({ success: false, error: 'str' })
   })
-})
 
-it('restoreBackup never re-injects secret bundle keys', async () => {
-  const store = useBackupStore()
-  const files = {
-    'airi-localstorage-1.json': JSON.stringify({ 'settings/sync/s3-secret-access-key': 'planted-secret', 'settings/language': 'ja', 'foo': 'bar' }),
-  }
-  const { invoke } = installElectron()
-  invoke.mockResolvedValue({ success: true, files })
-  localStorage.clear()
-  const res = await store.restoreBackup('/dir', { characters: false, sessions: false, memory: false, localStorage: true })
-  expect(res).toEqual({ success: true })
-  expect(localStorage.getItem('settings/sync/s3-secret-access-key')).toBeNull()
-  expect(localStorage.getItem('settings/language')).toBe('ja')
-  expect(localStorage.getItem('foo')).toBe('bar')
+  it('restoreBackup never re-injects secret bundle keys', async () => {
+    const store = useBackupStore()
+    const files = {
+      'airi-localstorage-1.json': JSON.stringify({ 'settings/sync/s3-secret-access-key': 'planted-secret', 'settings/language': 'ja', 'foo': 'bar' }),
+    }
+    const { invoke } = installElectron()
+    invoke.mockResolvedValue({ success: true, files })
+    localStorage.clear()
+    const res = await store.restoreBackup('/dir', { characters: false, sessions: false, memory: false, localStorage: true })
+    expect(res).toEqual({ success: true })
+    expect(localStorage.getItem('settings/sync/s3-secret-access-key')).toBeNull()
+    expect(localStorage.getItem('settings/language')).toBe('ja')
+    expect(localStorage.getItem('foo')).toBe('bar')
+  })
 })

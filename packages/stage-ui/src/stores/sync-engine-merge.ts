@@ -192,16 +192,16 @@ export function mergeChatSessions(localVal: any, remoteVal: any, tombstonedIds?:
       return localVal
 
     if (Array.isArray(localVal) && Array.isArray(remoteVal))
-      return mergeChatMessagesById(localVal, remoteVal, tombstonedIds)
+      return mergeByIdLww(localVal, remoteVal, tombstonedIds)
 
     // NOTICE: normalize to object shape so a legacy-array peer never spreads into the object.
     const localObj = isLocalObj ? localVal : { messages: localVal }
     const remoteObj = isRemoteObj ? remoteVal : { messages: remoteVal }
 
-    const localMsgs = localObj.messages || []
-    const remoteMsgs = remoteObj.messages || []
+    const localMsgs = Array.isArray(localObj.messages) ? localObj.messages : []
+    const remoteMsgs = Array.isArray(remoteObj.messages) ? remoteObj.messages : []
 
-    const mergedMsgs = mergeChatMessagesById(localMsgs, remoteMsgs, tombstonedIds)
+    const mergedMsgs = mergeByIdLww(localMsgs, remoteMsgs, tombstonedIds)
 
     return {
       ...localObj,
@@ -215,8 +215,4 @@ export function mergeChatSessions(localVal: any, remoteVal: any, tombstonedIds?:
     console.error('[SyncEngine] Failed to merge chat sessions:', e)
     return localVal || remoteVal
   }
-}
-
-function mergeChatMessagesById(localArr: any[], remoteArr: any[], tombstonedIds?: Set<string>): any[] {
-  return mergeByIdLww(localArr, remoteArr, tombstonedIds)
 }

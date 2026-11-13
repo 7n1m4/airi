@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { storage, storageState } from '../database/storage'
 import { SECRET_STORAGE_KEYS } from '../libs/secret-storage-keys'
-import { isMergeableSyncKey, S3StorageClient, useSyncEngineStore } from './sync-engine'
+import { isMergeableSyncKey, mergeAiriCards, S3StorageClient, useSyncEngineStore } from './sync-engine'
 import { extractAllowedSessionIds, shouldSkipMergeableKey } from './sync-engine-merge'
 import { markSyncTombstone, readSyncTombstones, SYNC_TOMBSTONE_CAP, SYNC_TOMBSTONES_KEY } from './sync-tombstones'
 
@@ -762,6 +762,227 @@ describe('sync-engine-safeguards', () => {
       expect(journalWrite).toBeDefined()
       const uploaded = JSON.parse(journalWrite!.content)
       expect(uploaded.map((entry: any) => entry.id).sort()).toEqual(['id-keep', 'id-other'])
+    })
+  })
+
+  describe('mergeAiriCards', () => {
+    it('drops tombstoned card ids from the merged output', () => {
+      const local: [string, any][] = [
+        ['card-a', { name: 'A local', updatedAt: 1000 }],
+        ['card-b', { name: 'B', updatedAt: 1000 }],
+      ]
+      const remote: [string, any][] = [
+        ['card-a', { name: 'A remote', updatedAt: 5000 }],
+        ['card-c', { name: 'C', updatedAt: 500 }],
+      ]
+      const merged = mergeAiriCards(local, remote, new Set(['card-a']))
+      assert.deepEqual(merged.map(([id]: [string, any]) => id).sort(), ['card-b', 'card-c'])
+    })
+
+    it('returns all cards when no tombstone set is passed', () => {
+      const local: [string, any][] = [['card-a', { name: 'A', updatedAt: 1000 }]]
+      const remote: [string, any][] = [['card-b', { name: 'B', updatedAt: 1000 }]]
+      const merged = mergeAiriCards(local, remote)
+      assert.deepEqual(merged.map(([id]: [string, any]) => id).sort(), ['card-a', 'card-b'])
+    })
+  })
+
+  describe('reconcile secret-key download exclusion', () => {
+    let pinia: ReturnType<typeof createTestingPinia>
+
+    beforeEach(async () => {
+      pinia = createTestingPinia({ createSpy: vi.fn, stubActions: false })
+      setActivePinia(pinia)
+      storageState.isImportingRemoteData = false
+
+      const keys = await storage.getKeys()
+      for (const k of keys) {
+        await storage.removeItem(k)
+      }
+      localStorage.clear()
+      localStorage.setItem('settings/sync/enabled', 'true')
+    })
+
+    afterEach(async () => {
+      localStorage.clear()
+      delete (window as any).electron
+      const keys = await storage.getKeys()
+      for (const k of keys) {
+        await storage.removeItem(k)
+      }
+    })
+
+    it('never downloads credential-bearing keys from the remote backup', async () => {
+      const syncStore = useSyncEngineStore(pinia)
+      syncStore.activeProvider = 'local-fs'
+
+      const remoteFiles = [
+        { relPath: 'db/localstorage/settings/discord/token.json', mtime: 2000, size: 200 },
+        { relPath: 'db/localstorage/settings/credentials/openai.json', mtime: 2000, size: 200 },
+        { relPath: 'db/providers.json', mtime: 2000, size: 200 },
+        { relPath: 'db/sync/tombstones.json', mtime: 2000, size: 200 },
+        { relPath: 'db/settings/region.json', mtime: 2000, size: 500, etag: 'region-etag' },
+      ]
+
+      ;(window as any).electron = {
+        ipcRenderer: {
+          invoke: vi.fn(async (channel: string, payload: any) => {
+            if (channel === 'byos-fs:validate-path')
+              return { success: true }
+            if (channel === 'byos-fs:list-files')
+              return { success: true, files: remoteFiles }
+            if (channel === 'byos-fs:read-file') {
+              if (payload.relPath === 'db/settings/region.json')
+                return { success: true, content: JSON.stringify({ region: 'apac' }) }
+              return { success: true, content: JSON.stringify({ token: 'attacker-controlled' }) }
+            }
+            if (channel === 'byos-fs:write-file')
+              return { success: true, mtime: Date.now() }
+            return { success: true }
+          }),
+        },
+      }
+
+      const success = await syncStore.reconcile({ skipBinaryAssets: true })
+      expect(success).toBe(true)
+
+      // Secrets and tombstones stay out of local storage even though the remote offers them
+      expect(await storage.getItemRaw('local:localstorage/settings/discord/token')).toBeNull()
+      expect(await storage.getItemRaw('local:localstorage/settings/credentials/openai')).toBeNull()
+      expect(await storage.getItemRaw('local:providers')).toBeNull()
+      expect(await storage.getItemRaw('local:sync/tombstones')).toBeNull()
+      // An ordinary key still lands locally
+      expect(await storage.getItemRaw('local:settings/region')).toEqual({ region: 'apac' })
+    })
+  })
+
+  describe('reconcile unparseable remote files', () => {
+    let pinia: ReturnType<typeof createTestingPinia>
+
+    beforeEach(async () => {
+      pinia = createTestingPinia({ createSpy: vi.fn, stubActions: false })
+      setActivePinia(pinia)
+      storageState.isImportingRemoteData = false
+
+      const keys = await storage.getKeys()
+      for (const k of keys) {
+        await storage.removeItem(k)
+      }
+      localStorage.clear()
+      localStorage.setItem('settings/sync/enabled', 'true')
+    })
+
+    afterEach(async () => {
+      localStorage.clear()
+      delete (window as any).electron
+      const keys = await storage.getKeys()
+      for (const k of keys) {
+        await storage.removeItem(k)
+      }
+    })
+
+    it('skips the bad file and still applies the good one, without failing the reconcile', async () => {
+      const syncStore = useSyncEngineStore(pinia)
+      syncStore.activeProvider = 'local-fs'
+
+      storageState.isImportingRemoteData = true
+      await storage.setItemRaw('local:settings/language', { locale: 'en' })
+      storageState.isImportingRemoteData = false
+
+      const remoteFiles = [
+        // Local copy exists but sizes differ drastically from remote; its body is invalid JSON
+        { relPath: 'db/settings/language.json', mtime: 2000, size: 12345 },
+        // Ordinary missing key; a valid file that MUST be applied
+        { relPath: 'db/settings/region.json', mtime: 2000, size: 500 },
+      ]
+
+      ;(window as any).electron = {
+        ipcRenderer: {
+          invoke: vi.fn(async (channel: string, payload: any) => {
+            if (channel === 'byos-fs:validate-path')
+              return { success: true }
+            if (channel === 'byos-fs:list-files')
+              return { success: true, files: remoteFiles }
+            if (channel === 'byos-fs:read-file') {
+              if (payload.relPath === 'db/settings/language.json')
+                return { success: true, content: '{not valid json' }
+              return { success: true, content: JSON.stringify({ region: 'apac' }) }
+            }
+            if (channel === 'byos-fs:write-file')
+              return { success: true, mtime: Date.now() }
+            return { success: true }
+          }),
+        },
+      }
+
+      const success = await syncStore.reconcile({ skipBinaryAssets: true })
+      expect(success).toBe(true)
+      // The unparseable key kept its local value instead of aborting or being overwritten
+      expect(await storage.getItemRaw('local:settings/language')).toEqual({ locale: 'en' })
+      expect(await storage.getItemRaw('local:settings/region')).toEqual({ region: 'apac' })
+    })
+  })
+
+  describe('reconcile mid-sync write replay', () => {
+    let pinia: ReturnType<typeof createTestingPinia>
+
+    beforeEach(async () => {
+      pinia = createTestingPinia({ createSpy: vi.fn, stubActions: false })
+      setActivePinia(pinia)
+      storageState.isImportingRemoteData = false
+
+      const keys = await storage.getKeys()
+      for (const k of keys) {
+        await storage.removeItem(k)
+      }
+      localStorage.clear()
+      localStorage.setItem('settings/sync/enabled', 'true')
+    })
+
+    afterEach(async () => {
+      localStorage.clear()
+      delete (window as any).electron
+      const keys = await storage.getKeys()
+      for (const k of keys) {
+        await storage.removeItem(k)
+      }
+    })
+
+    it('re-enqueues a write that lands during the import window once reconcile ends', async () => {
+      const syncStore = useSyncEngineStore(pinia)
+      syncStore.activeProvider = 'local-fs'
+
+      const remoteFiles = [
+        { relPath: 'db/settings/region.json', mtime: 2000, size: 500 },
+      ]
+
+      ;(window as any).electron = {
+        ipcRenderer: {
+          invoke: vi.fn(async (channel: string, payload: any) => {
+            if (channel === 'byos-fs:validate-path')
+              return { success: true }
+            if (channel === 'byos-fs:list-files')
+              return { success: true, files: remoteFiles }
+            if (channel === 'byos-fs:read-file') {
+              // Simulate a user/app write that lands while the remote import window is open
+              await storage.setItemRaw('local:settings/typed-mid-sync', { value: 'hello' })
+              return { success: true, content: JSON.stringify({ region: 'apac' }) }
+            }
+            if (channel === 'byos-fs:write-file')
+              return { success: true, mtime: Date.now() }
+            return { success: true }
+          }),
+        },
+      }
+
+      const success = await syncStore.reconcile({ skipBinaryAssets: true })
+      expect(success).toBe(true)
+      // The write itself landed locally
+      expect(await storage.getItemRaw('local:settings/typed-mid-sync')).toEqual({ value: 'hello' })
+      // And it was replayed into the outbox instead of vanishing
+      const queued = await storage.getItemRaw<{ key: string, action: string }>('outbox:queue/settings/typed-mid-sync')
+      expect(queued?.key).toBe('local:settings/typed-mid-sync')
+      expect(queued?.action).toBe('upsert')
     })
   })
 })

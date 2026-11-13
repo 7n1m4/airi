@@ -125,8 +125,10 @@ export const useBackupStore = defineStore('backup', () => {
           if (localStorageSkipped?.length)
             console.info(`[Backup Restore] Backup did not contain ${localStorageSkipped.length} secret key(s); they were left untouched.`)
           for (const [key, value] of Object.entries(storageData)) {
-            // Secrets are never restored from a bundle; same exclusion as backup creation.
-            if (isSecretStorageKey(key)) {
+            // Secrets are never restored from a bundle; same exclusion as backup creation (bridge keys probe both forms).
+            const secretProbe = key.startsWith('local:localstorage/') ? key.substring('local:localstorage/'.length) : key
+            if (isSecretStorageKey(secretProbe) || isSecretStorageKey(key)) {
+              console.info(`[Backup Restore] Skipping secret key during restore: ${key}`)
               continue
             }
             // CRITICAL: Skip any keys starting with 'airi_cc_' to prevent writing bloated base64 Data URIs back to LocalStorage

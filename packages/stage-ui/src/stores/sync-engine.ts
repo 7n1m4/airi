@@ -10,7 +10,7 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
-import { storage, storageState } from '../database/storage'
+import { flushPendingImportWrites, storage, storageState } from '../database/storage'
 import { isSecretStorageKey } from '../libs/secret-storage-keys'
 import { extractAllowedSessionIds, mergeByIdLww, mergeChatSessions, mergeVoiceProfiles, shouldSkipMergeableKey } from './sync-engine-merge'
 import { getSyncTombstoneIds } from './sync-tombstones'
@@ -366,6 +366,44 @@ async function parallelLimit<T>(
     }
   }
   await Promise.all(promises)
+}
+
+// Merges two airi-cards Map-entry arrays.
+export function mergeAiriCards(localVal: any, remoteVal: any, tombstonedIds?: Set<string>): any {
+  try {
+    const localEntries = Array.isArray(localVal) ? localVal as [string, any][] : []
+    const remoteEntries = Array.isArray(remoteVal) ? remoteVal as [string, any][] : []
+
+    const mergedMap = new Map<string, any>()
+    for (const [id, card] of localEntries) {
+      if (id && card) {
+        mergedMap.set(id, card)
+      }
+    }
+    for (const [id, card] of remoteEntries) {
+      if (id && card) {
+        const existing = mergedMap.get(id)
+        if (existing) {
+          const existingTime = existing.updatedAt || existing.createdAt || 0
+          const remoteTime = card.updatedAt || card.createdAt || 0
+          if (remoteTime > existingTime) {
+            mergedMap.set(id, card)
+          }
+        }
+        else {
+          mergedMap.set(id, card)
+        }
+      }
+    }
+    let mergedEntries = Array.from(mergedMap.entries())
+    if (tombstonedIds?.size)
+      mergedEntries = mergedEntries.filter(([id]) => !tombstonedIds.has(String(id)))
+    return mergedEntries
+  }
+  catch (e) {
+    console.error('[SyncEngine] Failed to merge airi-cards:', e)
+    return localVal || remoteVal
+  }
 }
 
 export const useSyncEngineStore = defineStore('sync-engine', () => {
@@ -1911,48 +1949,6 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     return ''
   }
 
-  function mergeArraysById(localArr: any[], remoteArr: any[], tombstonedIds?: Set<string>): any[] {
-    return mergeByIdLww(localArr, remoteArr, tombstonedIds)
-  }
-
-  // Merges two airi-cards Map-entry arrays.
-  function mergeAiriCards(localVal: any, remoteVal: any, tombstonedIds?: Set<string>): any {
-    try {
-      const localEntries = Array.isArray(localVal) ? localVal as [string, any][] : []
-      const remoteEntries = Array.isArray(remoteVal) ? remoteVal as [string, any][] : []
-
-      const mergedMap = new Map<string, any>()
-      for (const [id, card] of localEntries) {
-        if (id && card) {
-          mergedMap.set(id, card)
-        }
-      }
-      for (const [id, card] of remoteEntries) {
-        if (id && card) {
-          const existing = mergedMap.get(id)
-          if (existing) {
-            const existingTime = existing.updatedAt || existing.createdAt || 0
-            const remoteTime = card.updatedAt || card.createdAt || 0
-            if (remoteTime > existingTime) {
-              mergedMap.set(id, card)
-            }
-          }
-          else {
-            mergedMap.set(id, card)
-          }
-        }
-      }
-      let mergedEntries = Array.from(mergedMap.entries())
-      if (tombstonedIds?.size)
-        mergedEntries = mergedEntries.filter(([id]) => !tombstonedIds.has(String(id)))
-      return mergedEntries
-    }
-    catch (e) {
-      console.error('[SyncEngine] Failed to merge airi-cards:', e)
-      return localVal || remoteVal
-    }
-  }
-
   // Merges two chat-session indexes. Tombstoned session ids (locally deleted) are dropped
   // from the merged index so a delete cannot be undone by a merge.
   function mergeChatIndices(localVal: any, remoteVal: any, tombstonedIds?: Set<string>): any {
@@ -2256,6 +2252,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
 
     try {
       storageState.isImportingRemoteData = true
+      storageState.pendingImportWrites.length = 0 // drop anything stale held by an earlier window
 
       if (choice === 'local') {
         debug(`[SyncEngine] Resolving conflict for ${localKey} keeping LOCAL.`)
@@ -2315,7 +2312,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
           }
           else {
             if (Array.isArray(localData) && Array.isArray(remoteData)) {
-              mergedData = mergeArraysById(localData, remoteData, tombstonedIds)
+              mergedData = mergeByIdLww(localData, remoteData, tombstonedIds)
             }
             else {
               mergedData = localData || remoteData
@@ -2431,6 +2428,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         }
 
         storageState.isImportingRemoteData = true
+        storageState.pendingImportWrites.length = 0 // drop anything stale held by an earlier window
 
         // 1. Reconcile chat indices upfront so allowedSessionIds can be resolved without querying remote session files
         const remoteIndexEntries = Array.from(remoteFileMap.entries()).filter(([k]) => k && k.startsWith('local:chat/index/'))
@@ -2512,7 +2510,9 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
           if (!localKey)
             return
           // Device-local tombstones and secrets are never downloaded or merged.
-          if (localKey === 'local:sync/tombstones' || isSecretStorageKey(localKey))
+          // Bridge keys carry the credential outside the local: prefix, so probe both forms.
+          const secretProbe = localKey.startsWith('local:localstorage/') ? localKey.substring('local:localstorage/'.length) : localKey
+          if (localKey === 'local:sync/tombstones' || isSecretStorageKey(localKey) || isSecretStorageKey(secretProbe))
             return
 
           // Chat indices already reconciled upfront
@@ -2608,7 +2608,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
                 localArr = []
               if (!Array.isArray(remoteArr))
                 remoteArr = []
-              mergedVal = mergeArraysById(localArr, remoteArr, tombstonedIds)
+              mergedVal = mergeByIdLww(localArr, remoteArr, tombstonedIds)
             }
 
             await storage.setItemRaw(localKey, mergedVal)
@@ -2675,18 +2675,17 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             debug(`[SyncEngine] Downloading (missing local): remote (${remoteFile.relPath}) -> ${localKey}`)
             const readRes = await client.readFile(remoteFile.relPath)
             if (readRes.success && readRes.content) {
-              let data: any = null
               try {
-                data = JSON.parse(readRes.content)
+                const data = JSON.parse(readRes.content)
+                await storage.setItemRaw(localKey, data)
+                await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, remoteFile.mtime)
+                if (remoteFile.etag) {
+                  await storage.setItemRaw(`local:sync-metadata/etags/${localKey.replace('local:', '')}`, remoteFile.etag)
+                }
               }
               catch (e) {
-                console.warn('[SyncEngine] Skipping unparseable remote file for', localKey, e)
-                return
-              }
-              await storage.setItemRaw(localKey, data)
-              await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, remoteFile.mtime)
-              if (remoteFile.etag) {
-                await storage.setItemRaw(`local:sync-metadata/etags/${localKey.replace('local:', '')}`, remoteFile.etag)
+                // Never let one bad remote file abort the whole reconcile batch
+                console.warn('[SyncEngine] Skipping key', localKey, 'after failed parse/apply:', e)
               }
             }
           }
@@ -2732,7 +2731,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
               return
             }
 
-            // Case B: Remote file is newer OR strategy is remote-wins -> Download and overwrite local
+            // Case B: Remote file is newer -> Download and overwrite local (veto runs in every strategy)
             const isConflict = await checkSyncConflict(localKey, localTime, remoteFile, 'remote-newer')
             if (isConflict) {
               debug(`[SyncEngine] Conflict safety guard blocked auto-overwrite of local key ${localKey}`)
@@ -2742,18 +2741,17 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             debug(`[SyncEngine] Downloading (remote newer/Case B): remote (${remoteFile.relPath}) -> ${localKey}`)
             const readRes = await client.readFile(remoteFile.relPath)
             if (readRes.success && readRes.content) {
-              let data: any = null
               try {
-                data = JSON.parse(readRes.content)
+                const data = JSON.parse(readRes.content)
+                await storage.setItemRaw(localKey, data)
+                await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, remoteFile.mtime)
+                if (remoteFile.etag) {
+                  await storage.setItemRaw(`local:sync-metadata/etags/${localKey.replace('local:', '')}`, remoteFile.etag)
+                }
               }
               catch (e) {
-                console.warn('[SyncEngine] Skipping unparseable remote file for', localKey, e)
-                return
-              }
-              await storage.setItemRaw(localKey, data)
-              await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, remoteFile.mtime)
-              if (remoteFile.etag) {
-                await storage.setItemRaw(`local:sync-metadata/etags/${localKey.replace('local:', '')}`, remoteFile.etag)
+                // Never let one bad remote file abort the whole reconcile batch
+                console.warn('[SyncEngine] Skipping key', localKey, 'after failed parse/apply:', e)
               }
             }
           }
@@ -2863,10 +2861,12 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         }
 
         storageState.isImportingRemoteData = false
+        await flushPendingImportWrites()
         return true
       }
       catch (err) {
         storageState.isImportingRemoteData = false
+        await flushPendingImportWrites()
         console.error('[SyncEngine] Reconciliation error:', err)
         return false
       }
@@ -2893,6 +2893,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     debug(`[SyncEngine] Processing ${outboxKeys.length} outbox queue items...`)
 
     storageState.isImportingRemoteData = true
+    storageState.pendingImportWrites.length = 0 // drop anything stale held by an earlier window
     try {
       await parallelLimit(outboxKeys, 15, async (fullQueueKey) => {
         const item = await storage.getItemRaw<{ key: string, action: 'upsert' | 'delete', timestamp: number }>(fullQueueKey)
@@ -2981,7 +2982,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
                 localArr = []
               if (!Array.isArray(remoteArr))
                 remoteArr = []
-              mergedVal = mergeArraysById(localArr, remoteArr, tombstonedIds)
+              mergedVal = mergeByIdLww(localArr, remoteArr, tombstonedIds)
             }
 
             await storage.setItemRaw(item.key, mergedVal)
@@ -3017,6 +3018,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         await storage.removeItem(fullQueueKey)
       })
       storageState.isImportingRemoteData = false
+      // NOTICE: no flush here — outbox's own merge rewrites would re-arm the queue forever;
+      // captures are dropped at the next window entry (pre-item-16 behavior).
       return true
     }
     catch (err) {
@@ -3320,6 +3323,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     isSyncing.value = true
     syncError.value = ''
     storageState.isImportingRemoteData = true
+    storageState.pendingImportWrites.length = 0 // drop anything stale held by an earlier window
 
     try {
       await logDebug('[Restore] Starting force restore from remote backup...')
@@ -3363,9 +3367,10 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
       // 2. Wipe local database entries (excluding sync settings)
       const rawLocalKeys = await storage.getKeys('local')
       for (const k of rawLocalKeys) {
-        if (k === 'local:sync/tombstones')
-          continue // Keep the local delete guards across a restore
         const normalized = normalizeStorageKey(k)
+        // Keep the device-local delete guards across a restore; raw driver keys are not normalized.
+        if (normalized === 'local:sync/tombstones')
+          continue
         if (normalized && (normalized.includes('settings/sync/') || normalized.includes('local:settings/sync/'))) {
           continue
         }
@@ -3461,6 +3466,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     isSyncing.value = true
     syncError.value = ''
     storageState.isImportingRemoteData = true
+    storageState.pendingImportWrites.length = 0 // drop anything stale held by an earlier window
 
     try {
       await logDebug('[Restore Settings] Starting settings-only restore from remote backup...')
