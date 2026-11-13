@@ -8,6 +8,8 @@ import type {
 } from './middlewares'
 import type { AuthenticatedPeer, Peer } from './types'
 
+import { timingSafeEqual } from 'node:crypto'
+
 import { availableLogLevelStrings, Format, LogLevelString, logLevelStringToLogLevelMap, useLogg } from '@guiiai/logg'
 import { MessageHeartbeat, MessageHeartbeatKind, WebSocketEventSource } from '@proj-airi/server-shared/types'
 import { defineWebSocketHandler, H3 } from 'h3'
@@ -66,6 +68,12 @@ const RESPONSES = {
 } satisfies Record<string, (...args: unknown[]) => WebSocketEvent<Record<string, unknown>>>
 
 const DEFAULT_HEARTBEAT_TTL_MS = 60_000
+// Hard ceiling on a single inbound frame; crossws/ws has no working maxPayload
+// passthrough in this version, so the guard lives here (see server/index.ts).
+const MAX_EVENT_BYTES = 1_048_576 // 1 MiB
+// superjson on plain JSON is undefined, so external clients' plain-JSON frames
+// fall back to JSON.parse — only for frames small enough to keep that cheap.
+const JSON_FALLBACK_MAX_BYTES = 64 * 1024
 
 // helper send function
 function send(peer: Peer, event: WebSocketEvent<Record<string, unknown>> | string) {
@@ -126,7 +134,8 @@ export function setupApp(options?: AppOptions): { app: H3, closeAllPeers: () => 
   if (isTokenGenerated) {
     appLogger.warn('No authentication token provided via options or AUTHENTICATION_TOKEN env.')
     appLogger.warn('A secure App Key (Auth Token) has been automatically generated for this session.')
-    appLogger.log(`>>> APP KEY: ${authToken} <<<`)
+    // Keep the key out of the structured log stream; it must remain visible, so print it once to stderr.
+    console.error(`>>> APP KEY (shown once, not in logs): ${authToken} <<<`)
     appLogger.warn('Please use this key in your client settings (e.g. Stage UI -> Settings -> Connection -> App Key) to connect.')
   }
 
@@ -283,10 +292,15 @@ export function setupApp(options?: AppOptions): { app: H3, closeAllPeers: () => 
         // superjson.parse on plain JSON returns undefined since there is no `json` wrapper key.
         // In that case, fall back to JSON.parse so external clients can interoperate.
         const text = message.text()
+        if (text.length > MAX_EVENT_BYTES) {
+          send(peer, RESPONSES.error('event too large', instanceId))
+          return
+        }
+
         const parsed = parse<WebSocketEvent>(text)
         const potentialEvent = (parsed && typeof parsed === 'object' && 'type' in parsed)
           ? parsed
-          : JSON.parse(text)
+          : (text.length <= JSON_FALLBACK_MAX_BYTES ? JSON.parse(text) : undefined)
 
         if (!potentialEvent || typeof potentialEvent !== 'object' || !('type' in potentialEvent)) {
           send(peer, RESPONSES.error('invalid event format', instanceId))
@@ -299,6 +313,11 @@ export function setupApp(options?: AppOptions): { app: H3, closeAllPeers: () => 
         const errorMessage = err instanceof Error ? err.message : String(err)
         send(peer, RESPONSES.error(`invalid JSON, error: ${errorMessage}`, instanceId))
 
+        return
+      }
+
+      if (!event.data || typeof event.data !== 'object' || Array.isArray(event.data)) {
+        send(peer, RESPONSES.error('invalid event payload', instanceId, event.metadata?.event?.id))
         return
       }
 
@@ -361,7 +380,12 @@ export function setupApp(options?: AppOptions): { app: H3, closeAllPeers: () => 
         case 'module:authenticate': {
           const { caller, purpose } = event.data as { caller?: string, purpose?: string }
 
-          if (authToken && event.data.token !== authToken) {
+          // Compare in constant time; length check first because timingSafeEqual requires equal-length buffers.
+          const providedToken = Buffer.from(String((event.data as { token?: unknown }).token ?? ''), 'utf8')
+          const expectedToken = Buffer.from(authToken, 'utf8')
+          const tokenMatch = providedToken.length === expectedToken.length && timingSafeEqual(providedToken, expectedToken)
+
+          if (authToken && !tokenMatch) {
             logger.withFields({
               peer: peer.id,
               peerRemote: peer.remoteAddress,
@@ -545,6 +569,10 @@ export function setupApp(options?: AppOptions): { app: H3, closeAllPeers: () => 
       for (const [id, other] of peers.entries()) {
         if (id === peer.id) {
           logger.withFields({ peer: peer.id, peerName: p.name, event }).debug('not sending event to self')
+          continue
+        }
+
+        if (!other.authenticated) {
           continue
         }
 

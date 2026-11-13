@@ -127,6 +127,10 @@ export const useModsServerChannelStore = defineStore('mods:channels:proj-airi:se
       // to cross-process broadcasts (ContextBridge).
       const timeout = setTimeout(() => {
         console.warn('[PipelineTTS:Server] Initialization timed out after 5000ms. Proceeding without immediate connection.')
+        connected.value = false
+        status.value = 'unreachable'
+        initializing.value = null
+        clearListeners()
         resolve()
       }, 5000)
 

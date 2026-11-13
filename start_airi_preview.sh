@@ -6,8 +6,10 @@
 # Safeguard: prevent VS Code from forcing Electron into Node mode
 unset ELECTRON_RUN_AS_NODE
 
-# On Linux, disable Electron sandbox if needed for dev/preview environments
-if [ "$(uname -s)" = "Linux" ]; then
+# Dev fallback only if the SUID sandbox fails; do not ship.
+# ELECTRON_DISABLE_SANDBOX=1 is never set by default; opt in explicitly:
+#   AIRI_DISABLE_ELECTRON_SANDBOX=1 ./start_airi_preview.sh
+if [ "$(uname -s)" = "Linux" ] && [ "${AIRI_DISABLE_ELECTRON_SANDBOX:-}" = "1" ]; then
   export ELECTRON_DISABLE_SANDBOX=1
 fi
 

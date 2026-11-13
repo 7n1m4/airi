@@ -166,13 +166,16 @@ fn sidecar_domains(dir: &Path) -> Option<Vec<String>> {
 
 fn write_private(path: &Path, contents: &str) -> io::Result<()> {
     use std::io::Write as _;
-    use std::os::unix::fs::OpenOptionsExt;
+    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+    // mode(0o600) only applies at creation; tighten explicitly so a
+    // pre-existing 0644 key file is fixed on rewrite.
     let mut file = fs::OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
         .mode(0o600)
         .open(path)?;
+    file.set_permissions(fs::Permissions::from_mode(0o600))?;
     file.write_all(contents.as_bytes())
 }
 
@@ -407,6 +410,19 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let bundle = get_or_create_certs(tmp.path(), &san_domains(&[])).unwrap();
         assert!(server_config_available(&bundle.cert_pem, &bundle.key_pem));
+    }
+
+    #[test]
+    fn private_key_rewrite_tightens_preexisting_0644() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("websocket-key.pem");
+        fs::write(&path, "old key").unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+
+        write_private(&path, "new key").unwrap();
+        let mode = fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "rewritten private key must be owner-only");
     }
 
     #[test]

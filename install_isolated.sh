@@ -50,8 +50,10 @@ cd "$REPO_ROOT"
 # Prevent VS Code from forcing Node mode
 unset ELECTRON_RUN_AS_NODE
 
-# Linux Sandbox setup
-if [ "$(uname -s)" = "Linux" ]; then
+# Dev fallback only if the SUID sandbox fails; do not ship.
+# ELECTRON_DISABLE_SANDBOX=1 is never set by default; opt in explicitly:
+#   AIRI_DISABLE_ELECTRON_SANDBOX=1 ./install_isolated.sh
+if [ "$(uname -s)" = "Linux" ] && [ "${AIRI_DISABLE_ELECTRON_SANDBOX:-}" = "1" ]; then
   export ELECTRON_DISABLE_SANDBOX=1
 fi
 

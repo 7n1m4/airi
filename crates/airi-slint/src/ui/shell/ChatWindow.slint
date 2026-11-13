@@ -205,4 +205,12 @@ export component ChatWindow inherits Window {
             }
         }
     }
+
+    // While a stream is in flight, drain the chat bridge's event queue into
+    // the transcript (~30 fps). main.rs registers `pump-events()`.
+    Timer {
+        interval: 33ms;
+        running: root.streaming;
+        triggered => { root.pump-events(); }
+    }
 }

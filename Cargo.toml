@@ -12,7 +12,6 @@ members = [
   "crates/airi-stt",
   "crates/airi-speech",
   "crates/airi-local-llm",
-  "crates/airi-laya",
   "crates/airi-mcp",
   "crates/airi-mmd",
   "crates/airi-acp",
@@ -80,7 +79,7 @@ mockito = "1"
 
 # Rendering
 gltf = { version = "1", features = [ "extensions" ] }
-zip = "0.6"
+zip = "9.5.1"
 image = { version = "0.25", features = [
   "png",
   "jpeg",
@@ -92,7 +91,7 @@ png = "0.17"
 slint = { version = "1.18", features = [ "renderer-software" ] }
 slint-build = "1.18"
 
-# Laya (P9 lane 4): ONNX Runtime + HF tokenizers
+# ONNX Runtime + HF tokenizers (airi-speech, airi-stt)
 ort = "2.0.0-rc.15"
 tokenizers = { version = "0.22", default-features = false, features = [ "onig" ] }
 

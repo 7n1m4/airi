@@ -6,7 +6,7 @@ services:
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=example-PAssw0rd-xHjDYR.b7N
+      - POSTGRES_PASSWORD=change-me
     ports:
       - '5435:5432'
     volumes:

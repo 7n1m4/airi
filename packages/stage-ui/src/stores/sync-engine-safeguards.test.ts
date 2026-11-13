@@ -5,7 +5,8 @@ import { setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { storage, storageState } from '../database/storage'
-import { S3StorageClient, useSyncEngineStore } from './sync-engine'
+import { SECRET_STORAGE_KEYS } from '../libs/secret-storage-keys'
+import { isMergeableSyncKey, S3StorageClient, useSyncEngineStore } from './sync-engine'
 import { extractAllowedSessionIds, shouldSkipMergeableKey } from './sync-engine-merge'
 
 describe('sync-engine-safeguards', () => {
@@ -389,6 +390,42 @@ describe('sync-engine-safeguards', () => {
       expect(await storage.getItemRaw('outbox:queue/chat/sessions/sylvia-1')).toBeNull()
       // Bronya's outbox item was skipped without writing to remote
       expect(await storage.getItemRaw('outbox:queue/chat/sessions/bronya-1')).toBeNull()
+    })
+  })
+
+  describe('secret keys and user-scoped memory mergeability', () => {
+    let pinia: ReturnType<typeof createTestingPinia>
+
+    beforeEach(() => {
+      pinia = createTestingPinia({ createSpy: vi.fn, stubActions: false })
+      setActivePinia(pinia)
+      localStorage.clear()
+    })
+
+    afterEach(() => {
+      localStorage.clear()
+    })
+
+    it('shouldExcludeLocalStorageKey returns true for every SECRET_STORAGE_KEYS entry', () => {
+      const syncStore = useSyncEngineStore(pinia)
+      for (const secret of SECRET_STORAGE_KEYS) {
+        if (secret.endsWith('/')) {
+          expect(syncStore.shouldExcludeLocalStorageKey(`${secret}some-entry`)).toBe(true)
+        }
+        else {
+          expect(syncStore.shouldExcludeLocalStorageKey(secret)).toBe(true)
+        }
+      }
+    })
+
+    it('treats user-scoped memory keys as mergeable', () => {
+      const userId = `user-${Math.random().toString(36).slice(2)}`
+      expect(isMergeableSyncKey(`local:memory/text-journal/${userId}`)).toBe(true)
+      expect(isMergeableSyncKey(`local:memory/short-term/${userId}`)).toBe(true)
+      expect(isMergeableSyncKey(`local:memory/echo-chips/${userId}`)).toBe(true)
+      expect(isMergeableSyncKey('local:memory/text-journal/local')).toBe(true)
+      expect(isMergeableSyncKey('local:airi-cards')).toBe(true)
+      expect(isMergeableSyncKey('local:chat/sessions/abc')).toBe(false)
     })
   })
 

@@ -1,7 +1,7 @@
 import type { BaseIssue, BaseSchema, InferIssue, InferOutput } from 'valibot'
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { copyFile, mkdir, rename, writeFile } from 'node:fs/promises'
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { copyFile, mkdir, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { pid as processPid } from 'node:process'
 
@@ -94,6 +94,18 @@ export function createConfig<TSchema extends PersistedSchema>(
   let queuedSave = Promise.resolve()
   let saveSequence = 0
 
+  /**
+   * Atomic synchronous write: tmp file in the same directory + rename, mode 0600.
+   * Advances saveSequence so an in-flight async persistToDisk rename cannot
+   * land on top of this newer data afterwards.
+   */
+  const writeFileAtomicSync = (path: string, data: string) => {
+    const sequence = ++saveSequence
+    const tmpPath = `${path}.${processPid}.${sequence}.tmp`
+    writeFileSync(tmpPath, data, { mode: 0o600 })
+    renameSync(tmpPath, path)
+  }
+
   const persistToDisk = async () => {
     try {
       const path = configPath()
@@ -103,6 +115,12 @@ export function createConfig<TSchema extends PersistedSchema>(
       const data = persistenceMap.get(key)
       // console.log(`[Persistence] Writing config to disk: ${path}`, JSON.stringify(data, null, 2))
       await writeFile(tmpPath, JSON.stringify(data))
+      if (sequence !== saveSequence) {
+        // A synchronous flush superseded this in-flight save; drop the stale tmp
+        // instead of overwriting the newer data with an older serialization.
+        await unlink(tmpPath).catch(() => {})
+        return
+      }
       await rename(tmpPath, path)
     }
     catch (error) {
@@ -123,7 +141,7 @@ export function createConfig<TSchema extends PersistedSchema>(
       if (existsSync(path)) {
         await copyFile(path, `${path}.bak`).catch(err => console.warn('Failed to create backup for config:', path, err))
       }
-      await writeFile(path, JSON.stringify(value))
+      writeFileAtomicSync(path, JSON.stringify(value))
       return true
     }
     catch (error) {
@@ -205,7 +223,8 @@ export function createConfig<TSchema extends PersistedSchema>(
       const data = persistenceMap.get(key)
       if (data !== undefined) {
         // console.log(`[Persistence] Sync flushing config to ${path}`)
-        writeFileSync(path, JSON.stringify(data))
+        // Shares the saveSequence machinery so a stale in-flight rename cannot land after us.
+        writeFileAtomicSync(path, JSON.stringify(data))
       }
     }
     catch (error) {

@@ -146,6 +146,54 @@ describe('characterRoutes', () => {
     expect(res.status).toBe(403)
   })
 
+  it('get /:id should return character for owner', async () => {
+    const characters = await characterService.findAll()
+    const charId = characters[0].id
+
+    const res = await app.fetch(new Request(`http://localhost/${charId}`), { user: testUser } as any)
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.id).toBe(charId)
+  })
+
+  it('get /:id should return 403 if not owner', async () => {
+    const [otherUser] = await db.insert(schema.user).values({
+      id: 'user-3',
+      name: 'Third User',
+      email: 'third@example.com',
+    }).returning()
+
+    const characters = await characterService.findAll()
+    const charId = characters[0].id
+
+    const res = await app.fetch(new Request(`http://localhost/${charId}`), { user: otherUser } as any)
+    expect(res.status).toBe(403)
+  })
+
+  it('get /?all=true should ignore the flag and return only own characters', async () => {
+    const [otherUser] = await db.insert(schema.user).values({
+      id: 'user-4',
+      name: 'Fourth User',
+      email: 'fourth@example.com',
+    }).returning()
+    const [foreign] = await db.insert(schema.character).values({
+      version: '1',
+      coverUrl: 'foreign-url',
+      characterId: 'foreign-cid',
+      ownerId: otherUser.id,
+      creatorId: otherUser.id,
+    }).returning()
+
+    const res = await app.fetch(new Request('http://localhost/?all=true'), { user: testUser } as any)
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.length).toBeGreaterThan(0)
+    expect(data.every((c: any) => c.ownerId === testUser.id)).toBe(true)
+
+    // Keep later tests' findAll()[0] pointed at the owner's character
+    await characterService.delete(foreign.id)
+  })
+
   it('delete /:id should soft delete', async () => {
     const characters = await characterService.findAll()
     const charId = characters[0].id

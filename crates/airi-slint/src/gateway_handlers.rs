@@ -8,15 +8,6 @@
 //! Chat content, session titles, file paths, and credentials are never
 //! returned. Every query goes through the shared store connection under its
 //! mutex (see `Database::with_connection`).
-//!
-//! Beyond the read-only `renderer.info`, this also registers the three
-//! typed, opt-in GUI verbs from `bridges::gateway_pump` (`renderer.notify`,
-//! `renderer.window.raise`, `renderer.stage.visibility`). Those route through
-//! the `GatewayPumpController` dispatch core and are refused with
-//! `rpc_actions_disabled` unless `"allowActions": true` is set in
-//! `<profile>/server-channel/config.json`. Registration itself is
-//! unconditional: the dispatch core enforces the flag at request time, so
-//! flipping the config works without an app restart.
 
 use airi_store::Database;
 use serde_json::json;
@@ -49,26 +40,6 @@ pub fn build(db: Database) -> airi_channel::RendererHandlers {
         },
     );
     map.insert("info".to_string(), info_handler);
-
-    // GUI-dispatch verbs (opt-in via `allowActions` in server-channel/
-    // config.json; enforced at request time by `gateway_pump::dispatch_request`,
-    // which parks the connection thread until the UI-thread pump completes
-    // the action — or times out after 2 s).
-    for verb in ["notify", "window.raise", "stage.visibility"] {
-        map.insert(
-            verb.to_string(),
-            Box::new(
-                move |method: &str,
-                      payload: &serde_json::Value|
-                      -> Result<serde_json::Value, String> {
-                    crate::bridges::gateway_pump::dispatch_request(
-                        &format!("renderer.{method}"),
-                        payload,
-                    )
-                },
-            ),
-        );
-    }
 
     map
 }
