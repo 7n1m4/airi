@@ -174,3 +174,9 @@ scratch/
 # Local agent notes (not product docs)
 /memory/
 /macos_compatibility_problems.md
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+.beads-credential-key
+.beads/proxieddb/
+*.gate.lock*

@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "airi",
+  "project_id": "a1ca04a1-8283-45fd-a217-e216c85d24b9"
+}
