@@ -64,6 +64,7 @@ pub mod server;
 pub mod session;
 pub mod sha1;
 pub mod uuid;
+pub mod wire;
 pub mod ws;
 
 pub use config::{default_config_path, load_or_heal, ChannelConfig, ConfigError, DEFAULT_HOSTNAME};
@@ -72,6 +73,11 @@ pub use dispatch::{
 };
 pub use server::{ChannelServer, ServerHandle};
 pub use session::{CloseInfo, Session, SessionOutcome, SessionState, CLOSE_POLICY_VIOLATION};
+pub use wire::{
+    AuthenticatedData, GatewayAuthReply, GatewayClientFrame, GatewayConfigReply,
+    GatewayServerFrame, HeartbeatData, HeartbeatKind, ModuleAuthData, RpcErrorObject,
+    RuntimePingReply, RuntimeStatusReply,
+};
 pub use ws::{accept_key, encode_frame, Frame, FrameDecoder, OP_CLOSE, OP_PING, OP_PONG, OP_TEXT};
 
 /// Default channel-server port (`SERVER_CHANNEL_PORT` overrides).

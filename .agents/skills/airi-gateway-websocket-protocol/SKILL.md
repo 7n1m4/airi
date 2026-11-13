@@ -8,6 +8,7 @@ description: >-
 
 ## Key Files/Locations
 
+- `crates/airi-channel/src/wire.rs` — **Rust-canonical wire types** (D2): the frame vocabulary both sides speak (`GatewayClientFrame` / `GatewayServerFrame`, heartbeat, RPC replies). The checked-in TypeScript bindings at `packages/server-shared/src/types/generated/airi-channel.ts` are re-exported from `@proj-airi/server-shared/types`; regenerate with `pnpm run check:wire-types` (write mode: `cargo run -p airi-channel --example export-wire-types`). CI fails the `Wire Types Drift Check` job when they disagree — never edit the generated file.
 - `apps/stage-tamagotchi/src/main/services/airi/channel-server/index.ts` — Electron **main-process** service: manages the channel server runtime on port `6121` (overridable via `env.SERVER_CHANNEL_PORT`), cryptographic `authToken` handshake, auto-healing config store `server-channel/config.json`, mkcert local CA/TLS cert generation (`certHasAllDomains`), and LAN IP discovery (`getLocalIPs()`).
 - `apps/stage-tamagotchi/src/shared/eventa.ts` — Typed eventa IPC contracts: `electronGetServerChannelConfig`, `electronApplyServerChannelConfig`; payload schemas for `hostname`, `authToken`, and `tlsConfig`.
 - `packages/server-runtime/src/server/index.ts` — Core WebSocket server implementation and protocol dispatch.
