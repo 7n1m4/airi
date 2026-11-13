@@ -1,5 +1,17 @@
 # Agent Operating Guidelines
 
+## 0. The Pivot: What This Repo Is Becoming (read first, verify before citing)
+
+State of affairs as of **2026-11-13** (`main` = `23ab0ecb`). If the tree has moved since, trust the tree.
+
+- **Direction:** AIRI is no longer "a desktop pet app". It is pivoting to the **agent-runtime core of a personal agentic OS**: one long-lived Rust core owns state; every UI (Electrobun/Vue app, Slint native app, web) is a **thin WebSocket client** of the daemon.
+- **Architecture:** `crates/airi-daemon` hosts the WS/wss gateway on port 6121 (loopback by default; `wss://` + locally minted CA beyond loopback). `crates/airi-channel` defines the Rust-canonical wire protocol and the D-Bus control DTOs (`GetGatewayConfig`/`ApplyGatewayConfig` on `org.moeru.airi.Daemon1`); specta exports them to TS (`export-wire-types`, drift-checked in CI). `crates/airi-slint` is the native shell. `apps/stage-tamagotchi` is Electrobun (not Electron).
+- **Thin-client rule:** when the daemon answers on the session bus, clients bind nothing on 6121 — no token mint, no WS server. The app talks to the daemon via `busctl --user --json=short` (see `apps/stage-tamagotchi/src/main/services/airi/daemon-gateway.ts`). If the daemon does not answer, the app falls back to its in-app path (macOS/Windows remain functional until the daemon ports).
+- **Merged:** Increment 1 (daemon hosts the gateway with minted CA; wire types Rust-canonical) and Increment 2 (app re-backed to the daemon; renderer derives `ws://`/`wss://` from the daemon TLS flag; secrets excluded from cloud sync). PR #44, FF-merged 2026-11-13.
+- **Owed / not done:** live end-to-end D-Bus Get/Apply smoke on a real bus (never run); Rust CI job (cargo tests are not gated); ~10.5k lines of slint↔core duplication to unify; Slint native app as WS client not built; mobile = unified Rust native app (replaces purged Capacitor stage-pocket), see [`docs/proposal-unified-rust-native-app.md`](./docs/proposal-unified-rust-native-app.md); CA distribution UX for LAN clients undesigned.
+- **Canonical docs:** [`docs/design-daemon-gateway.md`](./docs/design-daemon-gateway.md) (design + invariants + threat model), [`docs/rosetta-stone.md`](./docs/rosetta-stone.md) (concept → code map), [`docs/data-catalog.md`](./docs/data-catalog.md) (persisted keys), [`README.md`](./README.md) (carries the UNDER CONSTRUCTION banner; this is a work-in-progress mid-pivot, not a daily driver).
+- **Verify, don't believe:** `cargo test --workspace --locked` (exit 0 at `23ab0ecb`), wire-types drift check, `pnpm -F @proj-airi/stage-ui typecheck`. Tamagotchi `typecheck:node` is env-red for pre-existing reasons; check whether changed files appear in the errors instead.
+
 ## 1. Domain Skills and Project Context
 
 - **Start by identifying relevant domain skills.** At the beginning of a task, review the user's request and consult `.agents/skills/` and [`docs/project-specialized-skills.md`](./docs/project-specialized-skills.md) to identify the most relevant guidance. Read the associated `SKILL.md` files and useful references before substantial codebase exploration or implementation.
