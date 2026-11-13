@@ -110,7 +110,11 @@ export function createEventaAdapter(transport: ElectrobunAdapterTransport): Elec
   context.on(and(matchBy((e: FlowEventa) => e._flowDirection === 'outbound' || e._flowDirection === undefined), matchBy('*')), (event) => {
     const frame: ElectrobunEventaFrame = {
       id: event.id,
-      type: event.type ?? 'event',
+      // Electron's `generatePayload(event.id, …)` puts the eventa tag in the frame's top-level
+      // `type` — the view-side electron adapter routes on `defineInboundEventa(frame.type)`.
+      // `event.type` is always the flow kind ('event'), which would route every inbound frame
+      // to listeners keyed `event` and silently drop tags.
+      type: event.id,
       payload: {
         ...event,
         body: encodeErrorBody(event.body),

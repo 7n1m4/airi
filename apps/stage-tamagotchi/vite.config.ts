@@ -149,6 +149,13 @@ export default defineConfig({
       { find: 'tslib', replacement: require.resolve('tslib/tslib.es6.js') },
       { find: 'three/addons', replacement: resolve(join(import.meta.dirname, 'node_modules', 'three', 'examples', 'jsm')) },
       { find: 'three', replacement: resolve(join(import.meta.dirname, 'node_modules', 'three')) },
+      // NOTICE: `node_modules/electrobun` is a stub whose module body throws; the real SDK
+      // is projected into .hutch by `hutch electrobun prepare`. The web program gets types
+      // from src/renderer/electrobun-view.d.ts instead; this alias is for the bundler only.
+      { find: 'electrobun/view', replacement: resolve(join(import.meta.dirname, '.hutch', 'devkit', 'api', 'browser', 'index.ts')) },
+      // .../devkit/api/browser/index.ts side-effect-imports `./global.d.ts` (ambient types, no
+      // runtime form); route it at an empty module so the bundle doesn't try to parse it.
+      { find: /^\.\/global\.d\.ts$/, replacement: resolve(join(import.meta.dirname, 'src', 'renderer', 'shims', 'empty.ts')) },
     ],
   },
   ssr: {

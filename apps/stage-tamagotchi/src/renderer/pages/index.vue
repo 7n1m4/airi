@@ -129,6 +129,36 @@ let lastIpcCaptionOpen: boolean | null = null
 let lastIpcStageEnabled: boolean | null = null
 let lastIpcChatOpen: boolean | null = null
 
+/**
+ * `getMainWindowConfig` is declared `defineInvokeEventa<any>` (`src/shared/eventa.ts:380`) and the
+ * `config-changed` channel `defineEventa<any>` (`:508`), so the config reaches the renderer with no
+ * shape at all — TS types the value as `{}`, and every field read off it fails. These are the fields
+ * the Control Strip actually uses; the guard narrows the `unknown` the IPC listener hands over.
+ */
+interface MainWindowConfig {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  orientation?: 'horizontal' | 'vertical'
+  collapsed?: boolean
+  backgroundColor?: string
+}
+
+function asMainWindowConfig(value: unknown): MainWindowConfig | undefined {
+  return typeof value === 'object' && value !== null ? value as MainWindowConfig : undefined
+}
+
+/**
+ * `Screen.availLeft` / `Screen.availTop` are Electron/Chromium additions that the DOM lib does not
+ * declare, so the two reads the docking math needs go through this narrowing instead of a cast at
+ * each use site. `0` when the browser window does not report them.
+ */
+function screenAvail(key: 'availLeft' | 'availTop'): number {
+  const value = (window.screen as unknown as Record<string, unknown>)[key]
+  return typeof value === 'number' ? value : 0
+}
+
 watch(stageEnabled, (val) => {
   if (val === lastIpcStageEnabled)
     return
@@ -771,7 +801,7 @@ onMounted(async () => {
   tools.value = await builtinTools()
 
   // Initialize orientation from main process config
-  const mainConfig = await getMainWindowConfig()
+  const mainConfig = asMainWindowConfig(await getMainWindowConfig())
   // console.log('[Renderer Page] Loaded mainConfig on mount:', mainConfig)
   if (mainConfig) {
     if (mainConfig.orientation) {
@@ -784,8 +814,8 @@ onMounted(async () => {
     const w = mainConfig.width ?? 48
     const h = mainConfig.height ?? 48
 
-    const availLeft = (window.screen as any)?.availLeft ?? 0
-    const availTop = (window.screen as any)?.availTop ?? 0
+    const availLeft = screenAvail('availLeft')
+    const availTop = screenAvail('availTop')
     const availWidth = window.screen?.availWidth ?? window.innerWidth
     const availHeight = window.screen?.availHeight ?? window.innerHeight
     const threshold = 3
@@ -826,8 +856,9 @@ onMounted(async () => {
     }])
   }
 
-  if (window.electron?.ipcRenderer) {
-    window.electron.ipcRenderer.on('toggle-mic-from-shortcut', () => {
+  const ipcRenderer = window.electron?.ipcRenderer
+  if (ipcRenderer) {
+    ipcRenderer.on('toggle-mic-from-shortcut', () => {
       const liveSessionStore = useLiveSessionStore()
       const discordStore = useDiscordStore()
 
@@ -839,44 +870,55 @@ onMounted(async () => {
 
       settingsAudioDeviceStore.enabled = !settingsAudioDeviceStore.enabled
     })
-    window.electron.ipcRenderer.on('chat-window-state', (_, isOpen: boolean) => {
+    ipcRenderer.on('chat-window-state', (...args) => {
+      const isOpen = args[1]
+      if (typeof isOpen !== 'boolean')
+        return
       lastIpcChatOpen = isOpen
       controlStripStore.chatOpen = isOpen
     })
-    window.electron.ipcRenderer.on('caption-window-state', (_, isOpen: boolean) => {
+    ipcRenderer.on('caption-window-state', (...args) => {
+      const isOpen = args[1]
+      if (typeof isOpen !== 'boolean')
+        return
       lastIpcCaptionOpen = isOpen
       controlStripStore.captionOpen = isOpen
     })
-    window.electron.ipcRenderer.on('stage-window-state', (_, isOpen: boolean) => {
+    ipcRenderer.on('stage-window-state', (...args) => {
+      const isOpen = args[1]
+      if (typeof isOpen !== 'boolean')
+        return
       lastIpcStageEnabled = isOpen
       controlStripStore.stageEnabled = isOpen
     })
-    window.electron.ipcRenderer.on('eventa:event:electron:windows:main:config-changed', (_, config) => {
-      if (config) {
-        const x = config.x ?? 0
-        const y = config.y ?? 0
-        const w = config.width ?? 48
-        const h = config.height ?? 48
+    ipcRenderer.on('eventa:event:electron:windows:main:config-changed', (...args) => {
+      const config = asMainWindowConfig(args[1])
+      if (!config)
+        return
 
-        const availLeft = (window.screen as any)?.availLeft ?? 0
-        const availTop = (window.screen as any)?.availTop ?? 0
-        const availWidth = window.screen?.availWidth ?? window.innerWidth
-        const availHeight = window.screen?.availHeight ?? window.innerHeight
-        const threshold = 3
+      const x = config.x ?? 0
+      const y = config.y ?? 0
+      const w = config.width ?? 48
+      const h = config.height ?? 48
 
-        let edge: 'left' | 'right' | 'top' | 'bottom' | null = null
-        if (x <= availLeft + threshold)
-          edge = 'left'
-        else if (x + w >= availLeft + availWidth - threshold)
-          edge = 'right'
-        else if (y <= availTop + threshold)
-          edge = 'top'
-        else if (y + h >= availTop + availHeight - threshold)
-          edge = 'bottom'
+      const availLeft = screenAvail('availLeft')
+      const availTop = screenAvail('availTop')
+      const availWidth = window.screen?.availWidth ?? window.innerWidth
+      const availHeight = window.screen?.availHeight ?? window.innerHeight
+      const threshold = 3
 
-        if (edge)
-          controlStripStore.dockedEdge = edge
-      }
+      let edge: 'left' | 'right' | 'top' | 'bottom' | null = null
+      if (x <= availLeft + threshold)
+        edge = 'left'
+      else if (x + w >= availLeft + availWidth - threshold)
+        edge = 'right'
+      else if (y <= availTop + threshold)
+        edge = 'top'
+      else if (y + h >= availTop + availHeight - threshold)
+        edge = 'bottom'
+
+      if (edge)
+        controlStripStore.dockedEdge = edge
     })
   }
 

@@ -23,9 +23,10 @@ import type { StartupMilestoneId, StartupMilestoneStatus, StartupResourceState, 
 // the inert proxy and the first window creation aborted DI. The package now exists and
 // typechecks, so it is a normal dependency.
 import { createMainContext as createElectrobunMainContext } from '@proj-airi/electrobun-eventa'
-import { BrowserView as ElectrobunBrowserView } from 'electrobun/main'
+import { BrowserWindow, BrowserView as ElectrobunBrowserView } from 'electrobun/main'
 
 import { electronSplashStateChanged } from '../../shared/eventa'
+import { dispatchToIpcMain } from '../electron-shim'
 
 /** The single RPC method eventa traffic rides on. */
 const EVENTA_TAG = 'eventa:emit'
@@ -75,14 +76,17 @@ interface EventaLike {
 /** eventa's electron envelope, as the wire carries it. */
 interface EventaFrame {
   id: string
-  type: unknown
+  /** Electron carries the eventa tag in the frame's top-level `type`; the view-side adapter routes on it. */
+  type: string
   payload: { id: string, type: unknown, body?: unknown, from: number }
 }
 
 function frame(tag: EventaLike, body: unknown, from = -1): EventaFrame {
   return {
     id: `${tag.id}:${from}`,
-    type: tag.type ?? 'event',
+    // See packages/electrobun-eventa/src/shared.ts — Electron routes inbound frames on
+    // `frame.type`, not `payload.id`, so the tag rides here.
+    type: tag.id,
     payload: { id: tag.id, type: tag.type ?? 'event', body, from },
   }
 }
@@ -129,8 +133,40 @@ const contextFactory = createElectrobunMainContext as unknown as ContextFactory
  */
 const pendingInbound = new Map<number, unknown[]>()
 
-/** Hand the frame to the bound context, or hold it until one exists. */
+/** Live views by webview id — the global bus and response routing key off this. */
+const viewsById = new Map<number, BrowserView>()
+
+/**
+ * Minimal stand-in for Electron's IpcMainEvent: `.sender.send` routes a response back to the
+ * originating view over its own RPC channel, `.sender.id` carries the webview id for
+ * same-window filters, `.sender.isDestroyed` reports teardown.
+ */
+function fakeIpcMainEvent(viewId: number) {
+  return {
+    sender: {
+      id: viewId,
+      send: (channel: string, ...args: unknown[]) => {
+        if (channel !== 'eventa-message')
+          return
+        const frame = args[0]
+        try {
+          const view = viewsById.get(viewId)
+          ;(view?.rpc as ElectrobunRpcPort | undefined)?.send('eventa:emit', frame)
+        }
+        catch {
+          // View already torn down.
+        }
+      },
+      isDestroyed: () => !viewsById.has(viewId),
+    },
+  }
+}
+
+/** Hand the frame to the global bus and to the bound context, or hold it until one exists. */
 function deliverInbound(viewId: number, frame: unknown, adapter: { receive: (frame: unknown) => void } | undefined): void {
+  // Electron parity: orphan `createContext(ipcMain)` modules (channel-server & friends) live on
+  // the global bus and see every view's frame regardless of per-view bind state.
+  dispatchToIpcMain('eventa-message', fakeIpcMainEvent(viewId), frame)
   if (adapter) {
     adapter.receive(frame)
     return
@@ -138,20 +174,6 @@ function deliverInbound(viewId: number, frame: unknown, adapter: { receive: (fra
   const queue = pendingInbound.get(viewId) ?? []
   queue.push(frame)
   pendingInbound.set(viewId, queue)
-}
-
-/** Handlers registered on this context reject with the port error, so the gap is enumerable. */
-function inertContext(view: BrowserView): AnyEventaContext {
-  const fail = () => notImplemented(`eventa context for view ${view.id}`)
-  return new Proxy({}, {
-    get: (_target, prop) => {
-      if (prop === 'on')
-        return () => () => {}
-      if (prop === 'abort')
-        return () => {}
-      return fail
-    },
-  }) as unknown as AnyEventaContext
 }
 
 export async function createRpcBootstrap(options: {
@@ -211,8 +233,19 @@ export async function createRpcBootstrap(options: {
 
   const attach = (view: BrowserView) => {
     views.add(view)
-    view.on('close', () => {
+    viewsById.set(view.id, view)
+    // `BrowserView.on()` carries only navigation/download events — nothing ever emits a
+    // view-level `close`. The owning window's `close` is the only close signal (the devkit
+    // drops a window's views in its own close handler), and `BrowserView.remove()` is silent.
+    //
+    // NOTICE: the subscription is never removed. `Electrobun.events` (devkit index.ts:291)
+    // is a plain Node EventEmitter, so `off()` exists — but the devkit never exports the
+    // emitter itself, `BrowserWindow` has no `off`/`once`, and an anonymous handler can't be
+    // unsubscribed anyway. Cost is one closure per closed window, identical to
+    // `windows/registry.ts:32`.
+    BrowserWindow.getById(view.windowId)?.on('close', () => {
       views.delete(view)
+      viewsById.delete(view.id)
       contexts.delete(view.id)
       pendingInbound.delete(view.id)
       adapters.get(view.id)?.dispose()

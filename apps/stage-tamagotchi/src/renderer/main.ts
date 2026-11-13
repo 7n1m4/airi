@@ -4,6 +4,8 @@ import type { RouteRecordRaw } from 'vue-router'
 import Tres from '@tresjs/core'
 
 import { autoAnimatePlugin } from '@formkit/auto-animate/vue'
+import { defineInvoke } from '@moeru/eventa'
+import { createContext } from '@moeru/eventa/adapters/electron/renderer'
 import { MotionPlugin } from '@vueuse/motion'
 import { createPinia } from 'pinia'
 import { setupLayouts } from 'virtual:generated-layouts'
@@ -13,8 +15,10 @@ import { routes } from 'vue-router/auto-routes'
 
 import App from './App.vue'
 
+import { widgetsAdd, widgetsClear } from '../shared/eventa'
 import { i18n } from './modules/i18n'
 
+import './install-bridge'
 import '@unocss/reset/tailwind.css'
 import 'splitpanes/dist/splitpanes.css'
 import 'vue-sonner/style.css'
@@ -64,24 +68,27 @@ createApp(App)
   .mount('#app')
 
 if (typeof window !== 'undefined') {
-  const win = window as any
-  // NOTICE: these two used raw `ipcRenderer.invoke(channel, payload)`, which bypasses
-  // eventa's invoke correlation (a nanoid plus a per-invoke reply channel) and therefore
-  // cannot work over the Electrobun bridge. They are the only two such call sites left in
-  // the renderer, so they are folded into eventa here rather than widening the bridge with a
-  // second, incompatible invoke mechanism.
-  win.spawnSticker = (stickerId: string, options: { weight?: number, pos?: string, ttlMs?: number } = {}) => {
-    return win.__airiInvoke('eventa:invoke:electron:windows:widgets:add', [{
-      componentName: 'sticker',
-      componentProps: {
-        stickerId,
-        weight: options.weight ?? 0.5,
-        pos: options.pos ?? 'random',
-      },
-      ttlMs: options.ttlMs ?? 0,
-    }])
+  const win = window as unknown as Window & {
+    spawnSticker?: (stickerId: string, options?: { weight?: number, pos?: string, ttlMs?: number }) => Promise<string | undefined>
+    clearStickers?: () => Promise<void>
   }
-  win.clearStickers = () => {
-    return win.__airiInvoke('eventa:invoke:electron:windows:widgets:clear')
+  // Eventa's own invoke, not a raw `ipcRenderer.invoke`: main registers exactly one request
+  // method (`eventa:emit`, src/main/rpc/index.ts), so a per-channel invoke could only ever
+  // reject. `install-bridge` guarantees `window.electron.ipcRenderer` exists by now.
+  const ipcRenderer = window.electron?.ipcRenderer
+  const eventaAdapter = ipcRenderer ? createContext(ipcRenderer) : undefined
+  const context = eventaAdapter?.context
+  const addWidget = context ? defineInvoke(context, widgetsAdd) : undefined
+  const clearWidget = context ? defineInvoke(context, widgetsClear) : undefined
+
+  win.spawnSticker = async (stickerId, options = {}) => {
+    return addWidget?.({
+      componentName: 'sticker',
+      componentProps: { stickerId, weight: options.weight ?? 0.5, pos: options.pos ?? 'random' },
+      ttlMs: options.ttlMs ?? 0,
+    })
+  }
+  win.clearStickers = async () => {
+    await clearWidget?.()
   }
 }
