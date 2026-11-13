@@ -20,6 +20,7 @@
 
 mod audit;
 mod control;
+mod gateway;
 mod observe;
 mod redact;
 mod ring;
@@ -50,7 +51,10 @@ const RATE_LIMIT_AUDIT_PERIOD: Duration = Duration::from_secs(60);
 
 #[derive(Debug, PartialEq, Eq)]
 enum Mode {
+    /// Run with the gateway hosted (default).
     Run,
+    /// Run without the gateway (dev machines where the desktop app hosts it).
+    RunNoGateway,
     SelfTest,
     Version,
     Help,
@@ -61,6 +65,7 @@ fn parse_args(args: &[String]) -> Result<Mode, String> {
         [] => Ok(Mode::Run),
         [one] => match one.as_str() {
             "--foreground" => Ok(Mode::Run),
+            "--no-gateway" => Ok(Mode::RunNoGateway),
             "--selftest" => Ok(Mode::SelfTest),
             "--version" | "-V" | "-v" => Ok(Mode::Version),
             "--help" | "-h" | "-?" => Ok(Mode::Help),
@@ -85,7 +90,8 @@ fn usage() {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match parse_args(&args) {
-        Ok(Mode::Run) => run(),
+        Ok(Mode::Run) => run(true),
+        Ok(Mode::RunNoGateway) => run(false),
         Ok(Mode::SelfTest) => selftest(),
         Ok(Mode::Version) => println!("airi-daemon {VERSION} (protocol {PROTOCOL})"),
         Ok(Mode::Help) => usage(),
@@ -97,7 +103,7 @@ fn main() {
     }
 }
 
-fn run() {
+fn run(gateway_enabled: bool) {
     eprintln!("airi-daemon: starting (protocol {PROTOCOL}, version {VERSION})");
 
     // Audit first: prune-on-start must happen before any append.
@@ -222,11 +228,27 @@ fn run() {
         }
     );
 
+    // Gateway (WS on 6121, optional TLS). Always created so D-Bus callers
+    // get an honest answer; failure is captured in `bound: false` +
+    // `last_error`, never fatal to awareness.
+    let gateway = if gateway_enabled {
+        eprintln!("airi-daemon: hosting the gateway (port from SERVER_CHANNEL_PORT, else 6121)");
+        gateway::Gateway::start()
+    } else {
+        eprintln!("airi-daemon: gateway disabled (--no-gateway); awareness continues");
+        gateway::Gateway::start_disabled("disabled (--no-gateway)")
+    };
+
     let mut debounce: HashMap<(String, String), u64> = HashMap::new();
     let mut rate_limited_drops: u64 = 0;
     let mut last_rate_limit_audit = Instant::now();
 
     loop {
+        // Recover the gateway bind if the port was busy at startup (e.g. the
+        // desktop app still hosts its own server). Internally rate-limited;
+        // a no-op when bound.
+        gateway.maybe_retry();
+
         // --- Session bus ---
         match session
             .channel()
@@ -250,6 +272,7 @@ fn run() {
                     digest: &digest_fn,
                     exclusions: &mut exclusions,
                     wake: &mut wake,
+                    gateway: &gateway,
                 };
                 handle_message(Bus::Session, msg, &session, &mut ctx);
             }
@@ -294,6 +317,7 @@ fn run() {
                         digest: &digest_fn,
                         exclusions: &mut exclusions,
                         wake: &mut wake,
+                        gateway: &gateway,
                     };
                     handle_message(Bus::System, msg, sys, &mut ctx);
                 }
@@ -413,6 +437,8 @@ struct LoopCtx<'a> {
     exclusions: &'a mut screen::Exclusions,
     /// Wake/suspend facts for the morning briefing (in-memory only).
     wake: &'a mut WakeFacts,
+    /// Gateway hosting state (WS on 6121). Shared, immutable to the handler.
+    gateway: &'a gateway::Gateway,
 }
 
 fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut LoopCtx<'_>) {
@@ -423,6 +449,40 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
             }
             // Snapshot the wake facts for the status closure (small owned copy).
             let wake_snapshot = ctx.wake.clone();
+            let gw = ctx.gateway;
+            let audit = ctx.audit;
+            let gateway_fn = |req: gateway::GatewayRequest| {
+                let reply = gw.handle(&req);
+                let mutated = match &req {
+                    gateway::GatewayRequest::Apply(_) => {
+                        serde_json::from_str::<serde_json::Value>(&reply)
+                            .map(|v| v.get("ok") != Some(&serde_json::Value::Bool(false)))
+                            .unwrap_or(false)
+                    }
+                    gateway::GatewayRequest::RegenerateToken => {
+                        serde_json::from_str::<serde_json::Value>(&reply)
+                            .map(|v| v.get("authToken").is_some())
+                            .unwrap_or(false)
+                    }
+                    gateway::GatewayRequest::Get => false,
+                };
+                if mutated {
+                    match &req {
+                        gateway::GatewayRequest::Apply(_) => audit.append(
+                            "gateway",
+                            "gateway: config applied",
+                            "hostname/TLS/token updated via D-Bus",
+                        ),
+                        gateway::GatewayRequest::RegenerateToken => audit.append(
+                            "gateway",
+                            "gateway: auth token regenerated",
+                            "token rotated via D-Bus; new connections must re-authenticate",
+                        ),
+                        _ => {}
+                    }
+                }
+                reply
+            };
             let reply = handle_method_call(
                 &msg,
                 ctx.awareness,
@@ -441,6 +501,7 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
                 },
                 ctx.digest,
                 ctx.exclusions,
+                &gateway_fn,
             );
             if let Some(reply) = reply {
                 // Best-effort reply; a dead peer is not our problem.

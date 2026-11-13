@@ -36,14 +36,18 @@ ProtectSystem=strict
 # resolution; ProtectHome=inaccessible was rejected for the same write
 # reason; ProtectHome=false/yes rejected as broader than needed.)
 ProtectHome=read-only
-ReadWritePaths=%h/.local/share/airi-slint/audit
+# The daemon now hosts the WS gateway (6121): the audit dir, plus the
+# server-channel dir (config + certs/) it owns outright.
+ReadWritePaths=%h/.local/share/airi-slint/audit %h/.local/share/airi-slint/server-channel
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
-RestrictAddressFamilies=AF_UNIX
+# AF_INET/AF_INET6: the gateway listens on loopback/LAN; AF_UNIX: D-Bus control.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 LockPersonality=true
 RestrictRealtime=true
-MemoryMax=64M
+# TLS + WebSocket + X.509 minting do not fit in 64 MiB.
+MemoryMax=256M
 CPUQuota=25%
 
 [Install]
