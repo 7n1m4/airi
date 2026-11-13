@@ -20,6 +20,15 @@ export function createAuth(db: Database, env: Env) {
       bearer(),
     ],
 
+    session: {
+      // Cache the session in the signed cookie for 5 minutes so /api/* does not
+      // hit Postgres on every request; revocation latency is bounded by maxAge.
+      cookieCache: {
+        enabled: true,
+        maxAge: 5 * 60,
+      },
+    },
+
     emailAndPassword: {
       enabled: true,
     },
