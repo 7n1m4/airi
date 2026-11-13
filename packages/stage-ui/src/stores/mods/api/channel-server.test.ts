@@ -123,4 +123,22 @@ describe('resolveWebSocketUrl', () => {
       'settings/server-channel/tls-enabled': 'true',
     }))).toBe('wss://localhost:6121/ws')
   })
+
+  it('rewrites non-loopback ws:// override to wss:// instead of cleartext', () => {
+    expect(resolveWebSocketUrl(fakeGetItem({ 'settings/connection/websocket-url': 'ws://192.168.1.10:6121/ws' })))
+      .toBe('wss://192.168.1.10:6121/ws')
+  })
+
+  it('rewrites a derived non-loopback ws:// (tls flag false) to wss://', () => {
+    expect(resolveWebSocketUrl(fakeGetItem({
+      'settings/server-channel/hostname': 'nas.example.lan',
+      'settings/server-channel/port': '6121',
+      'settings/server-channel/tls-enabled': 'false',
+    }))).toBe('wss://nas.example.lan:6121/ws')
+  })
+
+  it('keeps loopback ws:// untouched', () => {
+    expect(resolveWebSocketUrl(fakeGetItem({ 'settings/connection/websocket-url': 'ws://127.0.0.1:6121/ws' })))
+      .toBe('ws://127.0.0.1:6121/ws')
+  })
 })
