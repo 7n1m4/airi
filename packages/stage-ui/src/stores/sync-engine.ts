@@ -13,6 +13,7 @@ import { toast } from 'vue-sonner'
 import { flushPendingImportWrites, storage, storageState } from '../database/storage'
 import { isSecretStorageKey } from '../libs/secret-storage-keys'
 import { extractAllowedSessionIds, mergeByIdLww, mergeChatSessions, mergeVoiceProfiles, shouldSkipMergeableKey } from './sync-engine-merge'
+import { tryAcquireSyncLease } from './sync-lease'
 import { getSyncTombstoneIds } from './sync-tombstones'
 
 // Mergeable keys use last-writer merges instead of file overwrite. Real keys carry the
@@ -2260,6 +2261,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         if (localVal !== undefined && localVal !== null) {
           const writeRes = await client.writeFile(relPath, JSON.stringify(localVal, null, 2))
           if (writeRes.success) {
+            await storage.removeItem(`local:sync-metadata/etags/${localKey.replace('local:', '')}`)
             const stats = await client.listFiles()
             const matchingFile = stats.files?.find((f: any) => f.relPath === relPath)
             if (matchingFile) {
@@ -2323,6 +2325,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
 
           const writeRes = await client.writeFile(relPath, JSON.stringify(mergedData, null, 2))
           if (writeRes.success) {
+            await storage.removeItem(`local:sync-metadata/etags/${localKey.replace('local:', '')}`)
             const stats = await client.listFiles()
             const matchingFile = stats.files?.find((f: any) => f.relPath === relPath)
             if (matchingFile) {
@@ -2389,6 +2392,13 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     if (inFlightReconcile) {
       debug('[SyncEngine] Reconciliation already in flight, joining existing promise.')
       return inFlightReconcile
+    }
+
+    // Electron stage windows share localStorage — elect one window to run reconcile.
+    const lease = tryAcquireSyncLease('reconcile')
+    if (!lease.won) {
+      debug('[SyncEngine] Reconcile lease is held by another window, skipping.')
+      return false
     }
 
     inFlightReconcile = (async () => {
@@ -2461,9 +2471,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
           const writeRes = await client.writeFile(remoteFile.relPath, JSON.stringify(mergedVal, null, 2))
           if (writeRes.success && writeRes.mtime) {
             await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, writeRes.mtime)
-            if (remoteFile.etag) {
-              await storage.setItemRaw(`local:sync-metadata/etags/${localKey.replace('local:', '')}`, remoteFile.etag)
-            }
+            // NOTICE: pre-write etag is useless post-write; mtime/size are the freshness signals.
+            await storage.removeItem(`local:sync-metadata/etags/${localKey.replace('local:', '')}`)
           }
           localTimestamps.delete(localKey)
         }
@@ -2616,9 +2625,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             const writeRes = await client.writeFile(remoteFile.relPath, JSON.stringify(mergedVal, null, 2))
             if (writeRes.success && writeRes.mtime) {
               await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, writeRes.mtime)
-              if (remoteFile.etag) {
-                await storage.setItemRaw(`local:sync-metadata/etags/${localKey.replace('local:', '')}`, remoteFile.etag)
-              }
+              // NOTICE: pre-write etag is useless post-write; mtime/size are the freshness signals.
+              await storage.removeItem(`local:sync-metadata/etags/${localKey.replace('local:', '')}`)
             }
             localTimestamps.delete(localKey)
             return
@@ -2657,9 +2665,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
                 const writeRes = await client.writeFile(remoteFile.relPath, JSON.stringify(localVal, null, 2))
                 if (writeRes.success && writeRes.mtime) {
                   await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, writeRes.mtime)
-                  if (remoteFile.etag) {
-                    await storage.setItemRaw(`local:sync-metadata/etags/${localKey.replace('local:', '')}`, remoteFile.etag)
-                  }
+                  // NOTICE: pre-write etag is useless post-write; mtime/size are the freshness signals.
+                  await storage.removeItem(`local:sync-metadata/etags/${localKey.replace('local:', '')}`)
                 }
                 return
               }
@@ -2723,9 +2730,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
                 const writeRes = await client.writeFile(remoteFile.relPath, JSON.stringify(localVal, null, 2))
                 if (writeRes.success && writeRes.mtime) {
                   await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, writeRes.mtime)
-                  if (remoteFile.etag) {
-                    await storage.setItemRaw(`local:sync-metadata/etags/${localKey.replace('local:', '')}`, remoteFile.etag)
-                  }
+                  // NOTICE: pre-write etag is useless post-write; mtime/size are the freshness signals.
+                  await storage.removeItem(`local:sync-metadata/etags/${localKey.replace('local:', '')}`)
                 }
               }
               return
@@ -2798,9 +2804,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
               }
               else if (writeRes.mtime) {
                 await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, writeRes.mtime)
-                if (remoteFile.etag) {
-                  await storage.setItemRaw(`local:sync-metadata/etags/${localKey.replace('local:', '')}`, remoteFile.etag)
-                }
+                // NOTICE: pre-write etag is useless post-write; mtime/size are the freshness signals.
+                await storage.removeItem(`local:sync-metadata/etags/${localKey.replace('local:', '')}`)
               }
             }
           }
@@ -2845,6 +2850,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             }
             if (writeRes.mtime) {
               await storage.setItemRaw(`local:sync-metadata/timestamps/${fullKey.replace('local:', '')}`, writeRes.mtime)
+              await storage.removeItem(`local:sync-metadata/etags/${fullKey.replace('local:', '')}`)
             }
           }
         })
@@ -2871,6 +2877,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         return false
       }
     })().finally(() => {
+      lease.release()
       inFlightReconcile = null
     })
 
@@ -2879,153 +2886,166 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
 
   // Process the pending mutations in the outbox queue
   async function processOutbox(): Promise<boolean> {
-    const client = getActiveClient()
-    const pathValidation = await client.validate()
-    if (!pathValidation.success) {
+    const lease = tryAcquireSyncLease('outbox')
+    if (!lease.won) {
+      debug('[SyncEngine] Outbox lease is held by another window, skipping.')
       return false
     }
-
-    const rawOutboxKeys = await storage.getKeys('outbox')
-    const outboxKeys = rawOutboxKeys.map(normalizeStorageKey).filter((k): k is string => k !== null).filter(k => k.startsWith('outbox:queue/'))
-    if (outboxKeys.length === 0)
-      return true
-
-    debug(`[SyncEngine] Processing ${outboxKeys.length} outbox queue items...`)
-
-    storageState.isImportingRemoteData = true
-    storageState.pendingImportWrites.length = 0 // drop anything stale held by an earlier window
     try {
-      await parallelLimit(outboxKeys, 15, async (fullQueueKey) => {
-        const item = await storage.getItemRaw<{ key: string, action: 'upsert' | 'delete', timestamp: number }>(fullQueueKey)
-        if (!item) {
-          await storage.removeItem(fullQueueKey)
-          return
-        }
+      const client = getActiveClient()
+      const pathValidation = await client.validate()
+      if (!pathValidation.success) {
+        return false
+      }
 
-        // NOTICE: Never upload credential keys to the remote backup; drop stale queue entries
-        // (e.g. enqueued before exclusion existed) instead of retrying them forever.
-        const secretProbe = item.key.startsWith('local:localstorage/')
-          ? item.key.substring('local:localstorage/'.length)
-          : item.key
-        if (isSecretStorageKey(secretProbe) || isSecretStorageKey(item.key)) {
-          debug(`[SyncEngine] Dropping outbox item ${item.key}: credential-bearing key is excluded from remote sync.`)
-          await storage.removeItem(fullQueueKey)
-          return
-        }
+      const rawOutboxKeys = await storage.getKeys('outbox')
+      const outboxKeys = rawOutboxKeys.map(normalizeStorageKey).filter((k): k is string => k !== null).filter(k => k.startsWith('outbox:queue/'))
+      if (outboxKeys.length === 0)
+        return true
 
-        if (selectiveSyncEnabled.value && (item.key.startsWith('local:chat/sessions/') || item.key.startsWith('local:director/sessions/'))) {
-          let charId: string | null = null
-          if (item.key.startsWith('local:chat/sessions/')) {
-            const localVal = await storage.getItemRaw<any>(item.key)
-            charId = localVal?.meta?.characterId
+      debug(`[SyncEngine] Processing ${outboxKeys.length} outbox queue items...`)
+
+      storageState.isImportingRemoteData = true
+      storageState.pendingImportWrites.length = 0 // drop anything stale held by an earlier window
+      try {
+        await parallelLimit(outboxKeys, 15, async (fullQueueKey) => {
+          const item = await storage.getItemRaw<{ key: string, action: 'upsert' | 'delete', timestamp: number }>(fullQueueKey)
+          if (!item) {
+            await storage.removeItem(fullQueueKey)
+            return
           }
-          else if (item.key.startsWith('local:director/sessions/')) {
-            const sId = item.key.substring('local:director/sessions/'.length)
-            const chatVal = await storage.getItemRaw<any>(`local:chat/sessions/${sId}`)
-            charId = chatVal?.meta?.characterId
+
+          // NOTICE: Never upload credential keys to the remote backup; drop stale queue entries
+          // (e.g. enqueued before exclusion existed) instead of retrying them forever.
+          const secretProbe = item.key.startsWith('local:localstorage/')
+            ? item.key.substring('local:localstorage/'.length)
+            : item.key
+          if (isSecretStorageKey(secretProbe) || isSecretStorageKey(item.key)) {
+            debug(`[SyncEngine] Dropping outbox item ${item.key}: credential-bearing key is excluded from remote sync.`)
+            await storage.removeItem(fullQueueKey)
+            return
           }
-          if (charId) {
-            const chatNodeId = `chat-${charId}`
-            if (!selectiveCheckedIds.value.includes(chatNodeId)) {
-              await logDebug(`Skipping outbox processing for session ${item.key} because character chat ${chatNodeId} is not selected.`)
-              await storage.removeItem(fullQueueKey)
-              return
+
+          if (selectiveSyncEnabled.value && (item.key.startsWith('local:chat/sessions/') || item.key.startsWith('local:director/sessions/'))) {
+            let charId: string | null = null
+            if (item.key.startsWith('local:chat/sessions/')) {
+              const localVal = await storage.getItemRaw<any>(item.key)
+              charId = localVal?.meta?.characterId
             }
-          }
-        }
-
-        const conflictKey = `local:sync-metadata/conflicts/${item.key.replace('local:', '')}`
-        const hasActiveConflict = await storage.getItemRaw(conflictKey)
-        if (hasActiveConflict) {
-          debug(`[SyncEngine] Outbox processing skipped for ${item.key} due to active conflict.`)
-          return
-        }
-
-        const relPath = getRelPathForKey(item.key)
-
-        if (item.action === 'upsert') {
-          const isMergeableKey = isMergeableSyncKey(item.key) || item.key.startsWith('local:chat/index/')
-
-          if (isMergeableKey) {
-            debug(`[SyncEngine] Outbox key ${item.key} is mergeable. Merging with remote...`)
-            let remoteVal: any = null
-            const readRes = await client.readFile(relPath)
-            if (readRes.success && readRes.content) {
-              try {
-                remoteVal = JSON.parse(readRes.content)
+            else if (item.key.startsWith('local:director/sessions/')) {
+              const sId = item.key.substring('local:director/sessions/'.length)
+              const chatVal = await storage.getItemRaw<any>(`local:chat/sessions/${sId}`)
+              charId = chatVal?.meta?.characterId
+            }
+            if (charId) {
+              const chatNodeId = `chat-${charId}`
+              if (!selectiveCheckedIds.value.includes(chatNodeId)) {
+                await logDebug(`Skipping outbox processing for session ${item.key} because character chat ${chatNodeId} is not selected.`)
+                await storage.removeItem(fullQueueKey)
+                return
               }
-              catch {}
-            }
-            const localVal = await storage.getItemRaw<any>(item.key)
-            const tombstonedIds = await getSyncTombstoneIds(item.key)
-            let mergedVal: any = null
-
-            if (item.key === 'local:airi-cards') {
-              mergedVal = mergeAiriCards(localVal, remoteVal, tombstonedIds)
-            }
-            else if (item.key.startsWith('local:chat/sessions/')) {
-              mergedVal = mergeChatSessions(localVal, remoteVal, tombstonedIds)
-            }
-            else if (item.key.startsWith('local:chat/index/')) {
-              mergedVal = mergeChatIndices(localVal, remoteVal, tombstonedIds)
-            }
-            else if (item.key === 'local:localstorage/settings/live2d/available-motions') {
-              mergedVal = mergeAvailableMotions(localVal, remoteVal, tombstonedIds)
-            }
-            else if (item.key === 'local:localstorage/settings/speech/voice-profiles') {
-              mergedVal = mergeVoiceProfiles(localVal, remoteVal, tombstonedIds)
-            }
-            else {
-              let localArr = localVal || []
-              let remoteArr = remoteVal || []
-              if (!Array.isArray(localArr))
-                localArr = []
-              if (!Array.isArray(remoteArr))
-                remoteArr = []
-              mergedVal = mergeByIdLww(localArr, remoteArr, tombstonedIds)
-            }
-
-            await storage.setItemRaw(item.key, mergedVal)
-
-            const writeRes = await client.writeFile(relPath, JSON.stringify(mergedVal, null, 2))
-            if (!writeRes.success) {
-              throw new Error(writeRes.error || 'Failed to write remote file')
-            }
-            if (writeRes.mtime) {
-              await storage.setItemRaw(`local:sync-metadata/timestamps/${item.key.replace('local:', '')}`, writeRes.mtime)
             }
           }
-          else {
-            const val = await storage.getItemRaw(item.key)
-            if (val) {
-              const writeRes = await client.writeFile(relPath, JSON.stringify(val, null, 2))
+
+          const conflictKey = `local:sync-metadata/conflicts/${item.key.replace('local:', '')}`
+          const hasActiveConflict = await storage.getItemRaw(conflictKey)
+          if (hasActiveConflict) {
+            debug(`[SyncEngine] Outbox processing skipped for ${item.key} due to active conflict.`)
+            return
+          }
+
+          const relPath = getRelPathForKey(item.key)
+
+          if (item.action === 'upsert') {
+            const isMergeableKey = isMergeableSyncKey(item.key) || item.key.startsWith('local:chat/index/')
+
+            if (isMergeableKey) {
+              debug(`[SyncEngine] Outbox key ${item.key} is mergeable. Merging with remote...`)
+              let remoteVal: any = null
+              const readRes = await client.readFile(relPath)
+              if (readRes.success && readRes.content) {
+                try {
+                  remoteVal = JSON.parse(readRes.content)
+                }
+                catch {}
+              }
+              const localVal = await storage.getItemRaw<any>(item.key)
+              const tombstonedIds = await getSyncTombstoneIds(item.key)
+              let mergedVal: any = null
+
+              if (item.key === 'local:airi-cards') {
+                mergedVal = mergeAiriCards(localVal, remoteVal, tombstonedIds)
+              }
+              else if (item.key.startsWith('local:chat/sessions/')) {
+                mergedVal = mergeChatSessions(localVal, remoteVal, tombstonedIds)
+              }
+              else if (item.key.startsWith('local:chat/index/')) {
+                mergedVal = mergeChatIndices(localVal, remoteVal, tombstonedIds)
+              }
+              else if (item.key === 'local:localstorage/settings/live2d/available-motions') {
+                mergedVal = mergeAvailableMotions(localVal, remoteVal, tombstonedIds)
+              }
+              else if (item.key === 'local:localstorage/settings/speech/voice-profiles') {
+                mergedVal = mergeVoiceProfiles(localVal, remoteVal, tombstonedIds)
+              }
+              else {
+                let localArr = localVal || []
+                let remoteArr = remoteVal || []
+                if (!Array.isArray(localArr))
+                  localArr = []
+                if (!Array.isArray(remoteArr))
+                  remoteArr = []
+                mergedVal = mergeByIdLww(localArr, remoteArr, tombstonedIds)
+              }
+
+              await storage.setItemRaw(item.key, mergedVal)
+
+              const writeRes = await client.writeFile(relPath, JSON.stringify(mergedVal, null, 2))
               if (!writeRes.success) {
                 throw new Error(writeRes.error || 'Failed to write remote file')
               }
               if (writeRes.mtime) {
                 await storage.setItemRaw(`local:sync-metadata/timestamps/${item.key.replace('local:', '')}`, writeRes.mtime)
+                await storage.removeItem(`local:sync-metadata/etags/${item.key.replace('local:', '')}`)
+              }
+            }
+            else {
+              const val = await storage.getItemRaw(item.key)
+              if (val) {
+                const writeRes = await client.writeFile(relPath, JSON.stringify(val, null, 2))
+                if (!writeRes.success) {
+                  throw new Error(writeRes.error || 'Failed to write remote file')
+                }
+                if (writeRes.mtime) {
+                  await storage.setItemRaw(`local:sync-metadata/timestamps/${item.key.replace('local:', '')}`, writeRes.mtime)
+                  await storage.removeItem(`local:sync-metadata/etags/${item.key.replace('local:', '')}`)
+                }
               }
             }
           }
-        }
-        else if (item.action === 'delete') {
-          const delRes = await client.deleteFile(relPath)
-          if (!delRes.success) {
-            throw new Error(delRes.error || 'Failed to delete remote file')
+          else if (item.action === 'delete') {
+            const delRes = await client.deleteFile(relPath)
+            if (!delRes.success) {
+              throw new Error(delRes.error || 'Failed to delete remote file')
+            }
           }
-        }
 
-        await storage.removeItem(fullQueueKey)
-      })
-      storageState.isImportingRemoteData = false
-      // NOTICE: no flush here — outbox's own merge rewrites would re-arm the queue forever;
-      // captures are dropped at the next window entry (pre-item-16 behavior).
-      return true
+          await storage.removeItem(fullQueueKey)
+        })
+        storageState.isImportingRemoteData = false
+        // NOTICE: no flush here — outbox's own merge rewrites would re-arm the queue forever;
+        // captures are dropped at the next window entry (pre-item-16 behavior).
+        return true
+      }
+      catch (err) {
+        storageState.isImportingRemoteData = false
+        console.error('[SyncEngine] Failed to process outbox queue:', err)
+        return false
+      }
     }
-    catch (err) {
-      storageState.isImportingRemoteData = false
-      console.error('[SyncEngine] Failed to process outbox queue:', err)
-      return false
+
+    finally {
+      lease.release()
     }
   }
 

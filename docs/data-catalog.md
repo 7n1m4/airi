@@ -441,6 +441,14 @@ interface ProvisioningSession {
 }
 ```
 
+| Attribute | Value |
+| :--- | :--- |
+| **Key** | `settings/sync/lease-{kind}-{holder}` — `kind` ∈ `reconcile` \| `outbox` |
+| **File** | `packages/stage-ui/src/stores/sync-lease.ts` |
+| **Type** | `{ holder: string, expiresAt: number }` (holder = nanoid) |
+| **Description** | Cooperative election among stage windows sharing localStorage: the greatest live `holder` wins; loser skips the pass. TTL 300 s; expired entries are collected on read; `release()` removes only the writer's own key. Best-effort, not a mutex (no atomic CAS); bounding factor is the lease TTL. |
+| **Sync** | **Never synced** (`settings/sync/` is excluded from the localStorage bridge) |
+
 ### 1.10 Echo Chips
 
 | Attribute | Value |
@@ -531,6 +539,8 @@ The event log is the read-mostly audit trail for chat-related state events. Entr
 | **Sync** | **Skipped** by the sync engine (internal metadata) |
 
 ### 1.13b Sync Metadata — Tombstones
+
+### 1.13c Sync Lease — cross-window election
 
 | Attribute | Value |
 | :--- | :--- |
