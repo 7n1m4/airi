@@ -60,7 +60,7 @@
 //!
 //! `recent_audit()`/`clear_audit()` operate on the shared audit file at
 //! `dirs::data_dir()/airi-slint/audit/awareness-audit.jsonl` — the same path the
-//! daemon resolves in `audit.rs` (`AUDIT_FILE_NAME = "awareness-audit.jsonl"`)
+//! both resolve via `airi-channel::audit` (`AUDIT_FILE_NAME = "awareness-audit.jsonl"`)
 //! and the same one `GetStatus` reports in its `audit_path` field. (Note: an
 //! earlier draft of the lane brief called the file `awareness.jsonl`; the
 //! daemon source of truth wins and this bridge matches it.)
@@ -104,8 +104,6 @@
 use chrono::{Local, TimeZone};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::fs::File;
-use std::io::{Read as _, Seek as _, SeekFrom};
 use std::time::Duration;
 
 /// Well-known session-bus name owned by `airi-daemon`.
@@ -115,8 +113,6 @@ const DAEMON_NAME: &str = "org.moeru.airi.Daemon1";
 const DAEMON_PATH: &str = "/org/moeru/airi/Daemon1";
 /// Interface carrying the callable methods.
 const DAEMON_INTERFACE: &str = "org.moeru.airi.Daemon1";
-/// Must stay byte-identical to `AUDIT_FILE_NAME` in the daemon's `audit.rs`.
-const AUDIT_FILE_NAME: &str = "awareness-audit.jsonl";
 /// Every D-Bus call is bounded by this timeout.
 const DBUS_TIMEOUT: Duration = Duration::from_millis(800);
 /// Hard cap on audit rows returned by `recent_audit()` (and shown by the page).
@@ -128,10 +124,9 @@ const AUDIT_TAIL_BYTES: usize = 64 * 1024;
 const DAEMON_DOWN_STATUS: &str =
     "airi-daemon is not running — see packaging/README.md (dev-run section)";
 
-/// Resolve the shared audit file path exactly the way the daemon does:
-/// `dirs::data_dir()/airi-slint/audit/awareness-audit.jsonl`.
+/// Resolve the shared audit file path; the contract lives in `airi-channel`.
 fn audit_file_path() -> Option<std::path::PathBuf> {
-    dirs::data_dir().map(|d| d.join("airi-slint").join("audit").join(AUDIT_FILE_NAME))
+    airi_channel::audit::default_audit_path()
 }
 
 /// Path used for display + file operations, with a relative fallback when
@@ -140,7 +135,7 @@ fn audit_file_path() -> Option<std::path::PathBuf> {
 fn audit_file_path_display() -> String {
     audit_file_path()
         .map(|p| p.to_string_lossy().into_owned())
-        .unwrap_or_else(|| format!("airi-slint/audit/{AUDIT_FILE_NAME}"))
+        .unwrap_or_else(|| format!("airi-slint/audit/{}", airi_channel::audit::AUDIT_FILE_NAME))
 }
 
 /// One GetStatus round-trip. `Ok(body)` is the raw JSON string the daemon
@@ -566,47 +561,11 @@ fn set_excluded_apps_ok(body: &str) -> Result<(), String> {
     }
 }
 
-/// Parse the tail of the audit JSONL `path` and return at most `cap` entries,
-/// newest last (callers reverse for newest-first). Malformed lines are
-/// skipped, never fatal.
-///
-/// Reads only the last [`AUDIT_TAIL_BYTES`] — the file is 7-day-retention with
-/// no size cap and `recentAudit()` is polled every second, so the cost has to
-/// stay bounded no matter how large the log has grown. A missing/unreadable
-/// file yields an empty vec.
+/// Tail of the audit JSONL, capped; malformed lines are skipped.
+/// Enforced-by-contract parse lives in `airi-channel::audit`; a missing or
+/// unreadable file is an empty vec (logged except for the NotFound case).
 fn parse_jsonl_tail(path: &std::path::Path, cap: usize) -> Vec<Value> {
-    let read_tail = || -> std::io::Result<Vec<Value>> {
-        let mut file = File::open(path)?;
-        let len = file.seek(SeekFrom::End(0))?;
-        file.seek(SeekFrom::Start(len.saturating_sub(AUDIT_TAIL_BYTES as u64)))?;
-        let mut buf = String::new();
-        file.read_to_string(&mut buf)?;
-        // A fragment cut mid-line by the seek is not valid JSON.
-        let start = len as usize - buf.len();
-        let lines: Vec<&str> = if start == 0 {
-            buf.lines().collect()
-        } else {
-            match buf.find('\n') {
-                Some(i) => buf[i + 1..].lines().collect(),
-                None => Vec::new(),
-            }
-        };
-        let mut rows: Vec<Value> = lines
-            .into_iter()
-            .rev()
-            .filter_map(|line| {
-                let trimmed = line.trim();
-                if trimmed.is_empty() {
-                    return None;
-                }
-                serde_json::from_str::<Value>(trimmed).ok()
-            })
-            .take(cap)
-            .collect();
-        rows.reverse();
-        Ok(rows)
-    };
-    read_tail().unwrap_or_else(|e| {
+    airi_channel::audit::parse_jsonl_tail(path, cap, AUDIT_TAIL_BYTES as u64).unwrap_or_else(|e| {
         if e.kind() != std::io::ErrorKind::NotFound {
             eprintln!(
                 "[airi-slint] daemon: failed to read audit file {}: {e}",
@@ -919,18 +878,8 @@ impl DaemonState {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())
             .unwrap_or(0);
-        let file_name = path
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| AUDIT_FILE_NAME.to_string());
-        let mut archive = path.with_file_name(format!("{file_name}.cleared-{ts}"));
-        let mut counter = 1_u32;
-        while archive.exists() {
-            archive = path.with_file_name(format!("{file_name}.cleared-{ts}-{counter}"));
-            counter += 1;
-        }
-        match std::fs::rename(&path, &archive) {
-            Ok(()) => {
+        match airi_channel::audit::archive_audit_file(&path, ts) {
+            Ok(archive) => {
                 eprintln!(
                     "[airi-slint] daemon: audit log archived to {}",
                     archive.display()
@@ -939,9 +888,8 @@ impl DaemonState {
             }
             Err(e) => {
                 eprintln!(
-                    "[airi-slint] daemon: failed to archive audit file {} -> {}: {e}",
-                    path.display(),
-                    archive.display()
+                    "[airi-slint] daemon: failed to archive audit file {}: {e}",
+                    path.display()
                 );
                 false
             }

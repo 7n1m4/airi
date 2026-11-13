@@ -59,6 +59,7 @@
 //! that registry is a separate decision — handlers here must never touch
 //! `QObject`s directly; they get plain JSON and return plain JSON.
 
+pub mod audit;
 pub mod base64;
 pub mod certs;
 pub mod config;

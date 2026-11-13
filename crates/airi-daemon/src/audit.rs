@@ -17,17 +17,16 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::redact::redact;
 
 pub const RETENTION_MS: u64 = 7 * 24 * 3600 * 1000; // hardcoded 7 days (spec)
-pub const AUDIT_FILE_NAME: &str = "awareness-audit.jsonl";
+// The file contract itself lives in `airi-channel::audit` so thin clients
+// (e.g. the Slint shell) tail-read and archive the same file. Re-exported
+// here so existing daemon call sites keep working unchanged.
+pub use airi_channel::audit::{default_audit_path, AUDIT_FILE_NAME};
 
 pub fn now_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
         .unwrap_or(0)
-}
-
-pub fn default_audit_path() -> Option<PathBuf> {
-    dirs::data_dir().map(|d| d.join("airi-slint").join("audit").join(AUDIT_FILE_NAME))
 }
 
 /// Pure prune: returns (kept_contents, dropped_count). The rewrite decision
