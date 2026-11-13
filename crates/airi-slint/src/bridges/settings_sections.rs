@@ -26,18 +26,7 @@ use airi_core::settings::{
     SpineSettings, UserProfileSettings,
 };
 
-fn load_section<S: airi_core::settings::SettingsSection>() -> S {
-    crate::bridges::settings_store()
-        .and_then(|store| store.load_section::<S>().ok())
-        .unwrap_or_default()
-}
-
-fn save_section<S: airi_core::settings::SettingsSection>(value: &S) -> anyhow::Result<()> {
-    let Some(store) = crate::bridges::settings_store() else {
-        anyhow::bail!("settings store not registered");
-    };
-    store.save_section(value)
-}
+use crate::bridges::{load_section, save_section};
 
 fn clamp_finite_positive(value: f64, fallback: f64) -> f64 {
     if value.is_finite() && value > 0.0 {

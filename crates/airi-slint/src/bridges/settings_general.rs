@@ -105,18 +105,7 @@ impl GeneralSettingsState {
     }
 }
 
-fn load_section<S: airi_core::settings::SettingsSection>() -> S {
-    crate::bridges::settings_store()
-        .and_then(|store| store.load_section::<S>().ok())
-        .unwrap_or_default()
-}
-
-fn save_section<S: airi_core::settings::SettingsSection>(value: &S) -> anyhow::Result<()> {
-    let Some(store) = crate::bridges::settings_store() else {
-        anyhow::bail!("settings store not registered");
-    };
-    store.save_section(value)
-}
+use crate::bridges::{load_section, save_section};
 
 #[cfg(test)]
 mod tests {

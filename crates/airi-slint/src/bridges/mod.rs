@@ -81,6 +81,23 @@ pub fn settings_store() -> Option<&'static SettingsStore> {
     SETTINGS.get()
 }
 
+/// Load a settings section, or its default when unavailable or corrupt.
+pub(crate) fn load_section<S: airi_core::settings::SettingsSection>() -> S {
+    settings_store()
+        .and_then(|store| store.load_section::<S>().ok())
+        .unwrap_or_default()
+}
+
+/// Save a settings section; errors when the store is not registered.
+pub(crate) fn save_section<S: airi_core::settings::SettingsSection>(
+    value: &S,
+) -> anyhow::Result<()> {
+    let Some(store) = settings_store() else {
+        anyhow::bail!("settings store not registered");
+    };
+    store.save_section(value)
+}
+
 /// Register the provider repository used by the providers bridge.
 /// Silently keeps the first registration when called twice.
 pub fn set_provider_repo(repo: airi_store::ProviderRepo) {
