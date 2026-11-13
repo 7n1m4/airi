@@ -51,6 +51,7 @@ use airi_speech::{
     TtsStatus, TTS_PROVIDER_DEFS,
 };
 use serde::{Deserialize, Serialize};
+use airi_core::util::truncate_chars;
 
 /// Settings blob key (Electron `settings/<group>` namespace).
 const SPEECH_SETTINGS_KEY: &str = "settings/speech";
@@ -311,13 +312,6 @@ fn clamp_speed(speed: f64) -> f64 {
         // f64::clamp is fine with ±inf inputs (they clamp to the bounds).
         speed.clamp(0.25, 4.0)
     }
-}
-
-fn truncate_chars(value: &str, max: usize) -> String {
-    if value.chars().count() <= max {
-        return value.to_string();
-    }
-    value.chars().take(max).collect::<String>() + "…"
 }
 
 fn non_empty(value: &str) -> Option<String> {

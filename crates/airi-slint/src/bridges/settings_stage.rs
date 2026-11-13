@@ -30,6 +30,7 @@ use airi_core::settings::{
     CaptionsSettings, ControlStripSettings, StageModelSettings, StageWindowSettings,
 };
 use serde::Deserialize;
+use airi_core::util::platform_data_dir;
 
 /// Minimum stage window dimension enforced on save.
 const BOUNDS_MIN_SIZE: f64 = 200.0;
@@ -412,21 +413,6 @@ fn unique_dest(dir: &Path, file_name: &str) -> PathBuf {
         )),
         None => dir.join(format!("{file_name}-{nanos:x}")),
     }
-}
-
-#[cfg(unix)]
-fn platform_data_dir() -> Option<PathBuf> {
-    if let Some(xdg) = std::env::var_os("XDG_DATA_HOME") {
-        if !xdg.is_empty() {
-            return Some(PathBuf::from(xdg));
-        }
-    }
-    std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share"))
-}
-
-#[cfg(not(unix))]
-fn platform_data_dir() -> Option<PathBuf> {
-    None
 }
 
 fn load_section<S: airi_core::settings::SettingsSection>() -> S {

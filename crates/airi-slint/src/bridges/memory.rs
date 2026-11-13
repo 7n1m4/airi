@@ -24,7 +24,7 @@
 //!   surfaced.
 //! - **`index_missing` — the only backfill trigger** — embeds every
 //!   unembedded `journal_entries` / `summaries` row with the *chat* provider
-//!   config (resolved exactly like `ChatController::resolve_provider`) in one
+//!   config (resolved via `airi_core::providers::resolve_provider`) in one
 //!   batched embedding call. The batch (full journal scan + one HTTP
 //!   round-trip + N SQLite upserts) runs on the process Tokio runtime, never
 //!   on the UI thread: the call returns `true` ("started") immediately and
@@ -52,8 +52,8 @@
 //! - The backfill outcome is not pushed back into `status_line`: the bridge
 //!   owns no cross-thread UI signal yet, so the spawned task only logs.
 //! - Under `--smoke` the smoke provider override *is* observable by
-//!   `index_missing` (it resolves the provider the same way
-//!   `ChatController` does); the smoke run itself never enables the memory
+//!   `index_missing` (it resolves the provider the same way the chat
+//!   bridge does); the smoke run itself never enables the memory
 //!   flag, so no embed call happens there.
 
 use std::sync::{Arc, Mutex};
@@ -64,6 +64,7 @@ use airi_core::memory::TextJournalService;
 use serde::{Deserialize, Serialize};
 
 use crate::bridges;
+use airi_core::util::truncate_chars;
 
 /// Storage key for the memory preference blob.
 const MEMORY_KEY: &str = "settings/memory";
@@ -278,7 +279,7 @@ fn base_status_line(journal_note: &str) -> String {
     line
 }
 
-/// Resolve the chat provider's config exactly like `ChatController`
+/// Resolve the chat provider's config via `airi_core::providers::resolve_provider`
 /// (smoke override → `AIRI_SLINT_PROVIDER` env → first enabled `providers`
 /// row) and build an embedding client with the default embedding model.
 /// Errors when the chat context is missing, no provider is configured, or
@@ -392,70 +393,30 @@ fn memory_entry(entry: &airi_store::StoredJournalEntry) -> MemoryEntry {
     }
 }
 
-/// Truncate to at most `max` Unicode scalar values, appending `…` when cut.
-fn truncate_chars(text: &str, max: usize) -> String {
-    let mut chars = text.chars();
-    let kept: String = chars.by_ref().take(max).collect();
-    if chars.next().is_some() {
-        format!("{kept}…")
-    } else {
-        kept
-    }
-}
-
 /// Label of the LLM provider the chat pipeline would resolve today
 /// (`id` or `id · model`), or `""` when nothing is configured.
 ///
-/// Mirrors `chat.rs::resolve_provider`'s env-then-stored order, minus the
-/// implicit "openai" fallback: an unset configuration reports as not
-/// configured instead of naming a provider that was never set up. The smoke
-/// override is not observable from this bridge (noted in the module docs).
-/// Provider secrets are never read or surfaced.
+/// Uses the same resolution as the chat pipeline (env override → first
+/// enabled providers row; see `airi_core::providers`), minus the smoke
+/// override: it is not observable from this bridge. Provider secrets are
+/// never read or surfaced.
 fn llm_provider_label() -> String {
-    if let Ok(id) = std::env::var("AIRI_SLINT_PROVIDER") {
-        let id = id.trim().to_string();
-        if !id.is_empty() {
-            let model = std::env::var("AIRI_SLINT_MODEL").unwrap_or_default();
-            return provider_label(&id, model.trim());
-        }
-    }
     let repo = bridges::provider_repo().cloned().or_else(|| {
         bridges::database()
             .cloned()
             .map(airi_store::ProviderRepo::new)
     });
-    let Some(repo) = repo else {
-        return String::new();
-    };
-    match repo.list() {
-        Ok(rows) => {
-            if let Some(provider) = rows.into_iter().find(|p| p.enabled) {
-                let model = provider
-                    .config
-                    .get("model")
-                    .and_then(|m| m.as_str())
-                    .unwrap_or_default()
-                    .trim()
-                    .to_string();
-                provider_label(&provider.id, &model)
-            } else {
-                String::new()
-            }
-        }
-        Err(e) => {
+    let rows = match repo.map(|r| r.list()) {
+        Some(Ok(rows)) => rows,
+        Some(Err(e)) => {
             eprintln!("[airi-slint] memory: provider list failed: {e}");
-            String::new()
+            Vec::new()
         }
-    }
-}
-
-/// `id` when `model` is empty, else `id · model`.
-fn provider_label(id: &str, model: &str) -> String {
-    if model.is_empty() {
-        id.to_string()
-    } else {
-        format!("{id} · {model}")
-    }
+        None => Vec::new(),
+    };
+    airi_core::providers::resolve_provider(|k| std::env::var(k).ok(), &rows)
+        .map(|p| p.label())
+        .unwrap_or_default()
 }
 
 fn load_blob() -> MemorySettingsBlob {
@@ -474,17 +435,6 @@ fn save_blob(blob: &MemorySettingsBlob) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn truncate_chars_counts_scalars_and_marks_elision() {
-        assert_eq!(truncate_chars("hello", 400), "hello");
-        assert_eq!(truncate_chars("hello world", 5), "hello…");
-        // Multi-byte scalars count once each.
-        let cjk = "記憶".repeat(300);
-        assert_eq!(truncate_chars(&cjk, 400).chars().count(), 401);
-        // Exactly-at-limit text is not marked as truncated.
-        assert_eq!(truncate_chars(&"a".repeat(400), 400), "a".repeat(400));
-    }
 
     #[test]
     fn recent_entries_shape_capped_rows() {
@@ -507,12 +457,6 @@ mod tests {
         // no field for it.
         let json = serde_json::to_value(&rows).expect("entries serialize");
         assert!(json[0].get("embedding").is_none());
-    }
-
-    #[test]
-    fn provider_label_formats_with_and_without_model() {
-        assert_eq!(provider_label("openai", ""), "openai");
-        assert_eq!(provider_label("openai", "gpt-4o"), "openai · gpt-4o");
     }
 
     #[test]

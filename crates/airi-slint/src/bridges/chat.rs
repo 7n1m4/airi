@@ -78,22 +78,8 @@ static CHAT: OnceLock<ChatContext> = OnceLock::new();
 /// `providers` table.
 static PROVIDER_OVERRIDE: OnceLock<ProviderResolution> = OnceLock::new();
 
-#[derive(Clone)]
-pub(crate) struct ProviderResolution {
-    pub(crate) id: String,
-    pub(crate) config: ProviderConfig,
-    pub(crate) model: String,
-}
-
-impl ProviderResolution {
-    fn label(&self) -> String {
-        if self.model.trim().is_empty() {
-            String::new()
-        } else {
-            format!("{} · {}", self.id, self.model)
-        }
-    }
-}
+pub(crate) use airi_core::providers::ProviderResolution;
+use airi_core::util::platform_data_dir;
 
 /// Register the chat context. Silently keeps the first registration.
 pub fn set_chat_context(service: ChatService, db: Database) {
@@ -370,21 +356,6 @@ pub(crate) fn import_card_file(
         )
     })?;
     Ok((dest, name))
-}
-
-#[cfg(unix)]
-fn platform_data_dir() -> Option<PathBuf> {
-    if let Some(xdg) = std::env::var_os("XDG_DATA_HOME") {
-        if !xdg.is_empty() {
-            return Some(PathBuf::from(xdg));
-        }
-    }
-    std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share"))
-}
-
-#[cfg(not(unix))]
-fn platform_data_dir() -> Option<PathBuf> {
-    None
 }
 
 pub(crate) struct CardEntryData {
@@ -693,39 +664,19 @@ pub(crate) fn resolve_provider(ctx: &ChatContext) -> ProviderResolution {
     if let Some(o) = PROVIDER_OVERRIDE.get() {
         return o.clone();
     }
-    if let Ok(id) = std::env::var("AIRI_SLINT_PROVIDER") {
-        let id = id.trim().to_string();
-        if !id.is_empty() {
-            let config = ProviderConfig {
-                api_key: std::env::var("AIRI_SLINT_API_KEY").ok(),
-                base_url: std::env::var("AIRI_SLINT_BASE_URL").ok(),
-                model: std::env::var("AIRI_SLINT_MODEL").ok(),
-                extra_json: Default::default(),
-            };
-            let model = config.model.clone().unwrap_or_default();
-            return ProviderResolution { id, config, model };
-        }
-    }
     let stored = crate::bridges::provider_repo()
         .map(|repo| repo.list())
-        .unwrap_or_else(|| ProviderRepo::new(ctx.db.clone()).list());
-    if let Ok(rows) = stored {
-        if let Some(provider) = rows.into_iter().find(|p| p.enabled) {
-            let config: ProviderConfig =
-                serde_json::from_value(provider.config.clone()).unwrap_or_default();
-            let model = config.model.clone().unwrap_or_default();
-            return ProviderResolution {
-                id: provider.id,
-                config,
-                model,
-            };
+        .unwrap_or_else(|| ProviderRepo::new(ctx.db.clone()).list())
+        .unwrap_or_default();
+    airi_core::providers::resolve_provider(|k| std::env::var(k).ok(), &stored).unwrap_or_else(|| {
+        // Nothing configured: keep the slint-era default so send attempts
+        // produce a user-facing error rather than none at all.
+        ProviderResolution {
+            id: "openai".to_string(),
+            config: ProviderConfig::default(),
+            model: String::new(),
         }
-    }
-    ProviderResolution {
-        id: "openai".to_string(),
-        config: ProviderConfig::default(),
-        model: String::new(),
-    }
+    })
 }
 
 // ---------------------------------------------------------------------------

@@ -46,10 +46,12 @@ pub mod cards;
 pub mod chat;
 pub mod crashlog;
 pub mod memory;
+pub mod providers;
 pub mod sessions;
 pub mod settings;
 pub mod single_instance;
 pub mod update;
+pub mod util;
 pub mod vault;
 
 pub use chat::{ChatService, ChatStatus};
