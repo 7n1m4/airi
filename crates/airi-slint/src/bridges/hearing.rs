@@ -157,7 +157,7 @@ impl HearingControllerState {
     /// Validate and persist the input device selection.
     pub fn apply_device(&mut self, name: &str) -> bool {
         let trimmed = name.trim();
-        if let Err(reason) = validate_device_name(&trimmed) {
+        if let Err(reason) = validate_device_name(trimmed) {
             eprintln!("[airi-slint] hearing: rejected device name: {reason}");
             self.status_line = reason.to_string();
             return false;
@@ -187,8 +187,7 @@ impl HearingControllerState {
             }
             BlobLoad::Corrupt(e) => {
                 eprintln!("[airi-slint] hearing: refusing to overwrite {HEARING_KEY}: {e}");
-                self.status_line =
-                    format!("{HEARING_KEY} unreadable, showing current values: {e}");
+                self.status_line = format!("{HEARING_KEY} unreadable, showing current values: {e}");
             }
         }
         self.devices_json = enumerate_devices_json();
@@ -335,6 +334,9 @@ mod tests {
     fn save_without_store_reports_failure() {
         let mut state = HearingControllerState::default();
         assert!(!state.save());
-        assert_eq!(state.status_line, "save failed: settings store not registered");
+        assert_eq!(
+            state.status_line,
+            "save failed: settings store not registered"
+        );
     }
 }

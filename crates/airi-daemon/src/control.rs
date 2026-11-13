@@ -17,6 +17,11 @@
 //!                      `json` is a JSON string array of app-name substrings
 //!                      (case-insensitive). Stored in memory + persisted to
 //!                      `<data_dir>/airi-slint/awareness-exclusions.json`.
+//!   GetGatewayConfig() -> s                  JSON: {hostname, port, tlsEnabled, bound,
+//!                      lastError, adoptedFrom, caCertPath, authToken}
+//!   ApplyGatewayConfig(json: s) -> s          JSON: {websocketTlsConfig, authToken, hostname}
+//!                      (Electron handler shape; `{ok:false,error}` on bad input)
+//!   RegenerateGatewayToken() -> s            JSON: {authToken} (new connections only)
 //!
 //! Every arm/disarm is audited (source tag = "system" for kill switch,
 //! per-source tag for SetSource). Unknown sources and malformed calls are
@@ -25,6 +30,7 @@
 use dbus::{Message, MessageType};
 
 use crate::audit::AuditLog;
+use crate::gateway::GatewayRequest;
 use crate::ring::Ring;
 use crate::screen::Exclusions;
 use crate::state::{Awareness, Source};
@@ -141,6 +147,7 @@ pub fn dispatch(
     status: &dyn Fn(&Awareness, u64) -> String,
     digest: &dyn Fn(&Exclusions) -> String,
     exclusions: &mut Exclusions,
+    gateway: &dyn Fn(GatewayRequest) -> String,
 ) -> Option<ControlOutcome> {
     if msg.msg_type() != MessageType::MethodCall {
         return None;
@@ -208,6 +215,22 @@ pub fn dispatch(
                 )),
             }
         }
+        "GetGatewayConfig" => Some(ControlOutcome::ReplyString(gateway(GatewayRequest::Get))),
+        "ApplyGatewayConfig" => {
+            let mut it = msg.iter_init();
+            let raw: Result<String, _> = it.read();
+            match raw {
+                Ok(raw) => Some(ControlOutcome::ReplyString(gateway(GatewayRequest::Apply(
+                    raw,
+                )))),
+                Err(_) => Some(ControlOutcome::UnknownMethod(
+                    "expected ApplyGatewayConfig(json: s)".to_string(),
+                )),
+            }
+        }
+        "RegenerateGatewayToken" => Some(ControlOutcome::ReplyString(gateway(
+            GatewayRequest::RegenerateToken,
+        ))),
         other => Some(ControlOutcome::UnknownMethod(format!(
             "unknown method '{other}'"
         ))),
@@ -223,8 +246,11 @@ pub fn handle_method_call(
     status: &dyn Fn(&Awareness, u64) -> String,
     digest: &dyn Fn(&Exclusions) -> String,
     exclusions: &mut Exclusions,
+    gateway: &dyn Fn(GatewayRequest) -> String,
 ) -> Option<Message> {
-    match dispatch(msg, awareness, audit, ring, status, digest, exclusions)? {
+    match dispatch(
+        msg, awareness, audit, ring, status, digest, exclusions, gateway,
+    )? {
         ControlOutcome::ReplyString(s) => Some(msg.return_with_args((s,))),
         ControlOutcome::ReplyEmpty => Message::new_method_return(msg),
         ControlOutcome::UnknownMethod(why) => Some(unknown_method_error(msg, &why)),
@@ -271,6 +297,14 @@ mod tests {
 
     fn digest_canned(_: &Exclusions) -> String {
         r#"{"ok":true,"app":"test-app","title":"t","lines":["label: hi"],"text_length":10,"skipped_password_nodes":0}"#.to_string()
+    }
+
+    fn gateway_canned(req: GatewayRequest) -> String {
+        match req {
+            GatewayRequest::Get => r#"{"bound":true}"#.to_string(),
+            GatewayRequest::Apply(raw) => format!(r#"{{"applied":{raw}}}"#),
+            GatewayRequest::RegenerateToken => r#"{"authToken":"canned"}"#.to_string(),
+        }
     }
 
     fn ctx<'a>(awareness: &'a Awareness, wake: &'a WakeFacts) -> StatusContext<'a> {
@@ -397,6 +431,7 @@ mod tests {
             &status,
             &digest_canned,
             &mut excl,
+            &gateway_canned,
         )
         .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {
@@ -443,6 +478,7 @@ mod tests {
             &status,
             &digest_canned,
             &mut excl,
+            &gateway_canned,
         )
         .expect("dispatch");
         assert_eq!(outcome, ControlOutcome::ReplyEmpty);
@@ -459,6 +495,7 @@ mod tests {
             &status,
             &digest_canned,
             &mut excl,
+            &gateway_canned,
         )
         .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {
@@ -479,6 +516,7 @@ mod tests {
             &status,
             &digest_canned,
             &mut excl,
+            &gateway_canned,
         )
         .expect("dispatch");
         assert!(matches!(outcome, ControlOutcome::UnknownMethod(_)));
@@ -503,6 +541,107 @@ mod tests {
             true
         );
         assert!(a.effective_armed(Source::Screen));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn gateway_methods_roundtrip_via_dispatch() {
+        let mut a = Awareness::new();
+        let (log, path) = audit();
+        let wake = WakeFacts::new();
+        let status = |awareness: &Awareness, ring_count: u64| {
+            get_status_json(&StatusContext {
+                awareness,
+                ring_count,
+                audit_path: "/tmp/example/audit.jsonl",
+                session_bus: true,
+                system_bus: true,
+                audit_pruned: 0,
+                wake: &wake,
+            })
+        };
+        let call = |member: &str| {
+            Message::method_call(
+                &dbus::strings::BusName::new("org.example.Caller").unwrap(),
+                &dbus::strings::Path::new(OBJECT_PATH).unwrap(),
+                &dbus::strings::Interface::new(INTERFACE).unwrap(),
+                &dbus::strings::Member::new(member).unwrap(),
+            )
+        };
+
+        // GetGatewayConfig -> ReplyString with the canned payload.
+        let msg = call("GetGatewayConfig");
+        let mut excl = Exclusions::in_memory();
+        let outcome = dispatch(
+            &msg,
+            &mut a,
+            &log,
+            &mut Ring::with_default_cap(),
+            &status,
+            &digest_canned,
+            &mut excl,
+            &gateway_canned,
+        )
+        .expect("dispatch");
+        assert_eq!(
+            outcome,
+            ControlOutcome::ReplyString(r#"{"bound":true}"#.to_string())
+        );
+
+        // ApplyGatewayConfig(json: s) -> handler-shaped reply.
+        let mut msg = call("ApplyGatewayConfig");
+        msg.append_all((r#"{"hostname":"0.0.0.0"}"#.to_string(),));
+        let mut excl = Exclusions::in_memory();
+        let outcome = dispatch(
+            &msg,
+            &mut a,
+            &log,
+            &mut Ring::with_default_cap(),
+            &status,
+            &digest_canned,
+            &mut excl,
+            &gateway_canned,
+        )
+        .expect("dispatch");
+        let ControlOutcome::ReplyString(s) = outcome else {
+            panic!("expected ReplyString, got {outcome:?}");
+        };
+        assert_eq!(s, r#"{"applied":{"hostname":"0.0.0.0"}}"#);
+
+        // ApplyGatewayConfig with a missing argument -> UnknownMethod.
+        let msg = call("ApplyGatewayConfig");
+        let mut excl = Exclusions::in_memory();
+        let outcome = dispatch(
+            &msg,
+            &mut a,
+            &log,
+            &mut Ring::with_default_cap(),
+            &status,
+            &digest_canned,
+            &mut excl,
+            &gateway_canned,
+        )
+        .expect("dispatch");
+        assert!(matches!(outcome, ControlOutcome::UnknownMethod(_)));
+
+        // RegenerateGatewayToken -> canned token reply.
+        let msg = call("RegenerateGatewayToken");
+        let mut excl = Exclusions::in_memory();
+        let outcome = dispatch(
+            &msg,
+            &mut a,
+            &log,
+            &mut Ring::with_default_cap(),
+            &status,
+            &digest_canned,
+            &mut excl,
+            &gateway_canned,
+        )
+        .expect("dispatch");
+        assert_eq!(
+            outcome,
+            ControlOutcome::ReplyString(r#"{"authToken":"canned"}"#.to_string())
+        );
         let _ = std::fs::remove_file(&path);
     }
 
@@ -540,6 +679,7 @@ mod tests {
             &status,
             &digest_canned,
             &mut excl,
+            &gateway_canned,
         )
         .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {
@@ -590,6 +730,7 @@ mod tests {
             &status,
             &digest_canned,
             &mut excl,
+            &gateway_canned,
         )
         .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {
@@ -613,6 +754,7 @@ mod tests {
             &status,
             &digest_canned,
             &mut excl,
+            &gateway_canned,
         )
         .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {

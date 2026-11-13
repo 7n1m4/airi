@@ -14,19 +14,20 @@ export function createCharacterRoutes(characterService: CharacterService) {
 
     .get('/', async (c) => {
       const user = c.get('user')!
-      const all = c.req.query('all') === 'true'
 
-      const characters = all
-        ? await characterService.findAll()
-        : await characterService.findByOwnerId(user.id)
+      const characters = await characterService.findByOwnerId(user.id)
       return c.json(characters)
     })
 
     .get('/:id', async (c) => {
+      const user = c.get('user')!
+
       const id = c.req.param('id')
       const character = await characterService.findById(id)
       if (!character)
         throw createNotFoundError()
+      if (character.ownerId !== user.id)
+        throw createForbiddenError()
 
       return c.json(character)
     })

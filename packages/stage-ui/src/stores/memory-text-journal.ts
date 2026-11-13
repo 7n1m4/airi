@@ -21,6 +21,7 @@ import { shouldDegradeBackgroundWork } from '../utils/memory-sentinel'
 import { useAuthStore } from './auth'
 import { CHAT_STREAM_CHANNEL_NAME } from './chat/constants'
 import { stageJournalIntrusion } from './chat/intrusion-staging'
+import { extractMessageContent, mergeById } from './chat/session-message-merge'
 import { useChatSessionStore } from './chat/session-store'
 import { useEntityLedgerStore } from './entity-ledger'
 import { useEventLogStore } from './event-log'
@@ -223,21 +224,6 @@ export const useTextJournalStore = defineStore('text-journal', () => {
     finally {
       loading.value = false
     }
-  }
-
-  function extractTextContent(content: any): string {
-    if (typeof content === 'string')
-      return content
-    if (Array.isArray(content)) {
-      return content.map((part) => {
-        if (typeof part === 'string')
-          return part
-        if (part && typeof part === 'object' && 'text' in part)
-          return String(part.text ?? '')
-        return ''
-      }).join('')
-    }
-    return ''
   }
 
   /**
@@ -449,7 +435,7 @@ export const useTextJournalStore = defineStore('text-journal', () => {
                   if (uniqueRaw.size >= MAX_RAW_DOCS)
                     break
                   if (m.role === 'user' || m.role === 'assistant') {
-                    const text = extractTextContent(m.content).trim()
+                    const text = extractMessageContent(m).trim()
                     if (text.length > 10) {
                       appendChunkedTurnDocs(uniqueRaw, {
                         text,
@@ -912,7 +898,7 @@ export const useTextJournalStore = defineStore('text-journal', () => {
                 if (uniqueRaw.size >= MAX_RAW_DOCS)
                   break
                 if (m.role === 'user' || m.role === 'assistant') {
-                  const text = extractTextContent(m.content).trim()
+                  const text = extractMessageContent(m).trim()
                   if (text.length > 10) {
                     appendChunkedTurnDocs(uniqueRaw, {
                       text,
@@ -1047,7 +1033,16 @@ export const useTextJournalStore = defineStore('text-journal', () => {
 
   async function persist(nextEntries: TextJournalEntry[]) {
     const currentUserId = getCurrentUserId()
-    const snapshot = normalizeEntries(JSON.parse(JSON.stringify(nextEntries)) as TextJournalEntry[])
+    // NOTICE: Re-read the repo and union by id before writing — the chat window and the
+    // main stage both persist full snapshots, so blind last-write-wins would drop the
+    // other window's entries. Ids that were in memory but filtered out of `nextEntries`
+    // (local deletes) are tombstoned so they are not resurrected by the re-read.
+    // No per-entry keys / tombstone table yet — saves are still whole-array.
+    const nextIds = new Set(nextEntries.map(e => e.id))
+    const removedIds = new Set(entries.value.map(e => e.id).filter(id => !nextIds.has(id)))
+    const stored = await textJournalRepo.getAll(currentUserId).catch(() => null) ?? []
+    const merged = mergeById(stored, nextEntries, removedIds)
+    const snapshot = normalizeEntries(JSON.parse(JSON.stringify(merged)) as TextJournalEntry[])
     await textJournalRepo.saveAll(currentUserId, snapshot)
     entries.value = snapshot
     initializedForUserId.value = currentUserId
@@ -1129,7 +1124,6 @@ export const useTextJournalStore = defineStore('text-journal', () => {
 
     // Hook: If journal intrusion is enabled, stage the pending journal entry via BroadcastChannel + local call
     const injectJournalContext = targetCard.extensions?.airi?.textJournal?.injectJournalContext
-    console.warn('[TextJournal Debug] injectJournalContext value:', injectJournalContext)
     if (injectJournalContext) {
       const stagingData = {
         entryText: nextEntry.content,
@@ -1139,7 +1133,6 @@ export const useTextJournalStore = defineStore('text-journal', () => {
       stageJournalIntrusion(stagingData)
       // Broadcast to all windows (works if createEntry runs in a different window, e.g. out-of-band journal moment)
       postIntrusionStaging({ type: 'journal' as const, data: stagingData })
-      console.warn('[TextJournal Debug] Staged pendingJournalMoment via local + broadcast:', nextEntry.content.substring(0, 50))
     }
 
     const nextEntries = [nextEntry, ...entries.value]

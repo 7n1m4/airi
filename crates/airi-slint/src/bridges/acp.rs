@@ -171,7 +171,6 @@ fn permission_request_json(request: &PermissionRequest) -> serde_json::Value {
     })
 }
 
-
 /// ACP agents view-model (one process-wide instance).
 pub struct AcpState {
     /// JSON array of configured agents (from `acp.json`).
@@ -409,7 +408,7 @@ impl AcpState {
         let ok = self.set_agent_field(name, |entry| entry.permission_policy = policy.to_string());
         if ok && is_active {
             if let Some(client) = self.client.as_ref() {
-                client.set_permission_policy(policy_from_str(&policy));
+                client.set_permission_policy(policy_from_str(policy));
             }
         }
         ok
@@ -474,7 +473,13 @@ impl AcpState {
         let env: Option<Vec<(String, String)>> = if entry.env.is_empty() {
             None
         } else {
-            Some(entry.env.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+            Some(
+                entry
+                    .env
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect(),
+            )
         };
         let spawn_result = AcpAgentClient::spawn(&entry.command, &args, env.as_deref());
         let client = match spawn_result {
@@ -593,7 +598,10 @@ impl AcpState {
             self.set_error("no agent running".into());
             return false;
         };
-        let result = self.client.as_ref().map(|client| client.cancel(&session_id));
+        let result = self
+            .client
+            .as_ref()
+            .map(|client| client.cancel(&session_id));
         match result {
             Some(Ok(())) => true,
             Some(Err(e)) => {
@@ -646,7 +654,7 @@ impl AcpState {
     pub fn pump_updates(&mut self) {
         // Session events (transcript).
         let events = self.events.take();
-        if let Some(mut rx) = events {
+        if let Some(rx) = events {
             let mut finished = false;
             loop {
                 match rx.try_recv() {
@@ -680,7 +688,7 @@ impl AcpState {
             let mut enqueued_any = false;
             let mut disconnected = false;
             match permission_requests.lock() {
-                Ok(mut guard) => {
+                Ok(guard) => {
                     // Collect out of the std receiver without holding our
                     // borrow of `self` across the loop.
                     let mut drained: Vec<PermissionRequest> = Vec::new();

@@ -72,7 +72,7 @@ export const useModsServerChannelStore = defineStore('mods:channels:proj-airi:se
     return true
   })
 
-  const callerId = isStageWeb() ? 'stage-web' : isStageTamagotchi() ? 'stage-tamagotchi' : isStageCapacitor() ? 'stage-pocket' : 'stage-web'
+  const callerId = isStageTamagotchi() ? 'stage-tamagotchi' : 'stage-web'
   const purpose = 'Primary application interface for AIRI.'
 
   const basePossibleEvents: Array<keyof WebSocketEvents> = [
@@ -127,6 +127,10 @@ export const useModsServerChannelStore = defineStore('mods:channels:proj-airi:se
       // to cross-process broadcasts (ContextBridge).
       const timeout = setTimeout(() => {
         console.warn('[PipelineTTS:Server] Initialization timed out after 5000ms. Proceeding without immediate connection.')
+        connected.value = false
+        status.value = 'unreachable'
+        initializing.value = null
+        clearListeners()
         resolve()
       }, 5000)
 

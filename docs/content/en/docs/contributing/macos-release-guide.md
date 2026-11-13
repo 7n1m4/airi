@@ -1,5 +1,7 @@
 # Apple Platforms (macOS & iOS) Stable Release Guide
 
+> **[2026-11-13] iOS half superseded**: the Capacitor `apps/stage-pocket` app was purged — web tech on mobile was rejected in favor of a unified Rust native app (desktop + mobile from one screen-size-reactive Slint codebase). See `docs/proposal-unified-rust-native-app.md`. The macOS `.dmg` sections remain valid; the iOS `.ipa` sections are historical until the Rust native app has a packaging lane.
+
 This document captures the specific technical steps required to successfully build, package, and release stable versions of AIRI for Apple platforms (Electron macOS `.dmg` and Capacitor iOS `.ipa`).
 
 ## 1. Release Workflow

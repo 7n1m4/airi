@@ -16,14 +16,14 @@
  * import is gone from src/main. `docs/design-electrobun-port.md` §3.1 tracks that.
  */
 
-import type { BrowserWindow as ElectrobunBrowserWindow } from 'electrobun/main'
-import type * as ElectronTypes from 'electron'
+import type { Display, BrowserWindow as ElectrobunBrowserWindow } from 'electrobun/main'
 
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { BuildConfig, Screen, Utils } from 'electrobun/main'
+import { Screen, Utils } from 'electrobun/main'
 
+import { version as APP_VERSION } from '../../package.json'
 import { ElectrobunPortError, notImplemented } from './rpc'
 
 // ---------------------------------------------------------------------------
@@ -52,22 +52,6 @@ const pathGetters: Record<string, () => string> = {
   videos: () => Utils.paths.videos,
 }
 
-let appVersion = '0.0.0'
-let appVersionResolved = false
-async function resolveAppVersion(): Promise<string> {
-  if (appVersionResolved)
-    return appVersion
-  appVersionResolved = true
-  try {
-    const config = await BuildConfig.get()
-    appVersion = config.version ?? appVersion
-  }
-  catch {
-    // Cosmetic: the tray tooltip and `app.getVersion()` consumers fall back to 0.0.0.
-  }
-  return appVersion
-}
-
 export const app = {
   getPath(name: string): string {
     const getter = pathGetters[name]
@@ -80,7 +64,7 @@ export const app = {
     notImplemented('app.setPath')
   },
   getVersion(): string {
-    return appVersion
+    return APP_VERSION
   },
   getName(): string {
     return 'AIRI'
@@ -123,28 +107,65 @@ export const app = {
   get isLinux(): boolean {
     return process.platform === 'linux'
   },
-} as unknown as typeof ElectronTypes.app
+}
 
 // ---------------------------------------------------------------------------
 // ipcMain
 // ---------------------------------------------------------------------------
 
 /**
- * The eventa bridge is the RPC now (`packages/electrobun-eventa`); raw `ipcMain` channels
- * are ported per call site in wave 3. The bookkeeping methods stay functional because
- * unported modules still register against them during load; `handle`/`on` registration is
- * recorded so a ported call site can assert nothing was silently dropped.
+ * The eventa bridge is the RPC now (`packages/electrobun-eventa`), but modules written
+ * against Electron's ONE global `ipcMain` still register handlers through
+ * `createContext(ipcMain)` — and dropping those registrations on the floor made their
+ * invokes hang forever (e.g. `server-channel:get-config`, which stalled the startup
+ * sequence). The bus is functional again: `rpc/index.ts` fans every inbound view frame to
+ * `dispatchToIpcMain('eventa-message', …)`, so handlers fire with the same semantics as
+ * Electron's flat namespace. Raw `ipcMain.handle` channels are not the eventa path and stay
+ * inert until wave 3.
  */
-const registeredChannels = new Set<string>()
+const channelListeners = new Map<string, Set<IpcMainListener>>()
+
+type IpcMainListener = (event: unknown, ...args: unknown[]) => void
+
+function addChannelListener(channel: string, listener: IpcMainListener): void {
+  const set = channelListeners.get(channel) ?? new Set()
+  set.add(listener)
+  channelListeners.set(channel, set)
+}
+
+function removeChannelListener(channel: string, listener: IpcMainListener): void {
+  channelListeners.get(channel)?.delete(listener)
+}
+
+/**
+ * Fan a view's frame out to the global bus; called by `createRpcBootstrap`.
+ *
+ * @internal
+ */
+export function dispatchToIpcMain(channel: string, event: unknown, ...args: unknown[]): void {
+  for (const listener of channelListeners.get(channel) ?? []) {
+    try {
+      listener(event, ...args)
+    }
+    catch (error) {
+      console.error('[electron-shim] ipcMain listener failed:', error)
+    }
+  }
+}
 
 export const ipcMain = {
   handle(channel: string, _listener: (...args: unknown[]) => unknown): void {
-    registeredChannels.add(channel)
     notImplemented(`ipcMain.handle(${channel})`)
   },
-  on(channel: string, _listener: (...args: unknown[]) => void): unknown {
-    registeredChannels.add(channel)
+  on(channel: string, listener: IpcMainListener): unknown {
+    addChannelListener(channel, listener)
     return undefined
+  },
+  off(channel: string, listener: IpcMainListener): void {
+    removeChannelListener(channel, listener)
+  },
+  removeListener(channel: string, listener: IpcMainListener): void {
+    removeChannelListener(channel, listener)
   },
   emit(_channel: string, ..._args: unknown[]): void {
     // Electron's in-process bus (e.g. 'reset-window-positions-action' from the tray). The
@@ -152,19 +173,16 @@ export const ipcMain = {
     notImplemented('ipcMain.emit')
   },
   removeHandler(channel: string): void {
-    registeredChannels.delete(channel)
+    channelListeners.delete(channel)
   },
   removeAllListeners(channel?: string): void {
     if (channel)
-      registeredChannels.delete(channel)
+      channelListeners.delete(channel)
     else
-      registeredChannels.clear()
+      channelListeners.clear()
   },
   setMaxListeners(_count: number): void {},
-  get registeredChannels(): ReadonlySet<string> {
-    return registeredChannels
-  },
-} as unknown as typeof ElectronTypes.ipcMain
+}
 
 // ---------------------------------------------------------------------------
 // Window / view stand-ins
@@ -191,7 +209,7 @@ export class BrowserWindow {
   }
 
   get webContents(): never {
-    notImplemented('BrowserWindow.webContents')
+    return notImplemented('BrowserWindow.webContents')
   }
 
   isDestroyed(): boolean {
@@ -231,7 +249,7 @@ export const safeStorage = {
   decryptString(_encrypted: Buffer): string {
     notImplemented('safeStorage.decryptString')
   },
-} as unknown as typeof ElectronTypes.safeStorage
+}
 
 // ---------------------------------------------------------------------------
 // session
@@ -246,12 +264,12 @@ export const safeStorage = {
  */
 export const session = {
   get defaultSession(): never {
-    notImplemented('session.defaultSession')
+    return notImplemented('session.defaultSession')
   },
   fromPartition(partition: string): never {
     notImplemented(`session.fromPartition(${partition})`)
   },
-} as unknown as typeof ElectronTypes.session
+}
 
 // ---------------------------------------------------------------------------
 // powerMonitor / desktopCapturer / systemPreferences
@@ -270,13 +288,13 @@ export const powerMonitor = {
   getSystemIdleTime(_idleSeconds?: number): number {
     notImplemented('powerMonitor.getSystemIdleTime')
   },
-} as unknown as typeof ElectronTypes.powerMonitor
+}
 
 export const desktopCapturer = {
   getSources(_options?: unknown): Promise<unknown[]> {
     notImplemented('desktopCapturer.getSources')
   },
-} as unknown as typeof ElectronTypes.desktopCapturer
+}
 
 export const systemPreferences = {
   getMediaAccessStatus(_mediaType: string): 'not-determined' | 'granted' | 'denied' | 'restricted' | 'unknown' {
@@ -285,7 +303,7 @@ export const systemPreferences = {
   askForMediaAccess(_mediaType: string): Promise<boolean> {
     return Promise.resolve(false)
   },
-} as unknown as typeof ElectronTypes.systemPreferences
+}
 
 // ---------------------------------------------------------------------------
 // shell / dialog / globalShortcut / Menu / nativeImage / Tray
@@ -300,7 +318,7 @@ export const shell = {
     Utils.openPath(path)
     return Promise.resolve('')
   },
-} as unknown as typeof ElectronTypes.shell
+}
 
 export const dialog = {
   showErrorBox(title: string, content: string): void {
@@ -309,7 +327,7 @@ export const dialog = {
   showOpenDialog(_options?: unknown): Promise<{ canceled: boolean, filePaths: string[] }> {
     notImplemented('dialog.showOpenDialog')
   },
-} as unknown as typeof ElectronTypes.dialog
+}
 
 export const globalShortcut = {
   register(_accelerator: string, _callback: () => void): boolean {
@@ -320,14 +338,23 @@ export const globalShortcut = {
   isRegistered(_accelerator: string): boolean {
     return false
   },
-} as unknown as typeof ElectronTypes.globalShortcut
+}
+
+/** The path wrapper `nativeImage.createFromPath` returns: Electrobun has no bitmap images. */
+interface ShimNativeImage {
+  path: string
+  isEmpty: () => boolean
+  resize: (_options?: { width?: number, height?: number }) => ShimNativeImage
+  setTemplateImage: (_template: boolean) => ShimNativeImage
+  toPNG: () => Buffer
+}
 
 /**
  * `nativeImage` is only used to build a tray icon from a path. Electrobun's `Tray` takes a
  * path directly, so the object is a path wrapper rather than a bitmap.
  */
 export const nativeImage = {
-  createFromPath(path: string) {
+  createFromPath(path: string): ShimNativeImage {
     return {
       path,
       isEmpty: () => !existsSync(path),
@@ -336,16 +363,21 @@ export const nativeImage = {
       toPNG: () => Buffer.alloc(0),
     }
   },
-} as unknown as typeof ElectronTypes.nativeImage
+}
+
+/** What the ported call sites use off a built menu; the shim has no native menus. */
+export interface ShimMenu {
+  popup: () => void
+}
 
 export const Menu = {
-  buildFromTemplate(template: unknown): unknown {
+  buildFromTemplate(_template: unknown): ShimMenu {
     notImplemented('Menu.buildFromTemplate')
   },
   setApplicationMenu(_menu: unknown): void {
     notImplemented('Menu.setApplicationMenu')
   },
-} as unknown as typeof ElectronTypes.Menu
+}
 
 export class Tray {
   constructor(public readonly image: unknown) {
@@ -381,12 +413,10 @@ export const screen = {
   getAllDisplays: () => Screen.getAllDisplays(),
   getPrimaryDisplay: () => Screen.getPrimaryDisplay(),
   getCursorScreenPoint: () => Screen.getCursorScreenPoint(),
-  getDisplayMatching(rect: { x: number, y: number, width: number, height: number }) {
+  getDisplayMatching(rect: { x: number, y: number, width: number, height: number }): Display {
     const centerX = rect.x + rect.width / 2
     const centerY = rect.y + rect.height / 2
-    const displays = Screen.getAllDisplays() as Array<{
-      bounds: { x: number, y: number, width: number, height: number }
-    }>
+    const displays = Screen.getAllDisplays()
     const hit = displays.find(d =>
       centerX >= d.bounds.x
       && centerX < d.bounds.x + d.bounds.width
@@ -394,7 +424,7 @@ export const screen = {
       && centerY < d.bounds.y + d.bounds.height)
     return hit ?? Screen.getPrimaryDisplay()
   },
-  getDisplayNearestPoint(point: { x: number, y: number }) {
+  getDisplayNearestPoint(point: { x: number, y: number }): Display {
     return screen.getDisplayMatching({ x: point.x, y: point.y, width: 0, height: 0 })
   },
   dipToScreenPoint(point: { x: number, y: number }) {
@@ -409,7 +439,7 @@ export const screen = {
   screenToDipRect(_window: unknown, rect: { x: number, y: number, width: number, height: number }) {
     return rect
   },
-} as unknown as typeof ElectronTypes.screen
+}
 
 export class Notification {
   static isSupported(): boolean {

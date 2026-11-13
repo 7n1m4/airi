@@ -24,6 +24,29 @@ declare module 'electrobun/main' {
     isPrimary: boolean
   }
 
+  /**
+   * What the native window callbacks hand to a `move`/`resize` listener.
+   * `.hutch/devkit/api/sdks/main/events/event.ts:1-14` — every event is an
+   * `ElectrobunEvent` instance carrying its `name` and `data`; `ElectrobunEventEmitter.emitEvent`
+   * emits that instance itself, so the handler receives it rather than the bare frame.
+   */
+  export interface ElectrobunWindowEvent<Data> {
+    name: string
+    data: Data
+  }
+
+  /**
+   * `move`/`resize` payload: the full frame on `resize`, only the changed axes on `move`
+   * (`.hutch/devkit/api/sdks/main/events/windowEvents.ts:4-11`), so each axis is optional.
+   */
+  export interface WindowGeometryEvent {
+    id: number
+    x?: number
+    y?: number
+    width?: number
+    height?: number
+  }
+
   export type Renderer = 'native' | 'cef'
 
   export interface WindowOptionsType<T = undefined> {
@@ -76,6 +99,11 @@ declare module 'electrobun/main' {
     getPosition(): { x: number, y: number }
     getSize(): { width: number, height: number }
     on(name: string, handler: (event: unknown) => void): void
+    /**
+     * Emitted per window by the native callbacks (`proc/native.ts:2728-2747` move,
+     * `:2748+` resize); the handler gets the `ElectrobunEvent` instance, not the bare payload.
+     */
+    on(name: 'move' | 'resize', handler: (event: ElectrobunWindowEvent<WindowGeometryEvent>) => void): void
   }
 
   export interface BrowserViewOptions<T = undefined> {
@@ -177,6 +205,12 @@ declare module 'electrobun/main' {
     openFileDialog: (options: unknown) => Promise<unknown>
     clipboardReadText: () => string | null
     clipboardWriteText: (text: string) => void
+    /** `.hutch/devkit/api/sdks/main/core/Utils.ts:54` — opens a file or folder with its default app. */
+    openPath: (path: string) => boolean
+    /** `.hutch/devkit/api/sdks/main/core/Utils.ts:10` */
+    moveToTrash: (path: string) => boolean
+    /** `.hutch/devkit/api/sdks/main/core/Utils.ts:14` */
+    showItemInFolder: (path: string) => boolean
   }
 
   export const Screen: {

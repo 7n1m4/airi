@@ -25,8 +25,27 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm run lint
-      - run: docker run -v `pwd`:`pwd` -w `pwd` ghcr.io/realm/swiftlint:latest
-        working-directory: ./apps/stage-pocket
+
+  wire-types:
+    name: Wire Types Drift Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/debug
+          key: ${{ runner.os }}-cargo-wire-types-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-wire-types-
+      # Regenerates and diffs the checked-in bindings; fails if crates/airi-channel/src/wire.rs
+      # and packages/server-shared/src/types/generated/airi-channel.ts disagree (D2).
+      - run: cargo run -p airi-channel --example export-wire-types --locked -- --check
 
   build-test:
     name: Build Test (${{ matrix.app_name }})
@@ -164,7 +183,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: danielroe/provenance-action@main
+      - uses: danielroe/provenance-action@cbddd3d14144ca5c2f841d8e51bfb72675a55224 # main, pinned 2026-11-13
         id: check
         with:
           fail-on-provenance-change: true # optional, default: false

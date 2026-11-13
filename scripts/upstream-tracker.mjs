@@ -172,7 +172,6 @@ const SUBSYSTEM_RULES = [
     name: 'Mobile & Web Platforms',
     risk: '⚪ ignore / low-priority',
     patterns: [
-      /apps\/stage-pocket/,
       /apps\/stage-web/,
     ],
   },

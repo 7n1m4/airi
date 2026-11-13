@@ -39,7 +39,16 @@ pub fn render_frame(
             let bounds = session.bounds();
             let pages = load_pages(session, root.as_deref());
             Some(rasterize(
-                &data, &bounds, &pages, width, height, render_scale, offset_x, offset_y,
+                &data,
+                &bounds,
+                &pages,
+                Target {
+                    width,
+                    height,
+                    render_scale,
+                    offset_x,
+                    offset_y,
+                },
             ))
         },
         None,
@@ -71,7 +80,10 @@ fn load_pages(session: &SpineSession, root: Option<&std::path::Path>) -> Vec<Opt
                     })
                 }
                 Err(error) => {
-                    eprintln!("[airi-slint][spine] texture missing: {}: {error}", path.display());
+                    eprintln!(
+                        "[airi-slint][spine] texture missing: {}: {error}",
+                        path.display()
+                    );
                     None
                 }
             }
@@ -79,25 +91,35 @@ fn load_pages(session: &SpineSession, root: Option<&std::path::Path>) -> Vec<Opt
         .collect()
 }
 
-/// Fit + rasterize the collected draw data into an RGBA buffer.
-fn rasterize(
-    data: &DrawData,
-    bounds: &airi_render::spine::Bounds,
-    pages: &[Option<Page>],
+/// Output geometry for one rasterized frame.
+#[derive(Debug, Clone, Copy)]
+struct Target {
     width: u32,
     height: u32,
     render_scale: f32,
     offset_x: f32,
     offset_y: f32,
+}
+
+/// Fit + rasterize the collected draw data into an RGBA buffer.
+fn rasterize(
+    data: &DrawData,
+    bounds: &airi_render::spine::Bounds,
+    pages: &[Option<Page>],
+    target: Target,
 ) -> RgbaImage {
+    let Target {
+        width,
+        height,
+        render_scale,
+        offset_x,
+        offset_y,
+    } = target;
     let mut buffer = RgbaImage::from_pixel(width, height, image::Rgba([0, 0, 0, 0]));
 
     let bw = bounds.width.max(0.1);
     let bh = bounds.height.max(0.1);
-    let fit = (width as f32 / bw)
-        .min(height as f32 / bh)
-        * 0.9
-        * render_scale;
+    let fit = (width as f32 / bw).min(height as f32 / bh) * 0.9 * render_scale;
     // Skeleton is y-up; the image is y-down.
     let cx = width as f32 * 0.5 + offset_x;
     let cy = height as f32 * 0.5 + offset_y;
@@ -119,7 +141,7 @@ fn rasterize(
         let vtx_start = draw.vertex_offset as usize;
         let alpha = draw.alpha.clamp(0.0, 1.0);
 
-        for tri in data.indices[idx_start..idx_end].chunks_exact(3) {
+        for tri in data.indices[idx_start..idx_end].as_chunks::<3>().0 {
             let p = [
                 data.vertices[vtx_start + tri[0] as usize],
                 data.vertices[vtx_start + tri[1] as usize],
@@ -153,10 +175,30 @@ fn raster_triangle(
     premultiplied: bool,
 ) {
     let (w, h) = (buffer.width(), buffer.height());
-    let min_x = screen[0].0.min(screen[1].0).min(screen[2].0).floor().max(0.0) as u32;
-    let min_y = screen[0].1.min(screen[1].1).min(screen[2].1).floor().max(0.0) as u32;
-    let max_x = screen[0].0.max(screen[1].0).max(screen[2].0).ceil().min(w as f32 - 1.0) as u32;
-    let max_y = screen[0].1.max(screen[1].1).max(screen[2].1).ceil().min(h as f32 - 1.0) as u32;
+    let min_x = screen[0]
+        .0
+        .min(screen[1].0)
+        .min(screen[2].0)
+        .floor()
+        .max(0.0) as u32;
+    let min_y = screen[0]
+        .1
+        .min(screen[1].1)
+        .min(screen[2].1)
+        .floor()
+        .max(0.0) as u32;
+    let max_x = screen[0]
+        .0
+        .max(screen[1].0)
+        .max(screen[2].0)
+        .ceil()
+        .min(w as f32 - 1.0) as u32;
+    let max_y = screen[0]
+        .1
+        .max(screen[1].1)
+        .max(screen[2].1)
+        .ceil()
+        .min(h as f32 - 1.0) as u32;
     if min_x > max_x || min_y > max_y {
         return;
     }
@@ -291,7 +333,6 @@ pub fn to_slint_image(rgba: &RgbaImage) -> slint::Image {
     slint::Image::from_rgba8(buffer)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -311,17 +352,14 @@ mod tests {
         assert_eq!(frame.width(), 256);
         assert_eq!(frame.height(), 256);
 
-        let opaque = frame
-            .pixels()
-            .filter(|p| p.0[3] > 0)
-            .count();
+        let opaque = frame.pixels().filter(|p| p.0[3] > 0).count();
         assert!(
             opaque > 0,
             "expected non-zero opaque pixels, got {opaque} (frame likely blank)"
         );
 
-        let out = std::path::Path::new(&env!("CARGO_MANIFEST_DIR"))
-            .join("../../target/spine_test.png");
+        let out =
+            std::path::Path::new(&env!("CARGO_MANIFEST_DIR")).join("../../target/spine_test.png");
         if let Some(parent) = out.parent() {
             std::fs::create_dir_all(parent).expect("create target dir");
         }

@@ -484,9 +484,7 @@ impl SyncState {
         );
         self.set_working_flag(false);
         match outcome {
-            Ok(_report) => {
-                true
-            }
+            Ok(_report) => true,
             Err(e) => {
                 self.set_error(sync_error_message(&e));
                 false

@@ -65,8 +65,10 @@ function buildGemmaPrompt(messages: Array<{ role: string, content: unknown }>): 
 /**
  * Native Apple Silicon Core AI / CoreML Chat Provider.
  *
- * Runs locally on iOS/iPadOS/macOS via the native Swift Capacitor plugin (`NativeAIPlugin`),
- * offloading inference to Apple Neural Engine (ANE) and Metal GPU with zero WebKit memory footprint.
+ * Originally backed by a native Swift plugin shipped in the mobile app (since purged).
+ * On the web/desktop the NativeAI facade below resolves through the simulated
+ * web path; reintroduce a native provider behind the same facade when the
+ * unified Rust-native app grows an on-device inference path.
  */
 export function createAppleCoreAIChatProvider(config: AppleCoreAIProviderConfig = {}): ChatProvider {
   const defaultModelId = config.model || DEFAULT_APPLE_CORE_AI_MODEL

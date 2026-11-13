@@ -32,10 +32,19 @@ function getPeerLabels(peer: AuthenticatedPeer) {
   }
 }
 
+// Devtools bypass is operator-configured, never self-claimed: AIRI_DEVTOOLS_PEERS
+// is a comma-separated list of peer names and/or peer ids allowed to request a
+// route.bypass. Unset or empty means no devtools bypass at all.
 export function isDevtoolsPeer(peer: AuthenticatedPeer) {
-  const devtoolsLabel = getPeerLabels(peer).devtools
-  const isDevtoolsLabel = devtoolsLabel === 'true' || devtoolsLabel === '1'
-  return Boolean(isDevtoolsLabel || peer.name.includes('devtools'))
+  const allowed = (process.env.AIRI_DEVTOOLS_PEERS ?? '')
+    .split(',')
+    .map(entry => entry.trim())
+    .filter(Boolean)
+
+  if (allowed.length === 0)
+    return false
+
+  return allowed.includes(peer.name) || allowed.includes(peer.peer.id)
 }
 
 export function peerMatchesPolicy(peer: AuthenticatedPeer, policy: RoutingPolicy) {
@@ -61,14 +70,14 @@ export function peerMatchesPolicy(peer: AuthenticatedPeer, policy: RoutingPolicy
   return true
 }
 
+// NOTICE: route.bypass never skips this middleware — it only lets index.ts skip
+// destination collection, so policy still applies to bypassed events.
 export function createPolicyMiddleware(policy: RoutingPolicy): RouteMiddleware {
-  return ({ event, peers }) => {
-    if (event.route?.bypass) {
-      return
-    }
-
+  return ({ peers }) => {
     const targetIds = new Set<string>()
     for (const [id, peer] of peers.entries()) {
+      if (!peer.authenticated)
+        continue
       if (peerMatchesPolicy(peer, policy)) {
         targetIds.add(id)
       }

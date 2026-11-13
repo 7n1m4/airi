@@ -593,9 +593,7 @@ mod index_tests {
             &'life0 self,
             texts: &'life1 [String],
         ) -> Pin<
-            Box<
-                dyn Future<Output = Result<Vec<Vec<f32>>, EmbeddingError>> + Send + 'async_trait,
-            >,
+            Box<dyn Future<Output = Result<Vec<Vec<f32>>, EmbeddingError>> + Send + 'async_trait>,
         >
         where
             'life0: 'async_trait,

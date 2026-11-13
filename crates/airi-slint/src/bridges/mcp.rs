@@ -432,6 +432,7 @@ fn call_tool(
 }
 
 /// MCP servers view-model state (one process-wide instance).
+#[derive(Default)]
 pub struct McpControllerState {
     /// Configured servers, from the last reload.
     pub servers: Vec<McpServerView>,
@@ -443,18 +444,6 @@ pub struct McpControllerState {
     pub last_error: String,
     /// `true` while a long operation runs.
     pub working: bool,
-}
-
-impl Default for McpControllerState {
-    fn default() -> Self {
-        Self {
-            servers: Vec::new(),
-            config_path: String::new(),
-            config_loaded: false,
-            last_error: String::new(),
-            working: false,
-        }
-    }
 }
 
 /// Process-wide controller guarded by a mutex (a poisoned lock is recovered

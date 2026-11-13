@@ -19,8 +19,6 @@ export component AboutWindow inherits Window {
     preferred-height: 730px;
     min-width: 420px;
     min-height: 480px;
-    max-width: root.width;
-    max-height: root.height;
     background: Theme.bg;
 
     in property <string> locale: "en";
@@ -33,14 +31,14 @@ export component AboutWindow inherits Window {
     VerticalLayout {
         alignment: center;
         x: Theme.spacing-l;
-        width: min(parent.width - 2 * Theme.spacing-l, 460px);
+        width: min(root.width - 2 * Theme.spacing-l, 460px);
         spacing: Theme.spacing-l;
 
         // Avatar mark.
         Rectangle {
             width: 88px;
             height: 88px;
-            border-radius: width / 2;
+            border-radius: self.width / 2;
             background: Theme.accent;
             Text {
                 text: "A";
@@ -71,7 +69,7 @@ export component AboutWindow inherits Window {
 
         ACard {
             width: parent.width;
-            padding: Theme.spacing-l;
+            inner-padding: Theme.spacing-l;
             VerticalLayout {
                 spacing: Theme.spacing-s;
 

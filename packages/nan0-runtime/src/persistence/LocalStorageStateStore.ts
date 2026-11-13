@@ -38,6 +38,7 @@ import {
 export interface Nan0StorageLike {
   getItem: (key: string) => string | null
   setItem: (key: string, value: string) => void
+  removeItem?: (key: string) => void
 }
 
 export interface LocalStorageStateStoreOptions {
@@ -169,6 +170,7 @@ export class LocalStorageStateStore implements Nan0StateStore {
   private readonly clock: Nan0Clock
   private lastRawString: string | null = null
   private cachedParsedState: Nan0KernelState | null = null
+  private writeQueue: Promise<unknown> = Promise.resolve()
 
   constructor(
     private readonly key = 'nan0/kernel-state/v1',
@@ -190,7 +192,32 @@ export class LocalStorageStateStore implements Nan0StateStore {
       return structuredClone(this.cachedParsedState)
     }
 
-    const parsed = JSON.parse(raw) as Nan0KernelState
+    let parsed: Nan0KernelState
+    try {
+      parsed = JSON.parse(raw) as Nan0KernelState
+    }
+    catch (error) {
+      const quarantineKey = `${this.key}/corruption-${this.clock.utcNow()}`
+      try {
+        this.storage?.setItem(quarantineKey, raw)
+        this.storage?.removeItem?.(this.key)
+      }
+      catch (quarantineError) {
+        this.options.diagnostic?.('state.corrupt.quarantine-failed', {
+          key: this.key,
+          quarantineKey,
+          message: quarantineError instanceof Error ? quarantineError.message : String(quarantineError),
+        })
+      }
+      this.lastRawString = null
+      this.cachedParsedState = null
+      this.options.diagnostic?.('state.corrupt', {
+        key: this.key,
+        quarantineKey,
+        message: error instanceof Error ? error.message : String(error),
+      })
+      return null
+    }
     if (parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2)
       throw new Error(`Unsupported Nan0 state schema: ${String(parsed.schemaVersion)}`)
 
@@ -254,12 +281,25 @@ export class LocalStorageStateStore implements Nan0StateStore {
     if (!this.storage)
       throw new Error('localStorage is unavailable in this runtime.')
 
+    // NOTICE: saves read-merge-write the shared key, so concurrent saves must
+    // not interleave their load(); chain them instead. The catch keeps one
+    // failed save from poisoning the queue for later saves.
+    const result = this.writeQueue.then(() => this.doSave(state))
+    this.writeQueue = result.catch(() => {})
+    return result
+  }
+
+  private async doSave(state: Nan0KernelState): Promise<Nan0KernelState> {
+    const storage = this.storage
+    if (!storage)
+      throw new Error('localStorage is unavailable in this runtime.')
+
     const before = await this.load()
     const merged = mergeNan0States(before, state, this.clock)
     const serialized = JSON.stringify(merged)
     this.lastRawString = serialized
     this.cachedParsedState = merged
-    this.storage.setItem(this.key, serialized)
+    storage.setItem(this.key, serialized)
     this.options.diagnostic?.('state.save', {
       previousRevision: before?.revision ?? 0,
       revision: merged.revision,

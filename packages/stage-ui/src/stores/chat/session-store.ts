@@ -28,7 +28,7 @@ import { useSettingsGeneral } from '../settings'
 import { CHAT_STREAM_CHANNEL_NAME } from './constants'
 import { stripLargeInlineImagesForPersistence } from './message-sanitizer'
 import { updateRecentTopics } from './recent-topics'
-import { mergeLoadedSessionMessages } from './session-message-merge'
+import { extractMessageContent, mergeLoadedSessionMessages } from './session-message-merge'
 
 export const useChatSessionStore = defineStore('chat-session', () => {
   const { userId, isAuthenticated } = storeToRefs(useAuthStore())
@@ -100,25 +100,6 @@ export const useChatSessionStore = defineStore('chat-session', () => {
   function enqueueSync(task: () => Promise<void>) {
     syncQueue = syncQueue.then(task, task)
     return syncQueue
-  }
-
-  function snapshotMessages(messages: ChatHistoryItem[]) {
-    return JSON.parse(JSON.stringify(messages)) as ChatHistoryItem[]
-  }
-
-  function extractMessageContent(message: ChatHistoryItem) {
-    if (typeof message.content === 'string')
-      return message.content
-    if (Array.isArray(message.content)) {
-      return message.content.map((part) => {
-        if (typeof part === 'string')
-          return part
-        if (part && typeof part === 'object' && 'text' in part)
-          return String(part.text ?? '')
-        return ''
-      }).join('')
-    }
-    return ''
   }
 
   function ensureSessionMessageIds(sessionId: string) {
@@ -436,10 +417,13 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     const meta = sessionMetas.value[sessionId]
     if (!meta)
       return
-    // NOTICE: Strip oversized inline `data:` images before snapshotting so the
-    // multi-megabyte base64 payloads never reach IndexedDB, the outbox sync, or
-    // the JSON serialization itself (see message-sanitizer).
-    const messages = snapshotMessages(stripLargeInlineImagesForPersistence(ensureSessionMessageIds(sessionId)))
+    // NOTICE: Keep the strip here but NOT a deep clone — the repo sanitizes and
+    // clones on write (chat-sessions.repo.ts). A store-side JSON round-trip only
+    // duplicated that work. The stripped array may still reference live store
+    // objects; the repo serializes at write time, so a message streaming to a
+    // slightly newer state persists newer bytes, and loadSession re-derives
+    // messageCount if it drifts.
+    const messages = stripLargeInlineImagesForPersistence(ensureSessionMessageIds(sessionId))
     const now = Date.now()
     const updatedMeta: ChatSessionMeta = {
       ...meta,
@@ -547,8 +531,9 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     sessionMessages.value[sessionId] = nextWithIds
 
     // 3. Broadcast new or updated messages
+    const prevById = new Map(prev.map(m => [m.id, m]))
     for (const msg of nextWithIds) {
-      const prevMsg = prev.find(m => m.id === msg.id)
+      const prevMsg = msg.id ? prevById.get(msg.id) : undefined
       const isNew = !prevMsg
       const isUpdated = prevMsg && (
         prevMsg.content !== msg.content
@@ -575,7 +560,8 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     await persistSession(sessionId)
 
     // 5. Broadcast session-refreshed if any previous messages were removed
-    const removedAny = prev.some(m => m.id && !nextWithIds.some(n => n.id === m.id))
+    const nextIds = new Set(nextWithIds.map(n => n.id))
+    const removedAny = prev.some(m => m.id && !nextIds.has(m.id))
     if (removedAny) {
       broadcastStreamEvent({ type: 'session-refreshed', sessionId, messages: JSON.parse(JSON.stringify(stripLargeInlineImagesForPersistence(nextWithIds))) })
     }

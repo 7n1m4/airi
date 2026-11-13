@@ -16,3 +16,7 @@ dirs = { workspace = true }
 serde = { workspace = true, features = [ "derive" ] }
 serde_json = { workspace = true }
 airi-a11y = { path = "../airi-a11y" }
+airi-channel = { path = "../airi-channel" }
+
+[dev-dependencies]
+tempfile = { workspace = true }

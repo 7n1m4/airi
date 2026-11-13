@@ -12,7 +12,19 @@ import { toast } from 'vue-sonner'
 
 import { storage, storageState } from '../database/storage'
 import { SERVER_URL } from '../libs/auth'
+import { isSecretStorageKey } from '../libs/secret-storage-keys'
 import { extractAllowedSessionIds, mergeVoiceProfiles, shouldSkipMergeableKey } from './sync-engine-merge'
+
+// Mergeable keys use last-writer merges instead of file overwrite. Real keys carry the
+// better-auth user.id suffix (local:memory/text-journal/<userId>), so match by prefix.
+export function isMergeableSyncKey(key: string): boolean {
+  return key.startsWith('local:memory/short-term/')
+    || key.startsWith('local:memory/text-journal/')
+    || key.startsWith('local:memory/echo-chips/')
+    || key === 'local:airi-cards'
+    || key === 'local:localstorage/settings/live2d/available-motions'
+    || key === 'local:localstorage/settings/speech/voice-profiles'
+}
 
 function mergeCapabilityLists(
   localList: ModelCapabilityItem[] = [],
@@ -2558,14 +2570,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
           const localTime = localTimestamps.get(localKey)
           await logDebug(`Reconciling key: ${localKey}, localTime=${localTime}, remoteMtime=${remoteFile.mtime}, remoteSize=${remoteFile.size}`)
 
-          const isMergeableKey = [
-            'local:memory/short-term/local',
-            'local:memory/text-journal/local',
-            'local:memory/echo-chips/local',
-            'local:airi-cards',
-            'local:localstorage/settings/live2d/available-motions',
-            'local:localstorage/settings/speech/voice-profiles',
-          ].includes(localKey)
+          const isMergeableKey = isMergeableSyncKey(localKey)
 
           if (isMergeableKey) {
             const queueKey = `outbox:queue/${localKey.replace('local:', '')}`
@@ -2882,6 +2887,17 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
           return
         }
 
+        // NOTICE: Never upload credential keys to the remote backup; drop stale queue entries
+        // (e.g. enqueued before exclusion existed) instead of retrying them forever.
+        const secretProbe = item.key.startsWith('local:localstorage/')
+          ? item.key.substring('local:localstorage/'.length)
+          : item.key
+        if (isSecretStorageKey(secretProbe) || isSecretStorageKey(item.key)) {
+          debug(`[SyncEngine] Dropping outbox item ${item.key}: credential-bearing key is excluded from remote sync.`)
+          await storage.removeItem(fullQueueKey)
+          return
+        }
+
         if (selectiveSyncEnabled.value && (item.key.startsWith('local:chat/sessions/') || item.key.startsWith('local:director/sessions/'))) {
           let charId: string | null = null
           if (item.key.startsWith('local:chat/sessions/')) {
@@ -2913,14 +2929,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         const relPath = getRelPathForKey(item.key)
 
         if (item.action === 'upsert') {
-          const isMergeableKey = [
-            'local:memory/short-term/local',
-            'local:memory/text-journal/local',
-            'local:memory/echo-chips/local',
-            'local:airi-cards',
-            'local:localstorage/settings/live2d/available-motions',
-            'local:localstorage/settings/speech/voice-profiles',
-          ].includes(item.key) || item.key.startsWith('local:chat/index/')
+          const isMergeableKey = isMergeableSyncKey(item.key) || item.key.startsWith('local:chat/index/')
 
           if (isMergeableKey) {
             debug(`[SyncEngine] Outbox key ${item.key} is mergeable. Merging with remote...`)
@@ -3007,6 +3016,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     if (key === 'scene/backgrounds')
       return true
     if (key.startsWith('airi_cc_'))
+      return true
+    if (isSecretStorageKey(key))
       return true
     if (key.startsWith('settings/sync/'))
       return true
@@ -3714,6 +3725,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     selectiveSyncEnabled,
     selectiveCheckedIds,
     perDeviceAppearance,
+    shouldExcludeLocalStorageKey,
     getCardSyncStatus,
     addCardToSelectiveSync,
     syncCard,

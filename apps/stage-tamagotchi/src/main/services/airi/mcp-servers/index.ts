@@ -111,6 +111,20 @@ const toolNameSeparator = '::'
 const mcpRequestTimeoutMsec = 10_000
 const mcpRequestMaxTotalTimeoutMsec = 15_000
 
+/**
+ * MCP servers dump their environment on failures, including keys. Redact common
+ * secret shapes before the stderr line reaches the session log.
+ */
+export function redactSecrets(text: string): string {
+  return text
+    .replace(/((?:api[_-]?key|token|secret|password|authorization)\s*[=:]\s*)\S+/gi, '$1[redacted]')
+    .replace(/\bsk-[\w-]{8,}/g, '[redacted]')
+    .replace(/\bghp_[A-Za-z0-9]{20,}/g, '[redacted]')
+    .replace(/\bgithub_pat_\w{20,}/g, '[redacted]')
+    .replace(/Bearer\s+\S+/gi, 'Bearer [redacted]')
+    .replace(/AIza[\w-]{20,}/g, '[redacted]')
+}
+
 function stringifyError(error: unknown) {
   if (error instanceof Error) {
     return error.message
@@ -299,7 +313,7 @@ export function createMcpStdioManager(): McpStdioManager {
         transport.stderr?.on('data', (data) => {
           const text = data.toString('utf-8').trim()
           if (text) {
-            log.withFields({ name }).debug(`mcp stdio stderr: ${text}`)
+            log.withFields({ name }).debug(`mcp stdio stderr: ${redactSecrets(text)}`)
           }
         })
       }

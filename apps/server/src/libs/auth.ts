@@ -25,7 +25,10 @@ export function createAuth(db: Database, env: Env) {
     },
 
     baseURL: env.API_SERVER_URL,
-    trustedOrigins: ['*'],
+    // Same allowlist as the CORS middleware (utils/origin.ts): the deployed
+    // origin from API_SERVER_URL plus localhost dev origins. `*` would let any
+    // site drive /api/auth/* with cross-site cookies.
+    trustedOrigins: [env.API_SERVER_URL, 'http://localhost:*'],
 
     // To skip state-mismatch errors
     // https://github.com/better-auth/better-auth/issues/4969#issuecomment-3397804378

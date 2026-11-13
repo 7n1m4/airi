@@ -373,17 +373,22 @@ function resetStats() {
 }
 
 onMounted(() => {
-  if (window.electron?.ipcRenderer) {
-    const handleSetGroup = (_event: any, group: string) => {
-      if (CUSTOMIZER_CATALOG.some(g => g.id === group)) {
-        activeGroupId.value = group
-      }
-    }
-    window.electron.ipcRenderer.on('set-customizer-group', handleSetGroup)
-    onUnmounted(() => {
-      window.electron.ipcRenderer.removeListener('set-customizer-group', handleSetGroup)
-    })
+  const ipcRenderer = window.electron?.ipcRenderer
+  if (!ipcRenderer)
+    return
+
+  // `IpcRendererListener` is `(event, ...args: unknown[]) => void`, so the payload is narrowed here
+  // rather than declared in the callback signature.
+  const handleSetGroup = (...args: unknown[]) => {
+    const group = args[1]
+    if (typeof group !== 'string' || !CUSTOMIZER_CATALOG.some(g => g.id === group))
+      return
+    activeGroupId.value = group
   }
+  ipcRenderer.on('set-customizer-group', handleSetGroup)
+  onUnmounted(() => {
+    ipcRenderer.removeListener('set-customizer-group', handleSetGroup)
+  })
 })
 
 // Cleanup pointer listeners if component is unmounted mid-drag

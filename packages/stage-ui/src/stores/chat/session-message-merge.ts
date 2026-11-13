@@ -1,6 +1,6 @@
 import type { ChatHistoryItem } from '../../types/chat'
 
-function extractMessageContent(message: ChatHistoryItem) {
+export function extractMessageContent(message: ChatHistoryItem) {
   if (typeof message.content === 'string')
     return message.content
 
@@ -15,6 +15,20 @@ function extractMessageContent(message: ChatHistoryItem) {
   }
 
   return ''
+}
+
+/**
+ * Union two id-keyed entity lists: everything in `current` (in-memory, wins on
+ * id clash), plus stored items whose ids are neither overlaid nor tombstoned in
+ * `removedIds` (persist paths pass locally deleted ids so a re-read cannot
+ * resurrect them). Stored items without an id are carried over as-is since
+ * there is nothing to dedupe them against.
+ */
+export function mergeById<T extends { id?: string | number }>(stored: T[] | null | undefined, current: T[], removedIds?: Set<string>): T[] {
+  const currentIds = new Set(current.map(item => item?.id).filter(id => id !== undefined && id !== null).map(String))
+  const storedOnly = (stored ?? []).filter(item => item && (item.id === undefined || item.id === null
+    || (!removedIds?.has(String(item.id)) && !currentIds.has(String(item.id)))))
+  return [...current, ...storedOnly]
 }
 
 function getMessageFingerprint(message: ChatHistoryItem) {
@@ -32,6 +46,23 @@ export function mergeLoadedSessionMessages(storedMessages: ChatHistoryItem[], cu
   const storedIds = new Set(storedMessages.map(m => m.id).filter(Boolean))
   const storedFingerprints = new Set(storedMessages.map(getMessageFingerprint))
 
+  // Index stored messages by role+content so the 2s-jitter check stays O(1) per new message.
+  const storedTimesByRoleContent = new Map<string, number[]>()
+  for (const stored of storedMessages) {
+    const content = extractMessageContent(stored)
+    if (!content.trim())
+      continue
+    const key = `${stored.role}\u001F${content}`
+    const storedTime = stored.createdAt || 0
+    if (!storedTime)
+      continue
+    const times = storedTimesByRoleContent.get(key)
+    if (times)
+      times.push(storedTime)
+    else
+      storedTimesByRoleContent.set(key, [storedTime])
+  }
+
   const uniqueNewMessages = currentMessages.filter((message) => {
     if (message.id && storedIds.has(message.id))
       return false
@@ -44,18 +75,8 @@ export function mergeLoadedSessionMessages(storedMessages: ChatHistoryItem[], cu
     const content = extractMessageContent(message)
     if (content.trim()) {
       const msgTime = message.createdAt || 0
-      const isDuplicateByContentAndTime = storedMessages.some((stored) => {
-        if (stored.role !== message.role)
-          return false
-        const storedContent = extractMessageContent(stored)
-        if (storedContent !== content)
-          return false
-        const storedTime = stored.createdAt || 0
-        if (msgTime && storedTime && Math.abs(msgTime - storedTime) <= 2000)
-          return true
-        return false
-      })
-      if (isDuplicateByContentAndTime)
+      const times = msgTime ? storedTimesByRoleContent.get(`${message.role}\u001F${content}`) : undefined
+      if (times?.some(storedTime => Math.abs(msgTime - storedTime) <= 2000))
         return false
     }
 

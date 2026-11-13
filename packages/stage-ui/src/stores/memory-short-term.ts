@@ -1,7 +1,6 @@
 import type { ChatProvider } from '@xsai-ext/providers/utils'
 import type { Message } from '@xsai/shared-chat'
 
-import type { ChatHistoryItem } from '../types/chat'
 import type { ChatSessionsIndex } from '../types/chat-session'
 import type { ShortTermMemoryBlock } from '../types/short-term-memory'
 import type { AiriCard } from './modules/airi-card'
@@ -15,6 +14,7 @@ import { computed, ref, watch } from 'vue'
 import { chatSessionsRepo } from '../database/repos/chat-sessions.repo'
 import { shortTermMemoryRepo } from '../database/repos/short-term-memory.repo'
 import { useAuthStore } from './auth'
+import { extractMessageContent, mergeById } from './chat/session-message-merge'
 import { useChatSessionStore } from './chat/session-store'
 import { useLLM } from './llm'
 import { useAiriCardStore } from './modules/airi-card'
@@ -85,23 +85,6 @@ function formatLocalDayKey(timestamp: number) {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
-}
-
-function extractMessageText(message: ChatHistoryItem) {
-  if (typeof message.content === 'string')
-    return message.content.trim()
-
-  if (Array.isArray(message.content)) {
-    return message.content.map((part) => {
-      if (typeof part === 'string')
-        return part
-      if (part && typeof part === 'object' && 'text' in part)
-        return String(part.text ?? '')
-      return ''
-    }).join('').trim()
-  }
-
-  return ''
 }
 
 function buildCharacterSummaryContext(card: AiriCard) {
@@ -260,7 +243,15 @@ export const useShortTermMemoryStore = defineStore('short-term-memory', () => {
 
   async function persist(nextBlocks: ShortTermMemoryBlock[]) {
     const currentUserId = getCurrentUserId()
-    const snapshot = normalizeBlocks(JSON.parse(JSON.stringify(nextBlocks)) as ShortTermMemoryBlock[])
+    // NOTICE: Re-read the repo and union by id before writing — both the chat window and the
+    // main stage persist full snapshots, so blind last-write-wins would drop the other
+    // window's blocks. Local deletes (ids in memory but filtered out here) are tombstoned so
+    // the re-read cannot resurrect them. Saves are still whole-array; no per-entry keys yet.
+    const nextIds = new Set(nextBlocks.map(b => b.id))
+    const removedIds = new Set(blocks.value.map(b => b.id).filter(id => !nextIds.has(id)))
+    const stored = await shortTermMemoryRepo.getAll(currentUserId).catch(() => null) ?? []
+    const merged = mergeById(stored, nextBlocks, removedIds)
+    const snapshot = normalizeBlocks(JSON.parse(JSON.stringify(merged)) as ShortTermMemoryBlock[])
 
     try {
       await shortTermMemoryRepo.saveAll(currentUserId, snapshot)
@@ -303,7 +294,7 @@ export const useShortTermMemoryStore = defineStore('short-term-memory', () => {
         if ((message.role !== 'user' && message.role !== 'assistant') || !message.createdAt)
           continue
 
-        const content = extractMessageText(message)
+        const content = extractMessageContent(message).trim()
         if (!content)
           continue
 

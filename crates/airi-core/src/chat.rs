@@ -40,6 +40,7 @@ use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 
+#[cfg(feature = "local-llm")]
 use crate::settings::{LocalLlmSettings, SettingsSection};
 use crate::{new_id, now_ms};
 
@@ -621,6 +622,8 @@ pub(crate) async fn resolve_provider(
     config: ProviderConfig,
     local_llm: Option<&SettingsRepo>,
 ) -> Result<Arc<dyn ChatProvider>> {
+    #[cfg(not(feature = "local-llm"))]
+    let _ = local_llm; // kept in the signature: stable call-site API across features
     if let Some(client) = providers
         .lock()
         .expect("providers mutex poisoned")
@@ -629,6 +632,7 @@ pub(crate) async fn resolve_provider(
     {
         return Ok(client);
     }
+    #[cfg(feature = "local-llm")]
     if provider_id == airi_local_llm::PROVIDER_ID {
         return llama_cpp_provider(local_llm);
     }
@@ -644,6 +648,7 @@ pub(crate) async fn resolve_provider(
 /// `settings/local-llm` section. `AIRI_QT_LLAMA_MODEL` wins over the stored
 /// `modelPath`; the remaining fields always come from settings (spec
 /// defaults apply when the section was never written).
+#[cfg(feature = "local-llm")]
 fn llama_cpp_provider(local_llm: Option<&SettingsRepo>) -> Result<Arc<dyn ChatProvider>> {
     let stored = local_llm
         .and_then(|repo| {
@@ -1213,6 +1218,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "local-llm")]
     async fn llama_cpp_local_resolves_from_settings() {
         let (_dir, db) = test_db();
         let settings = SettingsRepo::new(db);
@@ -1243,6 +1249,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "local-llm")]
     async fn llama_cpp_local_without_model_configured_is_an_error() {
         let (_dir, db) = test_db();
         let settings = SettingsRepo::new(db);

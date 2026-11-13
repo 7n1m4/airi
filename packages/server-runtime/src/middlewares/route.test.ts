@@ -13,10 +13,11 @@ function createPeer(options: {
   plugin?: string
   instanceId?: string
   labels?: Record<string, string>
+  authenticated?: boolean
 }): AuthenticatedPeer {
   return {
     peer: { id: options.id, send: () => 0 },
-    authenticated: true,
+    authenticated: options.authenticated ?? true,
     name: options.name,
     identity: options.plugin && options.instanceId
       ? { kind: 'plugin', plugin: { id: options.plugin }, id: options.instanceId, labels: options.labels }
@@ -162,7 +163,32 @@ describe('route middleware', () => {
     expect([...decision!.targetIds]).toEqual(['peer-1'])
   })
 
-  it('devtools peer detection uses label', () => {
+  it('policy middleware skips unauthenticated peers', () => {
+    const peers = new Map<string, AuthenticatedPeer>([
+      ['peer-1', createPeer({ id: 'peer-1', name: 'telegram', plugin: 'telegram-bot', instanceId: 'telegram-1', labels: { env: 'prod' }, authenticated: false })],
+      ['peer-2', createPeer({ id: 'peer-2', name: 'stage-ui', plugin: 'stage-ui', instanceId: 'stage-ui-1', labels: { env: 'prod' } })],
+    ])
+
+    const policy = createPolicyMiddleware({ allowLabels: ['env=prod'] })
+    const decision = policy({
+      event: createSparkNotifyEvent(),
+      fromPeer: peers.get('peer-2')!,
+      peers,
+      destinations: undefined,
+    })
+
+    expect(decision).toBeDefined()
+    if (!decision)
+      return
+
+    expect(decision?.type).toBe('targets')
+    if (decision.type !== 'targets')
+      return
+
+    expect([...decision!.targetIds]).toEqual(['peer-2'])
+  })
+
+  it('devtools peer detection requires the env allowlist, not self-claimed labels', () => {
     const peer = createPeer({
       id: 'peer-3',
       name: 'debug-ui',
@@ -171,6 +197,24 @@ describe('route middleware', () => {
       labels: { devtools: 'true' },
     })
 
-    expect(isDevtoolsPeer(peer)).toBe(true)
+    delete process.env.AIRI_DEVTOOLS_PEERS
+    // self-claimed devtools label no longer grants bypass
+    expect(isDevtoolsPeer(peer)).toBe(false)
+
+    process.env.AIRI_DEVTOOLS_PEERS = 'peer-3'
+    try {
+      expect(isDevtoolsPeer(peer)).toBe(true)
+    }
+    finally {
+      delete process.env.AIRI_DEVTOOLS_PEERS
+    }
+
+    process.env.AIRI_DEVTOOLS_PEERS = 'someone-else'
+    try {
+      expect(isDevtoolsPeer(peer)).toBe(false)
+    }
+    finally {
+      delete process.env.AIRI_DEVTOOLS_PEERS
+    }
   })
 })

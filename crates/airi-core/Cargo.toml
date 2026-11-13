@@ -6,6 +6,13 @@ version = "0.1.0"
 edition = "2021"
 license = "GPL-3.0-or-later"
 
+[features]
+default = [ "local-llm" ]
+# Native in-process llama.cpp GGUF provider (airi-local-llm → llama-cpp-2,
+# native C++ build). Native GGUF is on by default; disable with
+# --no-default-features to drop the llama.cpp native build.
+local-llm = [ "dep:airi-local-llm" ]
+
 [dependencies]
 anyhow = { workspace = true }
 serde = { workspace = true }
@@ -19,7 +26,7 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 airi-store = { path = "../airi-store" }
 airi-llm = { path = "../airi-llm" }
-airi-local-llm = { path = "../airi-local-llm" }
+airi-local-llm = { path = "../airi-local-llm", optional = true }
 reqwest = { workspace = true }
 rusqlite = { workspace = true }
 dirs = { workspace = true }

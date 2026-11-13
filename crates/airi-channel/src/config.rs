@@ -8,12 +8,16 @@
 //! The token is stored in **plaintext** — same posture as the Electron build,
 //! no worse, no better. Protect the data dir accordingly.
 //!
-//! On-disk shape (extra keys such as the Electron `tlsConfig: null` are
-//! tolerated on read but not rewritten unless they were already present):
+//! On-disk shape (the Electron `tlsConfig` flag is round-tripped verbatim —
+//! anything else is tolerated on read but dropped on write):
 //!
 //! ```json
-//! { "hostname": "127.0.0.1", "authToken": "<uuid-v4>" }
+//! { "hostname": "127.0.0.1", "authToken": "<uuid-v4>", "tlsConfig": {} }
 //! ```
+//!
+//! `tlsConfig` is an opaque flag object: absent/`null` = plaintext listener,
+//! present (any object, even `{}`) = `wss://` with a locally minted CA +
+//! SAN-covered server certificate (see [`crate::certs`]).
 
 use std::fs;
 use std::io;
@@ -35,6 +39,15 @@ pub struct ChannelConfig {
     /// Shared secret clients must present as the first message.
     #[serde(rename = "authToken")]
     pub auth_token: String,
+    /// Opaque TLS flag: `Some(_)` = serve `wss://`; `None` = plaintext.
+    /// Round-tripped verbatim so enabling TLS in one build survives a
+    /// reload in another.
+    #[serde(
+        rename = "tlsConfig",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub tls_config: Option<serde_json::Value>,
 }
 
 impl ChannelConfig {
@@ -43,6 +56,7 @@ impl ChannelConfig {
         Self {
             hostname: DEFAULT_HOSTNAME.to_string(),
             auth_token: uuid_v4(),
+            tls_config: None,
         }
     }
 }
@@ -105,9 +119,14 @@ fn parse_config(raw: &str) -> Option<ChannelConfig> {
         return None;
     }
 
+    // `tlsConfig` is an opaque flag: present (any JSON value except null)
+    // means TLS. `null` means plaintext and is dropped on write.
+    let tls_config = obj.get("tlsConfig").filter(|v| !v.is_null()).cloned();
+
     Some(ChannelConfig {
         hostname,
         auth_token: auth_token.to_string(),
+        tls_config,
     })
 }
 
@@ -123,28 +142,78 @@ fn heal_in_place(path: &Path, raw: &str) -> Result<ChannelConfig, ConfigError> {
         .filter(|h| !h.trim().is_empty())
         .unwrap_or_else(|| DEFAULT_HOSTNAME.to_string());
 
+    let tls_config = serde_json::from_str::<serde_json::Value>(raw)
+        .ok()
+        .and_then(|v| v.get("tlsConfig").cloned())
+        .filter(|v| !v.is_null());
     let cfg = ChannelConfig {
         hostname,
         auth_token: uuid_v4(),
+        tls_config,
     };
     write_config(path, &cfg)?;
     Ok(cfg)
 }
 
-/// Write the config, creating parent directories.
+/// Write the config, creating parent directories. Written `0600`: this file
+/// carries the auth token, and any local uid that can read it can authenticate.
 fn write_config(path: &Path, cfg: &ChannelConfig) -> Result<(), ConfigError> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let json = serde_json::to_string_pretty(cfg)
-        .map_err(|e| ConfigError::Io(io::Error::new(io::ErrorKind::InvalidData, e)))?;
-    fs::write(path, json)?;
-    Ok(())
+    // mode(0o600) only applies at creation; tighten explicitly so a
+    // pre-existing 0644 file is fixed on rewrite.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+        let json = serde_json::to_string_pretty(cfg)
+            .map_err(|e| ConfigError::Io(io::Error::new(io::ErrorKind::InvalidData, e)))?;
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .mode(0o600)
+            .open(path)?;
+        file.set_permissions(fs::Permissions::from_mode(0o600))?;
+        io::Write::write_all(&mut file, json.as_bytes())?;
+        Ok(())
+    }
+    #[cfg(not(unix))]
+    {
+        let json = serde_json::to_string_pretty(cfg)
+            .map_err(|e| ConfigError::Io(io::Error::new(io::ErrorKind::InvalidData, e)))?;
+        fs::write(path, json)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rewrite_tightens_preexisting_0644() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.json");
+        fs::write(&path, r#"{ "hostname": "127.0.0.1", "authToken": "keep" }"#).unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+
+        write_config(&path, &ChannelConfig::healed()).unwrap();
+        let mode = fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "rewritten config.json must be owner-only");
+    }
+
+    #[test]
+    fn config_file_is_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server-channel").join("config.json");
+        let cfg = load_or_heal(&path).unwrap();
+        assert!(cfg.auth_token.len() == 36);
+        let mode = fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "config.json must never be world/group readable");
+    }
 
     #[test]
     fn missing_file_is_created_with_token() {
@@ -204,6 +273,39 @@ mod tests {
         let cfg = load_or_heal(&path).unwrap();
         assert_eq!(cfg.hostname, "0.0.0.0");
         assert_eq!(cfg.auth_token, "keep-me");
+    }
+
+    #[test]
+    fn tls_config_is_round_tripped() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.json");
+        fs::write(
+            &path,
+            r#"{ "hostname": "0.0.0.0", "authToken": "keep-me", "tlsConfig": {} }"#,
+        )
+        .unwrap();
+
+        let cfg = load_or_heal(&path).unwrap();
+        assert_eq!(cfg.tls_config, Some(serde_json::json!({})));
+        assert_eq!(cfg.auth_token, "keep-me");
+
+        // Rewritten file keeps the flag.
+        let raw = fs::read_to_string(&path).unwrap();
+        assert!(raw.contains("tlsConfig"));
+    }
+
+    #[test]
+    fn tls_config_null_remains_plaintext() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.json");
+        fs::write(
+            &path,
+            r#"{ "hostname": "0.0.0.0", "authToken": "keep-me", "tlsConfig": null }"#,
+        )
+        .unwrap();
+
+        let cfg = load_or_heal(&path).unwrap();
+        assert_eq!(cfg.tls_config, None);
     }
 
     #[test]

@@ -162,10 +162,13 @@ function getAvailableDiskSpace(targetPath: string): number {
 
 /**
  * Copies files and directories recursively while excluding locks and transient sockets.
+ * Appends every directory and file created by this copy to `created` so a failed
+ * migration can roll back exactly what it made and keep pre-existing user files.
  */
-function copyDirectoryFiltered(srcDir: string, destDir: string): void {
+function copyDirectoryFiltered(srcDir: string, destDir: string, created: string[]): void {
   if (!fs.existsSync(destDir)) {
     fs.mkdirSync(destDir, { recursive: true })
+    created.push(destDir)
   }
 
   const entries = fs.readdirSync(srcDir, { withFileTypes: true })
@@ -182,12 +185,13 @@ function copyDirectoryFiltered(srcDir: string, destDir: string): void {
       continue
 
     if (entry.isDirectory()) {
-      copyDirectoryFiltered(srcPath, destPath)
+      copyDirectoryFiltered(srcPath, destPath, created)
     }
     else if (entry.isFile()) {
       // Only overwrite if destination does not exist
       if (!fs.existsSync(destPath)) {
         fs.copyFileSync(srcPath, destPath)
+        created.push(destPath)
       }
     }
   }
@@ -242,7 +246,11 @@ export function ensureLegacyUserDataMigrated(targetUserDataPath: string): string
 
         console.info(`[Migration] Disk space verified (${(availableBytes / (1024 * 1024)).toFixed(1)} MB free). Seamlessly migrating data to: ${targetUserDataPath}...`)
 
+        // Rollback must remove only what this migration creates.
+        const createdPaths: string[] = []
         try {
+          if (!fs.existsSync(targetUserDataPath))
+            createdPaths.push(targetUserDataPath)
           fs.mkdirSync(targetUserDataPath, { recursive: true })
 
           // 1. Copy essential data directories
@@ -250,7 +258,7 @@ export function ensureLegacyUserDataMigrated(targetUserDataPath: string): string
             const srcSubDir = path.join(candidate, dirName)
             const destSubDir = path.join(targetUserDataPath, dirName)
             if (fs.existsSync(srcSubDir)) {
-              copyDirectoryFiltered(srcSubDir, destSubDir)
+              copyDirectoryFiltered(srcSubDir, destSubDir, createdPaths)
             }
           }
 
@@ -264,6 +272,7 @@ export function ensureLegacyUserDataMigrated(targetUserDataPath: string): string
                 const destFile = path.join(targetUserDataPath, entry.name)
                 if (!fs.existsSync(destFile)) {
                   fs.copyFileSync(srcFile, destFile)
+                  createdPaths.push(destFile)
                 }
               }
             }
@@ -274,11 +283,21 @@ export function ensureLegacyUserDataMigrated(targetUserDataPath: string): string
         }
         catch (copyError) {
           console.error('[Migration] Critical failure during data copy:', copyError)
-          console.info(`[Migration] Rolling back partial migration and cleaning up: ${targetUserDataPath}`)
-          try {
-            fs.rmSync(targetUserDataPath, { recursive: true, force: true })
+          console.info(`[Migration] Rolling back partial migration, removing only paths created by this migration`)
+          // Remove the created files first, then created directories deepest-first.
+          // Directories are removed with rmdirSync so a directory holding
+          // pre-existing user files survives the rollback.
+          for (const createdPath of [...createdPaths].sort((a, b) => b.split(path.sep).length - a.split(path.sep).length)) {
+            try {
+              if (fs.lstatSync(createdPath).isDirectory()) {
+                fs.rmdirSync(createdPath)
+              }
+              else {
+                fs.rmSync(createdPath, { force: true })
+              }
+            }
+            catch {}
           }
-          catch {}
           console.info(`[Migration] Safely falling back to existing directory at: ${candidate}`)
           return candidate
         }

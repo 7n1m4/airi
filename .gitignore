@@ -55,7 +55,6 @@ coverage/
 # Build
 out/
 bundle/
-apps/stage-pocket/build/
 .flatpak-builder/
 .flatpak-repo/
 *.flatpak
@@ -149,7 +148,6 @@ plugins/development
 plugins-local
 plugins-development
 
-apps/stage-pocket/ios/buildServer.json
 .ghfs/
 .obsidian/*
 !.obsidian/app.json
@@ -161,6 +159,8 @@ apps/stage-pocket/ios/buildServer.json
 recovery_artifacts/
 recovery/
 personal_airi/
+reports/
+scratch/
 
 # Swift / SPM
 .build/

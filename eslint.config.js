@@ -33,13 +33,16 @@ export default defineConfig({
     // generator's output, not a choice anyone can make. Linting it added 60,588
     // errors to the total and zero actionable findings.
     'packages/i18n/src/dist-lite/**',
+    // NOTICE: Rust-canonical wire bindings emitted by specta-typescript
+    // (`cargo run -p airi-channel --example export-wire-types`). The generator
+    // re-emits its own formatting on every change, so any diagnostic here is
+    // noise; the drift check (`pnpm run check:wire-types`) owns correctness.
+    'packages/server-shared/src/types/generated/**',
     'apps/stage-tamagotchi/out/**',
     'apps/stage-tamagotchi/src/bindings/**',
     'apps/stage-tamagotchi/src-tauri/**',
     'apps/stage-tamagotchi-electron/out/**',
     'apps/stage-tamagotchi-electron/src/renderer/bindings/**',
-    'apps/stage-pocket/ios/**',
-    'apps/stage-pocket/android/**',
     'crates/**',
     // NOTICE: moved here from the former desktop shell's scripts dir, so the root lint reaches
     // it for the first time. Its 9 diagnostics (2 `style/max-statements-per-line`,

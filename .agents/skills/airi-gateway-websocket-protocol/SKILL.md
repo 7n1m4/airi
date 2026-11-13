@@ -8,6 +8,7 @@ description: >-
 
 ## Key Files/Locations
 
+- `crates/airi-channel/src/wire.rs` — **Rust-canonical wire types** (D2): the frame vocabulary both sides speak (`GatewayClientFrame` / `GatewayServerFrame`, heartbeat, RPC replies). The checked-in TypeScript bindings at `packages/server-shared/src/types/generated/airi-channel.ts` are re-exported from `@proj-airi/server-shared/types`; regenerate with `pnpm run check:wire-types` (write mode: `cargo run -p airi-channel --example export-wire-types`). CI fails the `Wire Types Drift Check` job when they disagree — never edit the generated file.
 - `apps/stage-tamagotchi/src/main/services/airi/channel-server/index.ts` — Electron **main-process** service: manages the channel server runtime on port `6121` (overridable via `env.SERVER_CHANNEL_PORT`), cryptographic `authToken` handshake, auto-healing config store `server-channel/config.json`, mkcert local CA/TLS cert generation (`certHasAllDomains`), and LAN IP discovery (`getLocalIPs()`).
 - `apps/stage-tamagotchi/src/shared/eventa.ts` — Typed eventa IPC contracts: `electronGetServerChannelConfig`, `electronApplyServerChannelConfig`; payload schemas for `hostname`, `authToken`, and `tlsConfig`.
 - `packages/server-runtime/src/server/index.ts` — Core WebSocket server implementation and protocol dispatch.
@@ -16,7 +17,7 @@ description: >-
 
 ## When to Use
 
-- Extending or debugging the WebSocket Gateway connection between the desktop application and external companion clients (e.g. Android/iOS `stage-pocket`, VS Code extensions, or custom Python agents).
+- Extending or debugging the WebSocket Gateway connection between the desktop application and external companion clients (e.g. the unified Rust native app — see `proposal-unified-rust-native-app.md`, VS Code extensions, or custom Python agents).
 - Modifying gateway security, auth token verification, token regeneration, or hostname binding (`127.0.0.1` vs `0.0.0.0`).
 - Troubleshooting TLS certificate creation, SAN domain updates, or connection dropouts over local WiFi.
 - Wiring frontend settings UI in `packages/stage-pages/src/pages/settings/` to `electronGetServerChannelConfig` and `electronApplyServerChannelConfig`.
@@ -24,7 +25,7 @@ description: >-
 ## Architecture & Security Contracts
 
 ```text
-[ External Client (Pocket / VS Code) ]
+[ External Client (Rust native app / VS Code) ]
                  │
                  ▼  ws://[IP]:6121 (or wss://)
 [ Channel Server (Electron Main Process) ]
@@ -46,7 +47,7 @@ description: >-
 
 - **Main Process Isolation**: The WebSocket server runs strictly in the Electron main process. Never attempt to bind network sockets directly inside renderer components.
 - **Port Collisions**: If port 6121 is occupied by a lingering instance, check `SERVER_CHANNEL_PORT` or kill orphan processes before restarting.
-- **LAN Access vs Loopback**: If mobile pocket clients cannot connect, verify that `hostname` is explicitly set to `0.0.0.0` and that the desktop OS firewall permits incoming traffic on port 6121.
+- **LAN Access vs Loopback**: If mobile native clients cannot connect, verify that `hostname` is explicitly set to `0.0.0.0` and that the desktop OS firewall permits incoming traffic on port 6121.
 - **Token Invalidation**: When regenerating the token via `electronApplyServerChannelConfig`, active external connections will be closed and must re-authenticate with the new token.
 
 ## Verification

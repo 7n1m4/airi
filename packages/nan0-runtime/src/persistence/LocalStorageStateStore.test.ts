@@ -24,6 +24,14 @@ class TestStorage {
   setItem(key: string, value: string): void {
     this.values.set(key, value)
   }
+
+  removeItem(key: string): void {
+    this.values.delete(key)
+  }
+
+  keys(): string[] {
+    return [...this.values.keys()]
+  }
 }
 
 function memory(
@@ -318,6 +326,45 @@ describe('localStorageStateStore multi-renderer safety', () => {
     expect(persisted?.continuity.threads[0].turnIds).toEqual(['turn-1', 'turn-2'])
     expect(persisted?.continuity.threads[0].timelineEventIds).toEqual(['event-1', 'event-2'])
     expect(persisted?.continuity.threads[0].unresolvedItems).toHaveLength(1)
+  })
+
+  it('quarantines a corrupt value and boots fresh instead of throwing', async () => {
+    const storage = new TestStorage()
+    storage.setItem('nan0-test', '{"schemaVersion": 2, "memories": [{"id":')
+    const diagnostics: Array<{ event: string, details: Record<string, unknown> }> = []
+    const store = new LocalStorageStateStore('nan0-test', {
+      storage,
+      diagnostic: (event, details) => diagnostics.push({ event, details }),
+    })
+
+    const loaded = await store.load()
+    expect(loaded).toBeNull()
+
+    const quarantineKey = storage.keys().find(key => key.startsWith('nan0-test/corruption-'))
+    expect(quarantineKey).toBeTruthy()
+    expect(storage.getItem('nan0-test')).toBeNull()
+    expect(storage.getItem(quarantineKey!)).toBe('{"schemaVersion": 2, "memories": [{"id":')
+    expect(diagnostics.some(item => item.event === 'state.corrupt')).toBe(true)
+
+    // Boot path recovers: the next save overwrites the (now empty) key.
+    const saved = await store.save(state([]))
+    expect(JSON.parse(storage.getItem('nan0-test')!)).toMatchObject({ schemaVersion: 2 })
+    expect(saved.schemaVersion).toBe(2)
+  })
+
+  it('lands both memories when two saves race', async () => {
+    const storage = new TestStorage()
+    const store = new LocalStorageStateStore('nan0-test', { storage })
+    const first = memory('input-1', 'kyo', 'thought-1')
+    const second = memory('output-1', 'nan0', 'thought-1')
+
+    await Promise.all([
+      store.save(state([first])),
+      store.save(state([second])),
+    ])
+
+    const persisted = await store.load()
+    expect(persisted?.memories.map(item => item.id).sort()).toEqual(['input-1', 'output-1'])
   })
 
   it('migrates legacy state with empty lifecycle and temporal collections', async () => {

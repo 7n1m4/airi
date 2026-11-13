@@ -429,13 +429,6 @@ fn platform_data_dir() -> Option<PathBuf> {
     None
 }
 
-/// Directory `--import-model` writes to when no explicit `--profile` is set.
-/// The platform data dir so a model imported without `--profile` is found by
-/// the default launch's model scan as well.
-pub(crate) fn default_models_dir() -> Option<PathBuf> {
-    platform_data_dir().map(|base| base.join("airi-slint").join("models"))
-}
-
 fn load_section<S: airi_core::settings::SettingsSection>() -> S {
     crate::bridges::settings_store()
         .and_then(|store| store.load_section::<S>().ok())

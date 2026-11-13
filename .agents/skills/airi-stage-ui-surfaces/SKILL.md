@@ -6,7 +6,7 @@ description: >-
 
 # AIRI Stage UI Surfaces & Control Strip
 
-Guidelines and exact code paths for AIRI's stage overlay surfaces. The **Control Strip** is the centerpiece: it is one shared component (`packages/stage-ui/src/components/scenarios/layout/ControlStrip.vue`, ~2941 lines) rendered in **three app shells** (desktop Electron, stage-web, stage-pocket) with platform-specific defaults and a `mode` prop that switches desktop vs mobile UX rules. Anything that "touches every surface" usually lands here.
+Guidelines and exact code paths for AIRI's stage overlay surfaces. The **Control Strip** is the centerpiece: it is one shared component (`packages/stage-ui/src/components/scenarios/layout/ControlStrip.vue`, ~2941 lines) rendered in **two app shells** (desktop Electrobun, stage-web) with platform-specific defaults and a `mode` prop that switches desktop vs mobile UX rules. Anything that "touches every surface" usually lands here.
 
 ## 1. Surface Map
 
@@ -14,7 +14,7 @@ Guidelines and exact code paths for AIRI's stage overlay surfaces. The **Control
 - **ControlStripHost / WidgetStage** — `packages/stage-ui/src/components/scenes/ControlStripHost.vue` (~1491 lines). The comms-hub "host" (audio pipeline, lip-sync, broadcast channels, speech runtime) that wraps `RendererStage` and, **on Electron only**, overlays the strip: `v-if="isElectron"` at `ControlStripHost.vue:1487-1489`. Exported as `WidgetStage` from `packages/stage-ui/src/components/scenes/index.ts:1` (the historical `Stage.vue` was split per `docs/project-control-strip-rfc.md`).
 - **RendererStage** — `packages/stage-ui/src/components/scenes/RendererStage.vue` — pure avatar/background renderer.
 - **Desktop stage window** — `apps/stage-tamagotchi/src/renderer/pages/index.vue` (~1000+ lines) renders `WidgetStage` (:937) and owns window-level behavior: transparency/click-through, hover-expand debounce, event bus listeners, and strip-state sync to main.
-- **Web/pocket shells** — `apps/stage-web/src/pages/index.vue` and `apps/stage-pocket/src/pages/index.vue` (near-identical twins; keep them in lockstep).
+- **Web shell** — `apps/stage-web/src/pages/index.vue` (the pocket twin was purged 2026-11-13).
 - **Floating Electron windows** — managers in `apps/stage-tamagotchi/src/main/windows/` (`main/`, `stage/`, `chat/`, `settings/`, `widgets/`, `caption/`, `customizer/`, `inlay/`, `dashboard/`, …).
 
 ### Pinia stores
@@ -76,14 +76,14 @@ The mobile experience lives in the same `ControlStrip.vue`; every behavioral for
 | Edge docking | `dockedEdge` only ever `'left'` or `'right'` in practice; container pinned `top: 50%` centered on the docked edge (`left: 0` / `right: 0`) | `containerStyle` computed `:1057+` |
 | Drag handle | `onDragStart` toggles `collapsed` (no window dragging on mobile) | `:1057+` |
 | Popovers | Placement is dock-relative: `dockedEdge === 'left' ? 'right' : 'left'` | `popoverPlacement` `:683-684` |
-| Panels | Emoji/expression/wardrobe grids keep `variant="mobile"` touch sizing | `docs/project-mobile-revamp.md` §3 |
+| Panels | Emoji/expression/wardrobe grids keep `variant="mobile"` touch sizing | `docs/archive/project-mobile-revamp.md` §3 |
 | Customizer | No right-click path (no listener, §2.2 gap); use `/settings/stage`, 7-slot cap | `settings/stage/index.vue:14` |
 
 **Opposite-edge chatbox rule** (both layout modes): the side chatbox docks to the *opposite* edge of the strip to avoid collision — `dockedEdge === 'left' ? 'right-6' : 'left-6'` applied to `InteractiveArea` (`apps/stage-web/src/pages/index.vue:262`, `apps/stage-pocket/src/pages/index.vue:256`), gated on `!isPortraitMobile`. Orientation detection: `isLandscape = useMediaQuery('(orientation: landscape)')` + `isPortraitMobile = breakpoints.smaller('md') && !isLandscape` (web `:72-73`, pocket `:66-67`; a width-only breakpoint misclassified landscape phones — keep the orientation check).
 
-**Interaction planes** (`docs/project-mobile-revamp.md` §4): portrait = companion centered above `MobileWhisperSheet` with the 14px notch tab flush on the chosen edge; landscape/tablet = side-by-side theatre (avatar between strip and opposite-edge chatbox). Pocket adds a `MobileHeader`; web renders landscape-only chat through `InteractiveArea`.
+**Interaction planes** (`docs/archive/project-mobile-revamp.md` §4): portrait = companion centered above `MobileWhisperSheet` with the 14px notch tab flush on the chosen edge; landscape/tablet = side-by-side theatre (avatar between strip and opposite-edge chatbox). Pocket adds a `MobileHeader`; web renders landscape-only chat through `InteractiveArea`.
 
-> **Doc drift warning:** `docs/project-mobile-revamp.md` references `packages/stage-layouts/src/components/Layouts/MobileControlStrip.vue` and `MobileControlCustomizerDialog.vue` — **neither file exists**. The as-shipped integration is the shared `ControlStrip.vue` with `mode="mobile"` plus the `stage-pages` `/settings/stage` editor. Do not create the doc's named files; update the shared component.
+> **Doc drift warning:** `docs/archive/project-mobile-revamp.md` references `packages/stage-layouts/src/components/Layouts/MobileControlStrip.vue` and `MobileControlCustomizerDialog.vue` — **neither file exists**. The as-shipped integration is the shared `ControlStrip.vue` with `mode="mobile"` plus the `stage-pages` `/settings/stage` editor. Do not create the doc's named files; update the shared component.
 
 ## 4. Core SOPs
 
@@ -115,7 +115,7 @@ Edit the `mode === 'mobile'` branches in §3's table — not a new component. To
 - **DOM-rect staleness across CSS transforms:** `getBoundingClientRect()` only refreshes on mouse move / class change; a stationary cursor during the 300ms collapse transition keeps `isOutside` stale. Notch hit-testing therefore uses geometric bounds from `useElectronRelativeMouse` (index.vue:392-401). Do not reintroduce rect-based checks for animated notches.
 - **Pointer-mode side effects:** `viewport-cycle-modes` also *mutates* `settingsStore.stageViewControlsEnabled` and `useModelStore().interactionMode` (`use-control-strip-action.ts:26-43`) — those flags feed `applyTransparencyState`, so a new mode or reorder can silently change click-through behavior.
 - **Missing mobile listeners:** web/pocket ignore `control-strip:open-customizer`/`open-settings` (§2.2). If you add a strip-driven settings route, wire a listener in *both* web and pocket `index.vue` (or route through the settings page) — and update the twins together.
-- **`docs/project-mobile-revamp.md` names components that were never built** (`MobileControlStrip.vue`, `MobileControlCustomizerDialog.vue`) — trust code over that doc.
+- **`docs/archive/project-mobile-revamp.md` names components that were never built** (`MobileControlStrip.vue`, `MobileControlCustomizerDialog.vue`) — trust code over that doc.
 - **Window lifetime:** calling BrowserWindow methods on destroyed instances crashes Electron — check `isDestroyed()`.
 - **Desktop window always visible, renderer optionally hidden:** the main window shows even with stage hidden so the pill stays reachable; `stageEnabled` controls only avatar/WhisperDock rendering (RFC "Dual Visibility Architecture"). Don't gate window creation on it.
 
@@ -124,14 +124,14 @@ Edit the `mode === 'mobile'` branches in §3's table — not a new component. To
 - Shared strip/store changes: `pnpm -F @proj-airi/stage-ui typecheck`
 - Desktop window/page changes: `pnpm -F @proj-airi/stage-tamagotchi typecheck` (`typecheck:node` then `typecheck:web`)
 - stage-pages editor changes: `pnpm -F @proj-airi/stage-pages typecheck`
-- Web/pocket mount or layout changes: build/run the app (`pnpm -F @proj-airi/stage-web dev`, `pnpm -F @proj-airi/stage-pocket dev`); there is no behavior test suite for the strip.
+- Web/pocket mount or layout changes: build/run the app (`pnpm -F @proj-airi/stage-web dev`); there is no behavior test suite for the strip.
 - Manual: desktop — drag, dock to each edge, collapse/notch hover, verify OS clicks pass through the notch; mobile — portrait vs landscape, left vs right edge, opposite-edge chatbox placement, `/settings/stage` slot cap.
 
 ## 7. Authoritative Design & Architecture Documents
 
 - [docs/project-control-strip-rfc.md](docs/project-control-strip-rfc.md) — Control Strip revamp RFC (pill schema, endcaps, mode toggle, notch docking, startup visibility orchestration).
 - [docs/catalog-control-strip.md](docs/catalog-control-strip.md) — master catalog of strip items by category with icons/display-type/default-state.
-- [docs/project-mobile-revamp.md](docs/project-mobile-revamp.md) — mobile UX design (interaction planes, dockedEdge coordination, touch-first customizer). **Partially stale**: its named `MobileControlStrip.vue`/`MobileControlCustomizerDialog.vue` files were never built; the shipped version is `ControlStrip mode="mobile"` (§3).
+- [docs/archive/project-mobile-revamp.md](docs/archive/project-mobile-revamp.md) (archived 2026-11-13, superseded by `proposal-unified-rust-native-app.md` — mobile is the unified Rust native app, not a webview) — mobile UX design (interaction planes, dockedEdge coordination, touch-first customizer). **Partially stale**: its named `MobileControlStrip.vue`/`MobileControlCustomizerDialog.vue` files were never built; the shipped version is `ControlStrip mode="mobile"` (§3).
 - [docs/design-stage-ui-context-bridge-control-island.md](docs/design-stage-ui-context-bridge-control-island.md) — Stage UI context bridge / control island architecture.
 - [docs/project-navigation-routing-overhaul.md](docs/project-navigation-routing-overhaul.md) — Navigation & routing overhaul project plan.
 - [docs/proposal-studio-sidetab.md](docs/proposal-studio-sidetab.md) — Studio sidetab proposal.

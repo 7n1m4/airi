@@ -22,7 +22,7 @@ export component AInputNumber inherits Rectangle {
     opacity: root.enabled ? 1 : 0.45;
     border-radius: Theme.radius-s;
     border-width: 1px;
-    border-color: root.input-ta.has-focus ? Theme.accent : Theme.border;
+    border-color: input.has-focus ? Theme.accent : Theme.border;
     background: Theme.surface-hover;
 
     // Format helper: trim to `decimals` places, then drop trailing zeros.
@@ -88,7 +88,6 @@ export component AInputNumber inherits Rectangle {
         selection-foreground-color: Theme.accent-contrast;
         font-size: Theme.font-body;
         text: root.fmt(root.value);
-        input-ta := TouchArea { mouse-cursor: MouseCursor.text; }
         edited => {
             root.value = Math.clamp(self.text.to-float(), root.minimum, root.maximum);
             root.edited(root.value);

@@ -31,11 +31,6 @@ patchedDependencies:
   srvx: patches/srvx.patch
 catalog:
   '@agentclientprotocol/sdk': ^2.0.2
-  '@capacitor/android': ^8.4.0
-  '@capacitor/cli': ^8.1.0
-  '@capacitor/core': ^8.1.0
-  '@capacitor/ios': ^8.1.0
-  '@capacitor/local-notifications': ^8.0.1
   '@chainsafe/libp2p-gossipsub': 14.1.2
   '@chainsafe/libp2p-noise': 16.1.5
   '@chainsafe/libp2p-yamux': 7.0.4
@@ -98,7 +93,6 @@ catalog:
   aws4fetch: ^1.0.20
   better-auth: ^1.4.19
   builder-util-runtime: ^9.5.1
-  capacitor-native-settings: ^8.0.0
   crossws: ^0.4.4
   d3-force: ^3.0.0
   d3-selection: ^3.0.0
@@ -174,7 +168,6 @@ ignoredBuiltDependencies:
   - onnxruntime-node
 
 onlyBuiltDependencies:
-  - '@discordjs/opus'
   - '@ffmpeg-installer/darwin-arm64'
   - '@ffmpeg-installer/linux-x64'
   - '@napi-rs/image'
@@ -188,7 +181,6 @@ onlyBuiltDependencies:
   - electron-winstaller
   - es5-ext
   - esbuild
-  - ffmpeg-static
   - koffi
   - less
   - msw

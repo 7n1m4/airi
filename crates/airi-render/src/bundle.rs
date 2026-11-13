@@ -277,7 +277,11 @@ fn extract_to_temp_then_rename(
             if member.is_dir() {
                 continue;
             }
-            let raw_name = member.name().replace('\\', "/");
+            let raw_name = member
+                .name()
+                .context("read zip member name")?
+                .as_ref()
+                .replace('\\', "/");
             let Some(zip_path) = sanitize_zip_path(&raw_name) else {
                 continue; // skip absolute / parent-escaping members
             };
@@ -447,7 +451,7 @@ mod tests {
         let mut buf = std::io::Cursor::new(Vec::new());
         {
             let mut writer = zip::ZipWriter::new(&mut buf);
-            let options = zip::write::FileOptions::default()
+            let options = zip::write::SimpleFileOptions::default()
                 .compression_method(zip::CompressionMethod::Deflated);
             for (name, data) in entries {
                 writer.start_file(*name, options).expect("start zip member");

@@ -12,7 +12,6 @@ members = [
   "crates/airi-stt",
   "crates/airi-speech",
   "crates/airi-local-llm",
-  "crates/airi-laya",
   "crates/airi-mcp",
   "crates/airi-mmd",
   "crates/airi-acp",
@@ -21,7 +20,6 @@ members = [
   "crates/airi-discord",
   "crates/airi-daemon",
   "crates/airi-a11y",
-  "crates/airi-slint",
 ]
 
 [workspace.dependencies]
@@ -49,6 +47,21 @@ dirs = "5"
 
 # LLM / HTTP
 async-openai = "0.31"
+# Wire types: Rust-canonical schema exported to TS (D2). specta-typescript
+# 0.0.15 pins specta =2.0.0-rc.28 exactly — keep both in sync.
+specta = { version = "=2.0.0-rc.28", features = [
+  "derive",
+  "serde_json"
+] }
+specta-typescript = "0.0.15"
+specta-serde = "0.0.15"
+# Gateway TLS (mkcert-style local CA, self-contained; D3). rustls 0.23 pairs
+# with ring like the rest of the tree.
+rcgen = "0.14.10"
+time = "0.3"
+rustls = "0.23"
+rustls-pemfile = "2.2.0"
+local-ip-address = "0.6.13"
 reqwest = { version = "0.12", features = [
   "json",
   "stream",
@@ -66,7 +79,7 @@ mockito = "1"
 
 # Rendering
 gltf = { version = "1", features = [ "extensions" ] }
-zip = "0.6"
+zip = "9.5.1"
 image = { version = "0.25", features = [
   "png",
   "jpeg",
@@ -78,7 +91,7 @@ png = "0.17"
 slint = { version = "1.18", features = [ "renderer-software" ] }
 slint-build = "1.18"
 
-# Laya (P9 lane 4): ONNX Runtime + HF tokenizers
+# ONNX Runtime + HF tokenizers (airi-speech, airi-stt)
 ort = "2.0.0-rc.15"
 tokenizers = { version = "0.22", default-features = false, features = [ "onig" ] }
 
