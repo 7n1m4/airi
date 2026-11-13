@@ -16,7 +16,7 @@ description: >-
 
 ## When to Use
 
-- Extending or debugging the WebSocket Gateway connection between the desktop application and external companion clients (e.g. Android/iOS `stage-pocket`, VS Code extensions, or custom Python agents).
+- Extending or debugging the WebSocket Gateway connection between the desktop application and external companion clients (e.g. the unified Rust native app — see `proposal-unified-rust-native-app.md`, VS Code extensions, or custom Python agents).
 - Modifying gateway security, auth token verification, token regeneration, or hostname binding (`127.0.0.1` vs `0.0.0.0`).
 - Troubleshooting TLS certificate creation, SAN domain updates, or connection dropouts over local WiFi.
 - Wiring frontend settings UI in `packages/stage-pages/src/pages/settings/` to `electronGetServerChannelConfig` and `electronApplyServerChannelConfig`.
@@ -24,7 +24,7 @@ description: >-
 ## Architecture & Security Contracts
 
 ```text
-[ External Client (Pocket / VS Code) ]
+[ External Client (Rust native app / VS Code) ]
                  │
                  ▼  ws://[IP]:6121 (or wss://)
 [ Channel Server (Electron Main Process) ]
@@ -46,7 +46,7 @@ description: >-
 
 - **Main Process Isolation**: The WebSocket server runs strictly in the Electron main process. Never attempt to bind network sockets directly inside renderer components.
 - **Port Collisions**: If port 6121 is occupied by a lingering instance, check `SERVER_CHANNEL_PORT` or kill orphan processes before restarting.
-- **LAN Access vs Loopback**: If mobile pocket clients cannot connect, verify that `hostname` is explicitly set to `0.0.0.0` and that the desktop OS firewall permits incoming traffic on port 6121.
+- **LAN Access vs Loopback**: If mobile native clients cannot connect, verify that `hostname` is explicitly set to `0.0.0.0` and that the desktop OS firewall permits incoming traffic on port 6121.
 - **Token Invalidation**: When regenerating the token via `electronApplyServerChannelConfig`, active external connections will be closed and must re-authenticate with the new token.
 
 ## Verification

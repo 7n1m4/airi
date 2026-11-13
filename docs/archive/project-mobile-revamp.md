@@ -1,3 +1,5 @@
+> **Superseded 2026-11-13.** Web-tech mobile (`apps/stage-pocket`, Capacitor) was purged; the replacement is the unified Rust native app — see [`proposal-unified-rust-native-app.md`](../proposal-unified-rust-native-app.md). Kept for the mobile interaction-plane UX research only; component names marked in the body were never built.
+
 # Architecture & Design Spec: AIRI Mobile Experience Revamp
 
 ## 1. Executive Summary & Core Philosophy

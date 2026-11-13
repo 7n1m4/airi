@@ -6,7 +6,7 @@ description: >-
 
 # AIRI Release, Packaging & Deploy
 
-Deployment surface map for shipping AIRI. Desktop releases are manual + script-assisted on the fork; Electron CI builds cover Win/macOS/Linux; mobile (stage-pocket) is Capacitor-based and currently the least automated; stage-web ships as Docker/OCI; edge workers deploy per-user via Cloudflare.
+Deployment surface map for shipping AIRI. Desktop releases are manual + script-assisted on the fork; Electron CI builds cover Win/macOS/Linux; there is currently no mobile release channel (the Capacitor app was purged 2026-11-13; the unified Rust native app will add one); stage-web ships as Docker/OCI; edge workers deploy per-user via Cloudflare.
 
 ## 1. Surface Map
 
@@ -15,8 +15,7 @@ Deployment surface map for shipping AIRI. Desktop releases are manual + script-a
 | Windows | `stage-tamagotchi` | `AIRI-<ver>.exe` + `.zip` (portable) | Local: `pnpm run release:win` (fork `dasilva333/airi`) |
 | macOS | `stage-tamagotchi` | `AIRI-<ver>.dmg` (arm64 + x64) | Local: `pnpm run release:mac` (notarized) |
 | Linux | `stage-tamagotchi` | `.deb`, `.rpm`, `.flatpak` (x64 + arm64) | CI only (`release-linux-desktop.yml`, incl. Flatpak via flathub SDK) |
-| Android | `stage-pocket` | `.apk` / `.aab` | Manual Capacitor + Gradle; no release automation exists |
-| iOS | `stage-pocket` | `.ipa` | Manual Capacitor + Xcode archive; no release automation exists |
+| Mobile (planned) | unified Rust native app (`crates/airi-slint`) | TBD | Purged 2026-11-13; see `docs/proposal-unified-rust-native-app.md` |
 | Web & Docs | `stage-web` / `docs` | static sites | `deploy-frontends.yml` → GitHub Pages (`/airi/` & `/airi/web-stage/`) |
 | Edge relay | `apps/stage-edge` | Cloudflare Worker (per-user) | Built into users' accounts via OAuth PKCE during onboarding; see `airi-cloud-relay-infrastructure` skill |
 
@@ -61,35 +60,9 @@ Build matrix: `ubuntu-latest` (x64: deb, rpm, Flatpak via flathub SDK), `ubuntu-
 - Publish policy: `--publish=never` for electron-builder; artifacts renamed and uploaded via `softprops/action-gh-release` to the release tag.
 - Linux runners run `jlumbroso/free-disk-space` first (historic "No space left" archive failures).
 
-## 4. Mobile: Android APK & iOS IPA (`apps/stage-pocket`)
+## 4. Mobile — superseded (2026-11-13)
 
-Capacitor app (config `capacitor.config.ts`: appId `ai.moeru.airi-pocket`, appName `AIRI`, `webDir: 'dist'`). **The `android/` and `ios/` native projects ARE tracked in git** — commit legitimate native edits, but treat `cap`-regenerated files (e.g. `android/capacitor.settings.gradle`, "DO NOT EDIT" header) as generated noise unless a plugin list actually changed.
-
-### Dev loop
-- `pnpm -rF @proj-airi/stage-pocket run dev:ios` (= `cap-vite -- ios`, the in-repo `packages/cap-vite` tool: Vite dev server + `cap run` live reload; `CAPACITOR_DEV_SERVER_URL` env drives the capacitor dev-server config). Full CLI: `cap-vite [vite args] -- <ios|android> [cap run args]`.
-- **`dev:android` is missing** from stage-pocket's `package.json` — root `dev:pocket:android` invokes it and fails. Develop Android via `cap-vite -- android` directly or the manual flow below.
-- Root convenience: `pnpm run open:ios` (= `cap open ios`).
-
-### Android APK/AAB (manual, no release script)
-1. `pnpm -F @proj-airi/stage-pocket run build` — Vite web bundle → `dist/`.
-2. `pnpm -F @proj-airi/stage-pocket exec cap sync android` — copies web assets + plugin wiring into the Gradle project.
-3. Build: from `apps/stage-pocket/android`: `./gradlew assembleRelease` → `app/build/outputs/apk/release/app-release.apk` (AAB: `bundleRelease`).
-4. **Signing is conditional** (`app/build.gradle`): release is signed only when credentials exist — `android/keystore.properties` (copy of `keystore.properties.example`, gitignored) or env vars `AIRI_KEYSTORE_FILE` / `AIRI_KEYSTORE_PASSWORD` / `AIRI_KEY_ALIAS` / `AIRI_KEY_PASSWORD` (env wins). Without credentials the APK is unsigned — fine for sideload/debug-install, but the Play Store requires a signed AAB (`bundleRelease`). Generate a keystore once with `keytool -genkey -v -keystore airi-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias airi`; the keystore file itself (`.jks`) is gitignored — back it up securely, losing it loses store update continuity.
-- Facts: applicationId `ai.moeru.airipocket`, `minSdkVersion 24`, `targetSdkVersion`/`compileSdkVersion 36`, `versionCode 1` / `versionName "1.0"` (`app/build.gradle`).
-- `capacitor.settings.gradle` hard-codes `.pnpm` store paths for `@capacitor/android`, `@capacitor/local-notifications`, `capacitor-native-settings` — it breaks when versions bump until `capacitor update` / `cap sync` regenerates it (`pnpm install --frozen-lockfile` keeps paths stable across machines).
-
-### iOS IPA (Automated Headless & Manual Xcode)
-1. **Automated Headless Build & Upload**:
-   - `pnpm run release:ios` (from root): builds web bundle, syncs Capacitor iOS, runs headless `xcodebuild archive`, packages `AIRI-<version>-ios.ipa`, and uploads to the active GitHub release.
-   - `pnpm run build:pocket:ipa` (or `pnpm -F @proj-airi/stage-pocket run build:ipa`): generates `App.ipa` and `AIRI-<version>-ios.ipa` in `apps/stage-pocket/build/` without uploading.
-2. **Manual Xcode Export**:
-   - Open `ios/App/App.xcodeproj` in Xcode: `Product` → `Archive` → `Distribute App` (App Store Connect / Ad Hoc / Development).
-3. Versioning lives in Xcode project: `MARKETING_VERSION` (CFBundleShortVersionString) and `CURRENT_PROJECT_VERSION` (CFBundleVersion).
-- `Info.plist` (tracked): mic + speech-recognition usage descriptions (`NSMicrophoneUsageDescription`, `NSSpeechRecognitionUsageDescription`), `NSAllowsArbitraryLoads: true` (LAN/local model HTTP), `ITSAppUsesNonExemptEncryption: false`, iPhone-only, portrait+landscape.
-- `lint:swift` runs swiftlint over `ios/` (`swiftlint.yml` present).
-
-### Mobile version discipline
-`stage-pocket` has its own semver in `package.json` (`0.9.1-stable.<date>`) but Android `versionCode` and iOS build numbers are managed separately — bump both whenever distributing a new build to the same channel.
+The Capacitor app `apps/stage-pocket` was **purged** (web tech on mobile rejected; see `docs/proposal-unified-rust-native-app.md`). All Android APK / iOS IPA release flows, the `packages/cap-vite` tool, and the `dev:pocket:*` scripts are deleted. Mobile distribution will be designed for the unified Rust native app (Slint, desktop + mobile from one screen-size-reactive codebase) and documented here when it exists. There is no mobile release channel until then.
 
 ## 5. Web & Docs Frontends / GitHub Pages / Edge
 
@@ -113,21 +86,20 @@ Capacitor app (config `capacitor.config.ts`: appId `ai.moeru.airi-pocket`, appNa
  - **Resilient asset downloads:** build-time font/model fetches should use `packages/stage-shared/src/ts/resilient.ts` retry wrapper to survive flaky networks.
  - **taskkill ban:** never kill `node.exe`/`electron.exe` en masse to unstuck builds; coordinate with the user instead (guide §5, CAUTION).
  - **Fork vs upstream asymmetry:** the release scripts target `dasilva333/airi`; SignPath signing and several CI guards only fire on `moeru-ai/airi`. Don't assume parity.
- - **Android/iOS release automation does not exist.** Any "release pocket" request means manual gradle/Xcode steps plus signing decisions — confirm with the user which channel (sideload/ad-hoc/store) before proceeding.
+ - **There is no mobile release channel.** The Capacitor `stage-pocket` was purged 2026-11-13 (`docs/proposal-unified-rust-native-app.md`); any "release android/ios" request means the Rust native app does not exist yet — say so, and discuss scope with the user before doing anything.
 
  ## When to Use
 
  - Running or troubleshooting `release:win` / `release:mac`, version stamping, tagging, release-note drafting.
  - Interpreting or fixing `release-linux-desktop.yml` or `deploy-frontends.yml`.
  - Electron-builder config, signing/notarization, artifact naming (`artifacts-metadata.ts`, `rename-artifacts`).
- - Building stage-pocket APK/AAB/IPA, capacity/Capacitor sync problems, native-project git hygiene.
  - Any "why did the build fail" involving renderer Node-module leakage, disk space, or file locks.
 
  ## Verification
 
  - Desktop local release: the publish scripts re-verify tag/artifact existence themselves; a successful run ends with the GitHub release URL printed and the artifacts visible there.
  - Build-only validation without release: `pnpm run release:win --build-only` (smoke test window), or `pnpm -F @proj-airi/stage-tamagotchi run build:win|build:mac` for compile-level confidence. Typecheck/build per the `airi-codebase-verification` skill before any push.
- - Mobile: APK sanity = install on device/emulator (`adb install`); IPA = Xcode archive log + installed app run. No CI covers pocket yet — state this explicitly when asked to "reproduce CI" for mobile.
+ - Mobile: no channel exists — state this explicitly when asked to cut a mobile release.
  - After any file modification: `git status` and report open/unstaged files verbatim.
 
  ### Authoritative Documents

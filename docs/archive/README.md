@@ -33,6 +33,7 @@ This directory contains historical handoffs, point-in-time model reviews, comple
 | `[[project-positioning-store-migration]]` | Completed Phase Handoff | Positioning store migration plan with progress log; migration shipped. |
 | `[[proposal-acting-sidebar]]` | Implemented Proposal | Rehearsal Room sidebar proposal; shipped — referenced as live by `proposal-ninja-swap-interceptor.md`. |
 | `[[sentence-sync-streaming-tts-architecture-review]]` | Model Review Snapshot | Architecture review verdict on `design-contextual-streaming-tts-and-sentence-sync.md`. |
+| `[[project-mobile-revamp]]` | Superseded Proposal | Capacitor web-tech mobile purged 2026-11-13; replacement is the unified Rust native app (`proposal-unified-rust-native-app.md`). |
 
 ## `qt-port/` — the Qt Quick port (2026, superseded by the Slint port)
 
