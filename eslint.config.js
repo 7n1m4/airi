@@ -38,8 +38,6 @@ export default defineConfig({
     'apps/stage-tamagotchi/src-tauri/**',
     'apps/stage-tamagotchi-electron/out/**',
     'apps/stage-tamagotchi-electron/src/renderer/bindings/**',
-    'apps/stage-pocket/ios/**',
-    'apps/stage-pocket/android/**',
     'crates/**',
     // NOTICE: moved here from the former desktop shell's scripts dir, so the root lint reaches
     // it for the first time. Its 9 diagnostics (2 `style/max-statements-per-line`,

@@ -34,8 +34,8 @@ Why this shape:
 graph TB
   subgraph surfaces["UI surfaces (thin clients)"]
     web["TS web/desktop app<br/>apps/stage-tamagotchi<br/>(Vue renderer on Electrobun/CEF)"]
-    slint["Slint desktop shell<br/>crates/airi-slint"]
-    future["future OS surfaces<br/>(agentic OS, pocket, web)"]
+    slint["Unified Rust native app<br/>crates/airi-slint<br/>(desktop + mobile)"]
+    future["future OS surfaces<br/>(agentic OS)"]
   end
   subgraph core["Rust core (the brain)"]
     gw["airi-channel<br/>local WS gateway :6121<br/>auth-token handshake"]
@@ -64,7 +64,8 @@ Be honest about the gap; do not pretend the port is done.
 | Surface / component | State | Where its logic lives today |
 |---|---|---|
 | TS web/desktop app (`apps/stage-tamagotchi`) | Polished, daily-driver. Main process ported in place from Electron to **Electrobun 2** (`design-electrobun-port.md`). | **All business logic still in TypeScript** (`src/main/**` + `packages/*`). This is the strangler's starting point, not a finished client. |
-| Slint desktop shell (`crates/airi-slint`) | Booting profile/settings/store/provider repo, optional gateway, spine rendering. | Rust, via `airi-core`; UI-feature parity with the TS app is partial. |
+| Unified Rust native app (`crates/airi-slint`) | Booting profile/settings/store/provider repo, optional gateway, spine rendering. Desktop today; mobile is the same codebase, grown from this shell — the UI must be reactive to screen size so one build ships both. See `proposal-unified-rust-native-app.md`. | Rust, via `airi-core`; UI-feature parity with the TS app is partial. |
+| Mobile app (`apps/stage-pocket`, Capacitor) | **Purged 2026-11-13** — replaced by the unified Rust native app; UI must be reactive to screen size so one codebase ships desktop + mobile. | — |
 | Rust core (`airi-core`, `airi-store`, `airi-llm`, …) | Real foundation: typed settings sections, streaming chat pipeline with persistence, character cards (CCv2/v3 + `airi` ext), memory lanes. | Growing toward parity service by service. |
 | `airi-daemon` | Shipped: systemd `Type=dbus` unit + D-Bus activation (`packaging/`), six T0 awareness sources, opt-in AT-SPI, redacted audit JSONL. | Rust. The OS-integration anchor — awareness runs even with no UI open. |
 
