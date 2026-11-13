@@ -58,7 +58,9 @@ export function createReferencedWindowManager<Payload extends RequestWindowPaylo
 
     await setupBaseWindowElectronInvokes({ context, window: win, i18n: params.i18n, serverChannel: params.serverChannel })
 
-    win.on('closed', () => windows.delete(id))
+    // NOTICE: Electrobun's native layer emits `close-<id>`, so the event name is `close`
+    // (Electron's `closed`). Listening for `closed` here silently leaked the map entry.
+    win.on('close', () => windows.delete(id))
 
     return { window: win, context }
   }

@@ -452,26 +452,42 @@ async function boot() {
       })
       await setupOptionalService('services:discord', () => setupDiscordService())
 
-      defineInvokeHandler(context, electronSplashGetSnapshot, async () => lastSnapshot ?? buildStartupSnapshot())
+      // NOTICE: the splash invokes `getSnapshot` / `reportMilestone` / `dismiss` / `stageRelease`
+      // from its own view, and Electrobun routes a view's frames only to that view's bound
+      // context — registering these on the Control Strip's context alone parks every splash
+      // frame in `pendingInbound` forever (that was the 30 s "Splash did not dismiss in time"
+      // stall). Both contexts get the same handler set.
+      const registerStartupHandlers = (target: AnyEventaContext) => {
+        defineInvokeHandler(target, electronSplashGetSnapshot, async () => lastSnapshot ?? buildStartupSnapshot())
 
-      defineInvokeHandler(context, electronSplashReportMilestone, async (payload) => {
-        if (!payload || !STARTUP_MILESTONE_IDS.includes(payload.id as typeof STARTUP_MILESTONE_IDS[number]))
-          return
-        startupMilestones.set(payload.id, { id: payload.id, status: payload.status, error: payload.error })
-        emitStartupSnapshot()
-      })
+        defineInvokeHandler(target, electronSplashReportMilestone, async (payload) => {
+          if (!payload || !STARTUP_MILESTONE_IDS.includes(payload.id as typeof STARTUP_MILESTONE_IDS[number]))
+            return
+          startupMilestones.set(payload.id, { id: payload.id, status: payload.status, error: payload.error })
+          emitStartupSnapshot()
+        })
 
-      defineInvokeHandler(context, electronSplashDismiss, async () => {
-        if (splashDismissed)
-          return
-        splashDismissed = true
-        await rpc.startup.dismiss()
-        if (!registryIsDestroyed(mainWindowView as never))
-          get('main')?.show()
-        if (getStageVisibleState())
-          get('stage')?.show()
-        restoreCaption()
-      })
+        defineInvokeHandler(target, electronSplashDismiss, async () => {
+          if (splashDismissed)
+            return
+          splashDismissed = true
+          await rpc.startup.dismiss()
+          if (!registryIsDestroyed(mainWindowView as never))
+            get('main')?.show()
+          if (getStageVisibleState())
+            get('stage')?.show()
+          restoreCaption()
+        })
+
+        defineInvokeHandler(target, electronStageRelease, async () => {
+          // Full release: hide freezes the loops, close frees the Chromium
+          // renderer + GPU contexts (~200MB+) for text-only companions.
+          get('stage')?.hide()
+          get('stage')?.close()
+        })
+      }
+
+      registerStartupHandlers(context)
 
       const defaultBypassUrls = DEFAULT_CORS_BYPASS_URLS
       const coalesceCorsBypassUrls = (userUrls?: string[]): string[] => {
@@ -595,13 +611,6 @@ async function boot() {
         return { created: Boolean(window) }
       })
 
-      defineInvokeHandler(context, electronStageRelease, async () => {
-        // Full release: hide freezes the loops, close frees the Chromium
-        // renderer + GPU contexts (~200MB+) for text-only companions.
-        get('stage')?.hide()
-        get('stage')?.close()
-      })
-
       defineInvokeHandler(context, electronShowToast, async (payload) => {
         if (!payload)
           return
@@ -635,6 +644,14 @@ async function boot() {
         else if (!wasEnabled && isNowVisible)
           void caption.toggleVisibility(false)
       }
+
+      // Bind the splash view's own context and give it the same startup/splash handlers —
+      // `contextFor` also drains any frames the splash parked in `pendingInbound` before now.
+      // Anchored after `restoreCaption` so a parked frame that dismisses synchronously during
+      // the drain still sees an initialized closure.
+      const splashWebview = splashWindowManager.getWindow()?.webview
+      if (splashWebview)
+        registerStartupHandlers(await rpc.contextFor(splashWebview))
 
       // NOTICE: Caption restore is deferred until splash dismissal so the caption cannot pop in
       // before the coordinated reveal.

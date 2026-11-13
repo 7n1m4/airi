@@ -12,6 +12,8 @@ import {
   electronStageRelease,
 } from '../shared/eventa'
 
+import './install-bridge'
+
 // NOTICE: Milestone labels and hints tailored for the warm companion experience.
 // Kept self-contained so the splash paints instantly (<10ms) without waiting
 // on i18n initialization or the monolithic main.ts application graph.
@@ -210,8 +212,8 @@ btnCloseWindow?.addEventListener('click', () => {
 })
 
 // IPC & Eventa context
-const ipcRenderer = (window as unknown as { electron?: { ipcRenderer?: unknown } })?.electron?.ipcRenderer
-const eventaAdapter = ipcRenderer ? createContext(ipcRenderer as any) : undefined
+const ipcRenderer = window.electron?.ipcRenderer
+const eventaAdapter = ipcRenderer ? createContext(ipcRenderer) : undefined
 const context = eventaAdapter?.context
 
 const getSnapshot = context ? defineInvoke(context, electronSplashGetSnapshot) : undefined

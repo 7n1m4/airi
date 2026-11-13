@@ -1,4 +1,4 @@
-import type { BrowserView, Rectangle } from 'electrobun/main'
+import type { BrowserView, ElectrobunWindowEvent, Rectangle, WindowGeometryEvent } from 'electrobun/main'
 import type { InferOutput } from 'valibot'
 
 import type { globalAppConfigSchema } from '../../configs/global'
@@ -220,7 +220,20 @@ export async function setupMainWindow(params: {
   }
 
   const throttledHandleNewBounds = throttle(handleNewBounds, 200)
-  void throttledHandleNewBounds
+  // `handleNewBounds` needs all four numbers, while a `move` event carries only `x`/`y` — so a
+  // move handler reads the live frame and overrides the two axes the event actually changed.
+  const onWindowFrameChange = (moved: { x?: number, y?: number }) => {
+    const frame = window.getFrame()
+    throttledHandleNewBounds({
+      x: moved.x ?? frame.x,
+      y: moved.y ?? frame.y,
+      width: frame.width,
+      height: frame.height,
+    })
+  }
+  const onFrameEvent = (event: ElectrobunWindowEvent<WindowGeometryEvent>) => onWindowFrameChange(event.data)
+  window.on('move', onFrameEvent)
+  window.on('resize', onFrameEvent)
 
   const debouncedSnap = debounce(() => {
     if (isDestroyed(window))
@@ -347,10 +360,9 @@ export async function setupMainWindow(params: {
     }
   }, 150)
 
-  void debouncedSnap
+  window.on('move', () => debouncedSnap())
+  window.on('resize', () => debouncedSnap())
 
-  // TODO(port): window.on('resize'|'move') — Electrobun emits no per-window move/resize event,
-  // so bounds persistence must hook the native layer (docs/design-electrobun-port.md §3.1).
   // TODO(port): setupMainWindowElectronInvokes — the Control Strip RPC surface lands in wave 1
   // only as far as the splash + strip handlers; the remaining invokes are ported per surface.
 
