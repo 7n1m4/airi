@@ -13,7 +13,7 @@
 - `packages/stage-ui/src/composables/speech-runtime/` (TTS murmurs, asides, inner thoughts)
 
 **Related Authoritative References:**
-- [`docs/architecture-chat-orchestrator-decomposition.md`](./architecture-chat-orchestrator-decomposition.md) — Phase 4 `grounding-assembler.ts` seam for `[RECENT TOPICS]`.
+- [`docs/archive/architecture-chat-orchestrator-decomposition.md`](./archive/architecture-chat-orchestrator-decomposition.md) — Phase 4 `grounding-assembler.ts` seam for `[RECENT TOPICS]`.
 - [`docs/proposal-toggle4-rework-and-rwkv-harness.md`](./proposal-toggle4-rework-and-rwkv-harness.md) — Problem statement on stopword failure & Toggle 4 "Here & Now" requirements.
 - [`docs/proposal-dynamic-memory-rag-injection.md`](./proposal-dynamic-memory-rag-injection.md) — Original Toggle 4 context injection & Pre-Flight Grounding specification.
 - [`docs/proposal-echo-chips-rwkv-synthesis.md`](./proposal-echo-chips-rwkv-synthesis.md) — Original Echo Chips memory synthesis & ticker concepts.

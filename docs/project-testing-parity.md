@@ -9,7 +9,7 @@
 - [`AGENTS.md`](../AGENTS.md) — Critical git status reporting and commit/release safety rules.
 - [`docs/rosetta-stone.md`](./rosetta-stone.md) — Canonical concept-to-file path index.
 - [`docs/project-specialized-skills.md`](./project-specialized-skills.md) — Skill domain catalog (including `airi-codebase-verification`).
-- [`docs/architecture-chat-orchestrator-decomposition.md`](./architecture-chat-orchestrator-decomposition.md) — Core agent seam extraction specification.
+- [`docs/archive/architecture-chat-orchestrator-decomposition.md`](./archive/architecture-chat-orchestrator-decomposition.md) — Core agent seam extraction specification.
 - [`docs/UPSTREAM_RADAR.md`](./UPSTREAM_RADAR.md) — Upstream commit delta & PR tracking ledger.
 
 > [!IMPORTANT]

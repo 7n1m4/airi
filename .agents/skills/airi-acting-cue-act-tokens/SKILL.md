@@ -132,7 +132,7 @@ Verify these cases with the existing parser/categorizer tests and `packages/stag
 - `packages/stage-ui/src/types/chat.ts` (:25-48) — `rawContent`/`content` contract; `chat.ts` (:1113-1117, :1648-1656).
 - `packages/stage-ui/src/components/scenes/ControlStripHost.vue` (:387-421, :465) — cue dispatch.
 - `apps/stage-tamagotchi/src/renderer/components/chat/chat_rehearsal.vue` — playground.
-- `docs/design-journal-actor-token-sync.md` + `docs/design-actor-token-sync-postmortem.md` — ACTOR-token sync diagnostics journal and its validated code-trace review (generation/playback clock skew, text-swallowing, single-flight gaps).
+- `docs/design-journal-actor-token-sync.md` + `docs/archive/design-actor-token-sync-postmortem.md` — ACTOR-token sync diagnostics journal and its validated code-trace review (generation/playback clock skew, text-swallowing, single-flight gaps).
 - Peer skills: `airi-prompt-builder-engine`, `airi-character-rendering`, `airi-model-customizer`, `airi-interaction-pipelines`, `airi-onboarding-v2`, `airi-tool-registry-builtin-tools`.
 
 ## Related Skills & References

@@ -2,7 +2,7 @@
 
 This document serves as the canonical diagnostics journal and architectural design record for resolving the timing, synchronization, and text-swallowing bugs associated with the `<|ACTOR:|>` swap tokens.
 
-> **Validated by:** [`docs/design-actor-token-sync-postmortem.md`](./design-actor-token-sync-postmortem.md) — independent line-by-line code-trace review (2026-06-12); verdicts on A–D corrected where the original mechanisms were misdiagnosed.
+> **Validated by:** [`docs/archive/design-actor-token-sync-postmortem.md`](./archive/design-actor-token-sync-postmortem.md) — independent line-by-line code-trace review (2026-06-12); verdicts on A–D corrected where the original mechanisms were misdiagnosed.
 
 ---
 
