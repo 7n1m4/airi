@@ -60,7 +60,7 @@ fn live_zip_loads_from_env() {
             }
             let Some(enclosed) = entry.enclosed_name() else {
                 // Refuse zip-slip paths; skip the entry rather than write outside temp.
-                eprintln!("skipping unsafe entry {}", entry.name());
+                eprintln!("skipping unsafe entry {}", entry.name().map(|n| n.into_owned()).unwrap_or_else(|_| "<invalid>".to_string()));
                 continue;
             };
             let dest = temp.join(enclosed);
@@ -69,7 +69,7 @@ fn live_zip_loads_from_env() {
             }
             let mut out = std::fs::File::create(&dest)?;
             std::io::copy(&mut entry, &mut out)?;
-            if entry.name().to_ascii_lowercase().ends_with(".pmx") {
+            if entry.name().map(|n| n.to_ascii_lowercase()).unwrap_or_default().ends_with(".pmx") {
                 model_path = Some(dest);
             }
         }

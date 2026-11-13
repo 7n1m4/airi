@@ -4,25 +4,19 @@
 //! airi-slint: Slint-based desktop shell for AIRI.
 //!
 //! Boots the process-wide state the bridges need (profile directory, settings
-//! store, database, provider repo, Tokio runtime), optionally starts the local
-//! `--gateway` channel server, then hands control to the Slint event loop with
-//! the `MainWindow` from `bootstrap.slint`.
+//! store, database, provider repo, Tokio runtime), then hands control to the
+//! Slint event loop with the `MainWindow` from `bootstrap.slint`.
 //!
-//! Flags: `--profile <dir>`, `--smoke`, `--spine-model <path>`, `--gateway
-//! [port]`, `--help`. `--smoke` runs a headless spine check and exits without
-//! opening a window.
+//! Flags: `--profile <dir>`, `--smoke`, `--spine-model <path>`, `--help`.
+//! `--smoke` runs a headless spine check and exits without opening a window.
 
 use std::path::PathBuf;
 
 use airi_slint::bridges::{self, spine::with_controller};
-use airi_slint::{
-    AboutWindow, ChatWindow, MainWindow, SettingsWindow, gateway_handlers, spine_rt,
-};
+use airi_slint::{AboutWindow, ChatWindow, MainWindow, SettingsWindow, spine_rt};
 
 /// Directory name under the platform data dir for this app's profile.
 const APP_DIR_NAME: &str = "airi-slint";
-/// Default gateway port when `--gateway` is given without a port.
-const DEFAULT_GATEWAY_PORT: u16 = 6121;
 
 /// Parsed command line.
 #[derive(Debug, Default)]
@@ -33,13 +27,12 @@ struct Cli {
     smoke: bool,
     /// Load this spine bundle before showing the stage.
     spine_model: Option<String>,
-    /// Start the local RPC gateway; the optional value is the port.
-    gateway: Option<u16>,
     /// Print usage and exit.
     help: bool,
 }
 
 fn main() {
+    airi_channel::install_default_crypto_provider();
     let cli = parse_cli(std::env::args().skip(1));
 
     if cli.help {
@@ -80,12 +73,6 @@ fn main() {
         .build()
         .expect("failed to build the async runtime");
     bridges::set_runtime_handle(runtime.handle().clone());
-
-    // Held until the end of `main`: the spawned accept loop serves for the
-    // process lifetime.
-    let _gateway_handle = cli
-        .gateway
-        .and_then(|port| serve_gateway(&db, &profile, port));
 
     if let Some(path) = &cli.spine_model {
         let ok = with_controller(|c| c.load_model(path));
@@ -277,59 +264,6 @@ fn sync_chat_view(window: &airi_slint::ChatWindow) {
     ))));
 }
 
-/// Start the local RPC gateway on `port`, logging the bound address.
-///
-/// Loads the persisted `server-channel/config.json` exactly like airi-daemon
-/// (`<profile>/server-channel/config.json`, healing it when missing/invalid),
-/// so loopback clients authenticate against the same token the daemon and
-/// the Electron build use. The returned handle must be held for the process
-/// lifetime; dropping it does not stop the accept thread, but holding it
-/// keeps the spawn honest and preserves the bound port.
-fn serve_gateway(
-    db: &airi_store::Database,
-    profile: &std::path::Path,
-    port: u16,
-) -> Option<airi_channel::ServerHandle> {
-    let config_path = profile.join("server-channel").join("config.json");
-    let config = match airi_channel::load_or_heal(&config_path) {
-        Ok(config) => config,
-        Err(error) => {
-            eprintln!(
-                "[airi-slint] gateway config load/heal failed ({}): {error}",
-                config_path.display()
-            );
-            return None;
-        }
-    };
-    let handlers = gateway_handlers::build(db.clone());
-    let server = match airi_channel::ChannelServer::bind_with_renderer(
-        &config.hostname,
-        port,
-        &config,
-        handlers,
-    ) {
-        Ok(server) => server,
-        Err(error) => {
-            eprintln!("[airi-slint] gateway failed to bind port {port}: {error}");
-            return None;
-        }
-    };
-    match server.spawn() {
-        Ok(handle) => {
-            eprintln!(
-                "[airi-slint] gateway listening on {}:{}",
-                config.hostname,
-                handle.port()
-            );
-            Some(handle)
-        }
-        Err(error) => {
-            eprintln!("[airi-slint] gateway failed to spawn accept loop: {error}");
-            None
-        }
-    }
-}
-
 /// The profile directory: `--profile` when given, else `<data>/airi-slint`.
 fn resolve_profile(cli: &Cli) -> PathBuf {
     if let Some(dir) = &cli.profile {
@@ -352,7 +286,6 @@ fn print_usage() {
          --profile <dir>       use <dir> for settings, cards and the database\n    \
          --smoke               run the headless spine check and exit\n    \
          --spine-model <path>  load this spine bundle before showing the stage\n    \
-         --gateway [port]      serve the local RPC gateway (default port {DEFAULT_GATEWAY_PORT})\n    \
          --help                print this help"
     );
 }
@@ -360,23 +293,13 @@ fn print_usage() {
 /// Parse the CLI, warning about anything unrecognised.
 fn parse_cli(args: impl Iterator<Item = String>) -> Cli {
     let mut cli = Cli::default();
-    let mut iter = args.peekable();
+    let mut iter = args;
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--smoke" => cli.smoke = true,
             "--help" | "-h" => cli.help = true,
             "--spine-model" => cli.spine_model = iter.next(),
             "--profile" => cli.profile = iter.next().map(PathBuf::from),
-            "--gateway" => {
-                // The port is optional: a following value that is not a flag
-                // and parses as u16 is the port, anything else is the next flag.
-                cli.gateway = Some(
-                    iter.peek()
-                        .filter(|next| !next.starts_with("--"))
-                        .and_then(|next| next.parse::<u16>().ok())
-                        .unwrap_or(DEFAULT_GATEWAY_PORT),
-                );
-            }
             other => eprintln!("[airi-slint] unknown argument: {other}"),
         }
     }
@@ -398,27 +321,6 @@ mod tests {
         assert!(!cli.help);
         assert!(cli.profile.is_none());
         assert!(cli.spine_model.is_none());
-        assert!(cli.gateway.is_none());
-    }
-
-    #[test]
-    fn gateway_port_is_optional() {
-        // `--gateway` alone takes the default port.
-        assert_eq!(parse(&["--gateway"]).gateway, Some(DEFAULT_GATEWAY_PORT));
-        // A numeric value becomes the port; it is consumed, not left as a flag.
-        assert_eq!(parse(&["--gateway", "9000"]).gateway, Some(9000));
-        // A following flag must not be eaten as the port.
-        assert_eq!(
-            parse(&["--gateway", "--smoke"]).gateway,
-            Some(DEFAULT_GATEWAY_PORT)
-        );
-    }
-
-    #[test]
-    fn gateway_before_a_following_flag() {
-        let cli = parse(&["--gateway", "--smoke"]);
-        assert!(cli.smoke);
-        assert_eq!(cli.gateway, Some(DEFAULT_GATEWAY_PORT));
     }
 
     #[test]
@@ -427,15 +329,6 @@ mod tests {
         assert_eq!(
             cli.profile.as_deref(),
             Some(std::path::Path::new("/tmp/airi-test-profile"))
-        );
-        assert!(cli.gateway.is_none());
-    }
-
-    #[test]
-    fn repeated_flags_last_one_wins() {
-        assert_eq!(
-            parse(&["--gateway", "1", "--gateway", "2"]).gateway,
-            Some(2)
         );
     }
 }

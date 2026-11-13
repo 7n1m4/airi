@@ -31,7 +31,7 @@ use crate::uuid::uuid_v4;
 pub const DEFAULT_HOSTNAME: &str = "127.0.0.1";
 
 /// The persisted channel-server configuration.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 pub struct ChannelConfig {
     /// Bind address. Defaults to `127.0.0.1`; use `0.0.0.0` deliberately and
     /// only to permit LAN access (see crate-level security notes).
@@ -47,6 +47,9 @@ pub struct ChannelConfig {
         default,
         skip_serializing_if = "Option::is_none"
     )]
+    // specta rejects serde_json::Value wholesale (BigInt-style Number inside);
+    // the opaque flag exports as `unknown`, same as the frame payload fields.
+    #[specta(type = specta_typescript::Unknown)]
     pub tls_config: Option<serde_json::Value>,
 }
 

@@ -55,8 +55,9 @@ specta = { version = "=2.0.0-rc.28", features = [
 ] }
 specta-typescript = "0.0.15"
 specta-serde = "0.0.15"
-# Gateway TLS (mkcert-style local CA, self-contained; D3). rustls 0.23 pairs
-# with ring like the rest of the tree.
+# Gateway TLS (mkcert-style local CA, self-contained; D3). The unified
+# workspace build carries both rustls providers (ring via quinn-proto,
+# aws-lc-rs via rustls defaults); binaries/tests install aws-lc-rs explicitly.
 rcgen = "0.14.10"
 time = "0.3"
 rustls = "0.23"

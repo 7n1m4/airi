@@ -407,6 +407,7 @@ mod tests {
 
     #[test]
     fn server_config_builds_from_generated_certs() {
+        crate::install_default_crypto_provider();
         let tmp = tempfile::tempdir().unwrap();
         let bundle = get_or_create_certs(tmp.path(), &san_domains(&[])).unwrap();
         assert!(server_config_available(&bundle.cert_pem, &bundle.key_pem));

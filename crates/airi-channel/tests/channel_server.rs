@@ -459,6 +459,7 @@ fn websocket_ping_frame_gets_pong_frame() {
 /// for LAN/VPN clients.
 #[test]
 fn tls_round_trip_upgrade_auth_and_rpc() {
+    airi_channel::install_default_crypto_provider();
     use rustls::pki_types::CertificateDer;
 
     let _guard = TEST_LOCK.lock().unwrap();

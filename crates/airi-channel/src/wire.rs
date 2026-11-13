@@ -245,7 +245,8 @@ pub enum GatewayServerFrame {
 /// Types collected for the TypeScript export. Extracted into a function so
 /// the exporter example and any future drift test agree on the schema
 /// without duplicating the list. `specta::Types` auto-registers transitive
-/// named dependencies, so only the frame roots are needed here.
+/// named dependencies, so the frame roots plus the gateway control-plane
+/// DTOs (`control.rs`, `config.rs`) are needed here.
 pub fn type_collection() -> specta::Types {
     specta::Types::default()
         .register::<GatewayClientFrame>()
@@ -254,6 +255,9 @@ pub fn type_collection() -> specta::Types {
         .register::<RuntimeStatusReply>()
         .register::<GatewayConfigReply>()
         .register::<GatewayAuthReply>()
+        .register::<crate::config::ChannelConfig>()
+        .register::<crate::control::GatewayControlStatus>()
+        .register::<crate::control::GatewayControlApply>()
 }
 
 #[cfg(test)]

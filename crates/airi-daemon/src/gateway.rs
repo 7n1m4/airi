@@ -51,7 +51,7 @@ use std::time::{Duration, Instant};
 
 use airi_channel::{
     get_or_create_certs, load_or_heal, san_domains, uuid::uuid_v4, ChannelConfig, ChannelServer,
-    ServerHandle,
+    GatewayControlApply, GatewayControlStatus, ServerHandle,
 };
 
 /// How often the daemon re-tries a failed bind (e.g. while the desktop app
@@ -68,7 +68,8 @@ pub enum GatewayRequest {
     /// Read the effective config + listener state. Never logs credentials.
     Get,
     /// Apply a config patch (raw JSON object string, Electron handler shape:
-    /// `{ websocketTlsConfig?: {} | null, authToken?, hostname? }`).
+    /// `{ websocketTlsConfig?: {} | null, authToken?, hostname? }`; the legacy
+    /// `tlsConfig` spelling for the TLS flag is also accepted).
     Apply(String),
     /// Rotate the shared auth token; affects new connections (existing
     /// sessions are not force-closed, matching the in-app server).
@@ -262,55 +263,52 @@ impl Gateway {
 
     fn get_json(&self) -> String {
         let inner = self.inner.lock().expect("gateway mutex poisoned");
-        serde_json::json!({
-            "hostname": inner.hostname,
-            "port": self.port(),
-            "tlsEnabled": inner.bound_tls,
-            "bound": inner.bound,
-            "lastError": inner.last_error,
-            "adoptedFrom": inner.adopted_from.as_ref().map(|p| p.display().to_string()),
-            "caCertPath": self.cert_dir.join(airi_channel::certs::CA_CERT_FILE).is_file()
-                .then(|| self.cert_dir.join(airi_channel::certs::CA_CERT_FILE).display().to_string()),
-            "authToken": inner.auth_token,
+        let ca_cert = self.cert_dir.join(airi_channel::certs::CA_CERT_FILE);
+        serde_json::to_string(&GatewayControlStatus {
+            hostname: inner.hostname.clone(),
+            port: self.port(),
+            tls_enabled: inner.bound_tls,
+            bound: inner.bound,
+            last_error: inner.last_error.clone(),
+            adopted_from: inner.adopted_from.as_ref().map(|p| p.display().to_string()),
+            ca_cert_path: ca_cert.is_file().then(|| ca_cert.display().to_string()),
+            auth_token: inner.auth_token.clone(),
         })
-        .to_string()
+        .expect("GatewayControlStatus serialization cannot fail")
     }
 
     fn apply(&self, raw: &str) -> String {
-        let parsed: Result<serde_json::Value, _> = serde_json::from_str(raw);
-        let Ok(patch) = parsed else {
-            return serde_json::json!({ "ok": false, "error": "expected a JSON object payload" })
-                .to_string();
+        let patch: GatewayControlApply = match serde_json::from_str(raw) {
+            Ok(patch) => patch,
+            Err(_) => {
+                return serde_json::json!({ "ok": false, "error": "expected a JSON object payload" })
+                    .to_string();
+            }
         };
-        if !patch.is_object() {
-            return serde_json::json!({ "ok": false, "error": "expected a JSON object payload" })
-                .to_string();
-        }
 
         let mut inner = self.inner.lock().expect("gateway mutex poisoned");
         let mut hostname = inner.hostname.clone();
-        if let Some(h) = patch.get("hostname").and_then(|v| v.as_str()) {
+        if let Some(h) = patch.hostname.as_deref() {
             let h = h.trim();
             if !h.is_empty() {
                 hostname = h.to_string();
             }
         }
 
-        let auth_token = match patch.get("authToken").and_then(|v| v.as_str()) {
+        let auth_token = match patch.auth_token.as_deref() {
             Some(t) if !t.trim().is_empty() => t.trim().to_string(),
             _ => inner.auth_token.clone(),
         };
 
         // `tlsConfig`/`websocketTlsConfig` are opaque flags: undefined =
         // keep, null = disable, anything else = enable (always `{}`).
-        let tls_flag = patch
-            .get("tlsConfig")
-            .or_else(|| patch.get("websocketTlsConfig"));
+        // The legacy `tlsConfig` spelling wins, as before.
+        let tls_flag = patch.tls_config.as_ref().or(patch.websocket_tls_config.as_ref());
         let mut tls = inner.tls_flag;
         match tls_flag {
-            None => {}
-            Some(serde_json::Value::Null) => tls = false,
-            Some(_) => tls = true,
+            None => {}                   // key absent: keep the current flag
+            Some(serde_json::Value::Null) => tls = false, // explicit `null`: disable
+            Some(_) => tls = true,      // any other value: enable
         }
 
         let config = ChannelConfig {
@@ -631,6 +629,7 @@ mod tests {
 
     #[test]
     fn apply_changes_hostname_and_keeps_token() {
+        airi_channel::install_default_crypto_provider();
         let (gateway, _tmp) = fresh_gateway();
         let before = get_json(&gateway)["authToken"]
             .as_str()
@@ -717,6 +716,40 @@ mod tests {
         let v = get_json(&gateway);
         assert_eq!(v["tlsEnabled"], false);
         assert_eq!(v["bound"], true);
+    }
+
+    #[test]
+    fn tls_flag_three_state_and_legacy_alias_precedence() {
+        let (gateway, _tmp) = fresh_gateway();
+        // Any non-null value (not just objects) enables TLS.
+        gateway.handle(&GatewayRequest::Apply(
+            r#"{"websocketTlsConfig": 0}"#.to_string(),
+        ));
+        assert_eq!(get_json(&gateway)["tlsEnabled"], true);
+
+        // The legacy `tlsConfig` spelling wins over `websocketTlsConfig`
+        // when both are present, including an explicit `null`.
+        gateway.handle(&GatewayRequest::Apply(
+            r#"{"tlsConfig": null, "websocketTlsConfig": {}}"#.to_string(),
+        ));
+        assert_eq!(get_json(&gateway)["tlsEnabled"], false);
+
+        // Explicit `null` on the canonical key disables TLS.
+        gateway.handle(&GatewayRequest::Apply(
+            r#"{"websocketTlsConfig": {}}"#.to_string(),
+        ));
+        assert_eq!(get_json(&gateway)["tlsEnabled"], true);
+        gateway.handle(&GatewayRequest::Apply(
+            r#"{"websocketTlsConfig": null}"#.to_string(),
+        ));
+        assert_eq!(get_json(&gateway)["tlsEnabled"], false);
+
+        // Absent key keeps the current flag.
+        gateway.handle(&GatewayRequest::Apply(
+            r#"{"websocketTlsConfig": {}}"#.to_string(),
+        ));
+        gateway.handle(&GatewayRequest::Apply(r#"{"hostname": "127.0.0.1"}"#.to_string()));
+        assert_eq!(get_json(&gateway)["tlsEnabled"], true);
     }
 
     #[test]

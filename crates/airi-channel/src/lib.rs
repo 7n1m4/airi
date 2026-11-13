@@ -9,7 +9,7 @@
 //!
 //! 1. Waits for an HTTP `Upgrade: websocket` on a raw TCP socket.
 //! 2. Speaks just enough WebSocket (text frames, close, ping/pong) for a
-//!    gateway — no TLS, no extensions, no subprotocols.
+//!    gateway — optional `wss://` via a local CA (see [`certs`]), no extensions or subprotocols.
 //! 3. Requires the client's **first message to authenticate** with the
 //!    `authToken` from `<data>/airi-slint/server-channel/config.json`.
 //!    Unauthenticated peers receive nothing else and are closed with 1008.
@@ -62,6 +62,7 @@
 pub mod base64;
 pub mod certs;
 pub mod config;
+pub mod control;
 pub mod dispatch;
 pub mod server;
 pub mod session;
@@ -75,6 +76,7 @@ pub use certs::{
     CertBundle, CertsError,
 };
 pub use config::{default_config_path, load_or_heal, ChannelConfig, ConfigError, DEFAULT_HOSTNAME};
+pub use control::{GatewayControlApply, GatewayControlStatus};
 pub use dispatch::{
     RendererHandler, RendererHandlers, RpcContext, RpcError, RpcRegistry, APP_NAME, PROTOCOL,
 };
@@ -141,4 +143,14 @@ mod tests {
             None => std::env::remove_var("SERVER_CHANNEL_PORT"),
         }
     }
+}
+
+/// Install the rustls `aws-lc-rs` CryptoProvider as the process-wide default.
+///
+/// The unified workspace build enables both `ring` (via `quinn-proto`) and
+/// `aws-lc-rs` (rustls' default) providers, and rustls panics on every TLS-building
+/// call until one is chosen. Binaries and TLS-touching tests call
+/// this once at startup.
+pub fn install_default_crypto_provider() {
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
 }
