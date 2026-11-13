@@ -64,9 +64,11 @@
 //! and the same one `GetStatus` reports in its `audit_path` field. (Note: an
 //! earlier draft of the lane brief called the file `awareness.jsonl`; the
 //! daemon source of truth wins and this bridge matches it.)
-//! `clear_audit()` truncates the file to zero bytes; it does **not** delete
-//! the file, and it does **not** clear the daemon's in-memory ring buffer
-//! (the ring may re-serve events the page stops showing). The file is
+//! `clear_audit()` never deletes or truncates history: it renames the file
+//! to `awareness-audit.jsonl.cleared-<unix-ts>` (same dir, atomic on the same
+//! fs) so the forensic trail survives; a same-ts collision gets a
+//! `-<counter>` suffix. It does **not** clear the daemon's in-memory ring
+//! buffer (the ring may re-serve events the page stops showing). The file is
 //! 7-day-retention, redacted JSONL; nothing leaves the machine.
 //! `recent_audit()` reads only the last 64 KiB of that file (enough for the 50
 //! rows it shows) because the page polls it every second and the log grows
@@ -102,8 +104,8 @@
 use chrono::{Local, TimeZone};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::fs::{File, OpenOptions};
-use std::io::{Read as _, Seek as _, SeekFrom, Write as _};
+use std::fs::File;
+use std::io::{Read as _, Seek as _, SeekFrom};
 use std::time::Duration;
 
 /// Well-known session-bus name owned by `airi-daemon`.
@@ -897,39 +899,49 @@ impl DaemonState {
         }
     }
 
-    /// Truncate the shared audit file to zero bytes. Never deletes the
-    /// file; never touches the daemon's in-memory ring buffer.
+    /// Archive the shared audit file by renaming it to
+    /// `<name>.cleared-<unix-ts>[-<counter>]` in the same directory. Never
+    /// truncates, never deletes; never touches the daemon's in-memory ring
+    /// buffer. A missing file is a no-op success.
     pub fn clear_audit(&mut self) -> bool {
         let Some(path) = audit_file_path() else {
-            eprintln!("[airi-slint] daemon: no data dir; cannot clear the audit log");
+            eprintln!("[airi-slint] daemon: no data dir; cannot archive the audit log");
             return false;
         };
-        if let Some(parent) = path.parent() {
-            if let Err(e) = std::fs::create_dir_all(parent) {
-                eprintln!(
-                    "[airi-slint] daemon: failed to create audit dir {}: {e}",
-                    parent.display()
-                );
-                return false;
-            }
+        if !path.exists() {
+            eprintln!(
+                "[airi-slint] daemon: audit file {} does not exist; nothing to archive",
+                path.display()
+            );
+            return true;
         }
-        let result = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(&path);
-        match result {
-            Ok(mut file) => match file.flush() {
-                Ok(()) => true,
-                Err(e) => {
-                    eprintln!("[airi-slint] daemon: failed to flush truncated audit file: {e}");
-                    false
-                }
-            },
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let file_name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| AUDIT_FILE_NAME.to_string());
+        let mut archive = path.with_file_name(format!("{file_name}.cleared-{ts}"));
+        let mut counter = 1_u32;
+        while archive.exists() {
+            archive = path.with_file_name(format!("{file_name}.cleared-{ts}-{counter}"));
+            counter += 1;
+        }
+        match std::fs::rename(&path, &archive) {
+            Ok(()) => {
+                eprintln!(
+                    "[airi-slint] daemon: audit log archived to {}",
+                    archive.display()
+                );
+                true
+            }
             Err(e) => {
                 eprintln!(
-                    "[airi-slint] daemon: failed to truncate audit file {}: {e}",
-                    path.display()
+                    "[airi-slint] daemon: failed to archive audit file {} -> {}: {e}",
+                    path.display(),
+                    archive.display()
                 );
                 false
             }
