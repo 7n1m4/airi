@@ -147,13 +147,18 @@ says otherwise.
 
 ## Pending / known gaps
 
-- **Increment 2 (app side, not started):** re-back `electronGet/ApplyServerChannelConfig`
-  eventa contracts to the D-Bus methods above; disable Electrobun main's
-  in-app channel server (6121 single binder); renderer schema choice `ws://`
-  vs `wss://` from the daemon-reported flag.
+- **Increment 2 (app side):** implemented on `feat/unify-daemon-gateway`
+  (2026-11-13): eventa re-backed to the D-Bus verbs via
+  `busctl --user --json=short` (no new deps); the app binds 6121 only when
+  the daemon does not answer on the session bus; the renderer derives
+  `ws://` / `wss://` from the daemon-reported flag. Control-plane DTOs are
+  exported to TS through the same specta pipeline (drift-checked in CI).
 - Token rotation does not force-close live connections (matches the in-app
   server). If we want kill-on-rotate, the server needs tracked connection
   handles.
+- Operator knob: `AIRI_DEVTOOLS_PEERS` (comma-separated peer names/ids) —
+  allowlist for `route.bypass` devtools routing in `packages/server-runtime`;
+  unset = no bypass. Implemented and unit-tested; otherwise undocumented.
 - LAN clients need the CA (`websocket-ca-cert.pem`) installed/trusted —
   distribution is a UX step not yet designed (show path/fingerprint in
   settings UI?).

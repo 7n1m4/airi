@@ -13,6 +13,7 @@ const logger = useLogger('db').useGlobalConfig()
 export type Database = any
 
 export function createDrizzle(dsn: string) {
+  // DSN containing "@db:" (the documented docker-compose quickstart DSN) intentionally selects embedded PGlite; use a non-@db: hostname (or pglite://) to get real Postgres
   const usePglite = !dsn || dsn.includes('@db:') || dsn.startsWith('pglite://')
 
   if (usePglite) {

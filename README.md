@@ -14,6 +14,28 @@
 
 <h1 align="center">Project AIRI</h1>
 
+<div align="center">
+<h1>🚧 UNDER CONSTRUCTION 🚧</h1>
+<p><strong>This fork is not a daily driver.</strong></p>
+<p>Treat it as a conceptual inspiration source — blueprints, not installers.</p>
+</div>
+
+> [!WARNING]
+> **Status: November 2026 — closer than last week, not there.**
+>
+> Project AIRI is mid-pivot from a desktop-pet app to the agent-runtime core of a personal agentic OS. A long-lived Rust daemon (`airi-daemon`) owns state and hosts the WS/wss gateway (`airi-channel`), while every UI shell (`stage-tamagotchi`, `stage-web`, the Slint native app) is meant to be a thin client of it.
+>
+> **What is real:**
+> - The protocol layer — Rust-canonical wire types exported to TypeScript with a CI drift check.
+> - The transport layer — `ws`/`wss`, forced `wss://` off-loopback, `0600` secret files, 1 MiB frame caps.
+>
+> **What is missing:**
+> - Authority and wiring — two implementations of the gateway still co-bind port `6121` (the desktop app's in-process server and the daemon), decided by startup order.
+> - The config-file contract is duplicated rather than shared across the IPC, Rust serde, and renderer layers.
+> - The renderer cannot speak `wss://` yet (increment 2, in progress).
+>
+> **What that means for you:** installs misbehave, docs lag code, and the daemon/app boundary moves every week. Fork it for ideas; run it at your own risk.
+
 <p align="center"><strong>Presence without custody.</strong></p>
 
 <p align="center">
@@ -26,8 +48,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/anlmalabs/airi/actions/workflows/ci.yml">
-    <img src="https://github.com/anlmalabs/airi/actions/workflows/ci.yml/badge.svg" alt="Monorepo CI" />
+  <a href="https://github.com/7n1m4/airi/actions/workflows/ci.yml">
+    <img src="https://github.com/7n1m4/airi/actions/workflows/ci.yml/badge.svg" alt="Monorepo CI" />
   </a>
 </p>
 

@@ -38,7 +38,7 @@
 - If work in another repository is genuinely necessary, ask the user to identify or authorize the intended workspace before crossing that boundary.
 - Avoid broad formatting, cleanup, or unrelated refactoring. Prefer the smallest coherent diff that solves the requested problem.
 - Upstream (`dasilva333/airi`) MAY be inspected, fetched, and compared against for mergeability and upstream alignment (read-only reference operations: `git fetch upstream`, `git show upstream/<branch>:<path>`, `gh` API reads, `git diff upstream/main...HEAD` for review). Never push to, rebase onto, or merge from `upstream` without explicit current user authorization — those remain write/history operations, not reference reads.
-- Remember that `crates/` contains the legacy Tauri application; the current desktop application is Electron in `apps/stage-tamagotchi`.
+- `crates/` is the Rust runtime core (`airi-daemon` hosts the WS/wss gateway, `airi-channel` the wire protocol, `airi-slint` the native shell); the desktop application is in `apps/stage-tamagotchi` (Electrobun, not Electron).
 
 ## 6. Git, Commits, and Releases
 
