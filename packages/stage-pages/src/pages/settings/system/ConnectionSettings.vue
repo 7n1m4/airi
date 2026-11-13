@@ -18,7 +18,7 @@ const hfToken = useLocalStorageManualReset('settings/connection/hf-token', '')
     <FieldInput
       v-model="websocketUrl"
       :label="t('settings.pages.connection.websocket-url.label')"
-      description="Empty = derive from gateway settings"
+      :description="t('settings.pages.connection.websocket-url.description')"
       :placeholder="derivedExample"
     />
     <FieldInput

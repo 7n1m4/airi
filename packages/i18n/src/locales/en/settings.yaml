@@ -231,6 +231,19 @@ settings:
         description: Laya Local - Local model runner
         title: Laya Local
   pages:
+    connection:
+      websocket-url:
+        label: WebSocket URL
+        description: Empty = derive from the daemon-reported gateway settings
+          (tls/hostname/port)
+      auth-token:
+        label: Auth Token
+        description: Bearer token the gateway expects from companion apps and scripts
+        placeholder: Paste the token from the desktop app
+      hf-token:
+        label: Hugging Face Token
+        description: Hugging Face access token used for gated model downloads
+        placeholder: hf_...
     modules:
       agentic-os:
         title: 'Agentic OS'
