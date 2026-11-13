@@ -15,6 +15,7 @@
 
 use std::io::{Read, Write};
 use std::net::TcpStream;
+use std::sync::Arc;
 use std::time::Duration;
 
 use airi_channel::ws::MAX_WS_PAYLOAD_BYTES;
@@ -42,6 +43,7 @@ fn start_server() -> airi_channel::ServerHandle {
     let config = ChannelConfig {
         hostname: "127.0.0.1".to_string(),
         auth_token: TOKEN.to_string(),
+        tls_config: None,
     };
     let server =
         ChannelServer::bind("127.0.0.1", test_port(), &config).expect("bind channel server");
@@ -289,6 +291,7 @@ fn rpc_runtime_ping_round_trip() {
     let config = ChannelConfig {
         hostname: "127.0.0.1".to_string(),
         auth_token: TOKEN.to_string(),
+        tls_config: None,
     };
     let server = match ChannelServer::bind("127.0.0.1", test_port(), &config) {
         Ok(server) => server,
@@ -364,6 +367,7 @@ fn renderer_info_round_trip() {
     let config = ChannelConfig {
         hostname: "127.0.0.1".to_string(),
         auth_token: TOKEN.to_string(),
+        tls_config: None,
     };
     let mut handlers = RendererHandlers::new();
     handlers.insert(
@@ -445,4 +449,138 @@ fn websocket_ping_frame_gets_pong_frame() {
     assert_eq!(frame.payload, b"ciao");
 
     handle.stop();
+}
+
+// --- TLS round trip -----------------------------------------------------
+
+/// Mint the cert store into a tempdir, bind a TLS listener, and drive the
+/// full upgrade + auth + rpc flow over `wss://` with a client that trusts
+/// the generated CA (and only it). This is the exact flow the daemon uses
+/// for LAN/VPN clients.
+#[test]
+fn tls_round_trip_upgrade_auth_and_rpc() {
+    use rustls::pki_types::CertificateDer;
+
+    let _guard = TEST_LOCK.lock().unwrap();
+    let dir = tempfile::tempdir().expect("cert dir");
+    let bundle = airi_channel::get_or_create_certs(
+        dir.path(),
+        &airi_channel::san_domains(&["localhost".to_string()]),
+    )
+    .expect("mint certs");
+    assert!(
+        airi_channel::certs_exist(dir.path()),
+        "cert store must exist after minting"
+    );
+
+    let tls = Arc::new(
+        airi_channel::tls_server_config(&bundle.cert_pem, &bundle.key_pem).expect("server config"),
+    );
+    let config = ChannelConfig {
+        hostname: "127.0.0.1".to_string(),
+        auth_token: TOKEN.to_string(),
+        tls_config: None,
+    };
+    let server = ChannelServer::bind_tls("127.0.0.1", test_port(), &config, tls)
+        .expect("bind TLS channel server");
+    let server = server.spawn().expect("spawn TLS channel server");
+    let port = server.port();
+
+    // --- client: rustls over raw TCP, trusting only the generated CA -----
+    let mut roots = rustls::RootCertStore::empty();
+    let ca_ders: Vec<CertificateDer<'static>> =
+        rustls_pemfile::certs(&mut bundle.ca_cert_pem.as_bytes())
+            .filter_map(Result::ok)
+            .collect();
+    for der in ca_ders {
+        roots.add(der).expect("add CA to roots");
+    }
+    let client_config = rustls::ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    let conn =
+        rustls::ClientConnection::new(Arc::new(client_config), "localhost".try_into().unwrap())
+            .expect("client connection");
+    let tcp = TcpStream::connect(("127.0.0.1", port)).expect("tcp connect");
+    tcp.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+    tcp.set_write_timeout(Some(Duration::from_secs(5))).unwrap();
+    let mut stream = rustls::StreamOwned::new(conn, tcp);
+
+    // --- same handshake over TLS ------------------------------------------
+    let response = http_upgrade_generic(&mut stream, port);
+    assert!(
+        response.starts_with("HTTP/1.1 101"),
+        "unexpected upgrade response: {response}"
+    );
+
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+    send_masked_text_generic(
+        &mut stream,
+        &format!(r#"{{"type":"auth","authToken":"{TOKEN}"}}"#),
+    );
+    let frame = read_frame_generic(&mut stream, &mut decoder);
+    let payload = String::from_utf8(frame.payload).expect("utf8");
+    assert!(
+        payload.contains(r#""type":"auth""#) && payload.contains(r#""ok":true"#),
+        "expected auth ok over TLS, got {payload}"
+    );
+
+    send_masked_text_generic(
+        &mut stream,
+        r#"{"type":"rpc","action":"runtime.ping","payload":{}}"#,
+    );
+    let frame = read_frame_generic(&mut stream, &mut decoder);
+    let payload = String::from_utf8(frame.payload).expect("utf8");
+    assert!(
+        payload.contains(r#""pong":true"#),
+        "expected pong over TLS, got {payload}"
+    );
+
+    server.stop();
+}
+
+// Generic-over-Read+Write twins of the raw-TCP helpers above. The plaintext
+// helpers stay as-is for the rest of the suite.
+fn http_upgrade_generic<S: Read + Write>(stream: &mut S, port: u16) -> String {
+    let request = format!(
+        "GET /ws HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {CLIENT_KEY}\r\nSec-WebSocket-Version: 13\r\n\r\n",
+    );
+    stream.write_all(request.as_bytes()).expect("send upgrade");
+
+    let mut response = Vec::new();
+    let mut chunk = [0u8; 1024];
+    loop {
+        let n = stream.read(&mut chunk).expect("read upgrade response");
+        assert!(n > 0, "server closed connection during upgrade");
+        response.extend_from_slice(&chunk[..n]);
+        if response.windows(4).any(|w| w == b"\r\n\r\n") {
+            break;
+        }
+    }
+    String::from_utf8(response).expect("utf8 response")
+}
+
+fn send_masked_text_generic<S: Write>(stream: &mut S, text: &str) {
+    stream
+        .write_all(&encode_frame(
+            OP_TEXT,
+            text.as_bytes(),
+            Some([0x37, 0xfa, 0x21, 0x3d]),
+        ))
+        .expect("send masked text frame");
+}
+
+fn read_frame_generic<S: Read>(stream: &mut S, decoder: &mut FrameDecoder) -> Frame {
+    let mut chunk = [0u8; 16 * 1024];
+    loop {
+        match decoder.next_frame() {
+            Ok(Some(frame)) => return frame,
+            Ok(None) => {
+                let n = stream.read(&mut chunk).expect("read frame");
+                assert!(n > 0, "server closed connection while waiting for a frame");
+                decoder.push(&chunk[..n]);
+            }
+            Err(err) => panic!("frame decode failed: {err}"),
+        }
+    }
 }

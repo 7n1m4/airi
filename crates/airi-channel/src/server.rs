@@ -9,8 +9,10 @@
 //! handshake itself has a 10-second deadline; sockets that do not complete
 //! the upgrade and auth within it are dropped.
 //!
-//! This module performs no TLS and no origin validation — see the
-//! crate-level security posture docs.
+//! When constructed with a rustls [`rustls::ServerConfig`] the listener
+//! speaks `wss://`; otherwise it speaks plaintext. The cert chain is loaded
+//! by the caller (see [`crate::certs::server_config`]); this module performs
+//! no certificate management of its own.
 
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -33,12 +35,59 @@ use crate::ws::{
 /// How long a client may take to send the HTTP upgrade headers.
 const HANDSHAKE_READ_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// One accepted connection, either plaintext or TLS-wrapped.
+///
+/// The enum exists so the connection handler can be written once; the
+/// underlying `Read`/`Write` impls delegate to the concrete stream. The
+/// 10-second handshake deadline is configured on the `TcpStream` *before* it
+/// is wrapped, and cleared after the HTTP upgrade completes.
+enum ConnectionStream {
+    Plain(TcpStream),
+    Tls(rustls::StreamOwned<rustls::ServerConnection, TcpStream>),
+}
+
+impl ConnectionStream {
+    /// Clear the handshake read timeout (post-upgrade reads are unbounded).
+    fn clear_read_timeout(&mut self) -> io::Result<()> {
+        match self {
+            Self::Plain(stream) => stream.set_read_timeout(None),
+            Self::Tls(stream) => stream.sock.set_read_timeout(None),
+        }
+    }
+}
+
+impl Read for ConnectionStream {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        match self {
+            Self::Plain(stream) => stream.read(buf),
+            Self::Tls(stream) => stream.read(buf),
+        }
+    }
+}
+
+impl Write for ConnectionStream {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        match self {
+            Self::Plain(stream) => stream.write(buf),
+            Self::Tls(stream) => stream.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        match self {
+            Self::Plain(stream) => stream.flush(),
+            Self::Tls(stream) => stream.flush(),
+        }
+    }
+}
+
 /// The bound, not-yet-running channel server.
 pub struct ChannelServer {
     listener: TcpListener,
     token: Arc<str>,
     rpc: RpcContext,
     renderer_handlers: Arc<RendererHandlers>,
+    tls: Option<Arc<rustls::ServerConfig>>,
 }
 
 impl ChannelServer {
@@ -64,6 +113,38 @@ impl ChannelServer {
         config: &ChannelConfig,
         handlers: RendererHandlers,
     ) -> io::Result<Self> {
+        Self::bind_common(hostname, port, config, handlers, None)
+    }
+
+    /// Like [`ChannelServer::bind_with_renderer`] but serves `wss://` using
+    /// the given rustls configuration (see [`crate::certs::server_config`]).
+    pub fn bind_with_renderer_tls(
+        hostname: &str,
+        port: u16,
+        config: &ChannelConfig,
+        handlers: RendererHandlers,
+        tls: Arc<rustls::ServerConfig>,
+    ) -> io::Result<Self> {
+        Self::bind_common(hostname, port, config, handlers, Some(tls))
+    }
+
+    /// Like [`ChannelServer::bind`] but serves `wss://`.
+    pub fn bind_tls(
+        hostname: &str,
+        port: u16,
+        config: &ChannelConfig,
+        tls: Arc<rustls::ServerConfig>,
+    ) -> io::Result<Self> {
+        Self::bind_with_renderer_tls(hostname, port, config, RendererHandlers::new(), tls)
+    }
+
+    fn bind_common(
+        hostname: &str,
+        port: u16,
+        config: &ChannelConfig,
+        handlers: RendererHandlers,
+        tls: Option<Arc<rustls::ServerConfig>>,
+    ) -> io::Result<Self> {
         let listener = TcpListener::bind((hostname, port))?;
         let bound_port = listener.local_addr()?.port();
         Ok(Self {
@@ -71,6 +152,7 @@ impl ChannelServer {
             token: Arc::from(config.auth_token.as_str()),
             rpc: RpcContext::new(hostname.to_string(), bound_port),
             renderer_handlers: Arc::new(handlers),
+            tls,
         })
     }
 
@@ -93,6 +175,7 @@ impl ChannelServer {
             self.token,
             self.rpc,
             self.renderer_handlers,
+            self.tls,
             stop,
         )
     }
@@ -106,9 +189,10 @@ impl ChannelServer {
         let token = self.token;
         let rpc = self.rpc;
         let renderer_handlers = self.renderer_handlers;
+        let tls = self.tls;
         let join = std::thread::Builder::new()
             .name("airi-channel-accept".to_string())
-            .spawn(move || serve(self.listener, token, rpc, renderer_handlers, thread_stop))?;
+            .spawn(move || serve(self.listener, token, rpc, renderer_handlers, tls, thread_stop))?;
         Ok(ServerHandle {
             port,
             stop,
@@ -145,6 +229,7 @@ fn serve(
     token: Arc<str>,
     rpc: RpcContext,
     renderer_handlers: Arc<RendererHandlers>,
+    tls: Option<Arc<rustls::ServerConfig>>,
     stop: Arc<AtomicBool>,
 ) -> io::Result<()> {
     listener.set_nonblocking(true)?;
@@ -153,10 +238,30 @@ fn serve(
             return Ok(());
         }
         match listener.accept() {
-            Ok((stream, peer)) => {
+            Ok((tcp, peer)) => {
                 let token = Arc::clone(&token);
                 let rpc = rpc.for_session();
                 let renderer_handlers = Arc::clone(&renderer_handlers);
+                // Configure the socket *before* any TLS wrapping: the
+                // handshake deadline applies to the raw TCP stream, and the
+                // HTTP upgrade phase must complete within it.
+                if let Err(err) = tcp
+                    .set_read_timeout(Some(HANDSHAKE_READ_TIMEOUT))
+                    .and_then(|_| tcp.set_nonblocking(false))
+                {
+                    tracing::debug!(%peer, %err, "channel connection rejected at socket setup");
+                    continue;
+                }
+                let stream = match &tls {
+                    Some(config) => match rustls::ServerConnection::new(Arc::clone(config)) {
+                        Ok(conn) => ConnectionStream::Tls(rustls::StreamOwned::new(conn, tcp)),
+                        Err(err) => {
+                            tracing::warn!(%peer, %err, "TLS connection setup failed");
+                            continue;
+                        }
+                    },
+                    None => ConnectionStream::Plain(tcp),
+                };
                 std::thread::Builder::new()
                     .name(format!("airi-channel-conn-{peer}"))
                     .spawn(move || {
@@ -178,14 +283,11 @@ fn serve(
 }
 
 fn handle_connection(
-    mut stream: TcpStream,
+    mut stream: ConnectionStream,
     token: &str,
     rpc: RpcContext,
     renderer_handlers: &Arc<RendererHandlers>,
 ) -> io::Result<()> {
-    stream.set_read_timeout(Some(HANDSHAKE_READ_TIMEOUT))?;
-    stream.set_nonblocking(false)?;
-
     // --- HTTP Upgrade phase -------------------------------------------------
     let mut header_buf = Vec::with_capacity(1024);
     loop {
@@ -231,7 +333,7 @@ fn handle_connection(
     tracing::debug!(path = %request.path, "channel client upgraded");
 
     // --- WebSocket phase ----------------------------------------------------
-    stream.set_read_timeout(None)?; // idle clients are fine post-handshake
+    stream.clear_read_timeout()?; // idle clients are fine post-handshake
     let mut session = Session::with_renderer(token.to_string(), rpc, Arc::clone(renderer_handlers));
     let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
     let mut fragments: Option<(u8, Vec<u8>)> = None;
@@ -269,7 +371,7 @@ fn handle_connection(
 
 /// Handle one decoded frame. Returns `false` when the connection should close.
 fn handle_frame(
-    stream: &mut TcpStream,
+    stream: &mut impl Write,
     frame: &Frame,
     session: &mut Session,
     fragments: &mut Option<(u8, Vec<u8>)>,
@@ -366,7 +468,7 @@ fn handle_frame(
 }
 
 /// Send a close frame; errors are ignored (we are tearing down anyway).
-fn send_close(stream: &mut TcpStream, code: u16, reason: &str) {
+fn send_close(stream: &mut impl Write, code: u16, reason: &str) {
     let mut payload = code.to_be_bytes().to_vec();
     let bytes = reason.as_bytes();
     let keep = bytes.len().min(123); // close payloads are capped at 125 bytes
@@ -375,7 +477,7 @@ fn send_close(stream: &mut TcpStream, code: u16, reason: &str) {
     let _ = stream.flush();
 }
 
-fn write_http_error(stream: &mut TcpStream, code: u16, reason: &str) -> io::Result<()> {
+fn write_http_error(stream: &mut impl Write, code: u16, reason: &str) -> io::Result<()> {
     let body = format!("{code} {reason}\n");
     let response = format!(
         "HTTP/1.1 {code} {reason}\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{body}",

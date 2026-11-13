@@ -21,11 +21,13 @@
 //!
 //! ## Security posture (read before enabling on a network)
 //!
-//! - **No TLS.** Traffic, including the auth token, crosses the wire in
-//!   plaintext. This matches the Electron gateway's *default* only when the
-//!   Electron build runs without mkcert TLS configured — the Electron build
-//!   can additionally mint a local CA; this crate cannot. TLS/mkcert support
-//!   is **deferred** and tracked in the phase note.
+//! - **TLS is supported, not automatic.** With a `tlsConfig` flag in the
+//!   loaded config the daemon mints (or loads) a local CA + SAN-covered
+//!   server cert via [`certs`] and serves `wss://`; clients must trust the
+//!   CA (`websocket-ca-cert.pem`). Without the flag the listener speaks
+//!   plaintext — acceptable only on loopback. Remote (LAN/VPN/tailnet)
+//!   exposure should enable TLS, and public-internet exposure needs
+//!   per-client tokens, which do not exist yet.
 //! - **Loopback-only by default.** The healed config binds `127.0.0.1`.
 //!   Binding `0.0.0.0` for LAN clients is possible but is plaintext over the
 //!   LAN and MUST be weighed against the mkcert-less posture — do not do it
@@ -58,6 +60,7 @@
 //! `QObject`s directly; they get plain JSON and return plain JSON.
 
 pub mod base64;
+pub mod certs;
 pub mod config;
 pub mod dispatch;
 pub mod server;
@@ -67,6 +70,10 @@ pub mod uuid;
 pub mod wire;
 pub mod ws;
 
+pub use certs::{
+    ca_cert_pem, certs_exist, get_or_create_certs, san_domains, server_config as tls_server_config,
+    CertBundle, CertsError,
+};
 pub use config::{default_config_path, load_or_heal, ChannelConfig, ConfigError, DEFAULT_HOSTNAME};
 pub use dispatch::{
     RendererHandler, RendererHandlers, RpcContext, RpcError, RpcRegistry, APP_NAME, PROTOCOL,
