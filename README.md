@@ -21,20 +21,11 @@
 </div>
 
 > [!WARNING]
-> **Status: November 2026 — closer than last week, not there.**
+> **Status — mid-pivot, not a daily driver.**
 >
-> Project AIRI is mid-pivot from a desktop-pet app to the agent-runtime core of a personal agentic OS. A long-lived Rust daemon (`airi-daemon`) owns state and hosts the WS/wss gateway (`airi-channel`), while every UI shell (`stage-tamagotchi`, `stage-web`, the Slint native app) is meant to be a thin client of it.
+> Project AIRI is pivoting from a desktop-pet app to the agent-runtime core of a personal agentic OS. A long-lived Rust daemon (`airi-daemon`) owns state and hosts the WS/wss gateway (`airi-channel`); every UI (the Electrobun desktop app, the Slint native app, the web stage) is a thin client of it — WS/wss for the data plane, D-Bus for the control plane on Linux.
 >
-> **What is real:**
-> - The protocol layer — Rust-canonical wire types exported to TypeScript with a CI drift check.
-> - The transport layer — `ws`/`wss`, forced `wss://` off-loopback, `0600` secret files, 1 MiB frame caps.
->
-> **What is missing:**
-> - Authority and wiring — two implementations of the gateway still co-bind port `6121` (the desktop app's in-process server and the daemon), decided by startup order.
-> - The config-file contract is duplicated rather than shared across the IPC, Rust serde, and renderer layers.
-> - The renderer cannot speak `wss://` yet (increment 2, in progress).
->
-> **What that means for you:** installs misbehave, docs lag code, and the daemon/app boundary moves every week. Fork it for ideas; run it at your own risk.
+> Docs and code drift. For the current topology, invariants, and threat model read [`docs/design-daemon-gateway.md`](./docs/design-daemon-gateway.md); for where concepts live in the tree read [`docs/rosetta-stone.md`](./docs/rosetta-stone.md). File issues against the fork you actually intend to run.
 
 <p align="center"><strong>Presence without custody.</strong></p>
 
@@ -74,7 +65,7 @@ That is the promise of this fork: **one enduring presence across conversations, 
 | **Voice** | Swappable speech and transcription engines, voice profiles, Audio Studio processing, captions, and live audio |
 | **Body** | VRM, Live2D, MMD, and Spine renderers with expressions, motion, tactile interaction, wardrobe, and texture editing |
 | **Agency** | Proactivity, MCP tools, artistry, production direction, games, and actions that can continue beyond the chat composer |
-| **World** | Desktop stages, web and pocket surfaces, Discord, scenes, and other places the same character can inhabit |
+| **World** | Desktop stages, the web stage, Discord, scenes, and other places the same character can inhabit |
 | **Sovereignty** | Local-first storage, portable character data, optional user-owned cloud sync, and no developer-operated analytics |
 
 The complete implementation catalog lives in the [feature report](https://dasilva333.github.io/airi/en/docs/chronicles/feature-report). The [showcase](https://dasilva333.github.io/airi/en/docs/showcase/) presents the major experiences visually. For an evidence-backed architectural landscape comparing 11 desktop AI companions (VPet, Project N.E.K.O., Open-LLM-VTuber, Komorebi, Amica, NekoGPT, etc.), see [**COMPARISONS.md**](COMPARISONS.md).
@@ -294,7 +285,7 @@ Create or import a character, then choose the faculties that fit them:
 - assign speech, hearing, vision, and a display model independently
 - let memory accumulate without mixing unrelated characters or story universes
 - allow carefully scoped proactive behavior and tools
-- meet the same character through the desktop stage, chat workspace, mobile client, Discord, or another connected surface
+- meet the same character through the desktop stage, chat workspace, the web stage, Discord, or another connected surface
 - export the character and their portable assets instead of leaving them trapped inside one installation
 
 AIRI can be a quiet desktop companion, a voiced character on stage, a creative collaborator, a roleplay partner, or an autonomous presence. The architecture does not force every character into the same shape.
@@ -322,7 +313,7 @@ The repository is organized so that the character is not fused to any single ser
 - **Provider registries** separate metadata and capabilities from configured provider instances.
 - **Runtime services** isolate provider lifecycle, validation, model loading, and instance management.
 - **Stage renderers** provide interchangeable VRM, Live2D, MMD, and Spine bodies.
-- **Shared UI packages** let desktop, web, and pocket surfaces consume the same character systems.
+- **Shared UI packages** let desktop and web surfaces consume the same character systems.
 - **Namespaced persistence** keeps characters, sessions, memories, media, and settings independently addressable.
 - **Tool bridges and standalone modules** add abilities without redefining the character core.
 
@@ -341,7 +332,7 @@ For complete contribution and environment guidance, read [CONTRIBUTING.md](./.gi
 
 ### Desktop — Stage Tamagotchi
 
-The desktop application is the canonical daily-driver surface.
+The desktop application is the furthest-along surface.
 
 ~~~shell
 pnpm i
@@ -362,7 +353,7 @@ One-click helper scripts are also included:
 A Nix package is available:
 
 ~~~shell
-nix run github:dasilva333/airi
+nix run github:anlmalabs/airi
 ~~~
 
 On NixOS, use the included FHS shell for Electron dependencies:
@@ -383,26 +374,6 @@ pnpm dev:server
 ~~~shell
 pnpm dev:web
 ~~~
-
-### Mobile — Stage Pocket
-
-~~~shell
-pnpm dev:pocket:ios <DEVICE_ID_OR_SIMULATOR_NAME>
-~~~
-
-Or:
-
-~~~shell
-CAPACITOR_DEVICE_ID=<DEVICE_ID_OR_SIMULATOR_NAME> pnpm dev:pocket:ios
-~~~
-
-List available targets with:
-
-~~~shell
-pnpm exec cap run ios --list
-~~~
-
-For wireless server-channel development, start Tamagotchi with the required network privileges and enable secure WebSocket support under <code>settings/system/general</code>.
 
 ### Documentation
 
@@ -434,9 +405,9 @@ The provider system supports multiple configured instances rather than treating 
 
 ## Lineage
 
-This repository is a maintained downstream fork of [moeru-ai/airi](https://github.com/moeru-ai/airi).
+This repository is a downstream fork of [dasilva333/airi](https://github.com/dasilva333/airi), which is itself a downstream fork of [moeru-ai/airi](https://github.com/moeru-ai/airi).
 
-It preserves the original project's credit, foundation, and broad architectural lineage while pursuing a distinct daily-driver direction: persistent character continuity, selective upstream integration, modular faculties, desktop embodiment, and user-owned data. (See the [Capability comparison](#capability-comparison) above for a concrete breakdown of how the runtimes and creator workflows differ.)
+It preserves the original projects' credit, foundation, and broad architectural lineage while pursuing a distinct direction: persistent character continuity, selective upstream integration, modular faculties, desktop embodiment, and user-owned data. (See the [Capability comparison](#capability-comparison) above for a concrete breakdown of how the runtimes and creator workflows differ.)
 
 The aim is not to erase where AIRI came from. It is to carry the character somewhere more personal, durable, and free.
 
@@ -454,4 +425,4 @@ The aim is not to erase where AIRI came from. It is to carry the character somew
 
 ## Star history
 
-[![Star History Chart](https://api.star-history.com/svg?repos=dasilva333/airi&type=Date)](https://www.star-history.com/#dasilva333/airi&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=anlmalabs/airi&type=Date)](https://www.star-history.com/#anlmalabs/airi&Date)

@@ -588,7 +588,7 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 | `packages/stream-kit/` | Streaming utilities |
 | `packages/electron-eventa/` | Electron Eventa bindings |
 | `packages/font-*` | Font packages (allseto, departure-mono, xiaolai) |
-| `apps/stage-tamagotchi` | Electrobun app (main + renderer). Desktop stage; thin-client pivot toward the daemon is in flight (increment 2). |
+| `apps/stage-tamagotchi` | Electrobun app (main + renderer). Desktop stage; re-backed to the daemon when it answers on the session bus, with an in-app fallback elsewhere. |
 | `apps/stage-web` | Web app (hosted at `/airi/web-stage/` on GitHub Pages via `.github/workflows/deploy-frontends.yml`; build with `pnpm run build:web:pages`). Web stage: relies on `apps/server` as its backend service. |
 | `apps/stage-pocket` | ❌ Purged 2026-11. Native mobile app replaced by the unified Rust-native direction (`docs/proposal-unified-rust-native-app.md`). |
 | `apps/server` | Dedicated backend service for the Web Stage (`apps/stage-web`) topology (WebSocket channel server, API proxy, storage). Required for web-stage deployments. |

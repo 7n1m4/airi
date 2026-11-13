@@ -1,6 +1,6 @@
 # Design: Daemon-Hosted Gateway
 
-**Status:** implemented (Rust side, 2026-11-13) · **Owner:** project lead
+**Status:** implemented (Rust side); kept in sync with the daemon source · **Owner:** project lead
 
 ## Topology
 
@@ -23,9 +23,10 @@ external clients (Slint app, VS Code, scripts)
 
 ## Decisions
 
-- **Single binder.** The `Systemd` unit grants `AF_INET/AF_INET6`; the app's
-  in-app channel server must be disabled (pending increment 2 below). Port
-  contention during transition: the daemon retries every 15 s and reports
+- **Single binder.** The daemon is the preferred binder of port 6121; the
+  desktop app binds only when the daemon does not answer on the session bus
+  (fallback keeps macOS/Windows functional). Port contention during
+  transition: the daemon retries periodically and reports
   `bound: false` + `lastError`; awareness is unaffected either way.
 - **Config adoption.** The desktop app's `<userData>/server-channel-config.json`
   (Electrobun/Electron `createConfig`) is adopted by *copying* into the
@@ -33,8 +34,8 @@ external clients (Slint app, VS Code, scripts)
   so paired devices and TLS settings survive the migration. The copy is
   authoritative afterwards; `AIRI_SERVER_CHANNEL_CONFIG` overrides everything
   and is used write-through.
-- **TLS is always available; loopback `ws://` is the local default.** Per the
-  2026-11-13 call: `ws://` for local is good, wss stays mandatory beyond
+- **TLS is always available; loopback `ws://` is the local default.** `ws://`
+  for local is good, wss stays mandatory beyond
   loopback. **Transport policy is enforced in code:** `tlsConfig` on / flag
   off binds plaintext only when the hostname is loopback; any non-loopback
   hostname (`0.0.0.0`, LAN IP, mDNS/tailnet DNS) is **wss-only regardless of
@@ -57,8 +58,8 @@ close 1008 on failure) in both `ws://` and `wss://` modes. What differs is
 what an attacker can *learn* before that gate:
 
 - **Same-uid processes (local malware)**: no difference between `ws` and
-  `wss` — same-uid can read `config.json` (0600, owner-only as of
-  2026-11-13) or the CA key (0600) directly and authenticate as a client.
+  `wss` — same-uid can read `config.json` (0600, owner-only) or the CA key
+  (0600) directly and authenticate as a client.
   Transport crypto does not help against an attacker who already owns the
   user's files. The mitigations here are OS sandboxing of other processes,
   not transport.
@@ -89,21 +90,22 @@ what an attacker can *learn* before that gate:
   authenticated state — same as the in-app server today).
 - **Protocol stays 1** — everything is additive.
 
-## What shipped (2026-11-13)
+## Implementation notes
 
 - `crates/airi-channel`: `certs` module (rcgen local-CA + leaf minting,
   sidecar staleness detection, `0600` key storage), rustls accept loop
-  (`wss://`), `utf-8`/idle semantics unchanged; `tlsConfig` round-trips in
-  `ChannelConfig`.
+  (`wss://`), `tlsConfig` round-trips in `ChannelConfig`.
 - `crates/airi-daemon`: `gateway` module — config adoption, listener
-  lifecycle, 15 s retry, D-Bus methods, audit of mutations, `--no-gateway`
-  escape hatch.
+  lifecycle, periodic bind retry, D-Bus methods, audit of mutations,
+  `--no-gateway` escape hatch.
 - `packaging/systemd/airi-daemon.service`: `AF_INET`/`AF_INET6` allowed,
   `ReadWritePaths` += server-channel dir, `MemoryMax=256M`.
 - Verification: Rust round-trip TLS test (mint → bind → upgrade → auth →
-  `rpc runtime.ping` over `wss://`), D-Bus smoke against a `dbus-run-session`
-  bus (Get/Apply/Regenerate/bad-payload), `openssl s_client` against the
-  minted CA (`Verification: OK`), 82 + 70 unit/integration tests green.
+  `rpc runtime.ping` over `wss://`); D-Bus smoke against a
+  `dbus-run-session` bus (Get/Apply/Regenerate/bad-payload);
+  `openssl s_client` against the minted CA. Unit + integration suites in
+  `cargo test --workspace --locked` cover the CA/leaf consistency check,
+  atomic writes, lockdown reason set, and apply/rotation paths.
 
 ## Transport alternatives (considered, parked)
 
@@ -144,7 +146,7 @@ once in the library recon (no jsonrpsee/tarpc/tonic/socketioxide); unchanged.
 
 **What we do instead (recorded):** control plane = D-Bus session bus on
 Linux (kernel-authenticated, local-only privileged verbs; the renderer/native
-apps re-back to it — increment 2). Data plane = WS everywhere, `wss://` with
+apps re-back to it). Data plane = WS everywhere, `wss://` with
 the minted local CA for anything beyond loopback. Window/Unix paths: parked.
 
 **A cheap future option, not taken now:** `airi-channel` already wraps every
@@ -156,12 +158,11 @@ says otherwise.
 
 ## Pending / known gaps
 
-- **Increment 2 (app side):** implemented on `feat/unify-daemon-gateway`
-  (2026-11-13): eventa re-backed to the D-Bus verbs via
-  `busctl --user --json=short` (no new deps); the app binds 6121 only when
-  the daemon does not answer on the session bus; the renderer derives
-  `ws://` / `wss://` from the daemon-reported flag. Control-plane DTOs are
-  exported to TS through the same specta pipeline (drift-checked in CI).
+- **Increment 2 (app side): implemented.** The eventa gateway path talks to the
+  D-Bus verbs via `busctl --user --json=short` (no new deps); the app binds
+  6121 only when the daemon does not answer on the session bus; the renderer
+  derives `ws://` / `wss://` from the daemon-reported flag. Control-plane DTOs
+  are exported to TS through the same specta pipeline (drift-checked in CI).
 - Token rotation does not force-close live connections (matches the in-app
   server). If we want kill-on-rotate, the server needs tracked connection
   handles.
