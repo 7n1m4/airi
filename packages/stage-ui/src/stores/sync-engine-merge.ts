@@ -142,3 +142,64 @@ export function shouldSkipMergeableKey(
     return true
   return false
 }
+
+// Merges two chat-session payloads. Object-shaped sessions merge on
+// `messages` with the same Map-by-id rule as the other mergeable keys;
+// legacy array-shaped sessions merge directly. On any parsing
+// inconsistency, falls back to whichever payload exists.
+export function mergeChatSessions(localVal: any, remoteVal: any): any {
+  // One-sided payloads pass through untouched: a missing local copy must never
+  // truncate the remote session (this merge is written back to both stores).
+  if (localVal == null)
+    return remoteVal
+  if (remoteVal == null)
+    return localVal
+  try {
+    const isLocalObj = localVal && typeof localVal === 'object' && !Array.isArray(localVal)
+    const isRemoteObj = remoteVal && typeof remoteVal === 'object' && !Array.isArray(remoteVal)
+
+    const localMsgs = isLocalObj ? (localVal.messages || []) : (Array.isArray(localVal) ? localVal : [])
+    const remoteMsgs = isRemoteObj ? (remoteVal.messages || []) : (Array.isArray(remoteVal) ? remoteVal : [])
+
+    const mergedMsgs = mergeChatMessagesById(localMsgs, remoteMsgs)
+
+    if (isLocalObj) {
+      return {
+        ...localVal,
+        ...remoteVal,
+        messages: mergedMsgs,
+        updatedAt: Date.now(),
+      }
+    }
+    return mergedMsgs
+  }
+  catch (e) {
+    console.error('[SyncEngine] Failed to merge chat sessions:', e)
+    return localVal || remoteVal
+  }
+}
+
+function mergeChatMessagesById(localArr: any[], remoteArr: any[]): any[] {
+  const mergedMap = new Map<string, any>()
+  for (const item of localArr) {
+    if (item && item.id) {
+      mergedMap.set(item.id, item)
+    }
+  }
+  for (const item of remoteArr) {
+    if (item && item.id) {
+      const existing = mergedMap.get(item.id)
+      if (existing) {
+        const existingTime = existing.updatedAt || existing.createdAt || 0
+        const remoteTime = item.updatedAt || item.createdAt || 0
+        if (remoteTime > existingTime) {
+          mergedMap.set(item.id, item)
+        }
+      }
+      else {
+        mergedMap.set(item.id, item)
+      }
+    }
+  }
+  return Array.from(mergedMap.values())
+}

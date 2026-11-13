@@ -5,8 +5,9 @@ import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
-const defaultWebSocketUrl = import.meta.env.VITE_AIRI_WS_URL || 'ws://localhost:6121/ws'
-const websocketUrl = useLocalStorageManualReset('settings/connection/websocket-url', defaultWebSocketUrl)
+const derivedExample = 'ws://localhost:6121/ws'
+// Empty = derive from the daemon-reported gateway settings (tls/hostname/port).
+const websocketUrl = useLocalStorageManualReset('settings/connection/websocket-url', '')
 const authToken = useLocalStorageManualReset('settings/connection/auth-token', '')
 const hfToken = useLocalStorageManualReset('settings/connection/hf-token', '')
 </script>
@@ -17,8 +18,8 @@ const hfToken = useLocalStorageManualReset('settings/connection/hf-token', '')
     <FieldInput
       v-model="websocketUrl"
       :label="t('settings.pages.connection.websocket-url.label')"
-      :description="t('settings.pages.connection.websocket-url.description')"
-      :placeholder="t('settings.pages.connection.websocket-url.placeholder')"
+      description="Empty = derive from gateway settings"
+      :placeholder="derivedExample"
     />
     <FieldInput
       v-model="authToken"

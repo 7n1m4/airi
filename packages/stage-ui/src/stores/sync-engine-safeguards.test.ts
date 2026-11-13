@@ -425,7 +425,9 @@ describe('sync-engine-safeguards', () => {
       expect(isMergeableSyncKey(`local:memory/echo-chips/${userId}`)).toBe(true)
       expect(isMergeableSyncKey('local:memory/text-journal/local')).toBe(true)
       expect(isMergeableSyncKey('local:airi-cards')).toBe(true)
-      expect(isMergeableSyncKey('local:chat/sessions/abc')).toBe(false)
+      expect(isMergeableSyncKey('local:chat/sessions/abc')).toBe(true)
+      expect(isMergeableSyncKey('local:chat/index/default')).toBe(true)
+      expect(isMergeableSyncKey('local:director/sessions/abc')).toBe(false)
     })
   })
 
@@ -477,6 +479,68 @@ describe('sync-engine-safeguards', () => {
       expect(res2).toBe(true)
       // listFiles should have been called only ONCE due to inFlightReconcile promise sharing
       expect(listFilesCallCount).toBe(1)
+    })
+  })
+
+  describe('full reconcile secret-key exclusion', () => {
+    let pinia: ReturnType<typeof createTestingPinia>
+    let writeCalls: string[] = []
+
+    beforeEach(async () => {
+      pinia = createTestingPinia({ createSpy: vi.fn, stubActions: false })
+      setActivePinia(pinia)
+      storageState.isImportingRemoteData = false
+      writeCalls = []
+
+      const keys = await storage.getKeys()
+      for (const k of keys) {
+        await storage.removeItem(k)
+      }
+      localStorage.clear()
+      localStorage.setItem('settings/sync/enabled', 'true')
+    })
+
+    afterEach(async () => {
+      localStorage.clear()
+      delete (window as any).electron
+      const keys = await storage.getKeys()
+      for (const k of keys) {
+        await storage.removeItem(k)
+      }
+    })
+
+    it('does not upload credential-bearing keys while an ordinary key is uploaded', async () => {
+      const syncStore = useSyncEngineStore(pinia)
+      syncStore.activeProvider = 'local-fs'
+
+      await storage.setItem('local:settings/appearance', { theme: 'dark' })
+      await storage.setItemRaw('local:peers/device-keypair', { privateKey: 'sk-secret' })
+      await storage.setItemRaw('local:providers', { p1: { id: 'p1', definitionId: 'x', name: 'p1', config: { apiKey: 'sk-secret' }, validated: false, validationBypassed: false } })
+      await storage.setItemRaw('local:localstorage/settings/credentials/openai', { value: 'sk-secret', originalKey: 'settings/credentials/openai' })
+
+      ;(window as any).electron = {
+        ipcRenderer: {
+          invoke: vi.fn(async (channel: string, payload: any) => {
+            if (channel === 'byos-fs:validate-path')
+              return { success: true }
+            if (channel === 'byos-fs:list-files')
+              return { success: true, files: [] }
+            if (channel === 'byos-fs:write-file') {
+              writeCalls.push(payload.relPath)
+              return { success: true, mtime: Date.now() }
+            }
+            return { success: true }
+          }),
+        },
+      }
+
+      const success = await syncStore.reconcile({ skipBinaryAssets: true })
+      expect(success).toBe(true)
+
+      expect(writeCalls).toContain('db/settings/appearance.json')
+      expect(writeCalls).not.toContain('db/peers/device-keypair.json')
+      expect(writeCalls).not.toContain('db/providers.json')
+      expect(writeCalls).not.toContain('db/localstorage/settings/credentials/openai.json')
     })
   })
 })

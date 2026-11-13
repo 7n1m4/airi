@@ -106,7 +106,12 @@ onMounted(async () => {
   debug('[App] Initializing Chat Session...')
   await chatSessionStore.initialize()
   debug('[App] Initializing Server Channel...')
-  await serverChannelStore.initialize({ possibleEvents: ['ui:configure'] }).catch(err => console.error('Failed to initialize Mods Server Channel in App.vue:', err))
+  if (import.meta.env.VITE_AIRI_WS_URL) {
+    await serverChannelStore.initialize({ possibleEvents: ['ui:configure'] }).catch(err => console.error('Failed to initialize Mods Server Channel in App.vue:', err))
+  }
+  else {
+    debug('[App] no gateway configured; standalone chat-only mode')
+  }
   debug('[App] Initializing Context Bridge...')
   await contextBridgeStore.initialize()
   debug('[App] Initializing Character Orchestrator...')

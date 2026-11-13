@@ -21,6 +21,36 @@ function isLocalhostUrl(urlStr: string): boolean {
   }
 }
 
+// localStorage contract: stage-tamagotchi's daemon mirror writes settings/server-channel/{hostname,port,tls-enabled,websocket-tls-config}
+// into localStorage from the main process; stage-web has no daemon and never sets them, so derivation yields ws://localhost:6121/ws.
+export function resolveWebSocketUrl(getItem: (key: string) => string | null): string {
+  try {
+    const override = getItem('settings/connection/websocket-url')
+    if (override && override.trim())
+      return override
+
+    const tlsFlag = getItem('settings/server-channel/tls-enabled')
+    let tls = tlsFlag === 'true'
+    if (tlsFlag === null) {
+      try {
+        tls = JSON.parse(getItem('settings/server-channel/websocket-tls-config') ?? 'null') !== null
+      }
+      catch {
+        tls = false
+      }
+    }
+
+    const host = getItem('settings/server-channel/hostname') || 'localhost'
+    const port = getItem('settings/server-channel/port') || '6121'
+    const valid = /^[A-Z0-9.-]+$/i.test(host) && /^\d{1,5}$/.test(port) && Number(port) >= 1 && Number(port) <= 65535
+    const [resolvedHost, resolvedPort] = valid ? [host, port] : ['localhost', '6121']
+    return `${tls ? 'wss' : 'ws'}://${resolvedHost}:${resolvedPort}/ws`
+  }
+  catch {
+    return 'ws://localhost:6121/ws'
+  }
+}
+
 export type ChannelServerStatus = 'disconnected' | 'connecting' | 'connected' | 'unreachable'
 
 export const useModsServerChannelStore = defineStore('mods:channels:proj-airi:server', () => {
@@ -33,8 +63,8 @@ export const useModsServerChannelStore = defineStore('mods:channels:proj-airi:se
   const listenerDisposers = ref<Array<() => void>>([])
   let hasLoggedOfflineNotice = false
 
-  const defaultWebSocketUrl = import.meta.env.VITE_AIRI_WS_URL || 'ws://localhost:6121/ws'
-  const websocketUrl = useLocalStorage('settings/connection/websocket-url', defaultWebSocketUrl)
+  // Empty (default) = derive from daemon-mirrored gateway keys via resolveWebSocketUrl.
+  const websocketUrl = useLocalStorage('settings/connection/websocket-url', '')
   const authToken = useLocalStorage('settings/connection/auth-token', '')
 
   const activeListeners = new Set<{
@@ -66,7 +96,7 @@ export const useModsServerChannelStore = defineStore('mods:channels:proj-airi:se
   const isSupported = computed(() => {
     // If on mobile (Capacitor), only connect if user configured an explicit non-localhost remote URL
     if (isStageCapacitor()) {
-      const url = websocketUrl.value || defaultWebSocketUrl
+      const url = resolveWebSocketUrl(key => localStorage.getItem(key))
       return !isLocalhostUrl(url)
     }
     return true
@@ -111,7 +141,7 @@ export const useModsServerChannelStore = defineStore('mods:channels:proj-airi:se
     if (initializing.value)
       return initializing.value
 
-    const targetUrl = websocketUrl.value || defaultWebSocketUrl
+    const targetUrl = resolveWebSocketUrl(key => localStorage.getItem(key))
     status.value = 'connecting'
 
     const possibleEvents = Array.from(new Set<keyof WebSocketEvents>([

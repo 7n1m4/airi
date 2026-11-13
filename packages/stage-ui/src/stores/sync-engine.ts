@@ -13,7 +13,7 @@ import { toast } from 'vue-sonner'
 import { storage, storageState } from '../database/storage'
 import { SERVER_URL } from '../libs/auth'
 import { isSecretStorageKey } from '../libs/secret-storage-keys'
-import { extractAllowedSessionIds, mergeVoiceProfiles, shouldSkipMergeableKey } from './sync-engine-merge'
+import { extractAllowedSessionIds, mergeChatSessions, mergeVoiceProfiles, shouldSkipMergeableKey } from './sync-engine-merge'
 
 // Mergeable keys use last-writer merges instead of file overwrite. Real keys carry the
 // better-auth user.id suffix (local:memory/text-journal/<userId>), so match by prefix.
@@ -21,6 +21,8 @@ export function isMergeableSyncKey(key: string): boolean {
   return key.startsWith('local:memory/short-term/')
     || key.startsWith('local:memory/text-journal/')
     || key.startsWith('local:memory/echo-chips/')
+    || key.startsWith('local:chat/sessions/')
+    || key.startsWith('local:chat/index/')
     || key === 'local:airi-cards'
     || key === 'local:localstorage/settings/live2d/available-motions'
     || key === 'local:localstorage/settings/speech/voice-profiles'
@@ -2310,25 +2312,10 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
           let mergedData: any = null
 
           if (localKey.startsWith('local:chat/sessions/')) {
-            const isLocalObj = localData && typeof localData === 'object' && !Array.isArray(localData)
-            const isRemoteObj = remoteData && typeof remoteData === 'object' && !Array.isArray(remoteData)
-
-            const localMsgs = isLocalObj ? (localData.messages || []) : (Array.isArray(localData) ? localData : [])
-            const remoteMsgs = isRemoteObj ? (remoteData.messages || []) : (Array.isArray(remoteData) ? remoteData : [])
-
-            const mergedMsgs = mergeArraysById(localMsgs, remoteMsgs)
-
-            if (isLocalObj) {
-              mergedData = {
-                ...localData,
-                ...remoteData,
-                messages: mergedMsgs,
-                updatedAt: Date.now(),
-              }
-            }
-            else {
-              mergedData = mergedMsgs
-            }
+            mergedData = mergeChatSessions(localData, remoteData)
+          }
+          else if (localKey.startsWith('local:chat/index/')) {
+            mergedData = mergeChatIndices(localData, remoteData)
           }
           else if (localKey === 'local:localstorage/settings/live2d/available-motions') {
             mergedData = mergeAvailableMotions(localData, remoteData)
@@ -2600,6 +2587,12 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             if (localKey === 'local:airi-cards') {
               mergedVal = mergeAiriCards(localVal, remoteVal)
             }
+            else if (localKey.startsWith('local:chat/sessions/')) {
+              mergedVal = mergeChatSessions(localVal, remoteVal)
+            }
+            else if (localKey.startsWith('local:chat/index/')) {
+              mergedVal = mergeChatIndices(localVal, remoteVal)
+            }
             else if (localKey === 'local:localstorage/settings/live2d/available-motions') {
               mergedVal = mergeAvailableMotions(localVal, remoteVal)
             }
@@ -2799,8 +2792,11 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
           }
         })
 
+        // NOTICE: never upload credential-bearing keys; mirror the outbox drop (fullKey may wrap a localstorage-bridge key).
         const localKeysToUpload = localKeys.filter((fullKey) => {
           if (fullKey.startsWith('local:sync-metadata/') || fullKey === 'local:sync-metadata')
+            return false
+          if (isSecretStorageKey(fullKey) || (fullKey.startsWith('local:localstorage/') && isSecretStorageKey(fullKey.substring('local:localstorage/'.length))))
             return false
           return !remoteFileMap.has(fullKey)
         })
@@ -2946,6 +2942,9 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
 
             if (item.key === 'local:airi-cards') {
               mergedVal = mergeAiriCards(localVal, remoteVal)
+            }
+            else if (item.key.startsWith('local:chat/sessions/')) {
+              mergedVal = mergeChatSessions(localVal, remoteVal)
             }
             else if (item.key.startsWith('local:chat/index/')) {
               mergedVal = mergeChatIndices(localVal, remoteVal)

@@ -10,6 +10,7 @@ export const SECRET_STORAGE_KEYS = [
   'settings/cloudflare/cfApiToken',
   'settings/cloudflare/cfAccountId',
   'local:peers/device-keypair', // libp2p device identity private key
+  'local:providers', // provider catalog configs can carry raw API keys (config.apiKey is read straight off them)
   'settings/free-hub/', // free-tier test API keys
   'settings/discord/token',
   'settings/discord/cfOAuthTokens',

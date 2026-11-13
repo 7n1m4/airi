@@ -4,7 +4,7 @@ import SelectiveSyncPanel from '@proj-airi/stage-ui/components/scenarios/provide
 import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useLibp2pStore } from '@proj-airi/stage-ui/stores/modules/libp2p'
-import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
+import { isMergeableSyncKey, useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
 import { DoubleCheckButton, FieldCheckbox } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import {
@@ -167,16 +167,6 @@ async function handleRestoreFromBackup() {
 
 async function handleRestoreSettingsOnly() {
   await syncStore.restoreSettingsFromRemote()
-}
-
-function isMergeable(key: string): boolean {
-  return (
-    key.startsWith('local:chat/sessions/')
-    || key === 'local:localstorage/settings/live2d/available-motions'
-    || key === 'local:localstorage/settings/speech/voice-profiles'
-    || ['local:memory/short-term/local', 'local:memory/text-journal/local', 'local:memory/echo-chips/local', 'local:airi-cards'].includes(key)
-    || key.startsWith('local:chat/index/')
-  )
 }
 </script>
 
@@ -535,7 +525,7 @@ function isMergeable(key: string): boolean {
               Keep Remote
             </button>
             <button
-              v-if="isMergeable(conflict.key)"
+              v-if="isMergeableSyncKey(conflict.key)"
               class="rounded-xl bg-primary-500 px-3 py-1.5 text-xs text-white font-semibold transition hover:bg-primary-600"
               @click="syncStore.resolveConflict(conflict.key, 'merge')"
             >
