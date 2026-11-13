@@ -24,6 +24,15 @@ This directory contains historical handoffs, point-in-time model reviews, comple
 | `[[linux-wayland-chat-cpu-spikes]]` | Resolved Bug Report | Resolved Linux Wayland CPU spike diagnostic memo. |
 | `[[pr-summary]]` | Historical Upstream Sync Log | Upstream PR snapshot (#1861-#1895). |
 | `[[proposal-onboarding-overhaul]]` | Superseded Proposal | Historical Post-V2 Advanced Setup Lab proposal superseded and unified into `[[project-onboarding-modernize]]`. |
+| `[[AIRI-Mind-Map-Design-Review]]` | Model Review Snapshot | Point-in-time peer review (2026-09-24) of the Mind Map visualization proposals; living design in `design-mind-map.md`. |
+| `[[architecture-chat-orchestrator-decomposition]]` | Completed Phase Handoff | Chat orchestrator decomposition plan, all phases 0–5 verified complete. |
+| `[[design-actor-token-sync-postmortem]]` | Model Review Snapshot | Root-cause validation review of `design-journal-actor-token-sync.md`; the design doc it validated stays in production docs. |
+| `[[design-expression-emoji-mapping]]` | Deprecated / Shelved | Early Control Strip expression popover, deprecated in favor of ModelCustomizer; kept for redesign context. |
+| `[[design-tamagotchi-chatbox-ux-improvements]]` | Completed Plan | Finalized UX improvement checklist, items executed. |
+| `[[orbital-settings-topology-handoff]]` | Completed Phase Handoff | Handoff for the Orbital Settings Topology playground build. |
+| `[[project-positioning-store-migration]]` | Completed Phase Handoff | Positioning store migration plan with progress log; migration shipped. |
+| `[[proposal-acting-sidebar]]` | Implemented Proposal | Rehearsal Room sidebar proposal; shipped — referenced as live by `proposal-ninja-swap-interceptor.md`. |
+| `[[sentence-sync-streaming-tts-architecture-review]]` | Model Review Snapshot | Architecture review verdict on `design-contextual-streaming-tts-and-sentence-sync.md`. |
 
 ## `qt-port/` — the Qt Quick port (2026, superseded by the Slint port)
 

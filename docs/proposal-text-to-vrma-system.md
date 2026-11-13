@@ -161,7 +161,7 @@ To integrate this system cleanly into AIRI without disrupting existing chat and 
 
 ## 6. Rehearsal Room Integration (Sandbox Synergy)
 
-The **Rehearsal Room** (as outlined in [proposal-acting-sidebar.md](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/docs/proposal-acting-sidebar.md)) represents the perfect deterministic testing ground for Text-to-VRMA before rolling it out to fully autonomous agent tool-calls.
+The **Rehearsal Room** (as outlined in [proposal-acting-sidebar.md](./archive/proposal-acting-sidebar.md)) represents the perfect deterministic testing ground for Text-to-VRMA before rolling it out to fully autonomous agent tool-calls.
 
 By placing a **Deterministic Motion Generator** directly inside the Rehearsal Room UI, we resolve the early-stage friction of coaxing and testing characters.
 
