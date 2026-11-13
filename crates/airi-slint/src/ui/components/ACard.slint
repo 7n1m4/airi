@@ -7,18 +7,18 @@
 import { Theme } from "../Theme.slint";
 
 export component ACard inherits Rectangle {
-    in property <length> padding: Theme.spacing-l;
+    in property <length> inner-padding: Theme.spacing-l;
     in property <color> fill: Theme.surface;
-    in property <color> border-color: Theme.border;
+    in property <color> stroke: Theme.border;
     in property <bool> padded: true;
 
     border-radius: Theme.radius-l;
     border-width: 1px;
     background: root.fill;
-    border-color: root.border-color;
+    border-color: root.stroke;
 
     body := VerticalLayout {
-        padding: root.padded ? root.padding : 0px;
+        padding: root.padded ? root.inner-padding : 0px;
         @children
     }
 }

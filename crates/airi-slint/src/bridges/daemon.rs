@@ -330,13 +330,13 @@ fn clock_hhmm(unix_ms: u64, utc_offset_seconds: i32) -> String {
 /// cannot be resolved — the line then carries UTC wall times, which is
 /// honest, just not local.
 fn local_utc_offset_seconds(unix_ms: u64) -> i32 {
-    let utc = match chrono::DateTime::from_timestamp_millis(unix_ms as i64) {
+    let utc = match chrono::DateTime::from_timestamp_millis(i64::try_from(unix_ms).unwrap_or(0)) {
         Some(dt) => dt,
         None => return 0,
     };
-    let offset = Local.offset_from_utc_datetime(&utc.naive_utc());
-    let seconds = offset.local_minus_utc();
-    i32::try_from(seconds).unwrap_or(0)
+    Local
+        .offset_from_utc_datetime(&utc.naive_utc())
+        .local_minus_utc()
 }
 
 /// Compose the deterministic wake fact sheet. Returns `""` when there is
@@ -718,7 +718,6 @@ impl DaemonState {
         self.screen_enabled = screen_enabled_from_sources_json(&self.sources_json);
     }
 
-
     /// Set only the status line (leaves the rest of the mirror untouched).
     /// Used by the screen-awareness methods.
     fn set_status_line(&mut self, line: String) {
@@ -872,7 +871,7 @@ impl DaemonState {
     /// the daemon's `ok` (or `false` on validation/transport failure).
     /// Never throws.
     pub fn set_excluded_apps(&mut self, list_json: &str) -> bool {
-        let apps = match validate_excluded_apps(&list_json) {
+        let apps = match validate_excluded_apps(list_json) {
             Ok(apps) => apps,
             Err(msg) => {
                 eprintln!("[airi-slint] daemon: SetExcludedApps rejected locally: {msg}");
@@ -1025,7 +1024,6 @@ impl DaemonState {
         }
     }
 }
-
 
 /// Process-wide state guarded by a mutex (a poisoned lock is recovered so a
 /// hung D-Bus call cannot wedge the UI).
@@ -1535,4 +1533,3 @@ mod tests {
         assert!(!parsed.wake_briefing);
     }
 }
-

@@ -31,7 +31,7 @@ export component ASlider inherits Rectangle {
         y: (parent.height - self.height) / 2;
         width: parent.width - handle.width;
         height: 4px;
-        border-radius: height / 2;
+        border-radius: self.height / 2;
         background: Theme.surface-pressed;
     }
 
@@ -40,7 +40,7 @@ export component ASlider inherits Rectangle {
         y: track.y;
         width: track.width * root.value;
         height: track.height;
-        border-radius: height / 2;
+        border-radius: self.height / 2;
         background: Theme.accent;
     }
 
@@ -49,7 +49,7 @@ export component ASlider inherits Rectangle {
         y: (parent.height - self.height) / 2;
         width: 16px;
         height: 16px;
-        border-radius: width / 2;
+        border-radius: self.width / 2;
         background: Theme.accent;
         border-width: root.active-focus ? 2px : 1px;
         border-color: root.active-focus ? Theme.accent-hover : Theme.accent-pressed;

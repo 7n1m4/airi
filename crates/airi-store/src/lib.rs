@@ -1328,7 +1328,8 @@ mod tests {
     #[test]
     fn settings_set_refuses_older_write() {
         let db = test_db();
-        let repo = SettingsRepo::new(db);
+        // Keep a handle for the raw connection; repos take ownership of their clone.
+        let repo = SettingsRepo::new(db.clone());
         let conn = db.conn.lock().expect("database mutex poisoned");
         conn.execute(
             "insert into settings (key, value, updated_at) values ('theme', '\"dark\"', ?1)",
@@ -1339,7 +1340,10 @@ mod tests {
 
         // The stored row is newer than this write, so it must survive untouched.
         repo.set("theme", &"light").unwrap();
-        assert_eq!(repo.get::<String>("theme").unwrap().as_deref(), Some("dark"));
+        assert_eq!(
+            repo.get::<String>("theme").unwrap().as_deref(),
+            Some("dark")
+        );
     }
 
     #[test]

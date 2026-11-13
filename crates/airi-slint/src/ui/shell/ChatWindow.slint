@@ -18,8 +18,6 @@ export component ChatWindow inherits Window {
     preferred-height: 640px;
     min-width: 720px;
     min-height: 520px;
-    max-width: root.width;
-    max-height: root.height;
     background: Theme.bg;
 
     in property <string> locale: "en";
@@ -34,6 +32,8 @@ export component ChatWindow inherits Window {
     callback select-session(int);
 
     VerticalLayout {
+        width: root.width;
+        height: root.height;
         spacing: 0;
 
         // Top bar: app mark + active-card picker.
@@ -63,7 +63,7 @@ export component ChatWindow inherits Window {
                     Text {
                         x: Theme.spacing-m;
                         vertical-alignment: center;
-                        text: I18n.tr(root.locale, "shell.chat.card-picker");
+                        text: I18n.tr(root.locale, "shell.chat.card-picker.none");
                         color: Theme.text-secondary;
                         font-size: Theme.font-body;
                     }
@@ -81,7 +81,6 @@ export component ChatWindow inherits Window {
             Rectangle {
                 vertical-stretch: 1;
                 preferred-width: 240px;
-                x-margin: Theme.spacing-m;
                 background: transparent;
                 sessions-col := VerticalLayout {
                     x: Theme.spacing-m;
@@ -90,7 +89,7 @@ export component ChatWindow inherits Window {
                     height: parent.height - 2 * Theme.spacing-m;
                     spacing: Theme.spacing-s;
                     Text {
-                        text: I18n.tr(root.locale, "shell.chat.sessions.title");
+                        text: I18n.tr(root.locale, "shell.chat.recent");
                         color: Theme.text-secondary;
                         font-size: 12px;
                         font-weight: 700;
@@ -124,15 +123,23 @@ export component ChatWindow inherits Window {
                 spacing: Theme.spacing-s;
                 padding: Theme.spacing-m;
 
-                transcript-flick := VerticalLayout {
+                // Flickable, not a layout: a layout sized by its parent
+                // cannot scroll, and Text children must not bind their width
+                // back to the layout that contains them (binding loop).
+                transcript-flick := Flickable {
                     vertical-stretch: 1;
-                    alignment: start;
-                    for message in root.transcript: Text {
+                    // `vertical-alignment: start`, not `alignment`: a layout's
+                    // `alignment` re-parents its children, so a child binding
+                    // `width: <the layout>.width` would loop.
+                    transcript-col := VerticalLayout {
+                        vertical-stretch: 0;
                         width: transcript-flick.width;
-                        text: message;
-                        color: Theme.text-primary;
-                        font-size: Theme.font-body;
-                        wrap: word-wrap;
+                        for message in root.transcript: Text {
+                            text: message;
+                            color: Theme.text-primary;
+                            font-size: Theme.font-body;
+                            wrap: word-wrap;
+                        }
                     }
                 }
 

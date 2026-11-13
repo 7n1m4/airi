@@ -4,6 +4,7 @@
 //! later tracks.
 
 pub mod bridges;
+pub mod gateway_handlers;
 pub mod spine_render;
 pub mod spine_rt;
 

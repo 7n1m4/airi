@@ -26,7 +26,7 @@ export component ASwitch inherits Rectangle {
         y: (parent.height - self.height) / 2;
         height: 20px;
         width: 36px;
-        border-radius: height / 2;
+        border-radius: self.height / 2;
         background: root.checked ? Theme.accent : Theme.surface-pressed;
         border-width: 1px;
         border-color: root.checked ? Theme.accent : Theme.border;
@@ -37,7 +37,7 @@ export component ASwitch inherits Rectangle {
             y: 2px;
             width: parent.height - 4px;
             height: parent.height - 4px;
-            border-radius: height / 2;
+            border-radius: self.height / 2;
             background: root.checked ? Theme.accent-contrast : Theme.text-secondary;
             animate x { duration: 120ms; }
         }
