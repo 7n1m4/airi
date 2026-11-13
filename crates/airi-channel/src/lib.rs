@@ -62,6 +62,7 @@
 pub mod audit;
 pub mod base64;
 pub mod certs;
+pub mod client;
 pub mod config;
 pub mod control;
 pub mod dispatch;
@@ -76,6 +77,7 @@ pub use certs::{
     ca_cert_pem, certs_exist, get_or_create_certs, san_domains, server_config as tls_server_config,
     CertBundle, CertsError,
 };
+pub use client::{GatewayClient, GatewayClientError};
 pub use config::{default_config_path, load_or_heal, ChannelConfig, ConfigError, DEFAULT_HOSTNAME};
 pub use control::{GatewayControlApply, GatewayControlStatus};
 pub use dispatch::{

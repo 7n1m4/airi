@@ -35,4 +35,4 @@ Slint targets desktop and mobile natively (Slint 1.18.1, Android + iOS backends)
 - Code signing + distribution (App Store / Play Store vs sideload) for the Rust native app — needs a packaging lane comparable to the desktop release pipeline.
 - Exact breakpoint system and minimum screen-size floor in `.slint`; whether the desktop shell keeps its Shell (portrait-anchored control strip) as a `mode` preset or as a layout root variant.
 - Whether `apps/stage-web` remains the browser surface long-term, or is also folded into the Rust native strategy later.
-- Rust gateway client placement: extend `airi-channel` as a client module vs a new `airi-gateway-client` crate.
+- Rust gateway client placement: **decided — the blocking client is a module in `crates/airi-channel`** (see [`design-daemon-client.md`](./design-daemon-client.md)); a separate crate would only be revisited if the client grows beyond the gateway transport.
