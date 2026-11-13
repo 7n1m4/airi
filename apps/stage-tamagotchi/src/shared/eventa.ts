@@ -19,6 +19,12 @@ export interface ElectronServerChannelConfig {
   websocketTlsConfig: ElectronServerChannelTlsConfig | null
   authToken: string
   hostname: string
+  // Additive fields: populated when the Rust daemon owns the gateway, and
+  // with static defaults in the in-app fallback path.
+  port?: number
+  tlsEnabled?: boolean
+  bound?: boolean
+  lastError?: string | null
 }
 export const electronGetServerChannelConfig = defineInvokeEventa<ElectronServerChannelConfig>('eventa:invoke:electron:server-channel:get-config')
 export const electronApplyServerChannelConfig = defineInvokeEventa<ElectronServerChannelConfig, Partial<ElectronServerChannelConfig>>('eventa:invoke:electron:server-channel:apply-config')

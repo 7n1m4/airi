@@ -1,6 +1,9 @@
 import type { Server } from '@proj-airi/server-runtime/server'
 import type { Lifecycle } from 'injeca'
 
+import type { ElectronServerChannelConfig } from '../../../../shared/eventa'
+import type { DaemonGatewayStatus } from '../daemon-gateway'
+
 import { randomUUID, X509Certificate } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { Socket } from 'node:net'
@@ -24,6 +27,11 @@ import {
   electronGetServerChannelConfig,
 } from '../../../../shared/eventa'
 import { createConfig } from '../../../libs/electron/persistence'
+import {
+  applyDaemonGatewayConfig,
+  getDaemonGatewayStatus,
+  parseServerChannelPort,
+} from '../daemon-gateway'
 
 const channelServerConfigSchema = object({
   hostname: optional(string()),
@@ -51,7 +59,21 @@ const channelServerConfigStore = createConfig('server-channel', 'config.json', c
 })
 
 function getServerChannelPort() {
-  return env.SERVER_CHANNEL_PORT ? Number.parseInt(env.SERVER_CHANNEL_PORT) : 6121
+  return parseServerChannelPort(env.SERVER_CHANNEL_PORT)
+}
+
+// Shared get-shape for daemon mode: same fields the in-app handler returns,
+// sourced from the daemon's GetGatewayConfig instead of the local config store.
+function daemonGetConfigShape(daemon: DaemonGatewayStatus): ElectronServerChannelConfig {
+  return {
+    websocketTlsConfig: daemon.tlsEnabled ? {} : null,
+    authToken: daemon.authToken,
+    hostname: daemon.hostname,
+    port: daemon.port,
+    tlsEnabled: daemon.tlsEnabled,
+    bound: daemon.bound,
+    lastError: daemon.lastError,
+  }
 }
 
 async function getChannelServerConfig() {
@@ -215,6 +237,44 @@ async function getOrCreateCertificate() {
 }
 
 export async function setupServerChannel(params: { lifecycle: Lifecycle }): Promise<Server> {
+  // Increment 2: when the Rust gateway daemon answers on the session bus it
+  // owns port 6121 — never create the in-app server, never mint/flush the
+  // token, never start health-check/retry. On macOS/Windows (and de-daemoned
+  // Linux) busctl finds no daemon and we fall through to the in-app server.
+  const daemon = await getDaemonGatewayStatus()
+  if (daemon) {
+    console.info(`[Main/ServerChannel] daemon gateway detected (port ${daemon.port}, tlsEnabled=${daemon.tlsEnabled}, bound=${daemon.bound}) — in-app channel server disabled`)
+    const daemonLog = useLogg('main/server-runtime').useGlobalConfig()
+    const protocol = daemon.tlsEnabled ? 'wss' : 'ws'
+    const connectionHost = `${protocol}://${daemon.hostname}:${daemon.port}/ws`
+
+    params.lifecycle.appHooks.onStart(async () => {
+      daemonLog.log('daemon gateway owns port 6121; in-app channel server not started')
+    })
+    params.lifecycle.appHooks.onStop(async () => {
+      daemonLog.log('daemon gateway owns port 6121; nothing to close')
+    })
+
+    return {
+      getConnectionHost: () => [connectionHost],
+      async start() {
+        daemonLog.warn('daemon gateway owns port 6121; ignoring start()')
+      },
+      async restart() {
+        daemonLog.warn('daemon gateway owns port 6121; ignoring restart()')
+      },
+      async stop() {
+        daemonLog.warn('daemon gateway owns port 6121; ignoring stop()')
+      },
+      async updateConfig(config) {
+        await applyDaemonGatewayConfig({
+          websocketTlsConfig: config.tlsConfig,
+          hostname: config.hostname,
+        })
+      },
+    }
+  }
+
   channelServerConfigStore.setup()
 
   const storedConfig = await getChannelServerConfig()
@@ -395,16 +455,44 @@ export async function createServerChannelService(params: { serverChannel: Server
   defineInvokeHandler(context, electronGetServerChannelConfig, async () => {
     const startedAt = Date.now()
     console.info('[Main/ServerChannel] getServerChannelConfig invoked')
+    const daemon = await getDaemonGatewayStatus()
+    if (daemon) {
+      console.info(`[Main/ServerChannel] getServerChannelConfig resolved via daemon in ${Date.now() - startedAt}ms`)
+      return daemonGetConfigShape(daemon)
+    }
     const config = await getChannelServerConfig()
     console.info(`[Main/ServerChannel] getServerChannelConfig resolved in ${Date.now() - startedAt}ms`)
     return {
       websocketTlsConfig: config.tlsConfig || null,
       authToken: config.authToken,
       hostname: config.hostname,
+      port: getServerChannelPort(),
+      tlsEnabled: !!config.tlsConfig,
+      bound: true,
+      lastError: null,
     }
   })
 
   defineInvokeHandler(context, electronApplyServerChannelConfig, async (req) => {
+    // Daemon mode: the Rust gateway owns the port — forward the patch over
+    // D-Bus and return a merged snapshot (daemon state + daemon's reply).
+    const daemon = await getDaemonGatewayStatus()
+    if (daemon) {
+      const reply = await applyDaemonGatewayConfig({
+        websocketTlsConfig: req?.websocketTlsConfig,
+        authToken: req?.authToken,
+        hostname: req?.hostname,
+      })
+      if (reply && reply.ok === false)
+        useLogg('main/server-runtime').error(`Daemon rejected gateway config apply: ${String(reply.error ?? 'unknown error')}`)
+
+      const fresh = await getDaemonGatewayStatus()
+      const base = fresh ? daemonGetConfigShape(fresh) : daemonGetConfigShape(daemon)
+      // The daemon's reply ({ ok, ... }) rides along so the renderer can see
+      // rejections; spread only adds/overrides keys, base keeps the shape valid.
+      return { ...base, ...reply } as ElectronServerChannelConfig
+    }
+
     try {
       const current = await getChannelServerConfig()
       const next = await normalizeChannelServerOptions({
@@ -441,6 +529,10 @@ export async function createServerChannelService(params: { serverChannel: Server
         websocketTlsConfig: next.tlsConfig || null,
         authToken: next.authToken,
         hostname: next.hostname,
+        port: getServerChannelPort(),
+        tlsEnabled: !!next.tlsConfig,
+        bound: true,
+        lastError: null,
       }
     }
     catch (error) {

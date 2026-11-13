@@ -1,3 +1,5 @@
+import type { ElectronServerChannelConfig } from '../../../shared/eventa'
+
 import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import { useAsyncState, useLocalStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
@@ -8,6 +10,8 @@ import { electronApplyServerChannelConfig, electronGetServerChannelConfig } from
 export const useServerChannelSettingsStore = defineStore('tamagotchi-server-channel-settings', () => {
   const websocketTlsConfig = useLocalStorage<{ cert?: string, key?: string, passphrase?: string } | null | undefined>('settings/server-channel/websocket-tls-config', null)
   const hostname = useLocalStorage<string>('settings/server-channel/hostname', '127.0.0.1')
+  const port = useLocalStorage<string>('settings/server-channel/port', '')
+  const tlsEnabled = useLocalStorage<string>('settings/server-channel/tls-enabled', 'false')
   const authToken = useLocalStorage<string>('settings/server-channel/auth-token', '')
 
   const getServerChannelConfig = useElectronEventaInvoke(electronGetServerChannelConfig)
@@ -29,20 +33,34 @@ export const useServerChannelSettingsStore = defineStore('tamagotchi-server-chan
   })
 
   watch(serverChannelConfig.state, (newConfig) => {
-    if (newConfig?.websocketTlsConfig !== undefined) {
-      websocketTlsConfig.value = newConfig.websocketTlsConfig
+    // NOTICE: port/tlsEnabled/bound/lastError are additive on the daemon Get response and may not exist yet; read defensively.
+    const extended = newConfig as (ElectronServerChannelConfig & { port?: number | string, tlsEnabled?: boolean, bound?: string, lastError?: string | null }) | null | undefined
+    if (extended?.websocketTlsConfig !== undefined) {
+      websocketTlsConfig.value = extended.websocketTlsConfig
     }
-    if (newConfig?.hostname !== undefined) {
-      hostname.value = newConfig.hostname
+    if (extended?.hostname !== undefined) {
+      hostname.value = extended.hostname
     }
-    if (newConfig?.authToken) {
-      authToken.value = newConfig.authToken
+    if (extended?.authToken) {
+      authToken.value = extended.authToken
+    }
+    if (extended?.port !== undefined) {
+      port.value = String(extended.port)
+    }
+    if (extended?.tlsEnabled !== undefined) {
+      tlsEnabled.value = String(extended.tlsEnabled)
+    }
+    else if (extended?.websocketTlsConfig !== undefined) {
+      // Daemon has not grown a tlsEnabled field yet: derive from the TLS config presence so the mirror stays truthful.
+      tlsEnabled.value = extended.websocketTlsConfig ? 'true' : 'false'
     }
   })
 
   return {
     websocketTlsConfig,
     hostname,
+    port,
+    tlsEnabled,
     authToken,
   }
 })

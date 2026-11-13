@@ -114,7 +114,7 @@ export function createConfig<TSchema extends PersistedSchema>(
       const tmpPath = `${path}.${processPid}.${sequence}.tmp`
       const data = persistenceMap.get(key)
       // console.log(`[Persistence] Writing config to disk: ${path}`, JSON.stringify(data, null, 2))
-      await writeFile(tmpPath, JSON.stringify(data))
+      await writeFile(tmpPath, JSON.stringify(data), { mode: 0o600 })
       if (sequence !== saveSequence) {
         // A synchronous flush superseded this in-flight save; drop the stale tmp
         // instead of overwriting the newer data with an older serialization.
