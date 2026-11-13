@@ -33,6 +33,40 @@ import {
   parseServerChannelPort,
 } from '../daemon-gateway'
 
+// Canonical JSON (recursively key-sorted) so config comparison does not
+// depend on object key order produced by the caller.
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value))
+    return `[${value.map(stableStringify).join(',')}]`
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([key, val]) => `${JSON.stringify(key)}:${stableStringify(val)}`)
+    return `{${entries.join(',')}}`
+  }
+  return JSON.stringify(value) ?? 'null'
+}
+
+// NOTICE: deliberately cheap loopback test — exact matches plus 127.0.0.0/8.
+// Non-loopback + no TLS means the auth token crosses the wire in cleartext.
+// (0.0.0.0/:: bind every interface, so they are not loopback.)
+function isLoopbackHostname(hostname: string): boolean {
+  const h = hostname.trim().toLowerCase().replace(/^\[|\]$/g, '')
+  return h === 'localhost' || h === '::1' || h.startsWith('127.')
+}
+
+// S8: effective bind hostname non-loopback with no TLS => token on the wire in cleartext.
+function warnIfCleartextLanBind(hostname: string, tlsConfig: unknown): void {
+  if (!tlsConfig && !isLoopbackHostname(hostname)) {
+    console.warn(`[Main/ServerChannel] In-app gateway binding ${hostname} WITHOUT TLS — auth token is transmitted in cleartext; enable TLS`)
+  }
+}
+
+// In-app fallback state shared between setupServerChannel (bind side) and the
+// get/apply handlers (surfacing). Daemon mode never touches these.
+let activeHostname = '127.0.0.1'
+let lastStartError: string | null = null
+
 const channelServerConfigSchema = object({
   hostname: optional(string()),
   authToken: optional(string()),
@@ -44,7 +78,7 @@ const channelServerConfigSchema = object({
 })
 
 const channelServerInvokeConfigSchema = z.object({
-  hostname: z.string().optional(),
+  hostname: z.string().trim().min(1).max(253).refine(value => !/[\s\p{Cc}]/u.test(value), 'hostname must not contain whitespace or control characters').optional(),
   authToken: z.string().optional(),
   tlsConfig: z.object({ }).nullable().optional(),
 }).strict()
@@ -97,7 +131,7 @@ async function normalizeChannelServerOptions(payload: unknown, fallback?: any) {
   return {
     hostname: parsed.data.hostname ?? fallback.hostname,
     authToken,
-    tlsConfig: typeof parsed.data.tlsConfig === 'undefined' ? null : parsed.data.tlsConfig,
+    tlsConfig: parsed.data.tlsConfig === undefined ? (fallback?.tlsConfig ?? null) : parsed.data.tlsConfig,
   }
 }
 
@@ -143,10 +177,10 @@ async function installCACertificate(caCert: string) {
 
   try {
     if (platform === 'darwin') {
-      await x(`security`, ['add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', `"${caCertPath}"`], { nodeOptions: { stdio: 'ignore' } })
+      await x(`security`, ['add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', caCertPath], { nodeOptions: { stdio: 'ignore' } })
     }
     else if (platform === 'win32') {
-      await x(`certutil`, ['-addstore', '-f', 'Root', `"${caCertPath}"`], { nodeOptions: { stdio: 'ignore' } })
+      await x(`certutil`, ['-addstore', '-f', 'Root', caCertPath], { nodeOptions: { stdio: 'ignore' } })
     }
     else if (platform === 'linux') {
       const caDir = '/usr/local/share/ca-certificates'
@@ -159,7 +193,7 @@ async function installCACertificate(caCert: string) {
         const userCaDir = join(env.HOME || '', '.local/share/ca-certificates')
         try {
           if (!existsSync(userCaDir)) {
-            await x(`mkdir`, ['-p', `"${userCaDir}"`], { nodeOptions: { stdio: 'ignore' } })
+            await x(`mkdir`, ['-p', userCaDir], { nodeOptions: { stdio: 'ignore' } })
           }
           writeFileSync(join(userCaDir, caFileName), caCert)
         }
@@ -169,8 +203,8 @@ async function installCACertificate(caCert: string) {
       }
     }
   }
-  catch {
-    // Ignore installation errors
+  catch (error) {
+    console.warn('[Main/ServerChannel] Failed to install WebSocket CA certificate (clients may need to trust it manually):', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -245,8 +279,6 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
   if (daemon) {
     console.info(`[Main/ServerChannel] daemon gateway detected (port ${daemon.port}, tlsEnabled=${daemon.tlsEnabled}, bound=${daemon.bound}) — in-app channel server disabled`)
     const daemonLog = useLogg('main/server-runtime').useGlobalConfig()
-    const protocol = daemon.tlsEnabled ? 'wss' : 'ws'
-    const connectionHost = `${protocol}://${daemon.hostname}:${daemon.port}/ws`
 
     params.lifecycle.appHooks.onStart(async () => {
       daemonLog.log('daemon gateway owns port 6121; in-app channel server not started')
@@ -256,7 +288,6 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
     })
 
     return {
-      getConnectionHost: () => [connectionHost],
       async start() {
         daemonLog.warn('daemon gateway owns port 6121; ignoring start()')
       },
@@ -267,6 +298,18 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
         daemonLog.warn('daemon gateway owns port 6121; ignoring stop()')
       },
       async updateConfig(config) {
+        const log = useLogg('main/server-runtime')
+        // NOTICE: the daemon owns 6121 and does not accept a token over this
+        // path — rotation goes through the gateway UI / RegenerateGatewayToken.
+        // Surface the drop instead of silently ignoring it.
+        if (config.auth?.token || (config as Record<string, unknown>).authToken) {
+          log.warn('auth token rotation in daemon mode must go through the gateway UI / RegenerateGatewayToken — ignoring authToken in daemon updateConfig patch')
+        }
+        const extraFields = Object.keys(config).filter(key => !['tlsConfig', 'hostname', 'port'].includes(key) && key !== 'auth')
+        if (extraFields.length > 0) {
+          log.warn(`daemon updateConfig: fields not applied by the daemon gateway and ignored: ${extraFields.join(', ')}`)
+        }
+        // Only what the daemon applies rides the D-Bus patch — nothing else.
         await applyDaemonGatewayConfig({
           websocketTlsConfig: config.tlsConfig,
           hostname: config.hostname,
@@ -290,6 +333,12 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
     console.info('[Main/ServerChannel] Using existing authToken. Token exists: true')
   }
 
+  // Effective bind hostname — probed by health checks, updated by apply.
+  // (0.0.0.0/:: bind every interface incl. loopback; keep the raw value for the bind.)
+  activeHostname = storedConfig.hostname || env.SERVER_RUNTIME_HOSTNAME || '127.0.0.1'
+
+  warnIfCleartextLanBind(activeHostname, storedConfig.tlsConfig)
+
   const serverChannel = createServer({
     ...storedConfig,
     auth: { token: storedConfig.authToken },
@@ -306,7 +355,7 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
     return getServerChannelPort()
   }
 
-  function isPortListening(port: number) {
+  function isPortListening(port: number, host: string = probeHost(activeHostname)) {
     return new Promise<boolean>((resolve) => {
       const socket = new Socket()
       let settled = false
@@ -322,8 +371,14 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
       socket.once('connect', () => settle(true))
       socket.once('error', () => settle(false))
       socket.setTimeout(1500, () => settle(false))
-      socket.connect(port, '127.0.0.1')
+      socket.connect(port, host)
     })
+  }
+
+  // Binding to all interfaces is reachable on loopback — probe 127.0.0.1 there.
+  function probeHost(hostname: string) {
+    const h = hostname.trim()
+    return (h === '0.0.0.0' || h === '::' || h === '[::]') ? '127.0.0.1' : h
   }
 
   async function ensureServerRunning(reason: string) {
@@ -331,14 +386,16 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
       return startLoopTask
 
     const log = useLogg('main/server-runtime').useGlobalConfig()
+    const MAX_START_ATTEMPTS = 5
     startLoopTask = (async () => {
       let attempt = 0
 
-      while (true) {
+      while (attempt < MAX_START_ATTEMPTS) {
         attempt += 1
         try {
           await serverChannel.start()
           if (await isPortListening(getRuntimePort())) {
+            lastStartError = null
             log.withFields({ reason, attempt, port: getRuntimePort() }).log('WebSocket server confirmed ready')
             return
           }
@@ -346,6 +403,11 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
           throw new Error(`WebSocket server was not listening on port ${getRuntimePort()} after start`)
         }
         catch (error) {
+          if (attempt >= MAX_START_ATTEMPTS) {
+            lastStartError = error instanceof Error ? error.message : String(error)
+            log.withFields({ reason, attempt, port: getRuntimePort() }).withError(error as Error).error(`WebSocket server start failed ${attempt} times — giving up`)
+            return
+          }
           const delayMs = Math.min(1000 * 2 ** (attempt - 1), 10000)
           log.withFields({ reason, attempt, delayMs, port: getRuntimePort() }).withError(error as Error).error('WebSocket server start failed, retrying')
           await new Promise(resolve => setTimeout(resolve, delayMs))
@@ -371,7 +433,10 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
           await ensureServerRunning('health check')
         }
       }, 5000)
-      log.log('WebSocket server started')
+      if (lastStartError)
+        log.error(`WebSocket server did not start: ${lastStartError} (health check will keep retrying)`)
+      else
+        log.log('WebSocket server started')
     }
     catch (error) {
       log.withError(error).error('Error starting WebSocket server')
@@ -405,9 +470,6 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
   })
 
   return {
-    getConnectionHost() {
-      return serverChannel.getConnectionHost()
-    },
     async start() {
       const release = await mutex.acquire()
       try {
@@ -468,32 +530,39 @@ export async function createServerChannelService(params: { serverChannel: Server
       hostname: config.hostname,
       port: getServerChannelPort(),
       tlsEnabled: !!config.tlsConfig,
-      bound: true,
-      lastError: null,
+      bound: lastStartError === null,
+      lastError: lastStartError,
     }
   })
 
   defineInvokeHandler(context, electronApplyServerChannelConfig, async (req) => {
-    // Daemon mode: the Rust gateway owns the port — forward the patch over
-    // D-Bus and return a merged snapshot (daemon state + daemon's reply).
-    const daemon = await getDaemonGatewayStatus()
-    if (daemon) {
-      const reply = await applyDaemonGatewayConfig({
-        websocketTlsConfig: req?.websocketTlsConfig,
-        authToken: req?.authToken,
-        hostname: req?.hostname,
-      })
-      if (reply && reply.ok === false)
-        useLogg('main/server-runtime').error(`Daemon rejected gateway config apply: ${String(reply.error ?? 'unknown error')}`)
-
-      const fresh = await getDaemonGatewayStatus()
-      const base = fresh ? daemonGetConfigShape(fresh) : daemonGetConfigShape(daemon)
-      // The daemon's reply ({ ok, ... }) rides along so the renderer can see
-      // rejections; spread only adds/overrides keys, base keeps the shape valid.
-      return { ...base, ...reply } as ElectronServerChannelConfig
-    }
-
     try {
+      // Daemon mode: the Rust gateway owns the port — forward the patch over
+      // D-Bus and return a merged snapshot (daemon state + daemon's reply).
+      const daemon = await getDaemonGatewayStatus()
+      if (daemon) {
+        const reply = await applyDaemonGatewayConfig({
+          websocketTlsConfig: req?.websocketTlsConfig,
+          authToken: req?.authToken,
+          hostname: req?.hostname,
+        })
+        if (!reply) {
+          const message = 'Daemon ApplyGatewayConfig failed (bus unreachable, timeout, or unreadable reply)'
+          useLogg('main/server-runtime').error(`Daemon gateway config apply failed: ${message}`)
+          const fresh = await getDaemonGatewayStatus()
+          const base = fresh ? daemonGetConfigShape(fresh) : daemonGetConfigShape(daemon)
+          return { ...base, ok: false, error: message } as ElectronServerChannelConfig
+        }
+        if (reply.ok === false)
+          useLogg('main/server-runtime').error(`Daemon rejected gateway config apply: ${String(reply.error ?? 'unknown error')}`)
+
+        const fresh = await getDaemonGatewayStatus()
+        const base = fresh ? daemonGetConfigShape(fresh) : daemonGetConfigShape(daemon)
+        // The daemon's reply ({ ok, ... }) rides along so the renderer can see
+        // rejections; spread only adds/overrides keys, base keeps the shape valid.
+        return { ...base, ...reply } as ElectronServerChannelConfig
+      }
+
       const current = await getChannelServerConfig()
       const next = await normalizeChannelServerOptions({
         tlsConfig: req?.websocketTlsConfig,
@@ -505,17 +574,27 @@ export async function createServerChannelService(params: { serverChannel: Server
         next.authToken = current.authToken
       }
 
-      const tlsChanged = JSON.stringify(next.tlsConfig) !== JSON.stringify(current.tlsConfig)
+      const effectiveHost = (value: string | undefined) => value || env.SERVER_RUNTIME_HOSTNAME || '127.0.0.1'
+      const currentHost = effectiveHost(current.hostname)
+      const nextHost = effectiveHost(next.hostname)
+      const tlsChanged = stableStringify(next.tlsConfig) !== stableStringify(current.tlsConfig)
+      const authChanged = (current.authToken ?? '') !== (next.authToken ?? '')
+      const hostnameChanged = currentHost !== nextHost
 
       // Update and flush synchronously
       channelServerConfigStore.update(next)
       await channelServerConfigStore.flush()
+      activeHostname = nextHost
+      warnIfCleartextLanBind(nextHost, next.tlsConfig)
 
-      if (tlsChanged) {
+      if (tlsChanged || authChanged || hostnameChanged) {
         await params.serverChannel.stop()
         await params.serverChannel.updateConfig({
           port: getServerChannelPort(),
-          hostname: next.hostname || env.SERVER_RUNTIME_HOSTNAME || '127.0.0.1',
+          hostname: nextHost,
+          // Rotation never reaches the running listener without re-binding
+          // with the new token — restart picks it up along with host/TLS.
+          auth: { token: next.authToken },
           tlsConfig: next.tlsConfig ? await getOrCreateCertificate() : null,
         })
         await params.serverChannel.start()
@@ -524,6 +603,7 @@ export async function createServerChannelService(params: { serverChannel: Server
         // Ensure it's running
         await params.serverChannel.start()
       }
+      lastStartError = null
 
       return {
         websocketTlsConfig: next.tlsConfig || null,
@@ -536,7 +616,23 @@ export async function createServerChannelService(params: { serverChannel: Server
       }
     }
     catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      // An apply exception mid-restart can leave the listener down — report it
+      // through get/apply config as bound:false + lastError, not just the log.
+      lastStartError = message
       useLogg('main/server-runtime').withError(error).error('Failed to apply server channel configuration')
+      const current = await getChannelServerConfig().catch(() => undefined)
+      return {
+        websocketTlsConfig: current?.tlsConfig || null,
+        authToken: current?.authToken ?? '',
+        hostname: current?.hostname || env.SERVER_RUNTIME_HOSTNAME || '127.0.0.1',
+        port: getServerChannelPort(),
+        tlsEnabled: !!current?.tlsConfig,
+        bound: false,
+        lastError: message,
+        ok: false,
+        error: message,
+      } as ElectronServerChannelConfig
     }
   })
 }

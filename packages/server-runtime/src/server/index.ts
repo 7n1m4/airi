@@ -25,7 +25,6 @@ interface ServerInstance {
 }
 
 export interface Server {
-  getConnectionHost: () => string[]
   start: () => Promise<void>
   stop: () => Promise<void>
   restart: () => Promise<void>
@@ -128,7 +127,6 @@ export function createServer(opts?: ServerOptions): Server {
         port,
         hostname,
         tls: options?.tlsConfig || undefined,
-        reusePort: true,
         silent: true,
         manual: true,
         gracefulShutdown: {
@@ -221,7 +219,7 @@ export function createServer(opts?: ServerOptions): Server {
   }
 
   async function restart() {
-    log.log('restarting server channel', { options })
+    log.log('restarting server channel', { port: options.port, hostname: options.hostname, hasTls: !!options.tlsConfig })
     await closeServer(true)
     await start()
   }
@@ -231,9 +229,6 @@ export function createServer(opts?: ServerOptions): Server {
   }
 
   return {
-    getConnectionHost: () => {
-      return getLocalIPs()
-    },
     start,
     stop,
     restart,

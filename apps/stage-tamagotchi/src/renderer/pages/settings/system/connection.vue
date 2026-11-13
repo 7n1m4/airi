@@ -11,7 +11,7 @@ import { electronGetCorsBypassUrls, electronSetCorsBypassUrls } from '../../../.
 import { useServerChannelSettingsStore } from '../../../stores/settings/server-channel'
 
 const serverChannelSettingsStore = useServerChannelSettingsStore()
-const { websocketTlsConfig, hostname, authToken } = storeToRefs(serverChannelSettingsStore)
+const { websocketTlsConfig, hostname, authToken, lastApplyError } = storeToRefs(serverChannelSettingsStore)
 const { t } = useI18n()
 
 const websocketTlsEnabled = computed({
@@ -68,7 +68,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <ConnectionSettings>
+  <ConnectionSettings :apply-error="lastApplyError">
     <template #platform-specific>
       <FieldCheckbox
         v-model="websocketTlsEnabled"
