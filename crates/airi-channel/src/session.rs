@@ -65,6 +65,8 @@ use crate::wire::{
 
 /// Close code used when the policy (auth handshake) is violated: 1008.
 pub const CLOSE_POLICY_VIOLATION: u16 = 1008;
+/// Close code when the server goes away (e.g. dead-peer reap): 1001.
+pub const CLOSE_GOING_AWAY: u16 = 1001;
 /// Close code for malformed frames: 1002.
 pub const CLOSE_PROTOCOL_ERROR: u16 = 1002;
 /// Close code for wrong-opcode binary frames: 1003.

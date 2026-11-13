@@ -40,13 +40,18 @@ fn test_port() -> u16 {
 }
 
 fn start_server() -> airi_channel::ServerHandle {
+    start_server_with_ttl(airi_channel::server::DEAD_PEER_TTL)
+}
+
+fn start_server_with_ttl(ttl: Duration) -> airi_channel::ServerHandle {
     let config = ChannelConfig {
         hostname: "127.0.0.1".to_string(),
         auth_token: TOKEN.to_string(),
         tls_config: None,
     };
-    let server =
-        ChannelServer::bind("127.0.0.1", test_port(), &config).expect("bind channel server");
+    let server = ChannelServer::bind("127.0.0.1", test_port(), &config)
+        .expect("bind channel server")
+        .with_dead_peer_ttl(ttl);
     server.spawn().expect("spawn channel server")
 }
 
@@ -584,4 +589,95 @@ fn read_frame_generic<S: Read>(stream: &mut S, decoder: &mut FrameDecoder) -> Fr
             Err(err) => panic!("frame decode failed: {err}"),
         }
     }
+}
+
+// --- Dead-peer reaping --------------------------------------------------
+
+const TEST_TTL: Duration = Duration::from_millis(300);
+
+fn read_text_frame(stream: &mut TcpStream, decoder: &mut FrameDecoder) -> serde_json::Value {
+    let frame = read_frame(stream, decoder);
+    assert_ne!(frame.opcode, OP_CLOSE, "server unexpectedly closed the connection");
+    serde_json::from_slice(&frame.payload).expect("json frame")
+}
+
+#[test]
+fn silent_authenticated_peer_is_reaped_after_ttl() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let handle = start_server_with_ttl(TEST_TTL);
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let _ = http_upgrade(&mut stream, port);
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"auth","authToken":"integration-test-token"}"#,
+    );
+    let auth = read_text_frame(&mut stream, &mut decoder);
+    assert_eq!(auth["type"], "auth");
+
+    // Go silent. The server must close with 1001 once the TTL elapses.
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(frame.opcode, OP_CLOSE, "expected close frame for a dead peer");
+    let code = u16::from_be_bytes([frame.payload[0], frame.payload[1]]);
+    assert_eq!(code, 1001, "dead-peer reap must use close code 1001");
+
+    handle.stop();
+}
+
+#[test]
+fn heartbeat_ping_keeps_peer_alive() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let handle = start_server_with_ttl(TEST_TTL);
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let _ = http_upgrade(&mut stream, port);
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"auth","authToken":"integration-test-token"}"#,
+    );
+    let _ = read_text_frame(&mut stream, &mut decoder);
+
+    // ~3× TTL of heartbeat traffic: the peer must NOT be reaped.
+    for _ in 0..12 {
+        send_masked_text(
+            &mut stream,
+            r#"{"type":"transport:connection:heartbeat","data":{"kind":"ping"}}"#,
+        );
+        let pong = read_text_frame(&mut stream, &mut decoder);
+        assert_eq!(pong["data"]["kind"], "pong");
+        std::thread::sleep(Duration::from_millis(80));
+    }
+
+    handle.stop();
+}
+
+#[test]
+fn rpc_frame_refreshes_last_seen() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let handle = start_server_with_ttl(TEST_TTL);
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let _ = http_upgrade(&mut stream, port);
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"auth","authToken":"integration-test-token"}"#,
+    );
+    let _ = read_text_frame(&mut stream, &mut decoder);
+
+    // ~3× TTL of ordinary RPC traffic: the peer must NOT be reaped.
+    for _ in 0..12 {
+        send_masked_text(&mut stream, r#"{"type":"rpc","action":"runtime.ping","payload":{}}"#);
+        let rpc = read_text_frame(&mut stream, &mut decoder);
+        assert_eq!(rpc["type"], "rpc");
+        assert_eq!(rpc["ok"], true);
+        std::thread::sleep(Duration::from_millis(80));
+    }
+
+    handle.stop();
 }
