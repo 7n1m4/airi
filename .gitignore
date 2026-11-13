@@ -170,3 +170,7 @@ scratch/
 # omp local config
 .omp/config.yml
 
+
+# Local agent notes (not product docs)
+/memory/
+/macos_compatibility_problems.md
