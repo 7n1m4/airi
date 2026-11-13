@@ -213,6 +213,7 @@ fn slugify(name: &str) -> String {
 }
 
 /// Card library + editor state. One process-wide instance.
+#[derive(Default)]
 pub struct CardControllerState {
     /// The scanned library, newest scan winning.
     pub cards: Vec<CardEntry>,
@@ -220,16 +221,6 @@ pub struct CardControllerState {
     pub active_card_id: String,
     /// Last error message, empty when none.
     pub error: String,
-}
-
-impl Default for CardControllerState {
-    fn default() -> Self {
-        Self {
-            cards: Vec::new(),
-            active_card_id: String::new(),
-            error: String::new(),
-        }
-    }
 }
 
 /// Process-wide controller guarded by a mutex.
@@ -318,7 +309,12 @@ impl CardControllerState {
             return;
         }
         if let Some(store) = settings_store() {
-            if store.save_section(&CardsSettings { active_card_id: id.into() }).is_err() {
+            if store
+                .save_section(&CardsSettings {
+                    active_card_id: id.into(),
+                })
+                .is_err()
+            {
                 self.set_error_msg("failed to persist the active card".into());
                 return;
             }

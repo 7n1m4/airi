@@ -22,8 +22,8 @@ export component ATextField inherits Rectangle {
     preferred-height: 36px;
     opacity: root.enabled ? 1 : 0.45;
     border-radius: Theme.radius-s;
-    border-width: ta.has-focus ? 2px : 1px;
-    border-color: ta.has-focus ? Theme.accent : Theme.border;
+    border-width: input.has-focus ? 2px : 1px;
+    border-color: input.has-focus ? Theme.accent : Theme.border;
     background: root.hovered ? Theme.surface-hover : Theme.surface;
 
     input := TextInput {

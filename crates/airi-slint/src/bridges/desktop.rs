@@ -203,7 +203,9 @@ fn init_tray() {
     let mut tray = match tray_item::TrayItem::new("Project AIRI", icon) {
         Ok(tray) => tray,
         Err(e) => {
-            eprintln!("[airi-slint] tray: failed to create tray icon: {e}; continuing without tray");
+            eprintln!(
+                "[airi-slint] tray: failed to create tray icon: {e}; continuing without tray"
+            );
             return;
         }
     };

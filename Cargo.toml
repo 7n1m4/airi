@@ -21,7 +21,6 @@ members = [
   "crates/airi-discord",
   "crates/airi-daemon",
   "crates/airi-a11y",
-  "crates/airi-slint",
 ]
 
 [workspace.dependencies]

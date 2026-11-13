@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // Settings window chrome: left nav + content stack. Port of
-// The 30 nav items follow the navIndex order; the page bodies live in
+// The nav items follow the navIndex order; the page bodies live in
 // later tracks (the content stack is
 // referenced by the same index constants).
 
@@ -16,21 +16,21 @@ export component SettingsWindow inherits Window {
     preferred-height: 800px;
     min-width: 520px;
     min-height: 560px;
-    // Clamp so embedding in MainWindow (1x1) doesn't force the root bigger.
-    max-width: root.width;
-    max-height: root.height;
     background: Theme.bg;
 
     in property <string> locale: "en";
     in-out property <int> nav-index: 0;
     callback navigate(int);
 
-    // Nav model: [icon, labelKey, index] triples kept in lockstep with the
-    // navIndex order. Repeater reads the label via I18n.
+    // Nav model: one entry per settings page, icons and label keys in
+    // lockstep by index (nav-icons.length == nav-keys.length). Every key
+    // here must exist in packages/i18n/src/locales/en/shell.yaml under
+    // `nav:` or the row renders the raw key string.
     out property <[string]> nav-icons: [
-        "🔌", "🎨", "ℹ️", "🎭", "🌀", "🔩", "🖌️", "🧩", "🖊️", "🔊", "👤", "🃏", "🧭", "🗄️",
-        "✨", "📣", "👁️", "🧩", "🔌", "💬", "☁️", "🛠️", "📷", "🤵", "📦", "🧠", "🗣️", "👂",
-        "👁️",
+        "🔌", "🎨", "ℹ️", "🎭", "🌀", "🔩", "🖌️", "🧩",
+        "🖊️", "🔊", "👤", "🃏", "🧭", "🗄️", "✨", "📣",
+        "👁️", "💬", "☁️", "🛠️", "📷", "🤵", "📦",
+        "🎓", "🌫️",
     ];
     out property <[string]> nav-keys: [
         "shell.settings.nav.providers", "shell.settings.nav.theme",
@@ -40,14 +40,12 @@ export component SettingsWindow inherits Window {
         "shell.settings.nav.chat", "shell.settings.nav.voice",
         "shell.settings.nav.profile", "shell.settings.nav.cards",
         "shell.settings.nav.explore", "shell.settings.nav.data",
-        "shell.settings.nav.onboardingV3", "shell.settings.nav.notice",
-        "shell.settings.nav.fadeOnHover", "shell.settings.nav.widgets",
+        "shell.settings.nav.notice", "shell.settings.nav.widgets",
         "shell.settings.nav.mcp", "shell.settings.nav.discord",
         "shell.settings.nav.cloudSync", "shell.settings.nav.pluginHost",
         "shell.settings.nav.screenCapture", "shell.settings.nav.acpAgents",
-        "shell.settings.nav.modules", "shell.settings.nav.memory",
-        "shell.settings.nav.speech", "shell.settings.nav.hearing",
-        "shell.settings.nav.awareness",
+        "shell.settings.nav.modules", "shell.settings.nav.onboardingV3",
+        "shell.settings.nav.fadeOnHover",
     ];
 
     HorizontalLayout {
@@ -65,17 +63,18 @@ export component SettingsWindow inherits Window {
                 spacing: Theme.spacing-s;
 
                 Text {
-                    text: I18n.tr(root.locale, "settings.settings.title");
+                    text: I18n.tr(root.locale, "shell.settings.title");
                     color: Theme.text-secondary;
                     font-size: 15px;
                     font-weight: 700;
                 }
 
-                for idx in root.nav-icons.length: AListItem {
+                // nav-icons drives the repeater; nav-keys must stay the same
+                // length or labels fall off the end.
+                for idx in root.nav-keys.length: AListItem {
                     icon: root.nav-icons[idx];
                     title: I18n.tr(root.locale, root.nav-keys[idx]);
-                    active: root.nav-index == idx
-                        || (idx == 11 && root.nav-index == 12);
+                    active: root.nav-index == idx;
                     clicked => {
                         root.nav-index = idx;
                         root.navigate(idx);

@@ -215,7 +215,10 @@ impl MmdState {
     /// Interleaved vertex buffer bytes (shared by every primitive).
     pub fn vertex_data(&self, index: i32) -> Vec<u8> {
         let _ = index; // one shared buffer; index kept for API parity
-        self.engine.as_ref().map(|e| e.vertex_bytes().to_vec()).unwrap_or_default()
+        self.engine
+            .as_ref()
+            .map(|e| e.vertex_bytes().to_vec())
+            .unwrap_or_default()
     }
 
     /// Index buffer bytes for primitive `index`.

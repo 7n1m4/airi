@@ -94,15 +94,13 @@ pub struct ProviderEntry {
 
 /// Async results pushed from the Tokio thread onto the UI thread.
 enum ProviderEvent {
-    /// Connection-test outcome: `message` is a `"N models"` summary on
-    /// success or the diagnostic error on failure.
+    /// Connection-test outcome: the diagnostic text is logged where it is
+    /// produced; the event carries only what the UI reads.
     TestFinished {
         /// Provider id the test ran for.
         id: String,
         /// Whether the provider answered successfully.
         ok: bool,
-        /// Diagnostic detail (not localized).
-        message: String,
     },
     /// Model-list outcome: `models` is empty on error.
     ModelsLoaded {
@@ -455,19 +453,24 @@ impl ProviderSettingsControllerState {
         };
         let def = *def;
         handle.spawn(async move {
-            let event = match fetch_models(def, config).await {
-                Ok(models) => ProviderEvent::TestFinished {
-                    id: def.id.to_owned(),
-                    ok: true,
-                    message: format!("{} models", models.len()),
-                },
-                Err(err) => ProviderEvent::TestFinished {
-                    id: def.id.to_owned(),
-                    ok: false,
-                    message: err,
-                },
-            };
-            let _ = tx.send(event);
+            // The diagnostic text is logged here rather than carried on the
+            // event: no consumer reads it.
+            match fetch_models(def, config).await {
+                Ok(models) => {
+                    eprintln!("[airi-slint] providers: {} models", models.len());
+                    let _ = tx.send(ProviderEvent::TestFinished {
+                        id: def.id.to_owned(),
+                        ok: true,
+                    });
+                }
+                Err(error) => {
+                    eprintln!("[airi-slint] providers: test failed: {error}");
+                    let _ = tx.send(ProviderEvent::TestFinished {
+                        id: def.id.to_owned(),
+                        ok: false,
+                    });
+                }
+            }
         });
     }
 

@@ -616,3 +616,160 @@ fn prune_never_deletes_non_snap_dirs_or_corrupt_snap_dirs() {
     assert!(corrupt.is_dir());
     assert!(mismatched.is_dir());
 }
+
+/// A snapshot whose `files/` tree lost an entry must be refused *before* the
+/// destination is created at all, in every restore mode (dry run included).
+#[test]
+fn restore_incomplete_snapshot_is_rejected() {
+    let source = TempDir::new().unwrap();
+    write_file(source.path(), "alpha.txt", b"alpha-bytes");
+    write_file(source.path(), "beta.txt", b"beta-bytes");
+
+    let dest_root = TempDir::new().unwrap();
+    let manifest = create_snapshot(source.path(), dest_root.path(), None).unwrap();
+    let snap_dir = dest_root.path().join(format!("{}.snap", manifest.id));
+
+    // A pre-existing destination, so "nothing was written" is observable:
+    // the snapshot lists alpha.txt/beta.txt and dest holds neither, but an
+    // aborted restore must not even create the directory.
+    let dest = TempDir::new().unwrap();
+    let target = dest.path().join("restore-here");
+
+    fs::remove_file(snap_dir.join("files").join("alpha.txt")).unwrap();
+
+    for mode in [
+        RestoreMode::DryRun,
+        RestoreMode::OVERWRITE_CLEAN,
+        RestoreMode::Overwrite {
+            require_clean: false,
+        },
+    ] {
+        let err = restore_snapshot(&snap_dir, &target, mode).unwrap_err();
+        match &err {
+            SyncError::SnapshotIncomplete { snapshot, missing } => {
+                assert_eq!(snapshot, &snap_dir);
+                assert_eq!(missing, &vec!["alpha.txt".to_string()]);
+            }
+            other => panic!("expected SnapshotIncomplete for {mode:?}, got {other:?}"),
+        }
+        assert!(
+            !target.exists(),
+            "an incomplete snapshot must write nothing ({mode:?})"
+        );
+    }
+
+    // The file that *is* present must not be restored either.
+    assert!(fs::read_dir(dest.path()).unwrap().next().is_none());
+}
+
+/// `verify_snapshot` and the restore pre-flight must agree on completeness.
+#[test]
+fn verify_snapshot_and_restore_agree_on_missing_files() {
+    let source = TempDir::new().unwrap();
+    write_file(source.path(), "alpha.txt", b"alpha-bytes");
+    write_file(source.path(), "beta.txt", b"beta-bytes");
+
+    let dest_root = TempDir::new().unwrap();
+    let manifest = create_snapshot(source.path(), dest_root.path(), None).unwrap();
+    let snap_dir = dest_root.path().join(format!("{}.snap", manifest.id));
+
+    fs::remove_file(snap_dir.join("files").join("beta.txt")).unwrap();
+
+    match verify_snapshot(&snap_dir).unwrap() {
+        VerifyReport::Corrupt {
+            missing,
+            mismatched,
+        } => {
+            assert_eq!(missing, vec!["beta.txt".to_string()]);
+            assert!(mismatched.is_empty());
+        }
+        other => panic!("expected Corrupt, got {other:?}"),
+    }
+
+    let dest = TempDir::new().unwrap();
+    let target = dest.path().join("restore-here");
+    let err = restore_snapshot(&snap_dir, &target, RestoreMode::DryRun).unwrap_err();
+    match err {
+        SyncError::SnapshotIncomplete { missing, .. } => {
+            assert_eq!(missing, vec!["beta.txt".to_string()]);
+        }
+        other => panic!("expected SnapshotIncomplete, got {other:?}"),
+    }
+    assert!(!target.exists());
+}
+
+/// Prune must keep the N newest by `created_unix_ms`, not by directory order.
+#[test]
+fn prune_keeps_last_n_newest_by_created_time() {
+    let source = TempDir::new().unwrap();
+    write_file(source.path(), "alpha.txt", b"alpha-bytes");
+
+    let dest_root = TempDir::new().unwrap();
+    let mut ids = Vec::new();
+    for _ in 0..5 {
+        ids.push(
+            create_snapshot(source.path(), dest_root.path(), None)
+                .unwrap()
+                .id,
+        );
+    }
+    // Oldest → newest: 1_000 .. 5_000.
+    for (index, id) in ids.iter().enumerate() {
+        set_created_unix_ms(
+            &dest_root.path().join(format!("{id}.snap")),
+            (index as i64 + 1) * 1_000,
+        );
+    }
+
+    let report = prune_snapshots(dest_root.path(), 2).unwrap();
+
+    assert_eq!(report.kept, vec![ids[4].clone(), ids[3].clone()]);
+    assert_eq!(
+        report.deleted,
+        vec![ids[2].clone(), ids[1].clone(), ids[0].clone()]
+    );
+    assert_eq!(report.skipped_corrupt, 0);
+    assert!(report.bytes_freed > 0);
+
+    let remaining = snapshot_dirs(dest_root.path());
+    assert_eq!(remaining.len(), 2);
+    assert!(remaining
+        .iter()
+        .any(|p| p.ends_with(&format!("{}.snap", ids[3]))));
+    assert!(remaining
+        .iter()
+        .any(|p| p.ends_with(&format!("{}.snap", ids[4]))));
+    for id in &ids[..3] {
+        assert!(
+            !dest_root.path().join(format!("{id}.snap")).exists(),
+            "{id}.snap should have been pruned"
+        );
+    }
+
+    // keep_last >= candidate count keeps everything.
+    let report = prune_snapshots(dest_root.path(), 5).unwrap();
+    assert!(report.deleted.is_empty());
+    assert_eq!(snapshot_dirs(dest_root.path()).len(), 2);
+}
+
+/// `keep_last == 0` is refused and deletes nothing.
+#[test]
+fn prune_rejects_keep_zero_and_deletes_nothing() {
+    let source = TempDir::new().unwrap();
+    write_file(source.path(), "alpha.txt", b"alpha-bytes");
+
+    let dest_root = TempDir::new().unwrap();
+    let manifest = create_snapshot(source.path(), dest_root.path(), None).unwrap();
+
+    let err = prune_snapshots(dest_root.path(), 0).unwrap_err();
+    assert!(matches!(err, SyncError::PruneKeepZero));
+    assert!(dest_root
+        .path()
+        .join(format!("{}.snap", manifest.id))
+        .is_dir());
+
+    // A missing root is an empty report, not an error.
+    let report = prune_snapshots(&dest_root.path().join("never-created"), 1).unwrap();
+    assert!(report.deleted.is_empty());
+    assert!(report.kept.is_empty());
+}

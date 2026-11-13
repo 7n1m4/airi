@@ -731,9 +731,8 @@ impl DiscordGatewayState {
     }
 }
 
-/// Shared pre-flight + spawn used by both [`DiscordGatewayState::start`] and
-/// [`start_from_main`] (`--discord-gateway` autostart). Returns `Err(reason)`
-/// on refusal or failure; the caller decides how to report it.
+/// Shared pre-flight + spawn behind [`DiscordGatewayState::start`]. Returns
+/// `Err(reason)` on refusal or failure; the caller decides how to report it.
 pub(crate) fn start_worker() -> Result<(), String> {
     {
         let shared = lock_shared();
@@ -772,15 +771,6 @@ pub(crate) fn start_worker() -> Result<(), String> {
             Err(format!("failed to spawn gateway thread: {error}"))
         }
     }
-}
-
-/// Free entry point for the `--discord-gateway` CLI flag (called from
-/// `main`). Follows the same rails as the Start button: refuses (and only
-/// logs) when no token is configured; never spawns "because it's convenient".
-/// The gateway events surface through the page's 1 s poll exactly as if the
-/// human had pressed Start.
-pub(crate) fn start_from_main() -> bool {
-    start_worker().is_ok()
 }
 
 #[cfg(test)]

@@ -520,3 +520,174 @@ fn parse_bone(
         ik,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Encoding flags: 0 = UTF-16LE, 1 = UTF-8.
+    const UTF16LE: u8 = 0;
+    const UTF8: u8 = 1;
+
+    /// Append a length-prefixed PMX string.
+    fn put_string(buf: &mut Vec<u8>, encoding: u8, text: &str) {
+        if encoding == UTF8 {
+            buf.extend_from_slice(&(text.len() as i32).to_le_bytes());
+            buf.extend_from_slice(text.as_bytes());
+        } else {
+            let units: Vec<u16> = text.encode_utf16().collect();
+            buf.extend_from_slice(&((units.len() * 2) as i32).to_le_bytes());
+            for unit in units {
+                buf.extend_from_slice(&unit.to_le_bytes());
+            }
+        }
+    }
+
+    /// Append a little-endian `f32`.
+    fn put_f32(buf: &mut Vec<u8>, value: f32) {
+        buf.extend_from_slice(&value.to_le_bytes());
+    }
+
+    /// Append the PMX header (magic, version, globals) plus the four
+    /// length-prefixed name/comment strings.
+    fn put_header(buf: &mut Vec<u8>, encoding: u8) {
+        buf.extend_from_slice(b"PMX ");
+        put_f32(buf, 2.0);
+        buf.push(8); // header_size, read and ignored
+        buf.push(encoding);
+        buf.push(0); // additional UV count
+        for size in [1u8, 1, 1, 1, 1, 1] {
+            buf.push(size); // vertex/texture/material/bone/morph/rigid-body index sizes
+        }
+        put_string(buf, encoding, "test model");
+        put_string(buf, encoding, "");
+        put_string(buf, encoding, "comment");
+        put_string(buf, encoding, "");
+    }
+
+    /// Append the count that opens a section.
+    fn put_count(buf: &mut Vec<u8>, n: u32) {
+        buf.extend_from_slice(&n.to_le_bytes());
+    }
+
+    /// Build a minimal valid PMX 2.0 buffer: one model name and comment, zero
+    /// vertices, faces, textures, materials, bones and morphs. Bytes after the
+    /// morphs section (display frames, rigid bodies, joints) are never read, so
+    /// the buffer ends there.
+    fn minimal_pmx(encoding: u8) -> Vec<u8> {
+        let mut buf = Vec::new();
+        put_header(&mut buf, encoding);
+        for _ in 0..6 {
+            put_count(&mut buf, 0);
+        }
+        buf
+    }
+
+    /// Assert that `bytes` is rejected with a bounds error naming `section`.
+    fn assert_truncated(bytes: &[u8], section: &str) {
+        let error = parse(bytes).expect_err("truncated input must fail");
+        assert!(
+            matches!(&error, MmdError::Truncated { at } if *at == section),
+            "expected Truncated {{ at: {section:?} }}, got {error:?}"
+        );
+    }
+
+    #[test]
+    fn parse_minimal_pmx_succeeds() {
+        let model = parse(&minimal_pmx(1)).expect("minimal model must parse");
+
+        assert_eq!(model.name, "test model");
+        assert_eq!(model.name_global, "");
+        assert_eq!(model.comment, "comment");
+        assert_eq!(model.comment_global, "");
+        assert_eq!(model.version, 2.0);
+        assert_eq!(model.encoding, PmxEncoding::Utf8);
+        assert!(model.vertices.is_empty());
+        assert!(model.faces.is_empty());
+        assert!(model.textures.is_empty());
+        assert!(model.materials.is_empty());
+        assert!(model.bones.is_empty());
+        assert!(model.morphs.is_empty());
+    }
+
+    /// The same minimal model, encoded as UTF-16LE (the PMX default).
+    #[test]
+    fn parse_minimal_pmx_utf16_succeeds() {
+        let buf = minimal_pmx(UTF16LE);
+
+        let model = parse(&buf).expect("minimal UTF-16 model must parse");
+        assert_eq!(model.name, "test model");
+        assert_eq!(model.encoding, PmxEncoding::Utf16Le);
+    }
+
+    #[test]
+    fn parse_rejects_bad_signature() {
+        let mut bytes = minimal_pmx(1);
+        bytes[0] = b'X';
+
+        assert!(matches!(parse(&bytes), Err(MmdError::BadMagic)));
+    }
+
+    #[test]
+    fn parse_rejects_truncated_header() {
+        // The header is 16 bytes (magic 4 + version 4 + 8 global bytes): every
+        // cut below that fails inside "header", and cutting into the model-name
+        // length prefix reports "names".
+        let bytes = minimal_pmx(1);
+        for cut in [1, 4, 8, 15] {
+            assert_truncated(&bytes[..cut], "header");
+        }
+        assert_truncated(&bytes[..17], "names");
+    }
+
+    /// Append one BDEF1 vertex record: position (3) + normal (3) + UV (2) +
+    /// deform byte + bone index + edge factor = 52 bytes with 1-byte indices.
+    fn put_vertex(buf: &mut Vec<u8>) {
+        for value in [
+            1.0f32, 2.0, 3.0, // position
+            0.0, 1.0, 0.0, // normal
+            0.5, 0.5, // uv
+        ] {
+            put_f32(buf, value);
+        }
+        buf.push(DEFORM_BDEF1);
+        buf.push(0); // bone index 0
+        put_f32(buf, 0.0); // edge factor
+    }
+
+    /// Length of one BDEF1 vertex record built by [`put_vertex`].
+    const VERTEX_LEN: usize = 8 * 4 + 2 + 4;
+
+    /// A model with one BDEF1 vertex. Returns the buffer and the offset of the
+    /// vertex count inside it.
+    fn one_vertex_pmx() -> (Vec<u8>, usize) {
+        let mut buf = minimal_pmx(1);
+        let vertex_count_at = buf.len() - 6 * 4;
+        buf.truncate(vertex_count_at);
+        put_count(&mut buf, 1);
+        put_vertex(&mut buf);
+        // Faces, textures, materials, bones, morphs (all empty).
+        for _ in 0..5 {
+            put_count(&mut buf, 0);
+        }
+        assert!(parse(&buf).is_ok());
+        (buf, vertex_count_at)
+    }
+
+    #[test]
+    fn parse_rejects_truncated_mid_body() {
+        // Every cut inside the 52-byte record is a cut inside the vertex array.
+        let (buf, vertex_count_at) = one_vertex_pmx();
+        let vertex_at = vertex_count_at + 4;
+        for cut in [1, 27, VERTEX_LEN - 1] {
+            assert_truncated(&buf[..vertex_at + cut], "vertices");
+        }
+
+        // A count that promises more records than the buffer holds runs out of
+        // input mid-array instead of reading past the end: the count says 4,
+        // the buffer still carries exactly one record.
+        let mut over_counted = buf;
+        over_counted[vertex_count_at..vertex_at].copy_from_slice(&4u32.to_le_bytes());
+        assert_truncated(&over_counted, "vertices");
+    }
+}
