@@ -7,19 +7,18 @@ import type {
   ListCachedModelsResult,
   LoadModelOptions,
   LoadModelResult,
-  NativeAIPluginInterface,
   PingResponse,
   TestStreamOptions,
   TokenStreamEvent,
   UnloadModelOptions,
 } from './definitions'
 
-import { Capacitor, registerPlugin } from '@capacitor/core'
-import { isApplePlatform, isStageCapacitor } from '@proj-airi/stage-shared'
-
 export * from './definitions'
 
-const Plugin = registerPlugin<NativeAIPluginInterface>('NativeAI')
+// NOTICE: The Capacitor-based native bridge (on-device Apple Core AI via a Swift plugin) is
+// gone with the mobile app purge. Everything below is the mock/simulated path the web and
+// desktop builds always used. Reintroduce a native provider behind the same `NativeAI`
+// surface when the unified Rust-native app grows an on-device inference path.
 
 /**
  * Format raw bytes into human-readable memory strings (e.g. "6.0 GB" or "350.2 MB")
@@ -35,7 +34,7 @@ export function formatBytes(bytes: number, decimals = 1): string {
 }
 
 /**
- * Fallback telemetry for Web/Browser or when native detection fails to resolve fields.
+ * Fallback telemetry for Web/Browser — the only environment now.
  */
 function createSafeFallbackTelemetry(partial?: Partial<HardwareTelemetry>, raw?: Record<string, unknown>): HardwareTelemetry {
   const isWeb = typeof navigator !== 'undefined'
@@ -60,8 +59,8 @@ function createSafeFallbackTelemetry(partial?: Partial<HardwareTelemetry>, raw?:
     isNeuralEngineAvailable: partial?.isNeuralEngineAvailable ?? false,
     rawDiagnostics: raw || {
       userAgent,
-      platform: Capacitor.getPlatform(),
-      isNative: Capacitor.isNativePlatform(),
+      platform: 'web',
+      isNative: false,
       timestamp: Date.now(),
       ...partial?.rawDiagnostics,
     },
@@ -69,278 +68,100 @@ function createSafeFallbackTelemetry(partial?: Partial<HardwareTelemetry>, raw?:
 }
 
 /**
- * Robust wrapper around NativeAI plugin with graceful error handling on every method.
+ * NativeAI with the native bridge removed; every method resolves through the simulated
+ * web path so existing call sites keep working unchanged.
  */
 export const NativeAI = {
   isNative(): boolean {
-    if (typeof window === 'undefined')
-      return false
-    if (Capacitor.isNativePlatform() && (Capacitor.getPlatform() === 'ios' || isApplePlatform()))
-      return true
-    if (isStageCapacitor() && isApplePlatform())
-      return true
     return false
   },
 
   async getHardwareTelemetry(): Promise<HardwareTelemetry> {
-    if (!this.isNative()) {
-      return createSafeFallbackTelemetry()
-    }
-
-    try {
-      const result = await Plugin.getHardwareTelemetry()
-      if (!result || typeof result !== 'object') {
-        return createSafeFallbackTelemetry(undefined, { rawReturned: result })
-      }
-
-      // Ensure every property is guaranteed non-empty/non-undefined
-      return {
-        deviceModel: result.deviceModel || 'Apple Device',
-        rawMachineId: result.rawMachineId || 'Unknown Machine',
-        chipFamily: result.chipFamily || 'Apple Silicon',
-        cpuCores: result.cpuCores || 4,
-        totalMemoryBytes: result.totalMemoryBytes || 0,
-        totalMemoryFormatted: result.totalMemoryFormatted || formatBytes(result.totalMemoryBytes || 0),
-        availableMemoryBytes: result.availableMemoryBytes || 0,
-        availableMemoryFormatted: result.availableMemoryFormatted || formatBytes(result.availableMemoryBytes || 0),
-        gpuDeviceName: result.gpuDeviceName || 'Apple GPU',
-        hasUnifiedMemory: result.hasUnifiedMemory ?? true,
-        maxWorkingSetBytes: result.maxWorkingSetBytes || 0,
-        osVersion: result.osVersion || 'iOS Unknown',
-        isCoreAIAvailable: result.isCoreAIAvailable ?? true,
-        isNeuralEngineAvailable: result.isNeuralEngineAvailable ?? true,
-        rawDiagnostics: result.rawDiagnostics && Object.keys(result.rawDiagnostics).length > 0
-          ? result.rawDiagnostics
-          : { ...result },
-      }
-    }
-    catch (err: any) {
-      console.warn('[NativeAI] getHardwareTelemetry failed, using safe fallback:', err)
-      return createSafeFallbackTelemetry(undefined, {
-        error: String(err?.message || err),
-        stack: err?.stack,
-        platform: Capacitor.getPlatform(),
-      })
-    }
+    return createSafeFallbackTelemetry()
   },
 
   async ping(): Promise<PingResponse> {
     const clientTimestamp = Date.now()
-
-    if (!this.isNative()) {
-      return {
-        pong: true,
-        clientTimestamp,
-        serverTimestamp: clientTimestamp,
-        roundtripLatencyMs: 0.1,
-        platform: 'web-fallback',
-        engine: 'Mock Bridge',
-      }
-    }
-
-    try {
-      const response = await Plugin.ping({ timestamp: clientTimestamp })
-      const now = Date.now()
-      return {
-        pong: response?.pong ?? true,
-        clientTimestamp,
-        serverTimestamp: response?.serverTimestamp || now,
-        roundtripLatencyMs: Math.max(0.1, Number((now - clientTimestamp).toFixed(2))),
-        platform: response?.platform || 'iOS',
-        engine: response?.engine || 'Capacitor Native Swift',
-      }
-    }
-    catch (err: any) {
-      const now = Date.now()
-      console.warn('[NativeAI] Ping failed:', err)
-      return {
-        pong: false,
-        clientTimestamp,
-        serverTimestamp: now,
-        roundtripLatencyMs: Number((now - clientTimestamp).toFixed(2)),
-        platform: 'error',
-        engine: `Failed: ${String(err?.message || err)}`,
-      }
+    return {
+      pong: true,
+      clientTimestamp,
+      serverTimestamp: clientTimestamp,
+      roundtripLatencyMs: 0.1,
+      platform: 'web-fallback',
+      engine: 'Mock Bridge',
     }
   },
 
-  // In-flight download promises and listeners
-  _activeDownloads: new Map<string, Promise<{ modelId: string, status: string }>>(),
-  _progressListeners: new Map<string, Set<(event: DownloadProgressEvent) => void>>(),
-
-  async isModelCached(modelId: string): Promise<boolean> {
-    if (!this.isNative()) {
-      return false
-    }
-    try {
-      const res = await this.listCachedModels()
-      const sanitized = modelId.replace(/\//g, '_')
-      return (
-        res.models?.some(
-          m => (m.modelId === sanitized || m.modelId === modelId) && m.isCompiled,
-        ) ?? false
-      )
-    }
-    catch {
-      return false
-    }
+  async isModelCached(_modelId: string): Promise<boolean> {
+    return false
   },
 
   async downloadModel(
     options: DownloadModelOptions,
     onProgress?: (event: DownloadProgressEvent) => void,
   ): Promise<{ modelId: string, status: string }> {
-    if (!this.isNative()) {
-      // Browser mock download simulation
-      let bytes = 0
-      const totalBytes = 1.3 * 1024 * 1024 * 1024 // 1.3 GB
-      const stepBytes = 150 * 1024 * 1024 // 150 MB steps
-      const startTime = Date.now()
+    // Browser mock download simulation
+    let bytes = 0
+    const totalBytes = 1.3 * 1024 * 1024 * 1024 // 1.3 GB
+    const stepBytes = 150 * 1024 * 1024 // 150 MB steps
+    const startTime = Date.now()
 
-      return new Promise((resolve) => {
-        const interval = setInterval(() => {
-          bytes = Math.min(totalBytes, bytes + stepBytes)
-          const percentage = Number(((bytes / totalBytes) * 100).toFixed(1))
-          const elapsedSec = (Date.now() - startTime) / 1000
-          const speedMBs = Number(((bytes / (1024 * 1024)) / Math.max(0.1, elapsedSec)).toFixed(1))
-          const isCompleted = bytes >= totalBytes
+    return new Promise((resolve) => {
+      const interval = setInterval(() => {
+        bytes = Math.min(totalBytes, bytes + stepBytes)
+        const percentage = Number(((bytes / totalBytes) * 100).toFixed(1))
+        const elapsedSec = (elapsed => elapsed / 1000)(Date.now() - startTime)
+        const speedMBs = Number(((bytes / (1024 * 1024)) / Math.max(0.1, elapsedSec)).toFixed(1))
+        const isCompleted = bytes >= totalBytes
 
-          onProgress?.({
-            modelId: options.modelId,
-            bytesWritten: bytes,
-            totalBytes,
-            percentage,
-            speedMBs,
-            isCompleted,
-          })
-
-          if (isCompleted) {
-            clearInterval(interval)
-            resolve({ modelId: options.modelId, status: 'downloaded' })
-          }
-        }, 300)
-      })
-    }
-
-    // Register progress callback if provided
-    if (onProgress) {
-      if (!this._progressListeners.has(options.modelId)) {
-        this._progressListeners.set(options.modelId, new Set())
-      }
-      this._progressListeners.get(options.modelId)!.add(onProgress)
-    }
-
-    // If download is already in progress, return the existing in-flight Promise
-    const existingPromise = this._activeDownloads.get(options.modelId)
-    if (existingPromise) {
-      return existingPromise
-    }
-
-    const downloadPromise = new Promise<{ modelId: string, status: string }>(async (resolve, reject) => {
-      let listenerHandle: { remove: () => Promise<void> } | null = null
-
-      try {
-        listenerHandle = await Plugin.addListener('downloadProgress', (event: DownloadProgressEvent) => {
-          if (event.modelId === options.modelId) {
-            const listeners = this._progressListeners.get(options.modelId)
-            listeners?.forEach((cb) => {
-              try {
-                cb(event)
-              }
-              catch (e) {
-                console.error('[NativeAI] Progress callback error:', e)
-              }
-            })
-
-            if (event.isCompleted) {
-              listenerHandle?.remove().catch(() => {})
-              this._activeDownloads.delete(options.modelId)
-              this._progressListeners.delete(options.modelId)
-              resolve({ modelId: options.modelId, status: 'downloaded' })
-            }
-            else if (event.error) {
-              listenerHandle?.remove().catch(() => {})
-              this._activeDownloads.delete(options.modelId)
-              this._progressListeners.delete(options.modelId)
-              reject(new Error(event.error))
-            }
-          }
+        onProgress?.({
+          modelId: options.modelId,
+          bytesWritten: bytes,
+          totalBytes,
+          percentage,
+          speedMBs,
+          isCompleted,
         })
 
-        await Plugin.downloadModel(options)
-      }
-      catch (err) {
-        listenerHandle?.remove().catch(() => {})
-        this._activeDownloads.delete(options.modelId)
-        this._progressListeners.delete(options.modelId)
-        reject(err)
-      }
+        if (isCompleted) {
+          clearInterval(interval)
+          resolve({ modelId: options.modelId, status: 'downloaded' })
+        }
+      }, 300)
     })
-
-    this._activeDownloads.set(options.modelId, downloadPromise)
-    return downloadPromise
   },
 
   async ensureModelReady(
     options: LoadModelOptions,
-    onProgress?: (event: DownloadProgressEvent) => void,
+    _onProgress?: (event: DownloadProgressEvent) => void,
   ): Promise<LoadModelResult> {
-    if (!this.isNative()) {
-      return await this.loadModel(options)
-    }
-
-    const isCached = await this.isModelCached(options.modelId)
-    if (!isCached) {
-      console.info(`[NativeAI] Model ${options.modelId} not cached. Auto-downloading on-device weights...`)
-      await this.downloadModel(
-        {
-          modelId: options.modelId,
-          repo: options.modelId,
-        },
-        onProgress,
-      )
-    }
-
     return await this.loadModel(options)
   },
 
   async loadModel(options: LoadModelOptions): Promise<LoadModelResult> {
-    if (!this.isNative()) {
-      await new Promise(resolve => setTimeout(resolve, 600))
-      return {
-        modelId: options.modelId,
-        isLoaded: true,
-        loadTimeMs: 580,
-        computeUnitsUsed: 'Simulated Web Neural Engine',
-        residentMemoryBytes: 1.2 * 1024 * 1024 * 1024,
-      }
+    await new Promise(resolve => setTimeout(resolve, 600))
+    return {
+      modelId: options.modelId,
+      isLoaded: true,
+      loadTimeMs: 580,
+      computeUnitsUsed: 'Simulated Web Neural Engine',
+      residentMemoryBytes: 1.2 * 1024 * 1024 * 1024,
     }
-
-    return await Plugin.loadModel(options)
   },
 
-  async unloadModel(options?: UnloadModelOptions): Promise<{ success: boolean }> {
-    if (!this.isNative()) {
-      return { success: true }
-    }
-    return await Plugin.unloadModel(options)
+  async unloadModel(_options?: UnloadModelOptions): Promise<{ success: boolean }> {
+    return { success: true }
   },
 
   async listCachedModels(): Promise<ListCachedModelsResult> {
-    if (!this.isNative()) {
-      return {
-        models: [],
-        totalSizeBytes: 0,
-      }
+    return {
+      models: [],
+      totalSizeBytes: 0,
     }
-    return await Plugin.listCachedModels()
   },
 
-  async deleteCachedModel(options: DeleteCachedModelOptions): Promise<{ success: boolean }> {
-    if (!this.isNative()) {
-      return { success: true }
-    }
-    return await Plugin.deleteCachedModel(options)
+  async deleteCachedModel(_options: DeleteCachedModelOptions): Promise<{ success: boolean }> {
+    return { success: true }
   },
 
   async generateStream(
@@ -349,177 +170,95 @@ export const NativeAI = {
   ): Promise<{ stop: () => Promise<void> }> {
     const requestId = options.requestId || `gen-${Date.now()}`
 
-    if (!this.isNative()) {
-      return this.testTokenStream({
-        requestId,
-        prompt: options.prompt || options.messages?.[options.messages.length - 1]?.content || 'Hello!',
-        tokenCount: options.maxTokens || 40,
-        speedTokSec: 45,
-      }, onToken)
-    }
-
-    try {
-      const listenerHandle = await Plugin.addListener('token', (event: TokenStreamEvent) => {
-        if (event.requestId === requestId) {
-          onToken(event)
-          if (event.isFinished) {
-            listenerHandle.remove().catch(() => {})
-          }
-        }
-      })
-
-      await Plugin.generateStream(options)
-
-      return {
-        stop: async () => {
-          try {
-            await Plugin.cancelGeneration({ requestId })
-            await listenerHandle.remove()
-          }
-          catch (e) {
-            console.warn('[NativeAI] Error cancelling generation:', e)
-          }
-        },
-      }
-    }
-    catch (err) {
-      console.error('[NativeAI] generateStream failed:', err)
-      onToken({
-        requestId,
-        token: '',
-        isFinished: true,
-        finishReason: 'error',
-        error: String(err),
-      })
-      return { stop: async () => {} }
-    }
+    return this.testTokenStream({
+      requestId,
+      prompt: options.prompt || options.messages?.[options.messages.length - 1]?.content || 'Hello!',
+      tokenCount: options.maxTokens || 40,
+      speedTokSec: 45,
+    }, onToken)
   },
 
   async testTokenStream(options: TestStreamOptions, onToken: (event: TokenStreamEvent) => void): Promise<{ stop: () => Promise<void> }> {
     const requestId = options.requestId || `test-${Date.now()}`
 
-    if (!this.isNative()) {
-      // In-browser mock stream simulation
-      let isCancelled = false
-      const inputPrompt = options.prompt?.trim() || 'Hello AIRI!'
-      const totalTokens = options.tokenCount || 30
-      const delayMs = Math.max(10, Math.floor(1000 / (options.speedTokSec || 30)))
-      const startTime = Date.now()
+    // In-browser mock stream simulation
+    let isCancelled = false
+    const inputPrompt = options.prompt?.trim() || 'Hello AIRI!'
+    const totalTokens = options.tokenCount || 30
+    const delayMs = Math.max(10, Math.floor(1000 / (options.speedTokSec || 30)))
+    const startTime = Date.now()
 
-      const mockWords = [
-        `[Prompt: ${inputPrompt.slice(0, 15)}...]`,
-        ' Greetings',
-        ' from',
-        ' the',
-        ' Apple',
-        ' Silicon',
-        ' Neural',
-        ' Bridge!',
-        ' This',
-        ' is',
-        ' a',
-        ' simulated',
-        ' Core',
-        ' AI',
-        ' token',
-        ' stream',
-        ' running',
-        ' inside',
-        ' Project',
-        ' AIRI.',
-        ' Real-time',
-        ' events',
-        ' stream',
-        ' over',
-        ' the',
-        ' Capacitor',
-        ' eventa',
-        ' bus',
-        ' with',
-        ' sub-millisecond',
-        ' latency.',
-      ]
+    const mockWords = [
+      `[Prompt: ${inputPrompt.slice(0, 15)}...]`,
+      ' Greetings',
+      ' from',
+      ' the',
+      ' Apple',
+      ' Silicon',
+      ' Neural',
+      ' Bridge!',
+      ' This',
+      ' is',
+      ' a',
+      ' simulated',
+      ' Core',
+      ' AI',
+      ' token',
+      ' stream',
+      ' running',
+      ' inside',
+      ' Project',
+      ' AIRI.',
+      ' Real-time',
+      ' events',
+      ' stream',
+      ' over',
+      ' the',
+      ' eventa',
+      ' bus',
+      ' with',
+      ' sub-millisecond',
+      ' latency.',
+    ]
 
-      ;(async () => {
-        for (let i = 0; i < totalTokens; i++) {
-          if (isCancelled) {
-            onToken({ requestId, token: '', isFinished: true, finishReason: 'cancelled' })
-            return
-          }
-
-          await new Promise(resolve => setTimeout(resolve, delayMs))
-          const word = mockWords[i % mockWords.length]
-          const elapsedMs = Date.now() - startTime
-          const tokensPerSecond = Number(((i + 1) / (elapsedMs / 1000)).toFixed(1))
-
-          onToken({
-            requestId,
-            token: word,
-            isFinished: false,
-            completionTokens: i + 1,
-            elapsedMs,
-            tokensPerSecond,
-          })
+    ;(async () => {
+      for (let i = 0; i < totalTokens; i++) {
+        if (isCancelled) {
+          onToken({ requestId, token: '', isFinished: true, finishReason: 'cancelled' })
+          return
         }
 
+        await new Promise(resolve => setTimeout(resolve, delayMs))
+        const word = mockWords[i % mockWords.length]
         const elapsedMs = Date.now() - startTime
+        const tokensPerSecond = Number(((i + 1) / (elapsedMs / 1000)).toFixed(1))
+
         onToken({
           requestId,
-          token: '',
-          isFinished: true,
-          finishReason: 'stop',
-          completionTokens: totalTokens,
+          token: word,
+          isFinished: false,
+          completionTokens: i + 1,
           elapsedMs,
-          tokensPerSecond: Number((totalTokens / (elapsedMs / 1000)).toFixed(1)),
+          tokensPerSecond,
         })
-      })()
-
-      return {
-        stop: async () => {
-          isCancelled = true
-        },
       }
-    }
 
-    try {
-      const listenerHandle = await Plugin.addListener('token', (event: TokenStreamEvent) => {
-        if (event.requestId === requestId) {
-          onToken(event)
-          if (event.isFinished) {
-            listenerHandle.remove().catch(() => {})
-          }
-        }
-      })
-
-      await Plugin.testTokenStream({
-        requestId,
-        prompt: options.prompt,
-        tokenCount: options.tokenCount || 40,
-        speedTokSec: options.speedTokSec || 35,
-      })
-
-      return {
-        stop: async () => {
-          try {
-            await Plugin.cancelTestStream({ requestId })
-            await listenerHandle.remove()
-          }
-          catch (e) {
-            console.warn('[NativeAI] Error cancelling test stream:', e)
-          }
-        },
-      }
-    }
-    catch (err) {
-      console.error('[NativeAI] testTokenStream failed:', err)
+      const elapsedMs = Date.now() - startTime
       onToken({
         requestId,
         token: '',
         isFinished: true,
-        finishReason: 'error',
-        error: String(err),
+        finishReason: 'stop',
+        completionTokens: totalTokens,
+        elapsedMs,
+        tokensPerSecond: Number((totalTokens / (elapsedMs / 1000)).toFixed(1)),
       })
-      return { stop: async () => {} }
+    })()
+
+    return {
+      stop: async () => {
+        isCancelled = true
+      },
     }
   },
 }

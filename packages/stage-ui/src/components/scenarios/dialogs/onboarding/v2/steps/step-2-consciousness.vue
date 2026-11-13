@@ -3,7 +3,6 @@ import type { WebLlmLoadTarget } from '../../../../../../libs/inference/adapters
 import type { ProgressPayload } from '../../../../../../libs/inference/protocol'
 import type { ProviderMetadata } from '../../../../../../stores/providers'
 
-import { Capacitor } from '@capacitor/core'
 import { isApplePlatform, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
 import { detectWebGPU } from '@proj-airi/stage-shared/webgpu'
 import { Button } from '@proj-airi/ui'
@@ -16,8 +15,8 @@ import ProviderPickerGrid from '../components/provider-picker-grid.vue'
 
 import { DEFAULT_WEB_LLM_FP32_MODEL, WEB_LLM_MODELS } from '../../../../../../libs/inference/constants'
 import { NativeAI } from '../../../../../../libs/native-ai'
-import { useProvidersStore } from '../../../../../../stores/providers'
 import { isKeylessProvider, isOptionalKeyProvider, keylessOrOptionalKey } from '../../../../../../libs/providers/types'
+import { useProvidersStore } from '../../../../../../stores/providers'
 import { DEFAULT_APPLE_CORE_AI_MODEL } from '../../../../../../stores/providers/apple-core-ai'
 import { BrainModelPicker } from '../../../../chat'
 import { useOnboardingV2Draft } from '../draft-store'
@@ -54,8 +53,7 @@ const { allChatProvidersMetadata, configuredChatProvidersMetadata } = storeToRef
 // Platform detection: iOS/iPadOS runs exclusively via Apple Core AI (Neural Engine / CoreML).
 // WebLLM is restricted to Desktop Electron (Tamagotchi) or Desktop Web (non-Apple).
 const isIOSNative = computed(() => isApplePlatform() || NativeAI.isNative())
-const isAndroidNative = computed(() => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android')
-const isWebLlmPlatform = computed(() => (isStageTamagotchi() || (isStageWeb() && !isApplePlatform())) && !isAndroidNative.value)
+const isWebLlmPlatform = computed(() => isStageTamagotchi() || (isStageWeb() && !isApplePlatform()))
 
 // Cloud model list is id-keyed and queries live providerRuntimeState.
 const providerModels = computed(() => {
@@ -546,9 +544,7 @@ watch(verified, (v) => {
       class="flex-shrink-0"
       :message="isIOSNative
         ? 'Pick an AI brain for your companion. Run 100% offline with Apple Neural Engine (ANE) or connect your preferred cloud API (OpenRouter, Gemini, OpenAI, Claude)!'
-        : (isAndroidNative
-          ? 'Pick an AI brain for your companion. Connect a free provider or configure your preferred cloud API (OpenRouter, Gemini, OpenAI, Claude)!'
-          : 'Pick an AI brain for your companion. Connect a free provider, configure your preferred cloud API (OpenRouter, Gemini, OpenAI, Claude), or run local WebLLM on WebGPU!')"
+        : 'Pick an AI brain for your companion. Connect a free provider, configure your preferred cloud API (OpenRouter, Gemini, OpenAI, Claude), or run local WebLLM on WebGPU!'"
     />
 
     <!-- Quick-Pick for Configured Brains -->

@@ -3,9 +3,6 @@ import type { WebLlmLoadTarget } from '../../../../../../libs/inference/adapters
 import type { ProgressPayload } from '../../../../../../libs/inference/protocol'
 import type { ProviderMetadata } from '../../../../../../stores/providers'
 
-import { isKeylessProvider, isOptionalKeyProvider, keylessOrOptionalKey } from '../../../../../../libs/providers/types'
-
-import { Capacitor } from '@capacitor/core'
 import { isApplePlatform, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
 import { detectWebGPU } from '@proj-airi/stage-shared/webgpu'
 import { Button } from '@proj-airi/ui'
@@ -14,15 +11,17 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
+// NOTICE: reuses v2's picker because v3 has no copy of its own — keep both
+// onboarding flows aligned rather than moving or duplicating it.
+import ProviderPickerGrid from '../../v2/components/provider-picker-grid.vue'
+
 import { DEFAULT_WEB_LLM_FP32_MODEL, WEB_LLM_MODELS } from '../../../../../../libs/inference/constants'
 import { NativeAI } from '../../../../../../libs/native-ai'
+import { isKeylessProvider, isOptionalKeyProvider, keylessOrOptionalKey } from '../../../../../../libs/providers/types'
 import { useAiriCardStore } from '../../../../../../stores/modules/airi-card'
 import { useProvidersStore } from '../../../../../../stores/providers'
 import { DEFAULT_APPLE_CORE_AI_MODEL } from '../../../../../../stores/providers/apple-core-ai'
 import { BrainModelPicker } from '../../../../chat'
-// NOTICE: reuses v2's picker because v3 has no copy of its own — keep both
-// onboarding flows aligned rather than moving or duplicating it.
-import ProviderPickerGrid from '../../v2/components/provider-picker-grid.vue'
 import { resolvePersona } from '../composables/useStarterCardCommit'
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
@@ -50,8 +49,7 @@ const { allChatProvidersMetadata, configuredChatProvidersMetadata } = storeToRef
 
 // Platform detection: iOS runs Apple Core AI (ANE/CoreML), Desktop/Web runs WebLLM (WebGPU), Android runs Cloud API
 const isIOSNative = computed(() => isApplePlatform() || NativeAI.isNative())
-const isAndroidNative = computed(() => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android')
-const isWebLlmPlatform = computed(() => (isStageTamagotchi() || (isStageWeb() && !isApplePlatform())) && !isAndroidNative.value)
+const isWebLlmPlatform = computed(() => isStageTamagotchi() || (isStageWeb() && !isApplePlatform()))
 
 // Cloud model list is id-keyed and queries live providerRuntimeState
 const providerModels = computed(() => {
@@ -654,9 +652,7 @@ onBeforeUnmount(() => {
         <p :class="['leading-relaxed font-medium']">
           {{ isIOSNative
             ? 'Pick an AI brain for your companion. Run 100% offline with Apple Neural Engine (ANE) or connect your preferred cloud API (OpenRouter, Gemini, OpenAI, Claude)!'
-            : (isAndroidNative
-              ? 'Pick an AI brain for your companion. Connect a free provider or configure your preferred cloud API (OpenRouter, Gemini, OpenAI, Claude)!'
-              : 'Pick an AI brain for your companion. Connect a free provider, configure your preferred cloud API (OpenRouter, Gemini, OpenAI, Claude), or run local WebLLM on WebGPU!') }}
+            : 'Pick an AI brain for your companion. Connect a free provider, configure your preferred cloud API (OpenRouter, Gemini, OpenAI, Claude), or run local WebLLM on WebGPU!' }}
         </p>
       </div>
 
@@ -1034,7 +1030,7 @@ onBeforeUnmount(() => {
                 <span v-if="!keyIsOptional" class="text-red-500">*</span>
                 <span v-else class="text-neutral-400">(optional)</span>
               </label>
-              <p v-if="keyIsOptional" class="text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">
+              <p v-if="keyIsOptional" class="text-[11px] text-neutral-500 leading-relaxed dark:text-neutral-400">
                 {{ inlineConfigProvider.name }} works without a key. Add one to unlock paid models and higher quotas.
               </p>
               <div class="relative flex items-center">

@@ -3,7 +3,6 @@ import type { WebLlmModelInfo } from '../../../libs/inference/constants'
 import type { ProgressPayload } from '../../../libs/inference/protocol'
 import type { ProviderMetadata } from '../../../stores/providers'
 
-import { Capacitor } from '@capacitor/core'
 import { isApplePlatform, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
 import { detectWebGPU } from '@proj-airi/stage-shared/webgpu'
 import { storeToRefs } from 'pinia'
@@ -260,8 +259,7 @@ export function useConsciousnessConfig(options: UseConsciousnessConfigOptions = 
 
   // --- Platform Detection ---
   const isIOSNative = computed(() => isApplePlatform() || NativeAI.isNative())
-  const isAndroidNative = computed(() => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android')
-  const isWebLlmPlatform = computed(() => (isStageTamagotchi() || (isStageWeb() && !isApplePlatform())) && !isAndroidNative.value)
+  const isWebLlmPlatform = computed(() => isStageTamagotchi() || (isStageWeb() && !isApplePlatform()))
 
   const providerModels = computed(() => {
     if (!selectedProviderId.value)
