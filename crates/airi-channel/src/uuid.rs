@@ -50,6 +50,8 @@ fn fill_from_urandom(_buf: &mut [u8; 16]) -> bool {
 
 /// Last-resort weak fill. See module docs for the caveat.
 fn fill_fallback(buf: &mut [u8; 16]) {
+    // The module docs promise a loud warning on this path — honor it.
+    eprintln!("airi-channel: WARNING: /dev/urandom unavailable; auth token generated from time+pid and is NOT unguessable");
     // NOTICE: explicitly not cryptographic. Only reached when /dev/urandom is
     // unreadable; the authToken is still unique per process start but must
     // not be assumed unguessable on such targets.

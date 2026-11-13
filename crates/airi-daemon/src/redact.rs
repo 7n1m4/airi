@@ -27,11 +27,24 @@
 /// Patterns in longest-first order where one is a prefix of another
 /// (`sk-ant-` before `sk-`). The left-boundary rule already handles overlap,
 /// but longest-first keeps the intent obvious to a reader.
+/// Quoted JSON shapes are matched with their opening quote and colon/space
+/// included so the value run is actually redacted — the quote itself is not
+/// a token byte, so a bare `"authToken":` pattern would leave `abc` visible.
+/// Only a single space after the colon is recognized; tabs/newlines are
+/// not (compact JSON is the assumed shape). Matching is case-insensitive,
+/// so `"AUTHTOKEN":"…"` and friends are covered by the same patterns.
 const PATTERNS: &[&str] = &[
     "sk-ant-",
     "github_pat_",
     "Bearer ",
     "Basic ",
+    "\"authToken\":\"",
+    "\"authToken\": \"",
+    "\"token\":\"",
+    "\"token\": \"",
+    "\"api_key\":\"",
+    "\"api_key\": \"",
+    "authtoken",
     "token=",
     "api_key",
     "sk-",
@@ -127,6 +140,15 @@ mod tests {
             ("AIzaSyAAAA rest", "*** rest"),
             ("ya29.a0AfH6AAA rest", "*** rest"),
             ("gsk_AAAAAAAAAAAA rest", "*** rest"),
+            ("{\"authToken\":\"abc123\"}", "{***\"}"),
+            ("{\"authToken\": \"abc123\"}", "{***\"}"),
+            ("{\"AUTHTOKEN\":\"abc123\"}", "{***\"}"),
+            ("{\"token\":\"abc123\"}", "{***\"}"),
+            ("{\"Token\": \"abc123\"}", "{***\"}"),
+            ("{\"api_key\":\"abc123\"}", "{***\"}"),
+            ("{\"API_KEY\": \"abc123\"}", "{***\"}"),
+            ("authtoken=abc123 end", "*** end"),
+            ("authToken=abc123 end", "*** end"),
         ];
         for (input, want) in cases {
             assert_eq!(redact(input), want, "input: {input}");
@@ -168,6 +190,36 @@ mod tests {
         assert_eq!(redact("BEARER abc def"), "*** def");
         assert_eq!(redact("Token=abc def"), "*** def");
         assert_eq!(redact("API_KEY=abc def"), "*** def");
+    }
+
+    #[test]
+    fn token_equals_respects_alphanumeric_boundary() {
+        // Quote before `token=` acts as the boundary: the whole thing redacts.
+        assert_eq!(redact("\"token=abc123\""), "\"***\"");
+        // Underscore is a non-alphanumeric boundary before `authtoken`.
+        assert_eq!(redact("my_authtoken=abc123"), "my_***");
+        // Alphanumeric directly against the pattern: not a match, at all.
+        assert_eq!(redact("xauthtoken=abc123"), "xauthtoken=abc123");
+        assert_eq!(redact("authtoken=abc123"), "***");
+    }
+
+    #[test]
+    fn quoted_credentials_leave_no_value_bytes() {
+        let cases = [
+            "{\"authToken\":\"secret-value-1\"}",
+            "{\"authToken\": \"secret-value-1\"}",
+            "{\"token\":\"secret-value-2\"}",
+            "{\"token\": \"secret-value-2\"}",
+            "{\"api_key\":\"secret-value-3\"}",
+            "{\"api_key\": \"secret-value-3\"}",
+        ];
+        for input in cases {
+            let out = redact(input);
+            assert!(
+                !out.contains("secret"),
+                "credential leaked: {input} -> {out}"
+            );
+        }
     }
 
     #[test]

@@ -291,7 +291,7 @@ fn serve(
                     },
                     None => ConnectionStream::Plain(tcp),
                 };
-                std::thread::Builder::new()
+                if let Err(err) = std::thread::Builder::new()
                     .name(format!("airi-channel-conn-{peer}"))
                     .spawn(move || {
                         if let Err(err) = handle_connection(
@@ -304,7 +304,12 @@ fn serve(
                         ) {
                             tracing::debug!(%peer, %err, "channel connection ended with error");
                         }
-                    })?;
+                    })
+                {
+                    // Never propagate spawn failure (EMFILE/ENOMEM) out of
+                    // the accept loop; the client simply re-connects later.
+                    eprintln!("airi-channel: failed to spawn connection thread for {peer}: {err}");
+                }
             }
             Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
                 std::thread::sleep(Duration::from_millis(10));

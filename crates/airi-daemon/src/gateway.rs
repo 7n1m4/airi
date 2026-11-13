@@ -186,7 +186,7 @@ impl Gateway {
         match load_or_heal(&gateway.config_path) {
             Ok(config) => {
                 gateway.bind_once(&config);
-                let inner = gateway.inner.lock().expect("gateway mutex poisoned");
+                let inner = gateway.inner.lock().unwrap_or_else(|e| e.into_inner());
                 if inner.bound {
                     eprintln!(
                         "airi-daemon: gateway listening on {}:{} (TLS: {})",
@@ -242,12 +242,17 @@ impl Gateway {
             return; // disabled via --no-gateway
         }
         let do_retry = {
-            let inner = self.inner.lock().expect("gateway mutex poisoned");
+            let inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             !inner.bound && inner.last_attempt.elapsed() >= RETRY_INTERVAL
         };
         if do_retry {
-            if let Ok(config) = load_or_heal(&self.config_path) {
-                self.bind_once(&config);
+            match load_or_heal(&self.config_path) {
+                Ok(config) => self.bind_once(&config),
+                Err(err) => {
+                    // Failure must also consume the cooldown, otherwise the
+                    // poll loop hammers the config file at ~50 reads/s.
+                    self.set_error(format!("config load/heal failed: {err}"));
+                }
             }
         }
     }
@@ -262,7 +267,7 @@ impl Gateway {
     }
 
     fn get_json(&self) -> String {
-        let inner = self.inner.lock().expect("gateway mutex poisoned");
+        let inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         let ca_cert = self.cert_dir.join(airi_channel::certs::CA_CERT_FILE);
         serde_json::to_string(&GatewayControlStatus {
             hostname: inner.hostname.clone(),
@@ -286,7 +291,7 @@ impl Gateway {
             }
         };
 
-        let mut inner = self.inner.lock().expect("gateway mutex poisoned");
+        let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         let mut hostname = inner.hostname.clone();
         if let Some(h) = patch.hostname.as_deref() {
             let h = h.trim();
@@ -326,6 +331,17 @@ impl Gateway {
         drop(inner);
         self.bind_once(&config);
 
+        // A persisted-but-unbound apply must not look like a success:
+        // report ok:false with the bind error (Get's last_error unchanged).
+        let inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
+        if !inner.bound {
+            let message = inner
+                .last_error
+                .clone()
+                .unwrap_or_else(|| "gateway did not bind with the new config".to_string());
+            return serde_json::json!({ "ok": false, "error": message }).to_string();
+        }
+
         serde_json::json!({
             "websocketTlsConfig": if tls { serde_json::json!({}) } else { serde_json::Value::Null },
             "authToken": auth_token,
@@ -336,7 +352,7 @@ impl Gateway {
 
     fn regenerate_token(&self) -> String {
         let config = {
-            let inner = self.inner.lock().expect("gateway mutex poisoned");
+            let inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             ChannelConfig {
                 hostname: inner.hostname.clone(),
                 auth_token: uuid_v4(),
@@ -366,7 +382,7 @@ impl Gateway {
     }
 
     fn set_error(&self, message: String) {
-        let mut inner = self.inner.lock().expect("gateway mutex poisoned");
+        let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         inner.last_error = Some(message);
         inner.bound = false;
         inner.last_attempt = Instant::now();
@@ -406,7 +422,7 @@ impl Gateway {
 
     /// Stop the current listener (if any) and bind a fresh one with `config`.
     fn bind_once(&self, config: &ChannelConfig) {
-        let mut inner = self.inner.lock().expect("gateway mutex poisoned");
+        let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         inner.last_attempt = Instant::now();
         // Single sync point: the effective config lives in Inner, kept in
         // lockstep with whatever was persisted/loaded.
@@ -584,13 +600,10 @@ fn find_adoptable() -> Option<PathBuf> {
 mod tests {
     use super::*;
 
-    fn fresh_gateway() -> (Gateway, tempfile::TempDir) {
-        let tmp = tempfile::tempdir().unwrap();
-        let dir = tmp.path().join("server-channel");
-        // Isolate from the real data dir by overriding paths directly.
-        let gateway = Gateway {
+    fn test_gateway(dir: PathBuf, cert_dir: PathBuf) -> Gateway {
+        Gateway {
             config_path: dir.join(CONFIG_FILE),
-            cert_dir: dir.join(CERTS_DIR),
+            cert_dir,
             port_override: Some(0),
             inner: Mutex::new(Inner {
                 hostname: DEFAULT_HOSTNAME_PLACEHOLDER.to_string(),
@@ -603,7 +616,14 @@ mod tests {
                 server: None,
                 last_attempt: Instant::now() - RETRY_INTERVAL,
             }),
-        };
+        }
+    }
+
+    fn fresh_gateway() -> (Gateway, tempfile::TempDir) {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("server-channel");
+        // Isolate from the real data dir by overriding paths directly.
+        let gateway = test_gateway(dir.clone(), dir.join(CERTS_DIR));
         // Heal the log path: write a fresh config and bind.
         let config = ChannelConfig::healed();
         fs::create_dir_all(&dir).unwrap();
@@ -655,6 +675,33 @@ mod tests {
         let after = get_json(&gateway);
         assert_eq!(after["tlsEnabled"], false);
         assert_eq!(after["bound"], true);
+    }
+
+    #[test]
+    fn apply_reports_ok_false_when_rebind_fails() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("server-channel");
+        // cert_dir is a *file*, so the TLS rebind forced by a non-loopback
+        // hostname fails certificate management deterministically.
+        let cert_dir = tmp.path().join("certs-blocker");
+        fs::write(&cert_dir, "not a dir").unwrap();
+        let gateway = test_gateway(dir.clone(), cert_dir);
+        let config = ChannelConfig::healed();
+        fs::create_dir_all(&dir).unwrap();
+        let json = serde_json::to_string_pretty(&config).unwrap();
+        fs::write(&gateway.config_path, json).unwrap();
+        gateway.bind_once(&config);
+        assert_eq!(get_json(&gateway)["bound"], true);
+
+        let reply = gateway.handle(&GatewayRequest::Apply(
+            r#"{"hostname": "0.0.0.0"}"#.to_string(),
+        ));
+        let v: serde_json::Value = serde_json::from_str(&reply).unwrap();
+        assert_eq!(v["ok"], false, "failed rebind must surface ok:false");
+        assert!(v["error"].as_str().is_some_and(|e| !e.is_empty()));
+        // The persisted config is honest about the state via Get.
+        assert!(!get_json(&gateway)["lastError"].is_null());
+        assert_eq!(get_json(&gateway)["bound"], false);
     }
 
     #[test]

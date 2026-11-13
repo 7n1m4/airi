@@ -374,6 +374,10 @@ fn run(gateway_enabled: bool) {
             }
         }
 
+        // --- Debounce map sweep — stale entries suppress nothing again ---
+        let sweep_now = now_ms();
+        debounce.retain(|_, ts| sweep_now.saturating_sub(*ts) < RATE_LIMIT_WINDOW_MS);
+
         // --- Rate-limit drop counter, at most once per minute ---
         if rate_limited_drops > 0 && last_rate_limit_audit.elapsed() >= RATE_LIMIT_AUDIT_PERIOD {
             audit.append(
@@ -582,7 +586,9 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
                         );
                     }
                 }
-                Some(LockdownChange::Unlock) if ctx.awareness.lockdown_end() => {
+                Some(LockdownChange::Unlock)
+                    if ctx.awareness.lockdown_end(LockdownReason::Locked) =>
+                {
                     if ctx.awareness.user_paused() {
                         ctx.audit.append(
                             "system",
@@ -607,7 +613,9 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
                         );
                     }
                 }
-                Some(LockdownChange::Wake) if ctx.awareness.lockdown_end() => {
+                Some(LockdownChange::Wake)
+                    if ctx.awareness.lockdown_end(LockdownReason::Sleep) =>
+                {
                     if ctx.awareness.user_paused() {
                         ctx.audit.append(
                             "system",

@@ -21,7 +21,9 @@
 //! | `cert-domains.json`     | Sidecar: exact SAN list the cert was    |
 //! |                       | minted for (staleness detection)          |
 //!
-//! Private key files are written `0600`. Renewal policy: the server
+//! All file writes go through a sibling `<file>.tmp-<pid>` + rename, so a
+//! crash never leaves a truncated canonical file. Private key files are
+//! written `0600`. Renewal policy: the server
 //! certificate is re-minted on every call whose SAN sidecar differs from the
 //! requested domain set; the CA itself is reused indefinitely (mkcert's
 //! model). Expiry is calendar-based (365 days for the leaf, 10 years for the
@@ -164,19 +166,118 @@ fn sidecar_domains(dir: &Path) -> Option<Vec<String>> {
     serde_json::from_str::<Vec<String>>(&raw).ok()
 }
 
+/// Write `contents` to `path` atomically: a sibling tmp file (`<file>.tmp-<pid>`)
+/// is written first, then renamed onto `path`. A crash mid-sequence leaves at
+/// most one stray tmp behind, never a truncated canonical file. When `private`
+/// is set the file is created `0600` and tightened explicitly (a pre-existing
+/// 0644 tmp would otherwise survive), mirroring `write_config` in config.rs.
+fn atomic_write(path: &Path, contents: &str, private: bool) -> io::Result<()> {
+    let Some(file_name) = path.file_name().and_then(|n| n.to_str()) else {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "cert path has no file name",
+        ));
+    };
+    let tmp = path.with_file_name(format!("{file_name}.tmp-{}", std::process::id()));
+    #[cfg(unix)]
+    {
+        use std::io::Write as _;
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+        if private {
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(&tmp)?;
+            file.set_permissions(fs::Permissions::from_mode(0o600))?;
+            file.write_all(contents.as_bytes())?;
+        } else {
+            fs::write(&tmp, contents)?;
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = private;
+        fs::write(&tmp, contents)?;
+    }
+    fs::rename(&tmp, path)
+}
+
 fn write_private(path: &Path, contents: &str) -> io::Result<()> {
-    use std::io::Write as _;
-    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
-    // mode(0o600) only applies at creation; tighten explicitly so a
-    // pre-existing 0644 key file is fixed on rewrite.
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .mode(0o600)
-        .open(path)?;
-    file.set_permissions(fs::Permissions::from_mode(0o600))?;
-    file.write_all(contents.as_bytes())
+    atomic_write(path, contents, true)
+}
+
+/// Read one DER TLV at the start of `bytes`; returns the tag, the contents
+/// range, and the total encoded length (header + contents).
+fn tlv(bytes: &[u8]) -> Option<(u8, std::ops::Range<usize>, usize)> {
+    let tag = *bytes.first()?;
+    let first_len = *bytes.get(1)?;
+    let (len, hdr) = if first_len & 0x80 == 0 {
+        (first_len as usize, 2)
+    } else {
+        let n = (first_len & 0x7f) as usize;
+        if n == 0 || n > 4 {
+            return None;
+        }
+        let len_bytes = bytes.get(2..2 + n)?;
+        let mut len = 0usize;
+        for &b in len_bytes {
+            len = (len << 8) | b as usize;
+        }
+        (len, 2 + n)
+    };
+    let end = hdr + len;
+    if end > bytes.len() {
+        return None;
+    }
+    Some((tag, hdr..end, end))
+}
+
+/// Extract the complete `subjectPublicKeyInfo` TLV from a DER-encoded
+/// certificate. Hand-rolled walk (no x509 parser is a direct dependency of
+/// this crate); any unexpected shape returns `None`, which callers treat as
+/// "mismatch" — the fail-safe side is to re-mint.
+fn spki_from_cert_der(der: &[u8]) -> Option<&[u8]> {
+    let (tag, body, _) = tlv(der)?; // Certificate ::= SEQUENCE
+    if tag != 0x30 {
+        return None;
+    }
+    let cert = &der[body];
+    let (tag, tbs_range, _) = tlv(cert)?; // tbsCertificate ::= SEQUENCE
+    if tag != 0x30 {
+        return None;
+    }
+    let mut tbs = &cert[tbs_range];
+    // Optional [0] EXPLICIT version (v3 certs carry it).
+    if let Some((0xa0, _, total)) = tlv(tbs) {
+        tbs = &tbs[total..];
+    }
+    // serialNumber INTEGER, signature SEQUENCE, issuer Name, validity
+    // SEQUENCE, subject Name SEQUENCE — the next SEQUENCE is the SPKI.
+    for _ in 0..5 {
+        let (_, _, total) = tlv(tbs)?;
+        tbs = &tbs[total..];
+    }
+    let (tag, _, total) = tlv(tbs)?;
+    if tag != 0x30 {
+        return None;
+    }
+    Some(&tbs[..total])
+}
+
+/// True when the CA certificate PEM on disk carries the same public key as
+/// `key` (compared as SPKI DER). Garbage PEMs, unparsable certs, and genuine
+/// key mismatches all return `false`.
+fn ca_cert_matches_key(ca_pem: &str, key: &KeyPair) -> bool {
+    use rcgen::PublicKeyData;
+    let Some(Ok(cert_der)) = rustls_pemfile::certs(&mut ca_pem.as_bytes()).next() else {
+        return false;
+    };
+    let Some(cert_spki) = spki_from_cert_der(cert_der.as_ref()) else {
+        return false;
+    };
+    cert_spki == key.subject_public_key_info().as_slice()
 }
 
 /// Get a usable certificate set for `domains`, minting what is missing or
@@ -203,7 +304,16 @@ pub fn get_or_create_certs(dir: &Path, domains: &[String]) -> Result<CertBundle,
         fs::read_to_string(&ca_key_path),
     ) {
         (Ok(ca_pem), Ok(ca_key_pem)) => match KeyPair::from_pem(&ca_key_pem) {
-            Ok(key) => Some((ca_pem, key)),
+            Ok(key) => {
+                if ca_cert_matches_key(&ca_pem, &key) {
+                    Some((ca_pem, key))
+                } else {
+                    tracing::warn!(
+                        "airi-channel: CA cert does not match CA key; reminting CA and leaf"
+                    );
+                    None
+                }
+            }
             Err(_) => {
                 tracing::warn!("airi-channel: CA key unreadable, reminting CA");
                 None
@@ -228,7 +338,7 @@ pub fn get_or_create_certs(dir: &Path, domains: &[String]) -> Result<CertBundle,
             let cert = params.self_signed(&key)?;
 
             write_private(&ca_key_path, &key.serialize_pem())?;
-            fs::write(&ca_cert_path, cert.pem())?;
+            atomic_write(&ca_cert_path, &cert.pem(), false)?;
             ca_generated = true;
             (cert.pem(), key)
         }
@@ -268,10 +378,11 @@ pub fn get_or_create_certs(dir: &Path, domains: &[String]) -> Result<CertBundle,
     let leaf_cert = leaf.signed_by(&leaf_key, &issuer)?;
 
     write_private(&key_path, &leaf_key.serialize_pem())?;
-    fs::write(&cert_path, leaf_cert.pem())?;
-    fs::write(
-        dir.join(DOMAINS_FILE),
-        serde_json::to_string_pretty(&domains).expect("domain list serializes"),
+    atomic_write(&cert_path, &leaf_cert.pem(), false)?;
+    atomic_write(
+        &dir.join(DOMAINS_FILE),
+        &serde_json::to_string_pretty(&domains).expect("domain list serializes"),
+        false,
     )?;
 
     Ok(CertBundle {
@@ -411,6 +522,54 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let bundle = get_or_create_certs(tmp.path(), &san_domains(&[])).unwrap();
         assert!(server_config_available(&bundle.cert_pem, &bundle.key_pem));
+    }
+
+    #[test]
+    fn mismatched_ca_cert_is_reminted() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        let domains = vec!["localhost".to_string()];
+
+        let first = get_or_create_certs(dir, &domains).unwrap();
+        assert!(first.ca_generated);
+
+        // Overwrite the CA cert with a well-formed but unrelated CA cert;
+        // keep the CA key on disk. The next load must detect the mismatch
+        // and re-mint a self-consistent CA + leaf.
+        let other_key = KeyPair::generate().unwrap();
+        let mut other_params = ca_params().unwrap();
+        other_params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
+        set_validity_days(&mut other_params, CA_VALIDITY_DAYS);
+        let other_cert = other_params.self_signed(&other_key).unwrap();
+        fs::write(dir.join(CA_CERT_FILE), other_cert.pem()).unwrap();
+
+        let second = get_or_create_certs(dir, &domains).unwrap();
+        assert!(second.ca_generated, "mismatched CA must be re-minted");
+        assert!(second.generated, "leaf must be re-minted with the new CA");
+        let key = KeyPair::from_pem(&fs::read_to_string(dir.join(CA_KEY_FILE)).unwrap()).unwrap();
+        assert!(ca_cert_matches_key(
+            &fs::read_to_string(dir.join(CA_CERT_FILE)).unwrap(),
+            &key
+        ));
+    }
+
+    #[test]
+    fn garbage_ca_cert_pem_is_reminted() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        let domains = vec!["localhost".to_string()];
+
+        get_or_create_certs(dir, &domains).unwrap();
+        // Keep the CA key; corrupt the cert beyond parseability.
+        fs::write(
+            dir.join(CA_CERT_FILE),
+            "-----BEGIN CERTIFICATE-----\nnot base64!!!\n-----END CERTIFICATE-----\n",
+        )
+        .unwrap();
+
+        let second = get_or_create_certs(dir, &domains).unwrap();
+        assert!(second.ca_generated, "unparsable CA cert must be re-minted");
+        assert!(second.generated);
     }
 
     #[test]

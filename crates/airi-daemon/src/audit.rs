@@ -100,6 +100,33 @@ impl AuditLog {
             "event": event,
             "detail": redact(detail),
         });
+        // Written 0600: the log carries credential-adjacent context.
+        // mode(0o600) only applies at creation, so the file is tightened
+        // explicitly on every append (fixes pre-existing 0644 logs).
+        #[cfg(unix)]
+        let mut f = {
+            use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+            match fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .mode(0o600)
+                .open(&self.path)
+            {
+                Ok(f) => {
+                    if let Err(e) =
+                        fs::set_permissions(&self.path, fs::Permissions::from_mode(0o600))
+                    {
+                        eprintln!("airi-daemon: audit could not tighten {:?}: {e}", self.path);
+                    }
+                    f
+                }
+                Err(e) => {
+                    eprintln!("airi-daemon: audit append failed for {:?}: {e}", self.path);
+                    return;
+                }
+            }
+        };
+        #[cfg(not(unix))]
         let mut f = match fs::OpenOptions::new()
             .create(true)
             .append(true)
@@ -139,8 +166,18 @@ impl AuditLog {
             return 0;
         }
         // Rewrite via tmp + rename inside the audit dir (same filesystem).
+        // tmp is tightened to 0600 before the rename so the renamed log
+        // never widens the permission window.
         let tmp = self.path.with_extension("jsonl.prune-tmp");
-        let write_result = fs::write(&tmp, kept).and_then(|()| fs::rename(&tmp, &self.path));
+        let write_result = (|| -> io::Result<()> {
+            fs::write(&tmp, kept)?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600))?;
+            }
+            fs::rename(&tmp, &self.path)
+        })();
         match write_result {
             Ok(()) => dropped,
             Err(e) => {
@@ -230,6 +267,38 @@ mod tests {
             "secret leaked into audit log"
         );
         assert!(contents.contains("resumed with ***"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn audit_file_is_owner_only_after_append_and_prune() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!(
+            "airi-daemon-audit-mode-test-{}",
+            std::process::id()
+        ));
+        let path = dir.join("awareness-audit.jsonl");
+        fs::create_dir_all(&dir).unwrap();
+        // Pre-existing 0644 log: append must tighten it in place.
+        fs::write(&path, "{}\n").unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+        let log = AuditLog::open(path.clone());
+        log.append("media", "media: Playing", "hello");
+        let mode = fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "append must tighten a pre-existing 0644 log");
+
+        // Prune rewrite: tmp is tightened before the rename.
+        let now = 1_800_000_000_000u64;
+        let eight_days = now - 8 * DAY_MS;
+        fs::write(
+            &path,
+            format!("{{\"ts_ms\":{eight_days},\"source\":\"media\",\"event\":\"old\",\"detail\":\"\"}}\n{{\"ts_ms\":{now},\"source\":\"media\",\"event\":\"fresh\",\"detail\":\"\"}}\n"),
+        )
+        .unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+        assert_eq!(log.prune_on_start(now), 1);
+        let mode = fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "prune rewrite must not widen the log");
         let _ = fs::remove_dir_all(&dir);
     }
 

@@ -6,9 +6,11 @@
 //! * per-source `armed` flags — flipped by `SetSource`, never touched by
 //!   pause/lockdown;
 //! * `user_paused` — the kill switch (`Pause(true)`);
-//! * `lockdown` — set while the screen is locked or the machine is asleep.
+//! * `lockdown_reasons` — the set of active lockdown reasons (screen locked,
+//!   machine asleep). Lockdown is in effect while **any** reason is present;
+//!   `lockdown_end(reason)` removes only that reason.
 //!
-//! Effective armed (`effective_armed`) = `armed[source] && !user_paused && !lockdown`.
+//! Effective armed (`effective_armed`) = `armed[source] && !user_paused && no lockdown reasons active`.
 //!
 //! Precedence rule (spec §F rail 2 + lockdown coverage, exact):
 //! lockdown clearing (unlock / wake) re-arms the T0 sources automatically
@@ -91,7 +93,9 @@ pub enum LockdownReason {
 pub struct Awareness {
     armed: [bool; 7],
     user_paused: bool,
-    lockdown: Option<LockdownReason>,
+    /// Active lockdown reasons (locked / asleep). Lockdown is effective
+    /// while the set is non-empty; at most one entry per reason.
+    lockdown_reasons: Vec<LockdownReason>,
 }
 
 impl Default for Awareness {
@@ -105,12 +109,12 @@ impl Awareness {
         Awareness {
             armed: [true; 7],
             user_paused: false,
-            lockdown: None,
+            lockdown_reasons: Vec::new(),
         }
     }
 
     pub fn effective_armed(&self, source: Source) -> bool {
-        self.armed[source.index()] && !self.user_paused && self.lockdown.is_none()
+        self.armed[source.index()] && !self.user_paused && self.lockdown_reasons.is_empty()
     }
 
     /// Pause(true) kill switch / Pause(false) resume. Returns true if the
@@ -134,30 +138,37 @@ impl Awareness {
         changed
     }
 
-    /// Begin lockdown. Returns true if this call started it (i.e. it was not
-    /// already in lockdown).
+    /// Begin lockdown for `reason`. Returns true if this call started
+    /// lockdown (i.e. no reason was active before). Re-beginning a reason
+    /// that is already active does not restart it.
     pub fn lockdown_begin(&mut self, reason: LockdownReason) -> bool {
-        let was = self.lockdown.take();
-        self.lockdown = Some(reason);
-        was.is_none()
+        let was_empty = self.lockdown_reasons.is_empty();
+        if !self.lockdown_reasons.contains(&reason) {
+            self.lockdown_reasons.push(reason);
+        }
+        was_empty
     }
 
-    /// Clear lockdown (unlock / wake). Returns true if the daemon was in
-    /// lockdown. Does **not** clear a user pause — the user's kill switch
+    /// Clear the lockdown for `reason` (unlock / wake). Removes only that
+    /// reason; others survive (sleep(false) must not clear Locked). Returns
+    /// true if this call ended lockdown (the last active reason was
+    /// removed). Does **not** clear a user pause — the user's kill switch
     /// wins (see module docs).
-    pub fn lockdown_end(&mut self) -> bool {
-        self.lockdown.take().is_some()
+    pub fn lockdown_end(&mut self, reason: LockdownReason) -> bool {
+        let before = self.lockdown_reasons.len();
+        self.lockdown_reasons.retain(|&r| r != reason);
+        before > 0 && self.lockdown_reasons.is_empty()
     }
 
     #[cfg(test)]
     pub fn lockdown_active(&self) -> bool {
-        self.lockdown.is_some()
+        !self.lockdown_reasons.is_empty()
     }
 
     /// `paused` in GetStatus: true when awareness is effectively off,
     /// i.e. user kill switch **or** lockdown.
     pub fn paused(&self) -> bool {
-        self.user_paused || self.lockdown.is_some()
+        self.user_paused || !self.lockdown_reasons.is_empty()
     }
 
     /// `paused_by` in GetStatus: `"user"` | `"lockdown"` | `""`.
@@ -165,7 +176,7 @@ impl Awareness {
     pub fn paused_by(&self) -> &'static str {
         if self.user_paused {
             "user"
-        } else if self.lockdown.is_some() {
+        } else if !self.lockdown_reasons.is_empty() {
             "lockdown"
         } else {
             ""
@@ -245,14 +256,14 @@ mod tests {
         assert!(a.paused());
         assert_eq!(a.paused_by(), "lockdown");
         // Unlock clears lockdown: automatic re-arm, because user never paused.
-        assert!(a.lockdown_end());
+        assert!(a.lockdown_end(LockdownReason::Locked));
         assert!(a.effective_armed(Source::Sleep));
         assert!(!a.paused());
 
         // Now the user pauses explicitly, then a lock/unlock cycle happens.
         a.pause(true);
         a.lockdown_begin(LockdownReason::Locked);
-        a.lockdown_end();
+        a.lockdown_end(LockdownReason::Locked);
         assert!(
             !a.effective_armed(Source::Sleep),
             "user pause must win over unlock re-arm"
@@ -271,9 +282,28 @@ mod tests {
         assert_eq!(a.paused_by(), "lockdown");
         assert!(!a.lockdown_begin(LockdownReason::Locked)); // re-begin does not restart it
         assert!(a.lockdown_active());
-        assert!(a.lockdown_end());
+        // Ending the sleep reason alone leaves the lock reason active.
+        assert!(!a.lockdown_end(LockdownReason::Sleep));
+        assert!(a.lockdown_active());
+        assert!(a.lockdown_end(LockdownReason::Locked));
         assert!(!a.lockdown_active());
-        assert!(!a.lockdown_end()); // second clear reports no lockdown
+        assert!(!a.lockdown_end(LockdownReason::Locked)); // second clear reports no lockdown
+    }
+
+    #[test]
+    fn sleep_then_lock_then_wake_keeps_lockdown_active() {
+        let mut a = Awareness::new();
+        assert!(a.lockdown_begin(LockdownReason::Sleep));
+        assert!(!a.lockdown_begin(LockdownReason::Locked)); // already in lockdown
+        // Wake (sleep false) must not clear the lock reason.
+        assert!(!a.lockdown_end(LockdownReason::Sleep));
+        assert!(a.lockdown_active());
+        assert!(!a.effective_armed(Source::Media));
+        assert!(a.paused());
+        // Unlock then fully clears it.
+        assert!(a.lockdown_end(LockdownReason::Locked));
+        assert!(!a.lockdown_active());
+        assert!(a.effective_armed(Source::Media));
     }
 
     #[test]
@@ -281,7 +311,7 @@ mod tests {
         let mut a = Awareness::new();
         a.set_source(Source::Power, false);
         a.lockdown_begin(LockdownReason::Locked);
-        a.lockdown_end();
+        a.lockdown_end(LockdownReason::Locked);
         assert!(!a.effective_armed(Source::Power));
         assert!(a.effective_armed(Source::Media));
     }
@@ -301,13 +331,13 @@ mod tests {
         assert!(a.set_source(Source::Units, true));
         a.lockdown_begin(LockdownReason::Sleep);
         assert!(!a.effective_armed(Source::Units));
-        assert!(a.lockdown_end());
+        assert!(a.lockdown_end(LockdownReason::Sleep));
         assert!(a.effective_armed(Source::Units));
         // Pause (kill switch) disarms; unlock/wake must not override it.
         a.pause(true);
         assert!(!a.effective_armed(Source::Units));
         a.lockdown_begin(LockdownReason::Locked);
-        a.lockdown_end();
+        a.lockdown_end(LockdownReason::Locked);
         assert!(!a.effective_armed(Source::Units));
         a.pause(false);
         assert!(a.effective_armed(Source::Units));

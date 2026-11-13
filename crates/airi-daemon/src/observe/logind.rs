@@ -9,7 +9,7 @@ use super::{LockdownChange, Observed};
 use crate::state::Source;
 
 pub const MATCH_RULE: &str =
-    "type='signal',interface='org.freedesktop.login1.Manager',member='PrepareForSleep'";
+    "type='signal',interface='org.freedesktop.login1.Manager',member='PrepareForSleep',sender='org.freedesktop.login1'";
 
 pub fn parse(msg: &Message) -> Option<Observed> {
     if msg.msg_type() != dbus::MessageType::Signal {

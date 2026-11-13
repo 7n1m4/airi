@@ -4,7 +4,7 @@
 //! `airi-channel` — the AIRI gateway channel server for the desktop app.
 //!
 //! A local WebSocket server on port **6121** (override with
-//! `SERVER_CHANNEL_PORT`, see [`server_channel_port`]) implementing the
+//! `SERVER_CHANNEL_PORT` via the daemon) implementing the
 //! auth-token handshake from the `airi-gateway-websocket-protocol` skill:
 //!
 //! 1. Waits for an HTTP `Upgrade: websocket` on a raw TCP socket.
@@ -91,59 +91,6 @@ pub use ws::{accept_key, encode_frame, Frame, FrameDecoder, OP_CLOSE, OP_PING, O
 
 /// Default channel-server port (`SERVER_CHANNEL_PORT` overrides).
 pub const DEFAULT_PORT: u16 = 6121;
-
-/// Parse a `SERVER_CHANNEL_PORT`-style value. Returns `None` for empty,
-/// non-numeric, or out-of-range input. `0` is allowed (ephemeral, tests).
-pub fn parse_port(raw: &str) -> Option<u16> {
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-    trimmed.parse::<u16>().ok()
-}
-
-/// Port from `SERVER_CHANNEL_PORT`, falling back to [`DEFAULT_PORT`].
-pub fn server_channel_port() -> u16 {
-    std::env::var("SERVER_CHANNEL_PORT")
-        .ok()
-        .as_deref()
-        .and_then(parse_port)
-        .unwrap_or(DEFAULT_PORT)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_port_accepts_valid() {
-        assert_eq!(parse_port("6121"), Some(6121));
-        assert_eq!(parse_port(" 6122 "), Some(6122));
-        assert_eq!(parse_port("0"), Some(0));
-        assert_eq!(parse_port("65535"), Some(65535));
-    }
-
-    #[test]
-    fn parse_port_rejects_invalid() {
-        assert_eq!(parse_port(""), None);
-        assert_eq!(parse_port("abc"), None);
-        assert_eq!(parse_port("65536"), None);
-        assert_eq!(parse_port("-1"), None);
-        assert_eq!(parse_port("99999999999"), None);
-    }
-
-    #[test]
-    fn server_channel_port_defaults_to_6121() {
-        // Save/restore so the test doesn't leak env state into other tests.
-        let saved = std::env::var("SERVER_CHANNEL_PORT").ok();
-        std::env::remove_var("SERVER_CHANNEL_PORT");
-        assert_eq!(server_channel_port(), DEFAULT_PORT);
-        match saved {
-            Some(v) => std::env::set_var("SERVER_CHANNEL_PORT", v),
-            None => std::env::remove_var("SERVER_CHANNEL_PORT"),
-        }
-    }
-}
 
 /// Install the rustls `aws-lc-rs` CryptoProvider as the process-wide default.
 ///
