@@ -17,6 +17,7 @@
   },
   "scripts": {
     "ci:status": "node scripts/github/ci-status.mjs",
+    "check:wire-types": "cargo run -p airi-channel --example export-wire-types --locked -- --check",
     "postinstall": "simple-git-hooks",
     "dev": "pnpm -r -F @proj-airi/stage-web dev",
     "dev:docs": "pnpm -rF @proj-airi/docs run dev",

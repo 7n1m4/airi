@@ -48,6 +48,14 @@ dirs = "5"
 
 # LLM / HTTP
 async-openai = "0.31"
+# Wire types: Rust-canonical schema exported to TS (D2). specta-typescript
+# 0.0.15 pins specta =2.0.0-rc.28 exactly — keep both in sync.
+specta = { version = "=2.0.0-rc.28", features = [
+  "derive",
+  "serde_json"
+] }
+specta-typescript = "0.0.15"
+specta-serde = "0.0.15"
 reqwest = { version = "0.12", features = [
   "json",
   "stream",

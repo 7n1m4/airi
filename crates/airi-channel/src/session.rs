@@ -56,9 +56,12 @@
 
 use std::sync::Arc;
 
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use crate::dispatch::{RendererHandlers, RpcContext, RpcRegistry};
+use crate::wire::{
+    AuthenticatedData, GatewayServerFrame, HeartbeatData, HeartbeatKind, RpcErrorObject,
+};
 
 /// Close code used when the policy (auth handshake) is violated: 1008.
 pub const CLOSE_POLICY_VIOLATION: u16 = 1008;
@@ -238,19 +241,21 @@ impl Session {
 
         self.state = SessionState::Authenticated;
         let reply = match shape {
-            AuthShape::Simple => json!({ "type": "auth", "ok": true }),
-            AuthShape::ServerRuntime => {
-                json!({ "type": "module:authenticated", "data": { "authenticated": true } })
-            }
+            AuthShape::Simple => GatewayServerFrame::Auth { ok: true },
+            AuthShape::ServerRuntime => GatewayServerFrame::Authenticated {
+                data: AuthenticatedData {
+                    authenticated: true,
+                },
+            },
         };
-        SessionOutcome::replies_only(vec![reply.to_string()])
+        SessionOutcome::replies_only(vec![encode_frame(&reply)])
     }
 
     /// Post-auth path: ping/pong, typed RPC dispatch, typed errors.
     fn handle_authenticated(&mut self, value: &Value) -> SessionOutcome {
         match value.get("type").and_then(Value::as_str) {
             Some("ping") => {
-                SessionOutcome::replies_only(vec![json!({ "type": "pong" }).to_string()])
+                SessionOutcome::replies_only(vec![encode_frame(&GatewayServerFrame::Pong)])
             }
 
             Some("transport:connection:heartbeat") => {
@@ -260,11 +265,14 @@ impl Session {
                     .and_then(Value::as_str)
                     .unwrap_or("");
                 if kind == "ping" {
-                    let pong = json!({
-                        "type": "transport:connection:heartbeat",
-                        "data": { "kind": "pong", "message": "💛", "at": now_ms() },
-                    });
-                    SessionOutcome::replies_only(vec![pong.to_string()])
+                    let pong = GatewayServerFrame::Heartbeat {
+                        data: HeartbeatData {
+                            kind: HeartbeatKind::Pong,
+                            message: Some("💛".to_string()),
+                            at: Some(now_ms()),
+                        },
+                    };
+                    SessionOutcome::replies_only(vec![encode_frame(&pong)])
                 } else {
                     // Mirror the server-runtime: only ping heartbeats get pongs.
                     SessionOutcome::replies_only(Vec::new())
@@ -282,27 +290,28 @@ impl Session {
                             &payload,
                             &self.renderer_handlers,
                         );
-                        let mut reply = serde_json::Map::new();
-                        reply.insert("type".to_string(), json!("rpc"));
-                        reply.insert("action".to_string(), json!(action));
-                        match result {
-                            Ok(data) => {
-                                reply.insert("ok".to_string(), json!(true));
-                                reply.insert("data".to_string(), data);
-                            }
-                            Err(err) => {
-                                reply.insert("ok".to_string(), json!(false));
-                                reply.insert(
-                                    "error".to_string(),
-                                    json!({ "code": err.code(), "message": err.message() }),
-                                );
-                            }
-                        }
-                        // Echo the client-supplied id verbatim, if any.
-                        if let Some(id) = value.get("id") {
-                            reply.insert("id".to_string(), id.clone());
-                        }
-                        SessionOutcome::replies_only(vec![Value::Object(reply).to_string()])
+                        let id = value.get("id").cloned();
+                        let action = action.to_string();
+                        let reply = match result {
+                            Ok(data) => GatewayServerFrame::Rpc {
+                                action,
+                                ok: true,
+                                data: Some(data),
+                                error: None,
+                                id,
+                            },
+                            Err(err) => GatewayServerFrame::Rpc {
+                                action,
+                                ok: false,
+                                data: None,
+                                error: Some(RpcErrorObject {
+                                    code: err.code().to_string(),
+                                    message: err.message().to_string(),
+                                }),
+                                id,
+                            },
+                        };
+                        SessionOutcome::replies_only(vec![encode_frame(&reply)])
                     }
                     _ => SessionOutcome::replies_only(vec![error_frame(
                         "invalid_rpc",
@@ -346,13 +355,20 @@ impl std::fmt::Debug for Session {
     }
 }
 
+/// Serialize a server frame. Serialization cannot fail for this schema
+/// (all map keys are static strings), so a failure here is a bug.
+fn encode_frame(frame: &GatewayServerFrame) -> String {
+    serde_json::to_string(frame).expect("wire frame serializes")
+}
+
 /// Typed error frame as a JSON string.
 fn error_frame(code: &str, message: &str) -> String {
-    json!({
-        "type": "error",
-        "error": { "code": code, "message": message },
+    encode_frame(&GatewayServerFrame::Error {
+        error: RpcErrorObject {
+            code: code.to_string(),
+            message: message.to_string(),
+        },
     })
-    .to_string()
 }
 
 /// Constant-time-ish token comparison.
@@ -381,6 +397,7 @@ fn now_ms() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     const TOKEN: &str = "test-token-123";
 

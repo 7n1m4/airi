@@ -26,6 +26,27 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm run lint
 
+  wire-types:
+    name: Wire Types Drift Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/debug
+          key: ${{ runner.os }}-cargo-wire-types-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-wire-types-
+      # Regenerates and diffs the checked-in bindings; fails if crates/airi-channel/src/wire.rs
+      # and packages/server-shared/src/types/generated/airi-channel.ts disagree (D2).
+      - run: cargo run -p airi-channel --example export-wire-types --locked -- --check
+
   build-test:
     name: Build Test (${{ matrix.app_name }})
     if: ${{ !(github.event_name == 'pull_request' && startsWith(github.event.pull_request.head.label, 'moeru-ai:i18n/')) }}

@@ -65,7 +65,9 @@
 
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use serde_json::{Map, Value};
+use serde_json::Value;
+
+use crate::wire::{GatewayAuthReply, GatewayConfigReply, RuntimePingReply, RuntimeStatusReply};
 
 /// Protocol identifier reported by `runtime.status`.
 pub const PROTOCOL: &str = "airi-channel/1";
@@ -342,22 +344,24 @@ fn dispatch_renderer(
 
 fn runtime_ping(ctx: &RpcContext, payload: &Payload) -> Result<RpcValue, RpcError> {
     require_object_payload(payload)?;
-    Ok(serde_json::json!({
-        "pong": true,
-        "time": unix_secs(),
-        "uptimeSeconds": ctx.uptime_seconds(),
-    }))
+    Ok(serde_json::to_value(RuntimePingReply {
+        pong: true,
+        time: unix_secs(),
+        uptime_seconds: ctx.uptime_seconds(),
+    })
+    .expect("wire payload serializes"))
 }
 
 fn runtime_status(ctx: &RpcContext, payload: &Payload) -> Result<RpcValue, RpcError> {
     require_object_payload(payload)?;
-    Ok(serde_json::json!({
-        "app": APP_NAME,
-        "version": env!("CARGO_PKG_VERSION"),
-        "pid": std::process::id(),
-        "uptimeSeconds": ctx.uptime_seconds(),
-        "protocol": PROTOCOL,
-    }))
+    Ok(serde_json::to_value(RuntimeStatusReply {
+        app: APP_NAME.to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        pid: std::process::id(),
+        uptime_seconds: ctx.uptime_seconds(),
+        protocol: PROTOCOL.to_string(),
+    })
+    .expect("wire payload serializes"))
 }
 
 fn gateway_config(ctx: &RpcContext, payload: &Payload) -> Result<RpcValue, RpcError> {
@@ -365,21 +369,20 @@ fn gateway_config(ctx: &RpcContext, payload: &Payload) -> Result<RpcValue, RpcEr
     // NOTICE: Never include `authToken` (or any credential) here. The token
     // stays server-side; clients that need it read the config file or the
     // pairing UX, never this reply.
-    let mut obj = Map::new();
-    obj.insert(
-        "hostname".to_string(),
-        Value::String(ctx.hostname().to_string()),
-    );
-    obj.insert("port".to_string(), Value::from(ctx.port()));
-    Ok(Value::Object(obj))
+    Ok(serde_json::to_value(GatewayConfigReply {
+        hostname: ctx.hostname().to_string(),
+        port: ctx.port(),
+    })
+    .expect("wire payload serializes"))
 }
 
 fn gateway_auth(ctx: &RpcContext, payload: &Payload) -> Result<RpcValue, RpcError> {
     require_object_payload(payload)?;
-    Ok(serde_json::json!({
-        "authenticated": true,
-        "sessionStartedMs": ctx.session_started_ms(),
-    }))
+    Ok(serde_json::to_value(GatewayAuthReply {
+        authenticated: true,
+        session_started_ms: ctx.session_started_ms(),
+    })
+    .expect("wire payload serializes"))
 }
 
 fn unix_secs() -> u64 {
