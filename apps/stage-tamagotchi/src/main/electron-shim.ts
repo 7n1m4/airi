@@ -137,7 +137,11 @@ function removeChannelListener(channel: string, listener: IpcMainListener): void
   channelListeners.get(channel)?.delete(listener)
 }
 
+/**
+ * Fan a view's frame out to the global bus; called by `createRpcBootstrap`.
+ *
  * @internal
+ */
 export function dispatchToIpcMain(channel: string, event: unknown, ...args: unknown[]): void {
   for (const listener of channelListeners.get(channel) ?? []) {
     try {
