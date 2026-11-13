@@ -3,6 +3,8 @@ import memoryDriver from 'unstorage/drivers/memory'
 
 import { createStorage } from 'unstorage'
 
+import { isSecretStorageKey } from '../libs/secret-storage-keys'
+
 export const storage = createStorage({
   driver: memoryDriver(),
 })
@@ -20,6 +22,8 @@ export const storageState = {
 async function enqueueSync(key: string, action: 'upsert' | 'delete') {
   if (storageState.isImportingRemoteData)
     return
+  if (isSecretStorageKey(key))
+    return // Secrets are never synced, by any path
   if (typeof window !== 'undefined' && localStorage.getItem('settings/sync/enabled') !== 'true')
     return
   if (!key.startsWith('local:'))

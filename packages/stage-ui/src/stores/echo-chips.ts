@@ -19,6 +19,7 @@ import { useLLM } from './llm'
 import { useAiriCardStore } from './modules/airi-card'
 import { useConsciousnessStore } from './modules/consciousness'
 import { useProvidersStore } from './providers'
+import { markSyncTombstone } from './sync-tombstones'
 
 const ChipSchema = v.object({
   content: v.string(),
@@ -193,6 +194,8 @@ export const useEchoesStore = defineStore('echo-chips', () => {
     // the re-read cannot resurrect them. Saves are still whole-array; no per-entry keys yet.
     const nextIds = new Set(nextChips.map(c => c.id))
     const removedIds = new Set(chips.value.map(c => c.id).filter(id => !nextIds.has(id)))
+    if (removedIds.size)
+      await markSyncTombstone(`local:memory/echo-chips/${currentUserId}`, [...removedIds])
     const stored = await echoChipsRepo.getAll(currentUserId).catch(() => null) ?? []
     const merged = mergeById(stored, nextChips, removedIds).map(c => normalizeChip(c, currentUserId))
     const serialized = JSON.parse(JSON.stringify(merged))

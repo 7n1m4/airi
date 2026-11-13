@@ -11,12 +11,9 @@ import { ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
 import { storage, storageState } from '../database/storage'
-import { SERVER_URL } from '../libs/auth'
 import { isSecretStorageKey } from '../libs/secret-storage-keys'
 import { extractAllowedSessionIds, mergeByIdLww, mergeChatSessions, mergeVoiceProfiles, shouldSkipMergeableKey } from './sync-engine-merge'
-import { getSyncTombstoneIds, markSyncTombstone } from './sync-tombstones'
-
-export { markSyncTombstone }
+import { getSyncTombstoneIds } from './sync-tombstones'
 
 // Mergeable keys use last-writer merges instead of file overwrite. Real keys carry the
 // better-auth user.id suffix (local:memory/text-journal/<userId>), so match by prefix.
@@ -370,8 +367,6 @@ async function parallelLimit<T>(
   }
   await Promise.all(promises)
 }
-
-export { mergeVoiceProfiles }
 
 export const useSyncEngineStore = defineStore('sync-engine', () => {
   const isDesktopElectron = typeof window !== 'undefined' && Boolean((window as any).electron?.ipcRenderer)
@@ -1921,7 +1916,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
   }
 
   // Merges two airi-cards Map-entry arrays.
-  function mergeAiriCards(localVal: any, remoteVal: any): any {
+  function mergeAiriCards(localVal: any, remoteVal: any, tombstonedIds?: Set<string>): any {
     try {
       const localEntries = Array.isArray(localVal) ? localVal as [string, any][] : []
       const remoteEntries = Array.isArray(remoteVal) ? remoteVal as [string, any][] : []
@@ -1947,7 +1942,10 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
           }
         }
       }
-      return Array.from(mergedMap.entries())
+      let mergedEntries = Array.from(mergedMap.entries())
+      if (tombstonedIds?.size)
+        mergedEntries = mergedEntries.filter(([id]) => !tombstonedIds.has(String(id)))
+      return mergedEntries
     }
     catch (e) {
       console.error('[SyncEngine] Failed to merge airi-cards:', e)
@@ -2034,7 +2032,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
   }
 
   // Merges two available-motions arrays stored in localStorage bridge objects.
-  function mergeAvailableMotions(localVal: any, remoteVal: any): any {
+  function mergeAvailableMotions(localVal: any, remoteVal: any, tombstonedIds?: Set<string>): any {
     if (!localVal)
       return remoteVal
     if (!remoteVal)
@@ -2100,7 +2098,9 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         }
       }
 
-      const mergedList = Array.from(mergedMap.values())
+      let mergedList = Array.from(mergedMap.values())
+      if (tombstonedIds?.size)
+        mergedList = mergedList.filter(item => !item || !tombstonedIds.has(getMotionKey(item)))
       const mergedValueStr = JSON.stringify(mergedList)
 
       return {
@@ -2308,10 +2308,10 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             mergedData = mergeChatIndices(localData, remoteData, tombstonedIds)
           }
           else if (localKey === 'local:localstorage/settings/live2d/available-motions') {
-            mergedData = mergeAvailableMotions(localData, remoteData)
+            mergedData = mergeAvailableMotions(localData, remoteData, tombstonedIds)
           }
           else if (localKey === 'local:localstorage/settings/speech/voice-profiles') {
-            mergedData = mergeVoiceProfiles(localData, remoteData)
+            mergedData = mergeVoiceProfiles(localData, remoteData, tombstonedIds)
           }
           else {
             if (Array.isArray(localData) && Array.isArray(remoteData)) {
@@ -2511,6 +2511,9 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         await parallelLimit(remoteEntries, 15, async ([localKey, remoteFile]) => {
           if (!localKey)
             return
+          // Device-local tombstones and secrets are never downloaded or merged.
+          if (localKey === 'local:sync/tombstones' || isSecretStorageKey(localKey))
+            return
 
           // Chat indices already reconciled upfront
           if (localKey.startsWith('local:chat/index/'))
@@ -2584,7 +2587,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             let mergedVal: any = null
 
             if (localKey === 'local:airi-cards') {
-              mergedVal = mergeAiriCards(localVal, remoteVal)
+              mergedVal = mergeAiriCards(localVal, remoteVal, tombstonedIds)
             }
             else if (localKey.startsWith('local:chat/sessions/')) {
               mergedVal = mergeChatSessions(localVal, remoteVal, tombstonedIds)
@@ -2593,10 +2596,10 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
               mergedVal = mergeChatIndices(localVal, remoteVal, tombstonedIds)
             }
             else if (localKey === 'local:localstorage/settings/live2d/available-motions') {
-              mergedVal = mergeAvailableMotions(localVal, remoteVal)
+              mergedVal = mergeAvailableMotions(localVal, remoteVal, tombstonedIds)
             }
             else if (localKey === 'local:localstorage/settings/speech/voice-profiles') {
-              mergedVal = mergeVoiceProfiles(localVal, remoteVal)
+              mergedVal = mergeVoiceProfiles(localVal, remoteVal, tombstonedIds)
             }
             else {
               let localArr = localVal || []
@@ -2662,7 +2665,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
               }
 
               await logDebug(`[Case A] Local key ${localKey} exists but localTime is undefined. Running safety check.`)
-              const isConflict = conflictStrategy.value === 'remote-wins' ? false : await checkSyncConflict(localKey, 0, remoteFile, 'remote-newer')
+              const isConflict = await checkSyncConflict(localKey, 0, remoteFile, 'remote-newer')
               if (isConflict) {
                 await logDebug(`[WARNING] Safety conflict registered for ${localKey} (Case A - local data exists). Overwrite blocked.`)
                 return
@@ -2672,7 +2675,14 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             debug(`[SyncEngine] Downloading (missing local): remote (${remoteFile.relPath}) -> ${localKey}`)
             const readRes = await client.readFile(remoteFile.relPath)
             if (readRes.success && readRes.content) {
-              const data = JSON.parse(readRes.content)
+              let data: any = null
+              try {
+                data = JSON.parse(readRes.content)
+              }
+              catch (e) {
+                console.warn('[SyncEngine] Skipping unparseable remote file for', localKey, e)
+                return
+              }
               await storage.setItemRaw(localKey, data)
               await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, remoteFile.mtime)
               if (remoteFile.etag) {
@@ -2680,7 +2690,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
               }
             }
           }
-          else if (remoteFile.mtime > localTime || conflictStrategy.value === 'remote-wins') {
+          else if (remoteFile.mtime > localTime) {
             const queueKey = `outbox:queue/${localKey.replace('local:', '')}`
             const hasPendingOutbox = await storage.getItemRaw(queueKey).then(val => val !== null && val !== undefined)
             if (hasPendingOutbox) {
@@ -2723,7 +2733,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             }
 
             // Case B: Remote file is newer OR strategy is remote-wins -> Download and overwrite local
-            const isConflict = conflictStrategy.value === 'remote-wins' ? false : await checkSyncConflict(localKey, localTime, remoteFile, 'remote-newer')
+            const isConflict = await checkSyncConflict(localKey, localTime, remoteFile, 'remote-newer')
             if (isConflict) {
               debug(`[SyncEngine] Conflict safety guard blocked auto-overwrite of local key ${localKey}`)
               return
@@ -2732,7 +2742,14 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             debug(`[SyncEngine] Downloading (remote newer/Case B): remote (${remoteFile.relPath}) -> ${localKey}`)
             const readRes = await client.readFile(remoteFile.relPath)
             if (readRes.success && readRes.content) {
-              const data = JSON.parse(readRes.content)
+              let data: any = null
+              try {
+                data = JSON.parse(readRes.content)
+              }
+              catch (e) {
+                console.warn('[SyncEngine] Skipping unparseable remote file for', localKey, e)
+                return
+              }
               await storage.setItemRaw(localKey, data)
               await storage.setItemRaw(`local:sync-metadata/timestamps/${localKey.replace('local:', '')}`, remoteFile.mtime)
               if (remoteFile.etag) {
@@ -2796,6 +2813,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
           if (fullKey.startsWith('local:sync-metadata/') || fullKey === 'local:sync-metadata')
             return false
           if (isSecretStorageKey(fullKey) || (fullKey.startsWith('local:localstorage/') && isSecretStorageKey(fullKey.substring('local:localstorage/'.length))))
+            return false
+          if (fullKey === 'local:sync/tombstones')
             return false
           return !remoteFileMap.has(fullKey)
         })
@@ -2941,7 +2960,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             let mergedVal: any = null
 
             if (item.key === 'local:airi-cards') {
-              mergedVal = mergeAiriCards(localVal, remoteVal)
+              mergedVal = mergeAiriCards(localVal, remoteVal, tombstonedIds)
             }
             else if (item.key.startsWith('local:chat/sessions/')) {
               mergedVal = mergeChatSessions(localVal, remoteVal, tombstonedIds)
@@ -2950,10 +2969,10 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
               mergedVal = mergeChatIndices(localVal, remoteVal, tombstonedIds)
             }
             else if (item.key === 'local:localstorage/settings/live2d/available-motions') {
-              mergedVal = mergeAvailableMotions(localVal, remoteVal)
+              mergedVal = mergeAvailableMotions(localVal, remoteVal, tombstonedIds)
             }
             else if (item.key === 'local:localstorage/settings/speech/voice-profiles') {
-              mergedVal = mergeVoiceProfiles(localVal, remoteVal)
+              mergedVal = mergeVoiceProfiles(localVal, remoteVal, tombstonedIds)
             }
             else {
               let localArr = localVal || []
@@ -3344,6 +3363,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
       // 2. Wipe local database entries (excluding sync settings)
       const rawLocalKeys = await storage.getKeys('local')
       for (const k of rawLocalKeys) {
+        if (k === 'local:sync/tombstones')
+          continue // Keep the local delete guards across a restore
         const normalized = normalizeStorageKey(k)
         if (normalized && (normalized.includes('settings/sync/') || normalized.includes('local:settings/sync/'))) {
           continue
@@ -3586,52 +3607,18 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
       try {
         const rawOutboxKeys = await storage.getKeys('outbox')
         for (const k of rawOutboxKeys) {
+          const raw = await storage.getItemRaw<any>(k).catch(() => null)
+          if (raw?.action === 'delete')
+            continue // Pending deletes are the only carrier of delete propagation; keep them.
           await storage.removeItem(k)
         }
-        debug('[SyncEngine] Cleared sync outbox because Cloud Sync is disabled.')
+        debug('[SyncEngine] Cleared sync upsert outbox because Cloud Sync is disabled (deletes kept).')
       }
       catch (e) {
         console.error('[SyncEngine] Failed to clear sync outbox:', e)
       }
     }
   }, { immediate: true })
-
-  async function fetchGDriveManifest() {
-    try {
-      const res = await fetch(`${SERVER_URL}/api/gdrive/manifest`, {
-        credentials: 'include',
-      })
-      if (res.ok) {
-        return await res.json()
-      }
-      const data = await res.json()
-      console.error('[SyncEngine] Failed to fetch gdrive manifest:', data.error)
-    }
-    catch (e) {
-      console.error('[SyncEngine] Error fetching gdrive manifest:', e)
-    }
-    return { version: '1.0', providers: [] }
-  }
-
-  async function saveGDriveManifest(manifest: any) {
-    try {
-      const res = await fetch(`${SERVER_URL}/api/gdrive/manifest`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(manifest),
-        credentials: 'include',
-      })
-      if (res.ok) {
-        return true
-      }
-      const data = await res.json()
-      console.error('[SyncEngine] Failed to save gdrive manifest:', data.error)
-    }
-    catch (e) {
-      console.error('[SyncEngine] Error saving gdrive manifest:', e)
-    }
-    return false
-  }
 
   function getCardSyncStatus(cardId: string, displayModelId?: string): 'synced' | 'cloud-only' | 'partial' {
     if (!syncEnabled.value || !selectiveSyncEnabled.value) {
@@ -3728,7 +3715,5 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     getCardSyncStatus,
     addCardToSelectiveSync,
     syncCard,
-    fetchGDriveManifest,
-    saveGDriveManifest,
   }
 })

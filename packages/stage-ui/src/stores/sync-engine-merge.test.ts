@@ -154,3 +154,39 @@ describe('mergeByIdLww', () => {
     assert.equal(merged[0].v, 'remote')
   })
 })
+
+describe('mergeByIdLww idless carry-through', () => {
+  it('keeps idless items from both sides, fingerprint-deduped', () => {
+    const local = [{ role: 'user', content: 'hello' }, { id: 'a', content: 'keep', updatedAt: 1 }]
+    const remote = [{ role: 'user', content: 'hello' }, { role: 'assistant', content: 'answer' }]
+    const merged = mergeByIdLww(local, remote)
+    assert.equal(merged.filter((m: any) => !m.id).length, 2)
+    assert.ok(merged.some((m: any) => m.id === 'a'))
+  })
+})
+
+describe('mergeChatSessions mixed shapes', () => {
+  it('merges legacy array remote with object local without throwing', () => {
+    const local = { id: 's1', updatedAt: 500, messages: [{ id: 'a', content: 'a', updatedAt: 100 }] }
+    const remote = [{ id: 'b', content: 'b', updatedAt: 200 }]
+    const merged = mergeChatSessions(local, remote)
+    assert.equal(merged.id, 's1')
+    assert.deepEqual(merged.messages.map((m: any) => m.id).sort(), ['a', 'b'])
+    assert.equal(merged.updatedAt, 500)
+    assert.ok(!Array.isArray(merged))
+  })
+
+  it('merges legacy array local with object remote symmetric', () => {
+    const local = [{ id: 'a', content: 'a', updatedAt: 100 }]
+    const remote = { id: 's1', updatedAt: 900, messages: [], meta: { characterId: 'c1' } }
+    const merged = mergeChatSessions(local, remote)
+    assert.equal(merged.meta.characterId, 'c1')
+    assert.deepEqual(merged.messages.map((m: any) => m.id), ['a'])
+    assert.equal(merged.updatedAt, 900)
+  })
+
+  it('keeps wall-clock out of updatedAt when both sides lack it', () => {
+    const merged = mergeChatSessions({ messages: [] }, { messages: [] })
+    assert.equal(merged.updatedAt, 0)
+  })
+})

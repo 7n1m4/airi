@@ -3,10 +3,23 @@
 // regardless of which side carries them, so a delete cannot be undone by a merge.
 export function mergeByIdLww(localArr: any[], remoteArr: any[], tombstonedIds?: Set<string>): any[] {
   const mergedMap = new Map<string, any>()
+  // Idless items carry no merge identity; keep them (fingerprint-deduped) instead of dropping.
+  const idlessMerged: any[] = []
+  const idlessSeen = new Set<string>()
+  const pushIdless = (item: any) => {
+    const fp = JSON.stringify(item)
+    if (!idlessSeen.has(fp)) {
+      idlessSeen.add(fp)
+      idlessMerged.push(item)
+    }
+  }
 
   for (const item of localArr) {
     if (item && item.id) {
       mergedMap.set(item.id, item)
+    }
+    else if (item) {
+      pushIdless(item)
     }
   }
 
@@ -24,6 +37,9 @@ export function mergeByIdLww(localArr: any[], remoteArr: any[], tombstonedIds?: 
         mergedMap.set(item.id, item)
       }
     }
+    else if (item) {
+      pushIdless(item)
+    }
   }
 
   if (tombstonedIds?.size) {
@@ -33,11 +49,11 @@ export function mergeByIdLww(localArr: any[], remoteArr: any[], tombstonedIds?: 
     }
   }
 
-  return Array.from(mergedMap.values())
+  return [...Array.from(mergedMap.values()), ...idlessMerged]
 }
 
 // Merges two voice-profiles arrays stored in localStorage bridge objects.
-export function mergeVoiceProfiles(localVal: any, remoteVal: any): any {
+export function mergeVoiceProfiles(localVal: any, remoteVal: any, tombstonedIds?: Set<string>): any {
   if (!localVal)
     return remoteVal
   if (!remoteVal)
@@ -69,7 +85,7 @@ export function mergeVoiceProfiles(localVal: any, remoteVal: any): any {
     if (!Array.isArray(remoteArr))
       remoteArr = []
 
-    const mergedList = mergeByIdLww(localArr, remoteArr)
+    const mergedList = mergeByIdLww(localArr, remoteArr, tombstonedIds)
     const mergedValueStr = JSON.stringify(mergedList)
 
     return {
@@ -172,21 +188,28 @@ export function mergeChatSessions(localVal: any, remoteVal: any, tombstonedIds?:
     const isLocalObj = localVal && typeof localVal === 'object' && !Array.isArray(localVal)
     const isRemoteObj = remoteVal && typeof remoteVal === 'object' && !Array.isArray(remoteVal)
 
-    const localMsgs = isLocalObj ? (localVal.messages || []) : (Array.isArray(localVal) ? localVal : [])
-    const remoteMsgs = isRemoteObj ? (remoteVal.messages || []) : (Array.isArray(remoteVal) ? remoteVal : [])
+    if (!isLocalObj && !isRemoteObj && !Array.isArray(localVal) && !Array.isArray(remoteVal))
+      return localVal
+
+    if (Array.isArray(localVal) && Array.isArray(remoteVal))
+      return mergeChatMessagesById(localVal, remoteVal, tombstonedIds)
+
+    // NOTICE: normalize to object shape so a legacy-array peer never spreads into the object.
+    const localObj = isLocalObj ? localVal : { messages: localVal }
+    const remoteObj = isRemoteObj ? remoteVal : { messages: remoteVal }
+
+    const localMsgs = localObj.messages || []
+    const remoteMsgs = remoteObj.messages || []
 
     const mergedMsgs = mergeChatMessagesById(localMsgs, remoteMsgs, tombstonedIds)
 
-    if (isLocalObj) {
-      return {
-        ...localVal,
-        ...remoteVal,
-        messages: mergedMsgs,
-        // NOTICE: never Date.now() here — a stale merge must not outrank genuinely newer content
-        updatedAt: Math.max(localVal?.updatedAt ?? 0, remoteVal?.updatedAt ?? 0) || Date.now(),
-      }
+    return {
+      ...localObj,
+      ...remoteObj,
+      messages: mergedMsgs,
+      // NOTICE: never Date.now() here — a stale merge must not outrank genuinely newer content
+      updatedAt: Math.max(localObj?.updatedAt ?? 0, remoteObj?.updatedAt ?? 0),
     }
-    return mergedMsgs
   }
   catch (e) {
     console.error('[SyncEngine] Failed to merge chat sessions:', e)
