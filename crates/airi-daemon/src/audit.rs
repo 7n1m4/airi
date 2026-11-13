@@ -17,10 +17,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::redact::redact;
 
 pub const RETENTION_MS: u64 = 7 * 24 * 3600 * 1000; // hardcoded 7 days (spec)
-// The file contract itself lives in `airi-channel::audit` so thin clients
-// (e.g. the Slint shell) tail-read and archive the same file. Re-exported
-// here so existing daemon call sites keep working unchanged.
-pub use airi_channel::audit::{default_audit_path, AUDIT_FILE_NAME};
+// The path contract lives in `airi-channel::audit` so thin clients (e.g. the
+// Slint shell) tail-read and archive the same file. Re-exported here so
+// existing daemon call sites keep working unchanged.
+pub use airi_channel::audit::default_audit_path;
 
 pub fn now_ms() -> u64 {
     SystemTime::now()
