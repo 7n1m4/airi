@@ -72,6 +72,15 @@ what an attacker can *learn* before that gate:
   rate-limit-capable for hostile networks.
 - Treat the local CA private key exactly like the token: 0600, never leaves
   the host except via the client-trust install step (also 0600 handling).
+- **Same-uid session access is accepted.** Any process running in the user's
+  session can call the token-bearing verbs on `org.moeru.airi.Daemon1` —
+  `GetGatewayConfig` (returns the auth token), `ApplyGatewayConfig` (rebind /
+  rotate TLS flag), `RegenerateGatewayToken` (evicts every paired client).
+  No sender authorization is enforced (no polkit, no caller allowlist); the
+  session bus is treated as same-user-trusted, exactly as `config.json` (0600)
+  is. Protection is OS sandboxing of other processes, not the bus. This is a
+  deliberate decision; if you want it enforced, it is a policy change, not a
+  code fix.
 - **D-Bus is the control plane.** `GetGatewayConfig` (read; audited nothing —
   read-only), `ApplyGatewayConfig` (Electron-handler payload shape:
   `{ websocketTlsConfig?, authToken?, hostname? }`; empty token keeps,
