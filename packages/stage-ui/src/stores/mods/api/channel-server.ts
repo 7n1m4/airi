@@ -72,7 +72,7 @@ export const useModsServerChannelStore = defineStore('mods:channels:proj-airi:se
     return true
   })
 
-  const callerId = isStageWeb() ? 'stage-web' : isStageTamagotchi() ? 'stage-tamagotchi' : isStageCapacitor() ? 'stage-pocket' : 'stage-web'
+  const callerId = isStageTamagotchi() ? 'stage-tamagotchi' : 'stage-web'
   const purpose = 'Primary application interface for AIRI.'
 
   const basePossibleEvents: Array<keyof WebSocketEvents> = [

@@ -186,7 +186,6 @@ export const useCloudflareStore = defineStore('cloudflare', () => {
       import.meta.env?.DEV
         && !isElectron
         && typeof window !== 'undefined'
-        && !(window as any)?.Capacitor?.isNativePlatform?.()
         && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         && window.location.port,
     )
@@ -266,7 +265,6 @@ export const useCloudflareStore = defineStore('cloudflare', () => {
       import.meta.env?.DEV
         && !isElectron
         && typeof window !== 'undefined'
-        && !(window as any)?.Capacitor?.isNativePlatform?.()
         && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         && window.location.port,
     )
@@ -577,7 +575,6 @@ export const useCloudflareStore = defineStore('cloudflare', () => {
       import.meta.env?.DEV
         && !isElectron
         && typeof window !== 'undefined'
-        && !(window as any)?.Capacitor?.isNativePlatform?.()
         && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         && window.location.port,
     )
@@ -1310,7 +1307,6 @@ export const useCloudflareStore = defineStore('cloudflare', () => {
       import.meta.env?.DEV
         && !isElectron
         && typeof window !== 'undefined'
-        && !(window as any)?.Capacitor?.isNativePlatform?.()
         && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         && window.location.port,
     )

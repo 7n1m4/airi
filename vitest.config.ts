@@ -11,7 +11,6 @@ export default defineConfig({
       'packages/stage-pages',
       'packages/stage-shared',
       'packages/plugin-sdk',
-      'packages/cap-vite',
       'packages/vite-plugin-warpdrive',
       'packages/audio-pipelines-transcribe',
       'packages/pipelines-audio',
