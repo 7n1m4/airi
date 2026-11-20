@@ -101,7 +101,10 @@ export function createLoopbackTransport(): TransportAdapter {
       requiresExternalRelay: false,
     },
     initialize: async () => { status = 'connected' },
-    dispose: async () => { status = 'disconnected'; subs.clear() },
+    dispose: async () => {
+      status = 'disconnected'
+      subs.clear()
+    },
     publish: async (topic, payload) => {
       const handlers = subs.get(topic)
       if (!handlers)

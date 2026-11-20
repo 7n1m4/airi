@@ -421,7 +421,6 @@ export const useVisionOrchestratorStore = defineStore('vision-orchestrator', () 
                 }
               }
 
-              console.log(`[Vision Orchestrator] ⚡ Evaluating System-1 Sentinel (${activeQuestions.length} tripwires, provider=${payload.sentinelProvider || 'laya-local'})...`)
               const res = await systemOneStore.execute(
                 stateText,
                 questionsMap,
@@ -464,7 +463,6 @@ export const useVisionOrchestratorStore = defineStore('vision-orchestrator', () 
               if (shouldPromote) {
                 result.decision = 'PROMOTE'
                 result.summary = `[System-1 Sentinel Alert: "${triggeringQuestionText}" (${Math.round(maxConfidence * 100)}%)]\n${currentCaption}`
-                console.log(`[Vision Orchestrator] 🚨 System-1 Sentinel TRIPWIRE TRIGGERED: "${triggeringQuestionText}" (${Math.round(maxConfidence * 100)}% >= threshold)`)
               }
               else {
                 result.decision = 'NOTE'
@@ -506,7 +504,6 @@ export const useVisionOrchestratorStore = defineStore('vision-orchestrator', () 
                   },
                 ]
 
-                console.log(`[Vision Orchestrator] Requesting external VLM (${visionStore.activeProvider}/${visionStore.activeModel}) caption for promoted event...`)
                 let vlmResponse: any
                 try {
                   vlmResponse = await llmStore.generate(

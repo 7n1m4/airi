@@ -11,9 +11,6 @@ import { dirname, join, resolve } from 'node:path'
 import { env } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import clickDragPlugin from 'electron-click-drag-plugin'
-
-import { is } from '@electron-toolkit/utils'
 import { defineInvokeHandler } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/electron/main'
 import { initScreenCaptureForWindow } from '@proj-airi/electron-screen-capture/main'
@@ -27,7 +24,9 @@ import { electronStartDraggingWindow } from '../../../shared/eventa'
 import { APP_ICON as icon } from '../../assets'
 import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
 import { createConfig } from '../../libs/electron/persistence'
+import { notImplemented } from '../../rpc'
 import { openExternalSafely } from '../shared/open-external'
+import { isDev } from '../shared/view'
 import { setupDashboardWindowElectronInvokes } from './rpc/index.electron'
 
 const appConfigSchema = object({
@@ -84,7 +83,7 @@ export async function setupDashboardWindow(params: {
   }
 
   // NOTICE: in development mode, open devtools by default
-  if (is.dev || env.MAIN_APP_DEBUG || env.APP_DEBUG) {
+  if (isDev() || env.MAIN_APP_DEBUG || env.APP_DEBUG) {
     try {
       window.webContents.openDevTools({ mode: 'detach' })
     }
@@ -171,10 +170,10 @@ export async function setupDashboardWindow(params: {
   if (!isLinux) {
     function handleStartDraggingWindow(_payload: any, handlerOptions: any) {
       try {
-        const sender = handlerOptions?.raw?.ipcMainEvent?.sender
-        const win = sender ? (BrowserWindow.fromWebContents(sender) ?? window) : window
-        const windowId = win.getNativeWindowHandle()
-        clickDragPlugin.startDrag(windowId)
+        void handlerOptions
+        // electron-click-drag-plugin has no Electrobun counterpart; fail loudly if
+        // a platform ever reaches this Electron-only window-drag workaround.
+        notImplemented('electron-click-drag-plugin.startDrag')
       }
       catch (error) {
         console.error(error)

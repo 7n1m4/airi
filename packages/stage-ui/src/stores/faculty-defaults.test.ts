@@ -148,7 +148,7 @@ describe('useFacultyDefaultsStore', () => {
 
   it('setCircuitBreaker ignores unknown faculty', () => {
     const store = useFacultyDefaultsStore()
-    // @ts-expect-error
+    // @ts-expect-error intentionally invalid faculty key to exercise the ignore branch
     store.setCircuitBreaker('nope', true)
     expect(true).toBe(true)
   })
@@ -161,7 +161,7 @@ describe('useFacultyDefaultsStore', () => {
 
   it('setNotificationStyle ignores unknown faculty', () => {
     const store = useFacultyDefaultsStore()
-    // @ts-expect-error
+    // @ts-expect-error intentionally invalid faculty key to exercise the ignore branch
     store.setNotificationStyle('nope', 'toast')
     expect(true).toBe(true)
   })
@@ -174,7 +174,7 @@ describe('useFacultyDefaultsStore', () => {
 
   it('setRecoveryInterval ignores unknown faculty', () => {
     const store = useFacultyDefaultsStore()
-    // @ts-expect-error
+    // @ts-expect-error intentionally invalid faculty key to exercise the ignore branch
     store.setRecoveryInterval('nope', 5)
     expect(true).toBe(true)
   })
@@ -195,7 +195,7 @@ describe('useFacultyDefaultsStore', () => {
 
   it('resetFaculty ignores unknown', () => {
     const store = useFacultyDefaultsStore()
-    // @ts-expect-error
+    // @ts-expect-error intentionally invalid faculty key to exercise the ignore branch
     store.resetFaculty('nope')
     expect(true).toBe(true)
   })
@@ -328,7 +328,7 @@ describe('useFacultyDefaultsStore', () => {
   it('returns factory defaults when window is undefined', () => {
     const originalWindow = globalThis.window
     try {
-      // @ts-expect-error
+      // @ts-expect-error window is required by the ambient type; remove it to exercise the undefined-window branch
       delete globalThis.window
       setActivePinia(createPinia())
       const store = useFacultyDefaultsStore()
@@ -343,7 +343,7 @@ describe('useFacultyDefaultsStore', () => {
     const store = useFacultyDefaultsStore()
     const originalWindow = globalThis.window
     try {
-      // @ts-expect-error
+      // @ts-expect-error window is required by the ambient type; remove it to exercise the undefined-window branch
       delete globalThis.window
       store.setPrimary('consciousness', 'p', 'm')
       expect(store.consciousness.primaryProvider).toBe('p')
@@ -367,7 +367,9 @@ describe('useFacultyDefaultsStore', () => {
 
   it('covers syncLegacyKeys catch', () => {
     const store = useFacultyDefaultsStore()
-    const spy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('boom') })
+    const spy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('boom')
+    })
     store.setPrimary('consciousness', 'p', 'm')
     expect(store.consciousness.primaryProvider).toBe('p')
     spy.mockRestore()

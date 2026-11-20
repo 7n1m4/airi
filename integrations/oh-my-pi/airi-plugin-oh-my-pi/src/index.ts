@@ -13,7 +13,9 @@ export default function airiBridge(pi: ExtensionAPI, deps?: AiriBridgeDeps): voi
   const client = deps?.client ?? new Client({ name: 'proj-airi:plugin-oh-my-pi', autoConnect: false, ...resolveConfig(), possibleEvents: ['input:text', 'spark:notify', 'output:gen-ai:chat:message'], onError: (err: unknown) => pi.logger.error(String(err)) })
   const pendingPrompts = new Map<string, number>()
 
-  pi.on('session_start', async () => { void client.connect().catch(() => {}) })
+  pi.on('session_start', async () => {
+    void client.connect().catch(() => {})
+  })
 
   pi.on('before_agent_start', async (event: unknown, ctx: unknown) => {
     const ev = (event && typeof event === 'object') ? event as { reason?: unknown, prompt?: unknown } : {}
@@ -60,5 +62,7 @@ export default function airiBridge(pi: ExtensionAPI, deps?: AiriBridgeDeps): voi
     )
   })
 
-  pi.on('session_shutdown', async () => { client.close() })
+  pi.on('session_shutdown', async () => {
+    client.close()
+  })
 }

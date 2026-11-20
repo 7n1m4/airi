@@ -4,8 +4,9 @@ import { openExternalSafely } from './open-external'
 
 const { openExternal } = vi.hoisted(() => ({ openExternal: vi.fn() }))
 
-vi.mock('electron', () => ({
-  shell: { openExternal },
+// The port moved OS-scheme launching from Electron's `shell` to Electrobun's `Utils`.
+vi.mock('electrobun/main', () => ({
+  Utils: { openExternal },
 }))
 
 describe('openExternalSafely', () => {

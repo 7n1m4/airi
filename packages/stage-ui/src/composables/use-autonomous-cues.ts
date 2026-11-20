@@ -535,14 +535,12 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
 
     const actorId = toValue(context.currentActorId) || null
 
-    let modelId = toValue(context.activeModelId)
     let caps = toValue(context.expressionCapabilities) || []
     let motionCaps = toValue(context.motionCapabilities) || []
 
     if (context.resolveActorModel) {
       const resolved = context.resolveActorModel(actorId)
       if (resolved.modelId) {
-        modelId = resolved.modelId
         caps = resolved.expressionCapabilities
         motionCaps = resolved.motionCapabilities
       }
@@ -565,18 +563,6 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
 
     const { name, block } = buildPersonaContext(card, actorId)
     const state = `Line for ${name}:\n${block}\nLine: "${cleanSentence}"`
-
-    console.log('[AutonomousCues] Evaluating stride:', {
-      actorId,
-      modelId,
-      autoMode,
-      sentence: cleanSentence,
-      systemPrompt: block,
-      state,
-      expressions: caps.filter(c => c.usable !== false).map(c => c.label || c.rawKey),
-      motions: autoMode ? motionCaps.filter(c => c.usable !== false).map(c => c.label || c.rawKey) : [],
-      options: emotionOptions,
-    })
 
     // Skip API request if there are no cues available (only 'none')
     if (emotionOptions.length <= 1) {
@@ -634,18 +620,6 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
       }
 
       function finishRun(record: AutonomousCueRunRecord): AutonomousCueRunRecord {
-        console.log('[AutonomousCues] Classifier result:', {
-          actorId,
-          modelId,
-          token: record.token,
-          rawKey: record.rawKey,
-          status: record.status,
-          intensity: record.intensity,
-          confidence: record.confidence,
-          latencyMs: record.latencyMs,
-          budgetMs: record.budgetMs,
-          sentence: record.sentence,
-        })
         activeRuns.value.push(record)
         return record
       }
@@ -744,17 +718,6 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
         status: 'error',
         error: err?.message || String(err),
       }
-      console.log('[AutonomousCues] Classifier result:', {
-        actorId,
-        modelId,
-        token: '',
-        rawKey: null,
-        status: 'error',
-        error: errorRecord.error,
-        latencyMs,
-        budgetMs,
-        sentence: cleanSentence,
-      })
       activeRuns.value.push(errorRecord)
       return errorRecord
     }

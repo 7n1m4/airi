@@ -10,6 +10,7 @@
  * importing the same identifiers.
  */
 
+import type { BrowserWindow as ElectronBrowserWindow } from 'electron'
 import type { BrowserView } from 'electrobun/main'
 
 const DEV_SERVER_PORT = 5173
@@ -55,8 +56,14 @@ export function baseUrl(_parentOfIndexHtml?: string, filename?: string): { url: 
   return { url: `${VIEW_BASE}/${filename ?? 'index.html'}` }
 }
 
-/** Resolve a view URL, then load it into the window's webview. */
-export async function load(window: BrowserView | { webview: BrowserView }, url: string | { url: string }): Promise<void> {
+/**
+ * Resolve a view URL, then load it into the window's webview.
+ *
+ * Ported window modules still pass Electron `BrowserWindow` handles here; their
+ * `loadURL` has the same single-URL shape as `BrowserView.loadURL`, so both are
+ * accepted until those call sites move to Electrobun views.
+ */
+export async function load(window: BrowserView | ElectronBrowserWindow | { webview: BrowserView }, url: string | { url: string }): Promise<void> {
   const target = 'webview' in window ? window.webview : window
   const resolved = typeof url === 'string' ? await viewUrl(url) : url.url
   target.loadURL(resolved)
@@ -65,6 +72,10 @@ export async function load(window: BrowserView | { webview: BrowserView }, url: 
 /** Resolve the URL for a route inside the single-page Control Strip. */
 export function withHashRoute(baseUrl: string | { url: string }, hashRoute: string): { url: string } {
   const base = typeof baseUrl === 'string' ? baseUrl : baseUrl.url
-  const trimmed = base.endsWith('/') ? base.slice(0, -1) : base
-  return { url: `${trimmed}/#${hashRoute.startsWith('/') ? hashRoute : `/${hashRoute}`}` }
+  // Let WHATWG URL place the fragment. Hand-building `${base}/#${route}` inserts a
+  // stray slash into file/view URLs whose path already names index.html
+  // (e.g. `views://main/index.html/#/route`), which loads the wrong resource.
+  const url = new URL(base)
+  url.hash = hashRoute
+  return { url: url.toString() }
 }

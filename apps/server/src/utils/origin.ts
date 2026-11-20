@@ -1,3 +1,5 @@
+import process from 'node:process'
+
 // Deployed API origin (same one better-auth trusts via trustedOrigins) plus
 // localhost dev origins; everything else is blocked. Origin headers carry no path
 // or trailing slash, so compare against the URL-normalization of API_SERVER_URL.

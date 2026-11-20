@@ -91,7 +91,10 @@ describe('chunkTTSInput', () => {
 
   it('readerLike input works', async () => {
     const stream = new ReadableStream({
-      start(c) { c.enqueue(new TextEncoder().encode('hello world')); c.close() },
+      start(c) {
+        c.enqueue(new TextEncoder().encode('hello world'))
+        c.close()
+      },
     })
     const reader = stream.getReader()
     const r = await collect(reader)
@@ -103,7 +106,10 @@ describe('chunkEmitter', () => {
   it('calls handler for chunks', async () => {
     const handler = vi.fn()
     const stream = new ReadableStream({
-      start(c) { c.enqueue(new TextEncoder().encode('hello world')); c.close() },
+      start(c) {
+        c.enqueue(new TextEncoder().encode('hello world'))
+        c.close()
+      },
     })
     await chunkEmitter(stream.getReader(), [], handler)
     expect(handler).toHaveBeenCalled()
@@ -113,7 +119,10 @@ describe('chunkEmitter', () => {
     const handler = vi.fn()
     const input = `hi${TTS_SPECIAL_TOKEN}`
     const stream = new ReadableStream({
-      start(c) { c.enqueue(new TextEncoder().encode(input)); c.close() },
+      start(c) {
+        c.enqueue(new TextEncoder().encode(input))
+        c.close()
+      },
     })
     await chunkEmitter(stream.getReader(), ['SP1'], handler)
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ special: 'SP1' }))
@@ -123,7 +132,10 @@ describe('chunkEmitter', () => {
     const handler = vi.fn()
     const input = TTS_SPECIAL_TOKEN
     const stream = new ReadableStream({
-      start(c) { c.enqueue(new TextEncoder().encode(input)); c.close() },
+      start(c) {
+        c.enqueue(new TextEncoder().encode(input))
+        c.close()
+      },
     })
     await chunkEmitter(stream.getReader(), [], handler)
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ special: null }))
@@ -132,7 +144,10 @@ describe('chunkEmitter', () => {
   it('sanitizes tokens in chunk', async () => {
     const handler = vi.fn()
     const stream = new ReadableStream({
-      start(c) { c.enqueue(new TextEncoder().encode('hi world')); c.close() },
+      start(c) {
+        c.enqueue(new TextEncoder().encode('hi world'))
+        c.close()
+      },
     })
     await chunkEmitter(stream.getReader(), [], handler)
     const arg = handler.mock.calls[0][0]
@@ -142,7 +157,9 @@ describe('chunkEmitter', () => {
   it('catches errors without throwing', async () => {
     // pass a broken reader
     const handler = vi.fn()
-    const badReader = { read: async () => { throw new Error('boom') } } as unknown as ReaderLike
+    const badReader = { read: async () => {
+      throw new Error('boom')
+    } } as unknown as ReaderLike
     await expect(chunkEmitter(badReader, [], handler)).resolves.toBeUndefined()
   })
 })

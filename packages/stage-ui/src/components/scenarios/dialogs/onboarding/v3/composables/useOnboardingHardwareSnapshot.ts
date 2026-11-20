@@ -86,8 +86,11 @@ function withTimeout<T>(promise: Promise<T>, ms = 2500, fallback: T): Promise<T>
 }
 
 async function probeHardware() {
-  const isElectron = typeof window !== 'undefined'
-    && (Boolean((window as any).electron) || Boolean((window as any).process?.versions?.electron))
+  const electronWindow = typeof window !== 'undefined' ? window as any : undefined
+  // NOTICE: read `window.process` via a computed key so node/prefer-global/process
+  // does not mistake Electron's renderer-side process shim for Node's global `process`.
+  const electronProcessKey = 'process'
+  const isElectron = Boolean(electronWindow?.electron) || Boolean(electronWindow?.[electronProcessKey]?.versions?.electron)
   snapshotState.value.isElectron = isElectron
 
   let isAnyCheckSuccessful = false

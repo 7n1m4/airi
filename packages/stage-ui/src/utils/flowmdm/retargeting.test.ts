@@ -45,7 +45,9 @@ function sameRotation(a: Quat, b: Quat): void {
 function properRotation(q: Quat): void {
   assert(q.every(Number.isFinite))
   near(Math.hypot(...q), 1)
-  const x = rotateVector(q, RIGHT); const y = rotateVector(q, UP); const z = rotateVector(q, FORWARD)
+  const x = rotateVector(q, RIGHT)
+  const y = rotateVector(q, UP)
+  const z = rotateVector(q, FORWARD)
   near(dot(x, y), 0)
   near(dot(x, z), 0)
   near(dot(y, z), 0)
@@ -83,7 +85,8 @@ describe('calibrated frame invariants', () => {
   it('calibrates a non-axis-aligned rest frame with the correct multiplication order', () => {
     const rest = axisAngle(FORWARD, 0.35)
     const wanted = multiplyQuaternion(axisAngle(UP, 0.7), axisAngle(RIGHT, -0.2))
-    const p = rotateVector(rest, UP); const s = rotateVector(rest, RIGHT)
+    const p = rotateVector(rest, UP)
+    const s = rotateVector(rest, RIGHT)
     const result = solveFrameDelta({ restPrimary: p, restSecondary: s, primaryWorld: rotateVector(wanted, p), secondaryWorld: rotateVector(wanted, s) })
     sameRotation(result.rotation, wanted)
   })
@@ -270,9 +273,12 @@ describe('two-bone IK and exported FK invariants', () => {
   })
 
   it('is equivariant to a common rigid rotation and translation', () => {
-    const root: Vec3 = [0.1, 0.9, 0.05]; const target: Vec3 = [0.15, 0.2, 0.3]; const pole: Vec3 = [0.12, 0.5, 0.6]
+    const root: Vec3 = [0.1, 0.9, 0.05]
+    const target: Vec3 = [0.15, 0.2, 0.3]
+    const pole: Vec3 = [0.12, 0.5, 0.6]
     const base = solveTwoBoneIK({ root, target, pole, upperLength: 0.42, lowerLength: 0.42 })
-    const q = axisAngle(UP, 0.7); const t: Vec3 = [2, -1, 3]
+    const q = axisAngle(UP, 0.7)
+    const t: Vec3 = [2, -1, 3]
     const trans = (v: Vec3) => add(rotateVector(q, v), t)
     const transformed = solveTwoBoneIK({ root: trans(root), target: trans(target), pole: trans(pole), upperLength: 0.42, lowerLength: 0.42 })
     nearVector(transformed.knee, trans(base.knee), 1e-6)
@@ -345,7 +351,8 @@ describe('one-landmark contact anchor invariants', () => {
   })
 
   it('keeps ankle and toe contacts independent', () => {
-    let ankle = emptyContact(); let toe = emptyContact()
+    let ankle = emptyContact()
+    let toe = emptyContact()
     ankle = advanceContact(ankle, { value: 0.9, point: [0.1, 0.08, 0], mayEnter: true, mayStay: true }, policy)
     ankle = advanceContact(ankle, { value: 0.9, point: [0.1, 0.08, 0], mayEnter: true, mayStay: true }, policy)
     toe = advanceContact(toe, { value: 0.2, point: [0.1, 0.02, 0.14], mayEnter: false, mayStay: false }, policy)

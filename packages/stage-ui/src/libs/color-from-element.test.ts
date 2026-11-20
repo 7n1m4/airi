@@ -33,7 +33,9 @@ describe('patchThemeSamplingHtml2CanvasClone', () => {
     expect(true).toBe(true)
   })
 
-  it('placeholder2', () => { expect(true).toBe(true) })
+  it('placeholder2', () => {
+    expect(true).toBe(true)
+  })
   it('returns when document missing', () => {
     const g = globalThis as Record<string, unknown>
     const saved = g.document
@@ -82,12 +84,6 @@ describe('patchThemeSamplingHtml2CanvasClone', () => {
 })
 
 describe('colorFromElement', () => {
-  // Restores the fake `document` swapped in by the vibrant tests. Scoped to this
-  // describe only: the sibling one runs real-DOM tests and deletes globals on purpose.
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
   beforeEach(() => {
     vi.mocked(html2canvas).mockResolvedValue({
       width: 10,
@@ -96,6 +92,12 @@ describe('colorFromElement', () => {
         getImageData: () => ({ data: new Uint8ClampedArray([10, 20, 30, 255]) }),
       }),
     } as unknown as HTMLCanvasElement)
+  })
+
+  // Restores the fake `document` swapped in by the vibrant tests. Scoped to this
+  // describe only: the sibling one runs real-DOM tests and deletes globals on purpose.
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('vibrant mode with no image source returns empty', async () => {
@@ -113,7 +115,12 @@ describe('colorFromElement', () => {
       naturalHeight = 4
       onload: (() => void) | null = null
       onerror: (() => void) | null = null
-      set src(_v: string) { queueMicrotask(() => this.onload?.()) }
+      _src = ''
+      get src() { return this._src }
+      set src(_v: string) {
+        this._src = _v
+        queueMicrotask(() => this.onload?.())
+      }
     }
     ;(globalThis as unknown as { Image: unknown }).Image = MockImage
     const drawImage = vi.fn()
@@ -141,7 +148,12 @@ describe('colorFromElement', () => {
       naturalHeight = 4
       onload: (() => void) | null = null
       onerror: (() => void) | null = null
-      set src(_v: string) { queueMicrotask(() => this.onload?.()) }
+      _src = ''
+      get src() { return this._src }
+      set src(_v: string) {
+        this._src = _v
+        queueMicrotask(() => this.onload?.())
+      }
     }
     ;(globalThis as unknown as { Image: unknown }).Image = MockImage
     const canvas = {
@@ -246,7 +258,12 @@ describe('colorFromElement', () => {
       naturalHeight = 4
       onload: (() => void) | null = null
       onerror: (() => void) | null = null
-      set src(_v: string) { queueMicrotask(() => this.onerror?.()) }
+      _src = ''
+      get src() { return this._src }
+      set src(_v: string) {
+        this._src = _v
+        queueMicrotask(() => this.onerror?.())
+      }
     }
     ;(globalThis as unknown as { Image: unknown }).Image = MockImage
     await expect(colorFromElement(img, { mode: 'vibrant', vibrant: { imageSource: 'http://x' } })).rejects.toThrow('Failed to load image for Vibrant extraction')

@@ -8,7 +8,9 @@ describe('character-media-resolver', () => {
     setActivePinia(createPinia())
     iconCache.clear()
     colorCache.clear()
-    try { localStorage.clear() }
+    try {
+      localStorage.clear()
+    }
     catch {}
   })
 

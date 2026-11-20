@@ -126,14 +126,18 @@ describe('airi-card coverage', () => {
     storage.getItemRaw = (async () => [['s', salienceCard]]) as typeof storage.getItemRaw
     const store = useAiriCardStore()
     await store.loadCards()
-    storage.getItemRaw = (async () => { throw new Error('boom') }) as typeof storage.getItemRaw
+    storage.getItemRaw = (async () => {
+      throw new Error('boom')
+    }) as typeof storage.getItemRaw
     await store.loadCards()
     storage.getItemRaw = origGet
   })
 
   it('persistCards failure', async () => {
     const orig = storage.setItemRaw
-    storage.setItemRaw = (async () => { throw new Error('boom') }) as typeof storage.setItemRaw
+    storage.setItemRaw = (async () => {
+      throw new Error('boom')
+    }) as typeof storage.setItemRaw
     const store = useAiriCardStore()
     await store.loadCards()
     await store.addCard({ name: 'x' } as unknown as AiriCard)
@@ -150,7 +154,9 @@ describe('airi-card coverage', () => {
   })
 
   it('add fetch failure branch', async () => {
-    globalThis.fetch = (async () => { throw new Error('fetch fail') }) as unknown as typeof fetch
+    globalThis.fetch = (async () => {
+      throw new Error('fetch fail')
+    }) as unknown as typeof fetch
     const store = useAiriCardStore()
     await store.loadCards()
     const id = await store.addCard(cardFixture)
@@ -223,15 +229,25 @@ describe('airi-card coverage', () => {
     stageModelStore.stageModelSelectedDisplayModel = {} as unknown as typeof stageModelStore.stageModelSelectedDisplayModel
     const id = await store.addCard(cardFixture)
     const card = store.getCard(id)
-    try { await store.syncCardState(card, true) }
+    try {
+      await store.syncCardState(card, true)
+    }
     catch {}
-    try { await store.syncCardState(card, false) }
+    try {
+      await store.syncCardState(card, false)
+    }
     catch {}
-    try { await store.syncCardState(undefined) }
+    try {
+      await store.syncCardState(undefined)
+    }
     catch {}
-    try { await store.activateCard(id, true) }
+    try {
+      await store.activateCard(id, true)
+    }
     catch {}
-    try { await store.activateCard('missing', false) }
+    try {
+      await store.activateCard('missing', false)
+    }
     catch {}
   })
 
@@ -239,15 +255,25 @@ describe('airi-card coverage', () => {
     const store = useAiriCardStore()
     await store.loadCards()
     store.activeCardId = ''
-    try { await store.initialize() }
+    try {
+      await store.initialize()
+    }
     catch {}
-    try { await store.seedDefaults('nonexistent') }
+    try {
+      await store.seedDefaults('nonexistent')
+    }
     catch {}
-    try { await store.seedDefaults('default') }
+    try {
+      await store.seedDefaults('default')
+    }
     catch {}
-    try { await store.loadCards(true) }
+    try {
+      await store.loadCards(true)
+    }
     catch {}
-    try { store.resetState() }
+    try {
+      store.resetState()
+    }
     catch {}
   })
 
@@ -256,21 +282,35 @@ describe('airi-card coverage', () => {
     await store.loadCards()
     const id = await store.addCard(cardFixture)
     await store.activateCard(id)
-    try { store.updateCardOutfits('missing', [{ id: 'o1', name: 'O', type: 'base', expressions: { smile: 1 } }] as unknown as AiriOutfit[]) }
+    try {
+      store.updateCardOutfits('missing', [{ id: 'o1', name: 'O', type: 'base', expressions: { smile: 1 } }] as unknown as AiriOutfit[])
+    }
     catch {}
-    try { await store.updateCardOutfits(id, [{ id: 'o1', name: 'O', type: 'base', expressions: { smile: 1 } }] as unknown as AiriOutfit[]) }
+    try {
+      await store.updateCardOutfits(id, [{ id: 'o1', name: 'O', type: 'base', expressions: { smile: 1 } }] as unknown as AiriOutfit[])
+    }
     catch {}
-    try { await store.applyOutfit('o1') }
+    try {
+      await store.applyOutfit('o1')
+    }
     catch {}
     // overlay toggle
-    try { await store.updateCardOutfits(id, [{ id: 'o2', name: 'O2', type: 'overlay', expressions: { smile: 1 } }] as unknown as AiriOutfit[]) }
+    try {
+      await store.updateCardOutfits(id, [{ id: 'o2', name: 'O2', type: 'overlay', expressions: { smile: 1 } }] as unknown as AiriOutfit[])
+    }
     catch {}
-    try { await store.applyOutfit('o2') }
+    try {
+      await store.applyOutfit('o2')
+    }
     catch {}
-    try { await store.applyOutfit('o2') }
+    try {
+      await store.applyOutfit('o2')
+    }
     catch {}
     // missing outfit branch
-    try { await store.applyOutfit('does-not-exist') }
+    try {
+      await store.applyOutfit('does-not-exist')
+    }
     catch {}
     // two base outfits: applying one zeroes other's expressions
     try {
@@ -280,7 +320,9 @@ describe('airi-card coverage', () => {
       ] as unknown as AiriOutfit[])
     }
     catch {}
-    try { await store.applyOutfit('b1') }
+    try {
+      await store.applyOutfit('b1')
+    }
     catch {}
   })
 
@@ -294,7 +336,9 @@ describe('airi-card coverage', () => {
     const card = { name: 'Preset', extensions: { airi: { modules: { displayModelId: 'preset-live2d-2' }, active_concepts: [], artistry: { autonomousEnabled: false }, visual_assets: {} } } } as unknown as AiriCard
     const id = await store.addCard(card)
     const c = store.getCard(id)
-    try { await store.syncCardState(c, true) }
+    try {
+      await store.syncCardState(c, true)
+    }
     catch {}
   })
 
@@ -311,7 +355,9 @@ describe('airi-card coverage', () => {
     const store = useAiriCardStore()
     await store.loadCards()
     store.activeCardId = ''
-    try { await store.applyOutfit('o1') }
+    try {
+      await store.applyOutfit('o1')
+    }
     catch {}
     expect(true).toBe(true)
   })
@@ -396,7 +442,9 @@ describe('airi-card coverage', () => {
       },
     } as unknown as AiriCard
     const spineId = await store.addCard(spineCard)
-    try { await store.syncCardState(store.getCard(spineId), true) }
+    try {
+      await store.syncCardState(store.getCard(spineId), true)
+    }
     catch {}
     localStorage.removeItem('settings/spine/available-variants')
   })
@@ -434,7 +482,9 @@ describe('airi-card coverage', () => {
       },
     } as unknown as AiriCard
     const seedId = await store.addCard(seedCard)
-    try { await store.syncCardState(store.getCard(seedId), true) }
+    try {
+      await store.syncCardState(store.getCard(seedId), true)
+    }
     catch {}
 
     const live = await displayModelsStore.addDisplayModelWithTextures(
@@ -463,7 +513,9 @@ describe('airi-card coverage', () => {
       },
     } as unknown as AiriCard
     const id = await store.addCard(pmxCard)
-    try { await store.syncCardState(store.getCard(id), true) }
+    try {
+      await store.syncCardState(store.getCard(id), true)
+    }
     catch {}
   })
 

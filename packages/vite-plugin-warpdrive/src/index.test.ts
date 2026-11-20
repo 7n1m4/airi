@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'

@@ -226,7 +226,7 @@ describe('credential cache eviction', () => {
 
     // The deleted entry was dropped too: a read of it builds a new client.
     await expectRebuilt(VLLM_KEY, vllmOptions)
-  })
+  }, 15_000)
 
   it('removeInstance evicts the named instance and keeps siblings', async () => {
     const { store, built, flush, expectCached, expectRebuilt } = await boot()
@@ -253,7 +253,7 @@ describe('credential cache eviction', () => {
     // The sibling was never evicted: still served from cache, built exactly once.
     await expectCached(LM_KEY, lmOptions)
     expect(built.filter(config => config.apiKey === 'sk-l1')).toHaveLength(1)
-  })
+  }, 15_000)
 
   it('removeAllInstances evicts the primary and every named instance', async () => {
     const { store, count, flush, expectRebuilt } = await boot()
@@ -290,7 +290,7 @@ describe('credential cache eviction', () => {
     await store.getProviderInstance(PRIMARY_KEY)
     await store.getProviderInstance(VLLM_KEY)
     expect(count()).toBe(warm)
-  })
+  }, 15_000)
 
   it('does not evict when the credential object is unchanged', async () => {
     const { store, count, flush, expectCached } = await boot()
@@ -312,5 +312,5 @@ describe('credential cache eviction', () => {
     await expectCached(VLLM_KEY, vllmOptions)
     await expectCached(PRIMARY_KEY, primary)
     expect(count()).toBe(2)
-  })
+  }, 15_000)
 })

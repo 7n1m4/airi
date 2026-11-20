@@ -22,7 +22,10 @@ describe('control-customizer', () => {
     const seen: Record<string, true> = {}
     let dup = false
     for (const id of ids) {
-      if (seen[id]) { dup = true; break }
+      if (seen[id]) {
+        dup = true
+        break
+      }
       seen[id] = true
     }
     expect(dup).toBe(false)

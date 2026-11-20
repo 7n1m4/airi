@@ -78,7 +78,13 @@ function createFakeDirHandle(children: Map<string, FakeFsNode>) {
     async* values() {
       for (const [name, node] of children) {
         if (node.kind === 'file') {
-          yield { kind: 'file', name, async getFile() { return { size: node.size ?? 0 } } }
+          yield {
+            kind: 'file',
+            name,
+            async getFile() {
+              return { size: node.size ?? 0 }
+            },
+          }
         }
         else {
           // Real directory entries are handles: the recursive sizer calls

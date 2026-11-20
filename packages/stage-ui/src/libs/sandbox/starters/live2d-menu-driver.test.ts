@@ -1,3 +1,5 @@
+import { runInThisContext } from 'node:vm'
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { LIVE2D_MENU_DRIVER_STARTER } from './live2d-menu-driver'
@@ -9,9 +11,9 @@ interface MockNode {
   innerHTML: string
   dataset: Record<string, string>
   children: MockNode[]
-  listeners: Record<string, Function[]>
+  listeners: Record<string, Array<(...args: any[]) => void>>
   appendChild: (child: MockNode) => void
-  addEventListener: (event: string, fn: Function) => void
+  addEventListener: (event: string, fn: (...args: any[]) => void) => void
   querySelector: (sel: string) => MockNode | null
   querySelectorAll: (sel: string) => MockNode[]
   click: () => void
@@ -57,7 +59,7 @@ function createMockElement(tag = 'div'): MockNode {
     appendChild(child: MockNode) {
       this.children.push(child)
     },
-    addEventListener(event: string, fn: Function) {
+    addEventListener(event: string, fn: (...args: any[]) => void) {
       this.listeners[event] = this.listeners[event] || []
       this.listeners[event].push(fn)
     },
@@ -116,7 +118,7 @@ describe('lIVE2D_MENU_DRIVER_STARTER widget', () => {
     const sidecar: any = { live2d: null }
 
     const cleanCode = LIVE2D_MENU_DRIVER_STARTER.code.replace('export default function mount', 'return function mount')
-    const mountFn = new Function(cleanCode)()
+    const mountFn = runInThisContext(`(function(){${cleanCode}})()`)
     mountFn({
       container,
       sidecar,
@@ -159,7 +161,7 @@ describe('lIVE2D_MENU_DRIVER_STARTER widget', () => {
     }
 
     const cleanCode = LIVE2D_MENU_DRIVER_STARTER.code.replace('export default function mount', 'return function mount')
-    const mountFn = new Function(cleanCode)()
+    const mountFn = runInThisContext(`(function(){${cleanCode}})()`)
     mountFn({
       container,
       sidecar,

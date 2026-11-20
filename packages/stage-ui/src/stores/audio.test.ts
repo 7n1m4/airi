@@ -139,7 +139,9 @@ describe('audio store', () => {
   it('useAudioContext restores saved sink', async () => {
     const ctx = { setSinkId: vi.fn().mockResolvedValue(undefined) }
     const g = globalThis as unknown as { AudioContext: unknown }
-    g.AudioContext = function () { return ctx }
+    g.AudioContext = function () {
+      return ctx
+    }
     localStorage.setItem('settings/audio/output', JSON.stringify('sink-1'))
     const store = useAudioContext()
     await Promise.resolve()
@@ -152,7 +154,9 @@ describe('audio store', () => {
   it('useAudioContext setSinkId no setSinkId method', async () => {
     const ctx = {}
     const g2 = globalThis as unknown as { AudioContext: unknown }
-    g2.AudioContext = function () { return ctx }
+    g2.AudioContext = function () {
+      return ctx
+    }
     const store = useAudioContext()
     await store.setSinkId('x')
     expect(true).toBe(true)
@@ -161,7 +165,9 @@ describe('audio store', () => {
   it('useAudioContext setSinkId error caught', async () => {
     const ctx = { setSinkId: vi.fn().mockRejectedValue(new Error('boom')) }
     const g3 = globalThis as unknown as { AudioContext: unknown }
-    g3.AudioContext = function () { return ctx }
+    g3.AudioContext = function () {
+      return ctx
+    }
     localStorage.clear()
     const store = useAudioContext()
     await store.setSinkId('x')
@@ -216,7 +222,9 @@ describe('audio store', () => {
   it('useAudioContext ignores invalid saved sink JSON', () => {
     const ctx = { setSinkId: vi.fn() }
     const g = globalThis as unknown as { AudioContext: unknown }
-    g.AudioContext = function () { return ctx }
+    g.AudioContext = function () {
+      return ctx
+    }
     localStorage.setItem('settings/audio/output', '{bad json')
     const store = useAudioContext()
     expect(store).toBeDefined()
@@ -287,7 +295,9 @@ describe('audio store', () => {
   })
   it('useAudioContext setSinkId returns when setSinkId is absent', async () => {
     const g = globalThis as unknown as { AudioContext: unknown }
-    g.AudioContext = function () { return {} }
+    g.AudioContext = function () {
+      return {}
+    }
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useAudioContext()
@@ -298,7 +308,9 @@ describe('audio store', () => {
   it('setSinkId resolves when the AudioContext constructor yields null', async () => {
     const g = globalThis as unknown as { AudioContext: unknown }
     const prev = g.AudioContext
-    g.AudioContext = function () { return null }
+    g.AudioContext = function () {
+      return null
+    }
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useAudioContext()
@@ -324,7 +336,9 @@ describe('audio store', () => {
   // Kept as a regression guard around the store's public surface instead.
   it('setSinkId with null-returning AudioContext resolves without a setSinkId object', async () => {
     const g = globalThis as unknown as { AudioContext: unknown }
-    g.AudioContext = function () { return null }
+    g.AudioContext = function () {
+      return null
+    }
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useAudioContext()
@@ -334,7 +348,9 @@ describe('audio store', () => {
   it('useAudioContext skips localStorage restore when localStorage is undefined (branch line 88)', async () => {
     const g = globalThis as unknown as { AudioContext: unknown }
     const ctx = { setSinkId: vi.fn().mockResolvedValue(undefined) }
-    g.AudioContext = function () { return ctx }
+    g.AudioContext = function () {
+      return ctx
+    }
     const win = globalThis as unknown as { localStorage?: unknown }
     const prev = win.localStorage
     delete win.localStorage

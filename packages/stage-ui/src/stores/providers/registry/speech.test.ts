@@ -13,15 +13,21 @@ describe('speech registry coverage', () => {
       expect(meta).toBeDefined()
       void id
       if (typeof meta.isAvailableBy === 'function') {
-        try { await meta.isAvailableBy() }
+        try {
+          await meta.isAvailableBy()
+        }
         catch { /* ignore */ }
       }
       if (typeof meta.createProvider === 'function') {
-        try { await meta.createProvider({ apiKey: 'key', baseUrl: 'http://localhost/', model: 'm' }) }
+        try {
+          await meta.createProvider({ apiKey: 'key', baseUrl: 'http://localhost/', model: 'm' })
+        }
         catch { /* ignore */ }
       }
       if (typeof meta.capabilities.listModels === 'function') {
-        try { await meta.capabilities.listModels({ apiKey: 'key', baseUrl: 'http://localhost/' }) }
+        try {
+          await meta.capabilities.listModels({ apiKey: 'key', baseUrl: 'http://localhost/' })
+        }
         catch { /* ignore */ }
       }
     }

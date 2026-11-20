@@ -13,8 +13,12 @@ import {
 } from './settings-catalog'
 
 describe('settings-catalog', () => {
-  it('non-empty', () => { expect(SETTINGS_CATALOG_ITEMS.length).toBeGreaterThan(0) })
-  it('convert basic', () => { expect(convertProviderToCatalogNodeItem({ id: 'foo', name: 'Foo', category: 'chat' }).id).toBe('prov-foo') })
+  it('non-empty', () => {
+    expect(SETTINGS_CATALOG_ITEMS.length).toBeGreaterThan(0)
+  })
+  it('convert basic', () => {
+    expect(convertProviderToCatalogNodeItem({ id: 'foo', name: 'Foo', category: 'chat' }).id).toBe('prov-foo')
+  })
   it('convert unknown category fallback parent', () => {
     const n = convertProviderToCatalogNodeItem({ id: 'bar', name: 'Bar (x)', category: 'unknown', deployment: 'cloud' })
     expect(n.parentId).toBe('prov-cat-chat')
@@ -46,16 +50,28 @@ describe('settings-catalog', () => {
     expect(n.description).toContain('inference provider')
     expect(n.icon).toBe('i-solar:cpu-bold-duotone')
   })
-  it('getAll array', () => { expect(getAllCatalogItems([{ id: 'custom1', name: 'Custom', category: 'chat' }]).some(i => i.id === 'prov-custom1')).toBe(true) })
-  it('getAll record', () => { expect(getAllCatalogItems({ a: { id: 'custom2', name: 'Custom2', category: 'chat' } }).some(i => i.id === 'prov-custom2')).toBe(true) })
-  it('getAll no args', () => { expect(Array.isArray(getAllCatalogItems())).toBe(true) })
+  it('getAll array', () => {
+    expect(getAllCatalogItems([{ id: 'custom1', name: 'Custom', category: 'chat' }]).some(i => i.id === 'prov-custom1')).toBe(true)
+  })
+  it('getAll record', () => {
+    expect(getAllCatalogItems({ a: { id: 'custom2', name: 'Custom2', category: 'chat' } }).some(i => i.id === 'prov-custom2')).toBe(true)
+  })
+  it('getAll no args', () => {
+    expect(Array.isArray(getAllCatalogItems())).toBe(true)
+  })
   it('getAll skip invalid and duplicates', () => {
     const items = getAllCatalogItems([{ id: 'dup', name: 'Dup' }, null, { name: 'noId' }, { id: 'dup', name: 'Dup2' }])
     expect(items.filter(i => i.id === 'prov-dup').length).toBe(1)
   })
-  it('buildTopology', () => { expect(buildSettingsCatalogTopology().rootId).toBe('hub') })
-  it('buildTopology custom providers', () => { expect(buildSettingsCatalogTopology([{ id: 'cp', name: 'CP' }]).nodesById['prov-cp']).toBeDefined() })
-  it('resolvePath unknown', () => { expect(resolvePath(buildSettingsCatalogTopology(), 'nonexistent')).toEqual(['hub']) })
+  it('buildTopology', () => {
+    expect(buildSettingsCatalogTopology().rootId).toBe('hub')
+  })
+  it('buildTopology custom providers', () => {
+    expect(buildSettingsCatalogTopology([{ id: 'cp', name: 'CP' }]).nodesById['prov-cp']).toBeDefined()
+  })
+  it('resolvePath unknown', () => {
+    expect(resolvePath(buildSettingsCatalogTopology(), 'nonexistent')).toEqual(['hub'])
+  })
   it('resolvePath prepends root', () => {
     const topo: SettingsTopology = { rootId: 'hub', nodesById: { hub: { id: 'hub', label: 'hub', shortLabel: 'hub', route: '/', parentId: null, children: [], order: 0, kind: 'root', metadata: {} }, x: { id: 'x', label: 'x', shortLabel: 'x', route: '/x', parentId: null, children: [], order: 0, kind: 'page', metadata: {} } } }
     expect(resolvePath(topo, 'x')).toEqual(['hub', 'x'])
@@ -85,12 +101,24 @@ describe('settings-catalog', () => {
     const r = resolvePathFromRoute(topo, '/settings/providers/chat/foo')
     expect(r.path.length).toBeGreaterThan(0)
   })
-  it('back root', () => { expect(resolveSettingsBackRoute('/settings')).toBe('/') })
-  it('back root desktop', () => { expect(resolveSettingsBackRoute('/settings', { isDesktop: true })).toBeNull() })
-  it('back providers', () => { expect(resolveSettingsBackRoute('/settings/providers/chat/foo')).toBe('/settings/providers#chat') })
-  it('back providers free-hub', () => { expect(resolveSettingsBackRoute('/settings/providers/free-hub/x')).toBe('/settings/providers') })
-  it('back providers non-chat category', () => { expect(resolveSettingsBackRoute('/settings/providers/speech/foo')).toBe('/settings/providers#speech') })
-  it('back single', () => { expect(resolveSettingsBackRoute('/foo')).toBe('/settings') })
+  it('back root', () => {
+    expect(resolveSettingsBackRoute('/settings')).toBe('/')
+  })
+  it('back root desktop', () => {
+    expect(resolveSettingsBackRoute('/settings', { isDesktop: true })).toBeNull()
+  })
+  it('back providers', () => {
+    expect(resolveSettingsBackRoute('/settings/providers/chat/foo')).toBe('/settings/providers#chat')
+  })
+  it('back providers free-hub', () => {
+    expect(resolveSettingsBackRoute('/settings/providers/free-hub/x')).toBe('/settings/providers')
+  })
+  it('back providers non-chat category', () => {
+    expect(resolveSettingsBackRoute('/settings/providers/speech/foo')).toBe('/settings/providers#speech')
+  })
+  it('back single', () => {
+    expect(resolveSettingsBackRoute('/foo')).toBe('/settings')
+  })
   it('back topology exact child', () => {
     const topo = buildSettingsCatalogTopology()
     expect(resolveSettingsBackRoute('/settings/system/color-scheme', { topology: topo })).toBeDefined()

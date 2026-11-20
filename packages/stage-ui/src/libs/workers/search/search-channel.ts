@@ -167,7 +167,7 @@ export function createChannelSearchClient(channel: BroadcastChannel): SearchBack
           signal.removeEventListener('abort', onAbort)
       }
 
-      const onAbort = () => {
+      function onAbort() {
         cleanup()
         reject(new DOMException('Aborted', 'AbortError'))
       }

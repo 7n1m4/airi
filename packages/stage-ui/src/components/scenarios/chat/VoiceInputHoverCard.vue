@@ -25,6 +25,8 @@ const { autoSendEnabled, tapToTalk, voiceInputMode, configured: isHearingConfigu
 
 const providersStore = useProvidersStore()
 
+const isElectron = typeof window !== 'undefined' && !!(window as any).electron
+
 // STT tri-state: an explicit provider means Ready everywhere; otherwise
 // Electron has nothing to fall back on (Not Ready) while web/pocket fall
 // back to zero-setup browser speech recognition (Web Speech).
@@ -80,6 +82,8 @@ const micStatusText = computed(() => {
       return 'Need access'
     case 'no-mic':
       return 'No mic'
+    default:
+      return ''
   }
 })
 
@@ -92,6 +96,8 @@ const micStatusBadgeClass = computed(() => {
     case 'blocked':
     case 'no-mic':
       return 'bg-red-500/15 text-red-300'
+    default:
+      return ''
   }
 })
 
@@ -105,6 +111,8 @@ const micStatusTitle = computed(() => {
       return 'Microphone permission required — click to allow'
     case 'no-mic':
       return 'No microphone found'
+    default:
+      return ''
   }
 })
 
@@ -156,7 +164,6 @@ function openHearingSettings() {
 // fetch-then-persist discipline as the onboarding lock-key picker). Shares
 // the mic authority pact: whichever lock key is armed toggles the same
 // shared `enabled` flag as the strip and composer buttons.
-const isElectron = typeof window !== 'undefined' && !!(window as any).electron
 const getHotkeyInvoke = isElectron ? useElectronEventaInvoke(electronGetMicToggleHotkey) : null
 const setHotkeyInvoke = isElectron ? useElectronEventaInvoke(electronSetMicToggleHotkey) : null
 

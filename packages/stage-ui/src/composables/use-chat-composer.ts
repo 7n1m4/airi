@@ -52,6 +52,7 @@ export function useChatComposer(options: ChatComposerOptions = {}) {
   const attachments = ref<ChatComposerAttachment[]>([])
   const isComposing = ref(false)
   const isImagineMode = ref(false)
+  const isRecording = ref(false)
   const trashConfirmOpen = ref(false)
 
   const providersStore = useProvidersStore()
@@ -400,7 +401,7 @@ export function useChatComposer(options: ChatComposerOptions = {}) {
 
   // Principal Send Command
   async function handleSend() {
-    if (!messageInput.value.trim() && !attachments.value.length || isComposing.value) {
+    if ((!messageInput.value.trim() && !attachments.value.length) || isComposing.value) {
       return
     }
 
@@ -637,7 +638,7 @@ export function useChatComposer(options: ChatComposerOptions = {}) {
         throw err
       }
     }
-    catch (err) {
+    catch {
       isListening.value = false
     }
   }
@@ -669,7 +670,7 @@ export function useChatComposer(options: ChatComposerOptions = {}) {
       isListening.value = false
       resetDictationBuffers('')
     }
-    catch (err) {
+    catch {
       isListening.value = false
     }
   }
@@ -677,7 +678,6 @@ export function useChatComposer(options: ChatComposerOptions = {}) {
   // Voice-message recording loop (tap-to-talk path — the page-level VAD loop
   // owns recording while open-mic `enabled` is on, so this instance only
   // records when the user explicitly taps).
-  const isRecording = ref(false)
   const voiceRecorder = useAudioRecorder(stream)
 
   function addAudioAttachment(recording: Blob) {

@@ -202,6 +202,8 @@ const isDirectorActive = computed(() => {
   return airiCardStore.activeCard?.extensions?.airi?.artistry?.autonomousEnabled ?? false
 })
 
+const selectedIdleAnimations = ref<string[]>([])
+
 // Initialize when modal opens or props change
 watch(() => [props.modelValue, props.conceptId, props.initialData], () => {
   if (props.modelValue) {
@@ -240,7 +242,6 @@ watch(() => [props.modelValue, props.conceptId, props.initialData], () => {
 const manifestationSearch = ref('')
 const manifestationFormatFilter = ref<'all' | 'live2d' | 'vrm' | 'spine' | 'mmd'>('all')
 
-const selectedIdleAnimations = ref<string[]>([])
 const newIdleAnimInput = ref('')
 const isAnimDropdownOpen = ref(false)
 const highlightedIndex = ref(0)
@@ -444,7 +445,7 @@ function buildPayload(): { id: string, data: ConceptData } {
   try {
     options = selectedOptionsStr.value.trim() ? JSON.parse(selectedOptionsStr.value) : undefined
   }
-  catch (e) {
+  catch {
     // Ignore invalid JSON for now
   }
 

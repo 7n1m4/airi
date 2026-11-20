@@ -55,7 +55,12 @@ describe('presence electron path', () => {
   it('refreshIdleTimeOnce handles throw', async () => {
     const presence = usePresenceStore()
     presence.removeSignalProvider('os-idle-time')
-    presence.addSignalProvider({ id: 'boom', readIdleSec: async () => { throw new Error('nope') } })
+    presence.addSignalProvider({
+      id: 'boom',
+      readIdleSec: async () => {
+        throw new Error('nope')
+      },
+    })
     await presence.refreshIdleTimeOnce()
     expect(true).toBe(true)
   })
@@ -106,7 +111,12 @@ describe('presence electron path', () => {
   it('readIdleTimeOnce throws when all providers fail', async () => {
     const presence = usePresenceStore()
     presence.removeSignalProvider('os-idle-time')
-    presence.addSignalProvider({ id: 'boom2', readIdleSec: async () => { throw new Error('nope2') } })
+    presence.addSignalProvider({
+      id: 'boom2',
+      readIdleSec: async () => {
+        throw new Error('nope2')
+      },
+    })
     await expect(presence.readIdleTimeOnce()).rejects.toThrow()
   })
   it('derivePresenceState screen-locked/away/idle branches', () => {

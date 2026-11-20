@@ -1,4 +1,4 @@
-import type { Plugin } from 'vite'
+import type { Plugin, ResolvedConfig } from 'vite'
 
 import process from 'node:process'
 
@@ -45,15 +45,22 @@ function resilient(plugin: Plugin) {
   if (!originalHook)
     return plugin
 
-  plugin.configResolved = async (config) => {
+  // Vite hooks may be a bare function or an ObjectHook with a `handler` (and `order`).
+  const original: (config: ResolvedConfig) => void | Promise<void> = typeof originalHook === 'function' ? originalHook : originalHook.handler
+  const guarded = async (config: ResolvedConfig) => {
     try {
-      await withRetry(() => originalHook.call(plugin, config), 3, 2000)
+      await withRetry(() => Promise.resolve(original(config)), 3, 2000)
     }
     catch (error) {
       console.error(`[ResilientPlugin] ${plugin.name} failed after all retries:`, error instanceof Error ? error.message : error)
       console.warn(`[ResilientPlugin] Proceeding without ${plugin.name} assets.`)
     }
   }
+
+  // Preserve ObjectHook metadata (e.g. `order`) when the plugin used that form.
+  plugin.configResolved = typeof originalHook === 'function'
+    ? guarded
+    : { ...originalHook, handler: guarded }
   return plugin
 }
 

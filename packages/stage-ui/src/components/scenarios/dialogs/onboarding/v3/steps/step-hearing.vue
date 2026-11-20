@@ -539,7 +539,7 @@ onMounted(() => {
       }
     }
     catch (err) {
-      console.debug('[V3 Hearing] Whisper probe on mount:', err)
+      console.warn('[V3 Hearing] Whisper probe on mount:', err)
     }
   })()
 
@@ -561,7 +561,7 @@ onMounted(() => {
       await audioDevice.askPermission()
     }
     catch (err) {
-      console.debug('[V3 Hearing] Permission ask on mount:', err)
+      console.warn('[V3 Hearing] Permission ask on mount:', err)
     }
     finally {
       if (!selectedAudioInput.value && audioInputs.value.length > 0) {

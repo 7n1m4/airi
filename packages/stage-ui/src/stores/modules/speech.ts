@@ -252,7 +252,7 @@ export function applyUSTTransformations(text: string, ust?: VoiceProfile['ust'],
   // Protect arithmetic operators (e.g., 2 * 3, 2**10, x**2) from bracket muting/flattening
   const mathPlaceholders: string[] = []
   if (ust.preserveMathOperators !== false) {
-    transformed = transformed.replace(/(?<=\d)\s*\*{2}\s*(?=\d)|(?<=\b\w+)\s+\*{2}\s+(?=\w+\b)|(?<=\b[a-z]\b)\*{2}(?=\d+\b)/gi, (match) => {
+    transformed = transformed.replace(/(?<=\d)\s*\*{2}\s*(?=\d)|(?<=\b\w+)\s+\*{2}\s+(?=\w+\b)|(?<=\b[a-z])\*{2}(?=\d+\b)/gi, (match) => {
       const id = `__UST_MATH_EXP_${mathPlaceholders.length}__`
       mathPlaceholders.push(match)
       return id

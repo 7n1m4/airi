@@ -2,6 +2,8 @@ import type { $ZodType } from 'zod/v4/core'
 
 import type { ProviderDefinition, ProviderTranslationFn } from '../types'
 
+import process from 'node:process'
+
 import { orderBy } from 'es-toolkit'
 
 const isTestRuntime = typeof process !== 'undefined'

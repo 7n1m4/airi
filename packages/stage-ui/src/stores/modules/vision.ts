@@ -91,7 +91,6 @@ export const useVisionStore = defineStore('vision', () => {
     try {
       // In renderer, we use the IPC handler to check via systemPreferences
       const status = await checkPermissionInvoke()
-      console.log('[Vision Store] macOS Screen Capture Permission Status:', status)
       cachedPermission = status
       cachedPermissionAt = Date.now()
       return status
@@ -112,15 +111,9 @@ export const useVisionStore = defineStore('vision', () => {
   // Heartbeat Logic
   const heartbeat = async (options?: { force?: boolean }) => {
     const liveSessionStore = useLiveSessionStore()
-    console.log('[Vision Store] Heartbeat checking...', {
-      isActive: liveSessionStore.isActive,
-      isWitnessEnabled: isWitnessEnabled.value,
-      force: !!options?.force,
-    })
 
     // Master Gate Check: if the session is not active, we never capture.
     if (!liveSessionStore.isActive) {
-      console.log('[Vision Store] Heartbeat aborted: Master Gate (Live API) is OFF.')
       return
     }
 
@@ -135,14 +128,12 @@ export const useVisionStore = defineStore('vision', () => {
       // Background interval: enforce the full interval duration minus a small 10s drift buffer
       const intervalMs = 2 * 60 * 1000 // Minimum cooldown between captures
       if (now - lastHeartbeatExec.value < (intervalMs - 10000)) {
-        console.log(`[Vision Store] Background heartbeat skipped. Next allowed in ${intervalMs - (now - lastHeartbeatExec.value)}ms due to cross-window sync.`)
         return
       }
     }
     else {
       // Manual trigger: enforce a small 15-second debounce to prevent spam clicks and IPC echo
       if (now - lastHeartbeatExec.value < 15000) {
-        console.log(`[Vision Store] Forced heartbeat throttled (15s cooldown).`)
         return
       }
     }
@@ -155,13 +146,10 @@ export const useVisionStore = defineStore('vision', () => {
     if (!options?.force && respectSchedule.value && config?.schedule?.start && config.schedule.end) {
       const inWindow = isWithinSchedule(config.schedule.start, config.schedule.end)
       if (!inWindow) {
-        console.log(`[Vision Store] Heartbeat skipped: Outside schedule window (${config.schedule.start} - ${config.schedule.end})`)
         return
       }
-      console.log(`[Vision Store] Heartbeat inside schedule window (${config.schedule.start} - ${config.schedule.end})`)
     }
 
-    console.log('[Vision Store] Heartbeat pulse starting...')
     status.value = 'capturing'
 
     try {
@@ -181,11 +169,9 @@ export const useVisionStore = defineStore('vision', () => {
       }
 
       if (result?.dataUrl) {
-        console.log('[Vision Store] Heartbeat: Screen capture successful!')
         lastWitnessTime.value = result.timestamp
 
         // Send to Gemini via Chat Orchestrator
-        console.log('[Vision Store] Sending screenshot to Chat Orchestrator for commentary...')
         const base64 = result.dataUrl.split(',')[1]
 
         await chatOrchestrator.ingest(witnessPrompt.value, {
@@ -209,7 +195,6 @@ export const useVisionStore = defineStore('vision', () => {
     }
     finally {
       status.value = 'idle'
-      console.log('[Vision Store] Heartbeat pulse complete.')
     }
   }
 
@@ -220,8 +205,6 @@ export const useVisionStore = defineStore('vision', () => {
    * resolution (needed for accurate OCR).
    */
   async function captureSnapshot(options?: ScreenCaptureOptions) {
-    console.log('[Vision Store] captureSnapshot requested...')
-
     // 1. Permission Check (macOS only)
     const permission = await checkPermissions()
     if (permission === 'denied' || permission === 'restricted') {
@@ -229,7 +212,6 @@ export const useVisionStore = defineStore('vision', () => {
       return { error: 'permission_denied' }
     }
 
-    console.log('[Vision Store] Invoking OS screen capture via Eventa...')
     try {
       const result = await captureInvoke({
         width: options?.width,
@@ -274,9 +256,7 @@ export const useVisionStore = defineStore('vision', () => {
   }
 
   function toggleWitness() {
-    console.log('[Vision Store] toggleWitness() called. Current:', isWitnessEnabled.value)
     isWitnessEnabled.value = !isWitnessEnabled.value
-    console.log('[Vision Store] toggleWitness() new state:', isWitnessEnabled.value)
   }
 
   // Computed properties

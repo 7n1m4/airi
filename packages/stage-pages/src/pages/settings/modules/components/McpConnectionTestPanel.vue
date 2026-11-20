@@ -45,15 +45,18 @@ watch(() => props.initialServer, (newVal) => {
 // Options for configured servers
 const serverOptions = computed(() => {
   const servers = props.config?.mcpServers || {}
-  const list = Object.keys(servers).map(name => ({
+  return Object.keys(servers).map(name => ({
     label: `${name} (${'url' in servers[name] ? 'Remote HTTP' : 'Local Stdio'})`,
     value: name,
   }))
+})
+
+// Default to the first configured server without mutating state inside a computed.
+watch([serverOptions, selectedServer], ([list]) => {
   if (list.length && !selectedServer.value) {
     selectedServer.value = list[0].value
   }
-  return list
-})
+}, { immediate: true })
 
 const activeServerConfig = computed(() => {
   if (testMode.value !== 'configured')

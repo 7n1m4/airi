@@ -100,15 +100,11 @@ export function createWebSpeechAPIProvider(): TranscriptionProviderWithExtraOpti
 
           recognition.onresult = (event: any) => {
             let finalTranscript = ''
-            let interimTranscript = ''
 
             for (let i = event.resultIndex; i < event.results.length; i++) {
               const transcript = event.results[i][0].transcript
               if (event.results[i].isFinal) {
                 finalTranscript += transcript
-              }
-              else {
-                interimTranscript += transcript
               }
             }
 
@@ -265,7 +261,7 @@ export function streamWebSpeechAPITranscription(
       const trimmedInterim = interimTranscript.trim()
       lastInterim = trimmedInterim
       options?.onInterim?.(trimmedInterim)
-      console.debug('Web Speech API transcribed (interim stream):', trimmedInterim)
+      console.info('Web Speech API transcribed (interim stream):', trimmedInterim)
     }
   }
 

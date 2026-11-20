@@ -20,7 +20,7 @@ const kiloConfigSchema = z.object({
 
 type KiloConfig = z.input<typeof kiloConfigSchema>
 
-const KILO_GATEWAY_MODELS_URL = 'https://api.kilo.ai/api/gateway/models'
+export const KILO_GATEWAY_MODELS_URL = 'https://api.kilo.ai/api/gateway/models'
 
 /**
  * Shape of a single gateway listing entry. Only the fields this provider

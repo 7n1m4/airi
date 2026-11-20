@@ -9,6 +9,8 @@ import { resolveSearchBackend } from './search-channel'
 
 const MODEL_ID = 'embeddinggemma-2'
 
+let isModelLoaded = false
+
 /**
  * Raw multiplexed client bound to ONE worker instance. The host creates a
  * fresh one per spawn, so in-flight calls always address a live worker —
@@ -118,7 +120,6 @@ const host = createGpuWorkerHost<WorkerClient>({
   createRpc: (worker: Worker) => createWorkerClient(worker),
 })
 
-let isModelLoaded = false
 let isModelLoading = false
 let modelLoadPromise: Promise<void> | null = null
 

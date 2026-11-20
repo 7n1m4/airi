@@ -8,7 +8,7 @@ import StickerUploadDialog from './sticker-upload-dialog.vue'
 import { useStickersStore } from '../../../stores/stickers'
 
 const emit = defineEmits<{
-  (e: 'spawn-standalone', id: string): void
+  (e: 'spawnStandalone', id: string): void
 }>()
 const stickersStore = useStickersStore()
 const { currentLibrary, standaloneMode } = storeToRefs(stickersStore)
@@ -78,7 +78,7 @@ async function handleDialogAdded(id: string) {
 
 function spawn(id: string) {
   if (standaloneMode.value) {
-    emit('spawn-standalone', id)
+    emit('spawnStandalone', id)
   }
   else {
     stickersStore.spawnSticker(id, { duration: 60 })

@@ -16,10 +16,26 @@ const appMock = vi.hoisted(() => ({
 const contextState = vi.hoisted(() => ({
   lastContext: undefined as ReturnType<typeof createContext<any, any>> | undefined,
 }))
+const persistenceState = vi.hoisted(() => ({
+  userData: '',
+}))
 
 vi.mock('electron', () => ({
   app: appMock,
   ipcMain: {},
+}))
+
+// The port moved config persistence to Electrobun's `Utils.paths.userData`, so mocking
+// only `app.getPath` let plugin enabled-state leak in from a previous run via a global
+// config file. Point persistence at the per-test temp directory instead.
+vi.mock('electrobun/main', () => ({
+  Utils: {
+    paths: {
+      get userData() {
+        return persistenceState.userData
+      },
+    },
+  },
 }))
 
 vi.mock('@moeru/eventa/adapters/electron/main', async () => {
@@ -94,6 +110,7 @@ describe('setupPluginHost', () => {
     pluginsDir = join(userDataDir, 'plugins', 'v1')
     await mkdir(pluginsDir, { recursive: true })
     appMock.getPath.mockReturnValue(userDataDir)
+    persistenceState.userData = userDataDir
   })
 
   afterEach(async () => {

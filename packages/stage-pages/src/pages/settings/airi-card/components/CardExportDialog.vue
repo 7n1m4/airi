@@ -437,42 +437,32 @@ watch([() => activeCard.value, () => detectedChatSessions.value.length, () => di
 }, { immediate: true })
 
 // 3-part compatibility matrix
-const compatibilityMatrix = computed(() => {
-  switch (activeSegment.value) {
-    case 'zip':
-      return {
-        dasilva: true,
-        sillyTavern: false,
-        moeru: true,
-      }
-    case 'png':
-      return {
-        dasilva: true,
-        sillyTavern: true,
-        moeru: false,
-      }
-    case 'json':
-      return {
-        dasilva: true,
-        sillyTavern: false,
-        moeru: false,
-      }
-  }
-})
+const compatibilityMatrix = computed(() => ({
+  zip: {
+    dasilva: true,
+    sillyTavern: false,
+    moeru: true,
+  },
+  png: {
+    dasilva: true,
+    sillyTavern: true,
+    moeru: false,
+  },
+  json: {
+    dasilva: true,
+    sillyTavern: false,
+    moeru: false,
+  },
+})[activeSegment.value])
 
 // Dynamic button label based on format and flavor
-const exportButtonLabel = computed(() => {
-  switch (activeSegment.value) {
-    case 'zip':
-      return zipFlavor.value === 'v2'
-        ? 'Export AIRI Package (.zip)'
-        : 'Export Upstream Package (.zip)'
-    case 'png':
-      return 'Export Embedded Card (.png)'
-    case 'json':
-      return 'Export Character JSON (.json)'
-  }
-})
+const exportButtonLabel = computed(() => ({
+  zip: zipFlavor.value === 'v2'
+    ? 'Export AIRI Package (.zip)'
+    : 'Export Upstream Package (.zip)',
+  png: 'Export Embedded Card (.png)',
+  json: 'Export Character JSON (.json)',
+})[activeSegment.value])
 
 // Dynamic JSON manifest string preview
 const previewJsonString = computed(() => {

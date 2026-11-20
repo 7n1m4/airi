@@ -1,5 +1,7 @@
 // Smoke test for keyless/optional-key providers.
 // Run: tsx scripts/test-keyless-providers.ts [--dry-run]
+import process from 'node:process'
+
 import { writeFileSync } from 'node:fs'
 
 import { listProviders } from '../packages/stage-ui/src/libs/providers/index.ts'
@@ -55,7 +57,7 @@ async function defaultConfig(provider: ProviderDef): Promise<{ baseUrl?: string,
     const parsed = schema.parse({})
     return (parsed && typeof parsed === 'object') ? (parsed as { baseUrl?: string, apiKey?: string }) : {}
   }
-  catch (e) {
+  catch {
     return {}
   }
 }
@@ -73,19 +75,16 @@ async function fetchModels(baseUrl: string) {
   })
 }
 
-async function smokeOne(provider: ProviderDef, model: { id: string, description?: string }, config: { baseUrl?: string, apiKey?: string }) {
+async function smokeOne(model: { id: string, description?: string }, config: { baseUrl?: string, apiKey?: string }) {
   const baseUrl = normalizeBase(config.baseUrl ?? '')
   const apiKey = (config.apiKey ?? '').toString()
-  const id = provider.id
 
-  let url: string
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  let body: Record<string, unknown>
 
-  url = `${baseUrl}chat/completions`
+  const url = `${baseUrl}chat/completions`
   if (apiKey)
     headers.Authorization = `Bearer ${apiKey}`
-  body = { model: model.id, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }
+  const body: Record<string, unknown> = { model: model.id, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 30000)
@@ -112,12 +111,29 @@ async function smokeOne(provider: ProviderDef, model: { id: string, description?
     if (status === 200 && !malformed) {
       result = 'pass'
     }
-    else if (status === 429) { result = 'pass'; reason = 'rate-limited' }
-    else if (status >= 500) { result = 'pass'; reason = `transient ${status}` }
-    else if (status === 0) { result = 'pass'; reason = 'network' }
-    else if (status === 200 && malformed) { result = 'fail'; reason = 'malformed' }
-    else if (status >= 400) { result = 'fail'; reason = `http ${status}` }
-    else { result = 'pass' }
+    else if (status === 429) {
+      result = 'pass'
+      reason = 'rate-limited'
+    }
+    else if (status >= 500) {
+      result = 'pass'
+      reason = `transient ${status}`
+    }
+    else if (status === 0) {
+      result = 'pass'
+      reason = 'network'
+    }
+    else if (status === 200 && malformed) {
+      result = 'fail'
+      reason = 'malformed'
+    }
+    else if (status >= 400) {
+      result = 'fail'
+      reason = `http ${status}`
+    }
+    else {
+      result = 'pass'
+    }
     return { status, result, reason }
   }
   catch (e: unknown) {
@@ -142,7 +158,7 @@ async function main() {
       envOverride = LOCAL_ENV[provider.id as keyof typeof LOCAL_ENV]
       if (!envOverride) {
         skipped++
-        console.log(`SKIP ${provider.id} (local, no env base url)`)
+        console.info(`SKIP ${provider.id} (local, no env base url)`)
         continue
       }
     }
@@ -170,7 +186,7 @@ async function main() {
     }
     if (!models || models.length === 0) {
       skipped++
-      console.log(`SKIP ${provider.id} (no models)`)
+      console.info(`SKIP ${provider.id} (no models)`)
       continue
     }
 
@@ -178,47 +194,47 @@ async function main() {
     const filtered = models.filter((m: unknown) => !isNonChatModel(m as { id?: string, description?: string }))
     const excluded = models.length - filtered.length
     if (excluded > 0)
-      console.log(`EXCLUDE ${provider.id}: ${excluded} non-chat model(s)`)
+      console.info(`EXCLUDE ${provider.id}: ${excluded} non-chat model(s)`)
     models = filtered
     if (models.length === 0) {
       skipped++
-      console.log(`SKIP ${provider.id} (no chat models)`)
+      console.info(`SKIP ${provider.id} (no chat models)`)
       continue
     }
 
     if (DRY_RUN) {
       for (const m of models) {
         const mm = m as { id?: string }
-        console.log(`DRY ${provider.id} :: ${mm.id}`)
+        console.info(`DRY ${provider.id} :: ${mm.id}`)
       }
       continue
     }
 
     for (const model of models) {
       const m = model as { id: string, description?: string }
-      const r = await smokeOne(provider, m, config)
+      const r = await smokeOne(m, config)
       const row = { provider: provider.id, model: m.id, status: r.status, result: r.result, reason: r.reason }
       results.push(row)
       rows.push(row)
       if (r.result === 'fail')
         failures++
-      console.log(`${r.result.toUpperCase()} ${provider.id}/${m.id} status=${r.status} ${r.reason}`)
+      console.info(`${r.result.toUpperCase()} ${provider.id}/${m.id} status=${r.status} ${r.reason}`)
     }
   }
 
   if (!DRY_RUN) {
-    console.log('\n## Summary\n')
-    console.log('| Provider | Model | Status | Result | Reason |')
-    console.log('|---|---|---|---|---|')
+    console.info('\n## Summary\n')
+    console.info('| Provider | Model | Status | Result | Reason |')
+    console.info('|---|---|---|---|---|')
     for (const r of rows) {
       const row = r as { provider: string, model: string, status: number, result: string, reason: string }
-      console.log(`| ${row.provider} | ${row.model} | ${row.status} | ${row.result} | ${row.reason} |`)
+      console.info(`| ${row.provider} | ${row.model} | ${row.status} | ${row.result} | ${row.reason} |`)
     }
-    console.log(`\nFailures: ${failures}, Skipped: ${skipped}`)
+    console.info(`\nFailures: ${failures}, Skipped: ${skipped}`)
     writeFileSync('keyless-providers-report.json', JSON.stringify(results, null, 2))
   }
   else {
-    console.log(`\nDry run: ${providers.length} providers, skipped locals without env counted separately`)
+    console.info(`\nDry run: ${providers.length} providers, skipped locals without env counted separately`)
   }
 
   if (failures > 0)

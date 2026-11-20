@@ -467,17 +467,14 @@ export function setupWidgetsWindowManager(params: {
         pos: String(payload.componentProps?.pos || 'random'),
       }
 
-      if (typeof target === 'object' && 'url' in target && target.url) {
-        const u = new URL(target.url)
-        for (const [k, v] of Object.entries(query)) {
-          if (v)
-            u.searchParams.set(k, v)
-        }
-        await window.loadURL(u.toString())
+      // The port's baseUrl() only returns a URL (Electron's `{ file, options }`
+      // variant is gone), so there is no file-loading branch left here.
+      const u = new URL(target.url)
+      for (const [k, v] of Object.entries(query)) {
+        if (v)
+          u.searchParams.set(k, v)
       }
-      else if (typeof target === 'object' && 'file' in target && target.file) {
-        await window.loadFile(target.file, { query })
-      }
+      await window.loadURL(u.toString())
     }
     else {
       window = await showWindowWithRoute(`${defaultRoute}?id=${id}`, context)

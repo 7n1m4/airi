@@ -130,10 +130,9 @@ async function isPocketModelCached(): Promise<boolean> {
   try {
     const root = await navigator.storage.getDirectory()
     const dir = await root.getDirectoryHandle(POCKET_OPFS_DIR_NAME, { create: false })
-    for await (const _entry of dir.values()) {
-      return true // directory is not empty
-    }
-    return false
+    const iterator: AsyncIterator<FileSystemHandle> = dir.values()[Symbol.asyncIterator]()
+    const first = await iterator.next()
+    return !first.done // directory is not empty when it yields at least one entry
   }
   catch {
     return false
@@ -200,10 +199,9 @@ async function isMing3ModelCached(): Promise<boolean> {
   try {
     const root = await navigator.storage.getDirectory()
     const dir = await root.getDirectoryHandle(MING3_OPFS_DIR_NAME, { create: false })
-    for await (const _entry of dir.values()) {
-      return true // directory is not empty
-    }
-    return false
+    const iterator: AsyncIterator<FileSystemHandle> = dir.values()[Symbol.asyncIterator]()
+    const first = await iterator.next()
+    return !first.done
   }
   catch {
     return false

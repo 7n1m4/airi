@@ -14,6 +14,11 @@
 
 import type { FileLoggerHandle } from './app/file-logger'
 import type { AnyEventaContext } from './rpc'
+import type { ChatWindowManager } from './windows/chat'
+import type { NoticeWindowManager } from './windows/notice'
+import type { OnboardingWindowManager } from './windows/onboarding'
+import type { SettingsWindowManager } from './windows/settings'
+import type { WidgetsWindowManager } from './windows/widgets'
 
 import path, { dirname } from 'node:path'
 import process, { env, stderr, stdout } from 'node:process'
@@ -308,16 +313,16 @@ async function boot() {
 
   const widgetsManager = injeca.provide('windows:widgets', {
     dependsOn: { serverChannel, i18n },
-    build: () => notPortedWindow('windows:widgets'),
+    build: () => notPortedWindow<WidgetsWindowManager>('windows:widgets'),
   })
 
   const onboardingWindowManager = injeca.provide('windows:onboarding', {
     dependsOn: { serverChannel, i18n, widgetsManager },
-    build: () => notPortedWindow('windows:onboarding'),
+    build: () => notPortedWindow<OnboardingWindowManager>('windows:onboarding'),
   })
   const noticeWindow = injeca.provide('windows:notice', {
     dependsOn: { i18n, serverChannel },
-    build: () => notPortedWindow('windows:notice'),
+    build: () => notPortedWindow<NoticeWindowManager>('windows:notice'),
   })
 
   const aboutWindow = injeca.provide('windows:about', {
@@ -327,12 +332,12 @@ async function boot() {
 
   const settingsWindow = injeca.provide('windows:settings', {
     dependsOn: { widgetsManager, beatSync, autoUpdater, devtoolsMarkdownStressWindow, serverChannel, mcpStdioManager, acpAgentsManager, i18n },
-    build: () => notPortedWindow('windows:settings'),
+    build: () => notPortedWindow<SettingsWindowManager>('windows:settings'),
   })
 
   const chatWindow = injeca.provide('windows:chat', {
     dependsOn: { widgetsManager, serverChannel, mcpStdioManager, acpAgentsManager, i18n, appConfig, settingsWindow },
-    build: () => notPortedWindow('windows:chat'),
+    build: () => notPortedWindow<ChatWindowManager>('windows:chat'),
   })
 
   // NOTICE: The stage manager is cheap to construct (no BrowserWindow yet).

@@ -77,7 +77,7 @@ export async function runRoundTrip(
     setTimeout(() => finish(payload), SETTLE_MS)
   }
 
-  const finish = (message: RoundTripMessage | null) => {
+  function finish(message: RoundTripMessage | null) {
     if (done)
       return
     done = true

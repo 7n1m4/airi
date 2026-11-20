@@ -46,7 +46,9 @@ describe('useAsyncState', () => {
 
   it('execute captures error on failure and clears loading', async () => {
     const err = new Error('boom')
-    const fn = vi.fn(async () => { throw err })
+    const fn = vi.fn(async () => {
+      throw err
+    })
     const { state, isLoading, error, execute } = useAsyncState(fn)
     await execute()
     expect(state.value).toBeUndefined()

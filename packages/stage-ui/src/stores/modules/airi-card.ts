@@ -695,13 +695,6 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       }
     }
 
-    console.log('[AiriCard Store] 💾 updateCard persisting card:', {
-      id: resolvedId,
-      name: (updatedCard as any).name || (updatedCard as any).data?.name,
-      speechModule: (updatedCard as any).extensions?.airi?.modules?.speech || (updatedCard as any).data?.extensions?.airi?.modules?.speech,
-      fullUpdatedCard: JSON.parse(JSON.stringify(updatedCard)),
-    })
-
     const nextCards = new Map(cards.value)
     nextCards.set(resolvedId, compactCard(updatedCard))
     void persistCards(nextCards)
@@ -1138,7 +1131,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
           }
         }
       }
-      catch (e) {
+      catch {
         // Spine store might not be loaded in non-stage contexts
       }
 
@@ -1872,7 +1865,7 @@ export function buildSystemPrompt(card: AiriCard | undefined) {
       premise = datingSimStore.customPremise || story.premise || ''
     }
   }
-  catch (e) {
+  catch {
     // Ignore store initialization exceptions outside of Pinia
   }
 

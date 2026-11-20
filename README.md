@@ -15,7 +15,7 @@
 <h1 align="center">Project AIRI</h1>
 
 <div align="center">
-<h1>🚧 UNDER CONSTRUCTION 🚧</h1>
+<h2>🚧 UNDER CONSTRUCTION 🚧</h2>
 <p><strong>This fork is not a daily driver.</strong></p>
 <p>Treat it as a conceptual inspiration source — blueprints, not installers.</p>
 </div>

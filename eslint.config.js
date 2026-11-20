@@ -44,6 +44,18 @@ export default defineConfig({
     'apps/stage-tamagotchi-electron/out/**',
     'apps/stage-tamagotchi-electron/src/renderer/bindings/**',
     'crates/**',
+    // NOTICE: Full-repo type-aware linting (projectService / defaultProject tsconfig
+    // resolution) OOMs on these two trees — both 8GB and 16GB heaps time out. In
+    // docs/ the Markdown processor extracts inline backticks into virtual TS blocks
+    // whose type resolution loops against a tsconfig that excludes docs/; the desktop
+    // app tree resolves an oversized project. Root lint skips both trees entirely,
+    // including `apps/stage-tamagotchi/src`; neither is covered by `eslint .` while
+    // these ignores stand. Remove them when @moeru/eslint-config fixes projectService.
+    'docs/',
+    'apps/stage-tamagotchi/',
+    // NOTICE: bd rewrites its backup state locally and gitignores it, so any
+    // formatting fix here is immediately undone on the next bd command.
+    '.beads/backup/**',
     // NOTICE: moved here from the former desktop shell's scripts dir, so the root lint reaches
     // it for the first time. Its 9 diagnostics (2 `style/max-statements-per-line`,
     // 6 `no-console` for the progress lines it prints, 1 import ordering) are

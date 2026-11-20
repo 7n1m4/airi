@@ -4,7 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { chatStickers } from '../../../../../../assets/stickers'
 
 const props = withDefaults(defineProps<{
-  message: string
+  message?: string
   stepKey?: string
   stickerId?: string
   tone?: 'primary' | 'sky' | 'purple' | 'amber'

@@ -557,7 +557,7 @@ globalThis.addEventListener('message', async (e) => {
           if (doc.embedding?.length)
             restoredVectors++
         }
-        console.log('[Telemetry:SearchWorker:init]', {
+        console.info('[Telemetry:SearchWorker:init]', {
           hasSnapshot: !!payload?.snapshot,
           snapshotDocCount: normalizedSnapshot?.documents?.length ?? 0,
           compatible,
@@ -623,7 +623,7 @@ globalThis.addEventListener('message', async (e) => {
 
         rebuildKeywordStats()
         trackIndexedTurnTime(nextDocuments as SearchDocument[])
-        console.log('[Telemetry:SearchWorker:index:Complete]', {
+        console.info('[Telemetry:SearchWorker:index:Complete]', {
           indexedCount,
           totalDocumentsInWorker: documents.size,
           lastIndexedTurnAt,
@@ -658,7 +658,7 @@ globalThis.addEventListener('message', async (e) => {
           ...temporalHits.map(h => h.id),
         ])
 
-        console.log('[Telemetry:SearchWorker:search]', {
+        console.info('[Telemetry:SearchWorker:search]', {
           query,
           limit,
           characterId,

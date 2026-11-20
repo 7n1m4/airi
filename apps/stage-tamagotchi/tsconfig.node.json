@@ -16,21 +16,23 @@
       "@proj-airi/server-runtime": [
         "../../packages/server-runtime/src"
       ],
+      // The Hutch devkit ships Bun source, not declarations: pointing strict tsc at
+      // .hutch/devkit/api/sdks/main/index.ts drags ~65 FFI/Bun errors from generated
+      // code into this program. Describe only the consumed SDK surface here instead.
       "electrobun": [
-        "./.hutch/devkit/api/sdks/main/index.ts"
+        "./test-support/electrobun-types.d.ts"
       ],
       "electrobun/main": [
-        "./.hutch/devkit/api/sdks/main/index.ts"
+        "./test-support/electrobun-types.d.ts"
       ],
       "electrobun/view": [
-        "./.hutch/devkit/api/browser/index.ts"
-      ],
-      "electron": [
-        "./src/main/electron-shim.ts"
-      ],
-      "electron/*": [
-        "./src/main/electron-shim.ts"
+        "./test-support/electrobun-types.d.ts"
       ]
+      // NOTICE: `electron` is intentionally NOT aliased to src/main/electron-shim.ts
+      // here. That alias is a runtime concern (electrobun.config.ts / vitest.config.ts)
+      // because the shim is deliberately partial. For typechecking, the unported
+      // src/main modules must see the real Electron declarations so their API usage
+      // is validated; normal node_modules resolution finds electron.d.ts.
     },
     "resolveJsonModule": true,
     "types": [

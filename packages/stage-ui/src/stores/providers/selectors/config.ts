@@ -1,7 +1,8 @@
 import type { Ref } from 'vue'
 
-import { keylessOrOptionalKey } from '../../../libs/providers/types'
 import type { ProviderMetadata } from '../types'
+
+import { keylessOrOptionalKey } from '../../../libs/providers/types'
 
 /**
  * Pure configuration-policy helpers for provider state.

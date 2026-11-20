@@ -54,8 +54,8 @@
     "test:catalog:audit": "node scripts/audit-test-catalog.mjs",
     "free-ai:sync-platforms": "tsx scripts/sync-free-ai-platforms.ts",
     "i18n:audit": "node scripts/audit-i18n.mjs",
-    "lint": "moeru-lint .",
-    "lint:fix": "moeru-lint --fix .",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
     "lint:rust": "cargo fmt --check && cargo clippy --workspace",
     "release:win": "node scripts/release/publish-win.js",
     "release:mac": "node scripts/release/publish-mac.js",
@@ -120,7 +120,7 @@
     "apps/**"
   ],
   "nano-staged": {
-    "*": "moeru-lint --fix"
+    "*": "eslint --fix"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm nano-staged"

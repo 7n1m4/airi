@@ -9,11 +9,11 @@ import { useAuthStore } from './auth'
 
 const remoteSyncEnabledRef = ref(false)
 
+const fetchSessionMock = vi.fn(async () => true)
+
 vi.mock('../libs/auth', () => ({
   fetchSession: () => fetchSessionMock(),
 }))
-
-const fetchSessionMock = vi.fn(async () => true)
 
 vi.mock('./settings', () => ({
   useSettingsGeneral: () => ({

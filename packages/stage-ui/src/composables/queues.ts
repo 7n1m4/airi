@@ -298,7 +298,7 @@ export function getActorColor(id: string): string {
       return assets[id].textColor
     }
   }
-  catch (e) {
+  catch {
     // Pinia not initialized
   }
 

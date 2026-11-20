@@ -2,6 +2,8 @@ import type { ComposerTranslation } from 'vue-i18n'
 
 import type { ProviderMetadata } from '../types'
 
+import process from 'node:process'
+
 import { listProviders as listDefinedProviders } from '../../../libs/providers'
 import { convertProviderDefinitionsToMetadata } from '../converters'
 import { chatLocalMetadata } from './chat-local'

@@ -1,3 +1,5 @@
+import process from 'node:process'
+
 export interface AiriBridgeConfig { url: string, token?: string }
 
 function normalizeUrl(raw: string): string {

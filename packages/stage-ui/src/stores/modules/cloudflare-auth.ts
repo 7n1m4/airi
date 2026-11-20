@@ -3,6 +3,8 @@
  * Edge Vault credential sync, and workers.dev subdomain management.
  */
 
+import { Buffer } from 'node:buffer'
+
 export const CLOUDFLARE_OAUTH_CLIENT_ID = '54d11594-84e4-41aa-b438-e81b8fa78ee7'
 export const CLOUDFLARE_AUTH_ENDPOINT = 'https://dash.cloudflare.com/oauth2/auth'
 export const CLOUDFLARE_TOKEN_ENDPOINT = 'https://dash.cloudflare.com/oauth2/token'

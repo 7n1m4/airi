@@ -674,7 +674,7 @@ describe('sync-engine-safeguards', () => {
       ]
       ;(window as any).electron = {
         ipcRenderer: {
-          invoke: vi.fn(async (channel: string, payload: any) => {
+          invoke: vi.fn(async (channel: string, _payload: any) => {
             if (channel === 'byos-fs:validate-path')
               return { success: true }
             if (channel === 'byos-fs:list-files')
@@ -958,7 +958,7 @@ describe('sync-engine-safeguards', () => {
 
       ;(window as any).electron = {
         ipcRenderer: {
-          invoke: vi.fn(async (channel: string, payload: any) => {
+          invoke: vi.fn(async (channel: string, _payload: any) => {
             if (channel === 'byos-fs:validate-path')
               return { success: true }
             if (channel === 'byos-fs:list-files')

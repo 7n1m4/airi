@@ -107,9 +107,15 @@ export function slerp(a: Quat, b: Quat, t: number): Quat {
 
 function quaternionFromBasis(x: Vec3, y: Vec3, z: Vec3): Quat {
   // Columns form a right-handed orthonormal basis.
-  const m00 = x[0]; const m01 = y[0]; const m02 = z[0]
-  const m10 = x[1]; const m11 = y[1]; const m12 = z[1]
-  const m20 = x[2]; const m21 = y[2]; const m22 = z[2]
+  const m00 = x[0]
+  const m01 = y[0]
+  const m02 = z[0]
+  const m10 = x[1]
+  const m11 = y[1]
+  const m12 = z[1]
+  const m20 = x[2]
+  const m21 = y[2]
+  const m22 = z[2]
   const trace = m00 + m11 + m22
   let q: Quat
   if (trace > 0) {

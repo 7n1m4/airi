@@ -34,6 +34,14 @@ const isSyncing = ref(false)
 const lastSyncResult = ref<'idle' | 'updating' | 'up-to-date' | 'bootstrapped' | 'error'>('idle')
 const lastSyncError = ref<string | null>(null)
 
+const activeUniverseId = computed(() => {
+  if (!activeCardId.value)
+    return 'global'
+  const activeSessionId = chatSessionStore.getCharacterIndex(activeCardId.value)?.activeSessionId || chatSessionStore.activeSessionId
+  const activeSessionMeta = chatSessionStore.getSessionMeta(activeSessionId)
+  return activeSessionMeta?.universeId || 'global'
+})
+
 const activeCharacterArtifact = computed(() => {
   if (!activeCardId.value)
     return null
@@ -56,14 +64,6 @@ const artifactTokens1k = computed(() => {
 const artifactTokens7k = computed(() => {
   const content = activeCharacterArtifact.value?.baseContent
   return content ? estimateTokens(content) : 0
-})
-
-const activeUniverseId = computed(() => {
-  if (!activeCardId.value)
-    return 'global'
-  const activeSessionId = chatSessionStore.getCharacterIndex(activeCardId.value)?.activeSessionId || chatSessionStore.activeSessionId
-  const activeSessionMeta = chatSessionStore.getSessionMeta(activeSessionId)
-  return activeSessionMeta?.universeId || 'global'
 })
 
 const updateHistory = computed(() => {

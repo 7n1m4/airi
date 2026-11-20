@@ -142,12 +142,20 @@ export class Live2DRuntimeAdapter {
         this.selectChoiceHandler?.(event.choiceIndex)
       }
       else if (event?.type === 'dsl-widget-dispatch') {
-        try { this.dslDispatchHandler?.(event.target) }
-        catch (e) { console.warn('[Live2D DSL] dispatch failed (non-fatal):', e) }
+        try {
+          this.dslDispatchHandler?.(event.target)
+        }
+        catch (e) {
+          console.warn('[Live2D DSL] dispatch failed (non-fatal):', e)
+        }
       }
       else if (event?.type === 'dsl-widget-command') {
-        try { this.dslCommandHandler?.(event.command) }
-        catch (e) { console.warn('[Live2D DSL] command failed (non-fatal):', e) }
+        try {
+          this.dslCommandHandler?.(event.command)
+        }
+        catch (e) {
+          console.warn('[Live2D DSL] command failed (non-fatal):', e)
+        }
       }
     })
   }

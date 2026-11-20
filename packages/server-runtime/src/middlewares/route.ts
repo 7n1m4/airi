@@ -2,6 +2,8 @@ import type { RouteTargetExpression, WebSocketEvent } from '@proj-airi/server-sh
 
 import type { AuthenticatedPeer } from '../types'
 
+import process from 'node:process'
+
 import { matchesDestinations, matchesLabelSelectors } from './route/match-expression'
 
 export type RouteDecision

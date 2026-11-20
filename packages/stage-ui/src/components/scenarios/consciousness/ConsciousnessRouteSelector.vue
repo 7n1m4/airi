@@ -592,7 +592,7 @@ const { config } = props
         </div>
 
         <!-- Action Anchor -->
-        <div ref="config.actionTargetRef" class="flex flex-col scroll-mt-4 gap-3">
+        <div :ref="config.actionTargetRef" class="flex flex-col scroll-mt-4 gap-3">
           <!-- Streamlined Inline Credentials Card -->
           <div
             v-if="config.inlineConfigProvider.value"

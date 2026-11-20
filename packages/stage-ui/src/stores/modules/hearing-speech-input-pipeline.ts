@@ -454,7 +454,7 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
             options?.onSentenceEnd?.(delta)
 
             // Transcription feedback toast
-            console.debug('[Hearing Pipeline] Web Speech API delta:', delta)
+            console.info('[Hearing Pipeline] Web Speech API delta:', delta)
             toast.dismiss('transcription-feedback')
             toast.info(`🎤 You said: ${delta}`, {
               id: 'transcription-feedback',

@@ -8,7 +8,7 @@ import { useI18n } from 'vue-i18n'
 import { CUSTOMIZER_CATALOG } from '../../../constants/control-customizer'
 import { useSettingsControlStrip } from '../../../stores/settings/control-strip'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   /** Tighter spacing + condensed header for bottom-sheet embedding. */
   compact?: boolean
 }>(), {

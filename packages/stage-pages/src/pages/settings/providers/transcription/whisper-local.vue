@@ -61,6 +61,23 @@ const downloadingModel = ref('')
 const loadingProgress = ref(0)
 const isModelResident = ref(false)
 
+const DEFAULT_DEVICE = 'webgpu'
+const deviceOptions = [
+  { label: 'WebGPU (fastest)', value: 'webgpu' },
+  { label: 'WASM / CPU (compatible)', value: 'wasm' },
+]
+
+const device = computed({
+  get: () => (providers.value[providerId]?.device as 'webgpu' | 'wasm' | undefined) || DEFAULT_DEVICE,
+  set: (value: string) => {
+    if (!providers.value[providerId])
+      providers.value[providerId] = {}
+    providers.value[providerId].device = value as 'webgpu' | 'wasm'
+    // The loaded shard is device-specific; force a fresh load on next action.
+    isModelResident.value = false
+  },
+})
+
 async function checkModelStatus() {
   try {
     const adapter = await getWhisperAdapter()
@@ -135,23 +152,6 @@ const language = computed({
     if (!providers.value[providerId])
       providers.value[providerId] = {}
     providers.value[providerId].language = value
-  },
-})
-
-const DEFAULT_DEVICE = 'webgpu'
-const deviceOptions = [
-  { label: 'WebGPU (fastest)', value: 'webgpu' },
-  { label: 'WASM / CPU (compatible)', value: 'wasm' },
-]
-
-const device = computed({
-  get: () => (providers.value[providerId]?.device as 'webgpu' | 'wasm' | undefined) || DEFAULT_DEVICE,
-  set: (value: string) => {
-    if (!providers.value[providerId])
-      providers.value[providerId] = {}
-    providers.value[providerId].device = value as 'webgpu' | 'wasm'
-    // The loaded shard is device-specific; force a fresh load on next action.
-    isModelResident.value = false
   },
 })
 

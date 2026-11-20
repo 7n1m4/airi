@@ -76,21 +76,6 @@ const quickSuggestContextDepth = useLocalStorage('airi:producer:context-depth', 
 const quickSuggestCount = useLocalStorage('airi:producer:suggestion-count', 2)
 const quickSuggestShortReplies = useLocalStorage('airi:producer:short-replies', true)
 
-const { isAutoSuggestionsEnabled } = useAutoSuggestions({
-  getGuidance: () => messageInput.value.trim(),
-  onTurnComplete: async (guidance) => {
-    if (!activeProvider.value || !activeModel.value)
-      return
-
-    await handleProducerSubmit({
-      guidance,
-      contextDepth: quickSuggestContextDepth.value,
-      count: quickSuggestCount.value,
-      shortReplies: quickSuggestShortReplies.value,
-    })
-  },
-})
-
 function showConfigPrompt(reason: string) {
   console.error(`[WhisperComposerBar] ${reason}: No active AI provider or model configured.`)
   isConfigModalOpen.value = true
@@ -148,6 +133,21 @@ const {
     else {
       toast.error(message)
     }
+  },
+})
+
+const { isAutoSuggestionsEnabled } = useAutoSuggestions({
+  getGuidance: () => messageInput.value.trim(),
+  onTurnComplete: async (guidance) => {
+    if (!activeProvider.value || !activeModel.value)
+      return
+
+    await handleProducerSubmit({
+      guidance,
+      contextDepth: quickSuggestContextDepth.value,
+      count: quickSuggestCount.value,
+      shortReplies: quickSuggestShortReplies.value,
+    })
   },
 })
 

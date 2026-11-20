@@ -1138,7 +1138,7 @@ console.log('SUM:' + res.sum);
       await sandbox.init()
 
       await sandbox.writeFile('/workspace/counter.json', JSON.stringify({ count: 7 }))
-      await sandbox.writeFile('/workspace/counter.ts', 'export default function mount({ container, state }: AiriWidgetContext) { container.innerHTML = `Count: ${state.count}`; }')
+      await sandbox.writeFile('/workspace/counter.ts', 'export default function mount({ container, state }: AiriWidgetContext) { container.innerHTML = `Count: $' + '{state.count}`; }')
       const res = await sandbox.exec('mount_widget /workspace/counter.ts')
       expect(res.exitCode).toBe(0)
 

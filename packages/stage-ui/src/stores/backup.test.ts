@@ -203,7 +203,10 @@ describe('useBackupStore', () => {
   it('restoreBackup non-Error throw', async () => {
     const store = useBackupStore()
     const { invoke } = installElectron()
-    invoke.mockImplementation(async () => { throw 'str' })
+    const nonError = 'str'
+    invoke.mockImplementation(async () => {
+      throw nonError
+    })
     const res = await store.restoreBackup('/dir', { characters: false, sessions: false, memory: false, localStorage: false })
     expect(res).toEqual({ success: false, error: 'str' })
   })

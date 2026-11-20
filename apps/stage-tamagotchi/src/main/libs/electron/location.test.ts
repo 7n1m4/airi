@@ -1,14 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-import { withHashRoute } from './location'
-
-vi.mock(import('@electron-toolkit/utils'), () => {
-  return {
-    is: {
-      dev: true,
-    },
-  }
-})
+// The port moved this module to libs/electrobun (the Electron implementation and its
+// @electron-toolkit/utils dependency are gone); keep the test alongside its subject.
+import { withHashRoute } from '../electrobun/location'
 
 describe('withHashRoute', () => {
   it('should use string url construct URL with hash route correctly', () => {

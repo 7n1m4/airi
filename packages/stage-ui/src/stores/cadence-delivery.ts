@@ -459,22 +459,24 @@ export const useCadenceDeliveryStore = defineStore('cadence-delivery', () => {
 
   function waitForPlan(intentId: string, signal: AbortSignal): Promise<'released' | 'aborted'> {
     return new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        const pending = planWaiters.get(intentId)
-        pending?.delete(settle)
-        resolve('released')
-      }, PLAN_WAIT_CEILING_MS)
-      const settle = (value: 'released' | 'aborted') => {
+      let timer: ReturnType<typeof setTimeout>
+
+      function settle(value: 'released' | 'aborted') {
         clearTimeout(timer)
         signal.removeEventListener('abort', onAbort)
         resolve(value)
       }
-      const onAbort = () => {
+      function onAbort() {
         const pending = planWaiters.get(intentId)
         pending?.delete(settle)
         clearTimeout(timer)
         resolve('aborted')
       }
+      timer = setTimeout(() => {
+        const pending = planWaiters.get(intentId)
+        pending?.delete(settle)
+        resolve('released')
+      }, PLAN_WAIT_CEILING_MS)
       let pending = planWaiters.get(intentId)
       if (!pending) {
         pending = new Set()
@@ -536,13 +538,13 @@ export const useCadenceDeliveryStore = defineStore('cadence-delivery', () => {
     }
 
     return new Promise((resolve) => {
-      const onAbort = () => {
+      function onAbort() {
         const idx = entry.waiters.findIndex(w => w.resolve === settle)
         if (idx >= 0)
           entry.waiters.splice(idx, 1)
         resolve('aborted')
       }
-      const settle = (value: 'released' | 'aborted') => {
+      function settle(value: 'released' | 'aborted') {
         signal.removeEventListener('abort', onAbort)
         resolve(value)
       }

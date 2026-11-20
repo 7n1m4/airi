@@ -209,7 +209,8 @@ describe('useModelPreload', () => {
 
     schedulePreload([
       task('model-a', async () => {
-        throw { name: 'TimeoutError', message: 'too slow' }
+        const nonError = { name: 'TimeoutError', message: 'too slow' }
+        throw nonError
       }),
     ])
 

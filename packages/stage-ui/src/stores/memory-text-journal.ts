@@ -1233,7 +1233,7 @@ export const useTextJournalStore = defineStore('text-journal', () => {
         const activeLedgerCharId = entityLedgerStore?.currentLoadedCharacterId
         const isLedgerForTargetChar = !activeLedgerCharId || !targetCharacterId || activeLedgerCharId === targetCharacterId
 
-        console.log('[Telemetry:TextJournal:searchEntries:Start]', {
+        console.info('[Telemetry:TextJournal:searchEntries:Start]', {
           query,
           targetCharacterId,
           activeCardId: activeCardId.value,
@@ -1260,7 +1260,7 @@ export const useTextJournalStore = defineStore('text-journal', () => {
         if (!embedderRuntime.value)
           void refreshEmbedderRuntime()
 
-        console.log('[Telemetry:TextJournal:searchEntries:LayeredResults]', {
+        console.info('[Telemetry:TextJournal:searchEntries:LayeredResults]', {
           query,
           targetCharacterId,
           resultsCount: results.length,
@@ -1381,7 +1381,7 @@ export const useTextJournalStore = defineStore('text-journal', () => {
       const limit = Math.max(1, Math.min(input.limit ?? 10, 10))
       const fallbackResult = ranked.slice(0, limit)
 
-      console.log('[Telemetry:TextJournal:searchEntries:FallbackExecuted]', {
+      console.info('[Telemetry:TextJournal:searchEntries:FallbackExecuted]', {
         query,
         targetCharacterId,
         totalEntries: entries.value.length,

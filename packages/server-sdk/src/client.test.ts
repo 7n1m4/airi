@@ -14,7 +14,11 @@ const { MockWebSocket } = vi.hoisted(() => {
     onerror: ((e?: unknown) => void) | null = null
     onmessage: ((e: { data: unknown }) => void) | null = null
     sent: unknown[] = []
-    close = vi.fn(function (this: MockWebSocket) { this.readyState = MockWebSocket.CLOSED; this.onclose?.() })
+    close = vi.fn(function (this: MockWebSocket) {
+      this.readyState = MockWebSocket.CLOSED
+      this.onclose?.()
+    })
+
     send = vi.fn(function (this: MockWebSocket, data: unknown) { this.sent.push(data) })
     ping = vi.fn()
     pong = vi.fn()

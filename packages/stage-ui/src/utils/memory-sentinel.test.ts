@@ -77,7 +77,9 @@ describe('memory-sentinel', () => {
     expect(isMemorySentinelEnabled()).toBe(false)
 
     vi.unstubAllGlobals()
-    vi.stubGlobal('localStorage', { getItem: () => { throw new Error('x') } } as unknown as Storage)
+    vi.stubGlobal('localStorage', { getItem: () => {
+      throw new Error('x')
+    } } as unknown as Storage)
     expect(isMemorySentinelEnabled()).toBe(false)
   })
 
@@ -111,7 +113,9 @@ describe('memory-sentinel', () => {
 
   it('logMemoryProbe catch warns', () => {
     vi.stubGlobal('localStorage', { getItem: () => 'true' } as unknown as Storage)
-    procMock.memoryUsage = () => { throw new Error('boom') }
+    procMock.memoryUsage = () => {
+      throw new Error('boom')
+    }
     const warn = vi.fn()
     vi.stubGlobal('console', { info: vi.fn(), warn } as unknown as Console)
     vi.stubGlobal('performance', {} as unknown as Performance)
@@ -133,7 +137,9 @@ describe('memory-sentinel', () => {
   })
 
   it('getMemoryPressureLevel catch on localStorage', () => {
-    vi.stubGlobal('localStorage', { getItem: () => { throw new Error('x') } } as unknown as Storage)
+    vi.stubGlobal('localStorage', { getItem: () => {
+      throw new Error('x')
+    } } as unknown as Storage)
     vi.stubGlobal('performance', {} as unknown as Performance)
     procMock.memoryUsage = () => ({ rss: 0 })
     expect(getMemoryPressureLevel()).toBe('normal')
@@ -142,14 +148,19 @@ describe('memory-sentinel', () => {
   it('readMemoryMB catch on process memoryUsage', () => {
     vi.stubGlobal('localStorage', { getItem: () => null } as unknown as Storage)
     vi.stubGlobal('performance', {} as unknown as Performance)
-    procMock.memoryUsage = () => { throw new Error('boom') }
+    procMock.memoryUsage = () => {
+      throw new Error('boom')
+    }
     expect(getMemoryPressureLevel()).toBe('normal')
   })
 
   it('initMemorySentinel enabled', () => {
     vi.stubGlobal('localStorage', { getItem: (k: string) => (k === 'settings/debug/enable-memory-sentinel' ? 'true' : null) } as unknown as Storage)
     const cbHolder: { cb?: () => void } = {}
-    const setInterval = vi.fn((cb: () => void) => { cbHolder.cb = cb; return 1 as unknown as number })
+    const setInterval = vi.fn((cb: () => void) => {
+      cbHolder.cb = cb
+      return 1 as unknown as number
+    })
     vi.stubGlobal('window', { setInterval, location: { hash: '#/' } } as unknown as Window & { setInterval: typeof setInterval })
     vi.stubGlobal('performance', {} as unknown as Performance)
     procMock.memoryUsage = () => ({ rss: 0 })

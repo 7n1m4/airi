@@ -139,11 +139,11 @@ describe('burnCoordinateGridToDataUrl', () => {
       src = ''
       dispatchEvent = (e: unknown) => {
         if (this.onload)
-          this.onload(e); return true
+          this.onload(e)
+        return true
       }
 
       constructor() {}
-      set srcSetter(v: string) {}
     }
     // make src assignment trigger load synchronously
     Object.defineProperty(FakeImage.prototype, 'src', {
@@ -177,14 +177,16 @@ describe('burnCoordinateGridToDataUrl', () => {
       _src = ''
       dispatchEvent = (e: unknown) => {
         if (this.onload)
-          this.onload(e); return true
+          this.onload(e)
+        return true
       }
 
       constructor() {}
     }
     Object.defineProperty(FakeImage.prototype, 'src', {
       set(this: FakeImage, v: string) {
-        this._src = v; if (this.complete && this.onload)
+        this._src = v
+        if (this.complete && this.onload)
           this.onload(new Event('load'))
       },
       get(this: FakeImage) { return this._src },
@@ -226,7 +228,9 @@ describe('burnCoordinateGridToDataUrl', () => {
 
   it('catch path', async () => {
     const ctx = makeCtx()
-    ctx.drawImage = () => { throw new Error('boom') }
+    ctx.drawImage = () => {
+      throw new Error('boom')
+    }
     const canvas: Record<string, unknown> = { width: 50, height: 40, getContext: () => ctx, toDataURL: () => 'data:image/jpeg;base64,AAA' }
     g.document = { createElement: () => canvas }
 
@@ -241,14 +245,16 @@ describe('burnCoordinateGridToDataUrl', () => {
       _src = ''
       dispatchEvent = (e: unknown) => {
         if (this.onload)
-          this.onload(e); return true
+          this.onload(e)
+        return true
       }
 
       constructor() {}
     }
     Object.defineProperty(FakeImage.prototype, 'src', {
       set(this: FakeImage, v: string) {
-        this._src = v; if (this.complete && this.onload)
+        this._src = v
+        if (this.complete && this.onload)
           this.onload(new Event('load'))
       },
       get(this: FakeImage) { return this._src },

@@ -147,7 +147,9 @@ describe('validateProvider', () => {
   })
   it('config throws', async () => {
     const cv = makeConfigValidator()
-    cv.validator = vi.fn(async () => { throw new Error('boom') }) as any
+    cv.validator = vi.fn(async () => {
+      throw new Error('boom')
+    }) as any
     const def = makeDefinition({ validators: { validateConfig: [() => cv], validateProvider: [] } } as any)
     const plan = getValidatorsOfProvider({ definition: def, config: {}, schemaDefaults: {}, contextOptions: { t } })
     const cb = { onValidatorError: vi.fn(), onValidatorStart: vi.fn(), onValidatorSuccess: vi.fn() }
@@ -158,7 +160,9 @@ describe('validateProvider', () => {
   })
   it('createProvider throws', async () => {
     const def = makeDefinition()
-    def.createProvider = vi.fn(async () => { throw new Error('nope') }) as any
+    def.createProvider = vi.fn(async () => {
+      throw new Error('nope')
+    }) as any
     const plan = getValidatorsOfProvider({ definition: def, config: {}, schemaDefaults: {}, contextOptions: { t } })
     const steps = await validateProvider(plan, { t })
     expect(steps[1].status).toBe('invalid')
@@ -168,7 +172,9 @@ describe('validateProvider', () => {
     const pv = makeProviderValidator()
     pv.validator = vi.fn(async () => ({ valid: false, reason: 'r' })) as any
     const pv2 = makeProviderValidator('p2', 'P2')
-    pv2.validator = vi.fn(async () => { throw new Error('x') }) as any
+    pv2.validator = vi.fn(async () => {
+      throw new Error('x')
+    }) as any
     const def = makeDefinition({ validators: { validateConfig: [], validateProvider: [() => pv, () => pv2] } } as any)
     const plan = getValidatorsOfProvider({ definition: def, config: {}, schemaDefaults: {}, contextOptions: { t } })
     const cb = { onValidatorSuccess: vi.fn(), onValidatorError: vi.fn(), onValidatorStart: vi.fn() }
@@ -200,7 +206,9 @@ describe('validateProviderManual', () => {
     const def = makeDefinition({ validators: { validateConfig: [], validateProvider: [() => mv] } } as any)
     // force manual by marking manualOnly
     mv.manualOnly = true as any
-    def.createProvider = vi.fn(async () => { throw new Error('cp') }) as any
+    def.createProvider = vi.fn(async () => {
+      throw new Error('cp')
+    }) as any
     const plan = getValidatorsOfProvider({ definition: def, config: {}, schemaDefaults: {}, contextOptions: { t } })
     const res = await validateProviderManual(plan, { t })
     expect(res[0].status).toBe('invalid')
@@ -218,7 +226,9 @@ describe('validateProviderManual', () => {
   it('manual validator throws', async () => {
     const mv = makeProviderValidator('m', 'M', true)
     mv.manualOnly = true as any
-    mv.validator = vi.fn(async () => { throw new Error('mv') }) as any
+    mv.validator = vi.fn(async () => {
+      throw new Error('mv')
+    }) as any
     const def = makeDefinition({ validators: { validateConfig: [], validateProvider: [() => mv] } } as any)
     const plan = getValidatorsOfProvider({ definition: def, config: {}, schemaDefaults: {}, contextOptions: { t } })
     const res = await validateProviderManual(plan, { t })

@@ -8,7 +8,7 @@ import {
   shortestArcQuaternion,
 } from './math'
 
-function closeVec(actual: number[], expected: number[], tol = 1e-6) {
+function closeVec(actual: number[], expected: number[]) {
   expect(actual).toHaveLength(expected.length)
   actual.forEach((v, i) => expect(v).toBeCloseTo(expected[i], 6))
 }
@@ -28,8 +28,14 @@ describe('quatMultiply', () => {
     const a: [number, number, number, number] = [1, 2, 3, 4]
     const b: [number, number, number, number] = [5, 6, 7, 8]
     // manual
-    const ax = a[0]; const ay = a[1]; const az = a[2]; const aw = a[3]
-    const bx = b[0]; const by = b[1]; const bz = b[2]; const bw = b[3]
+    const ax = a[0]
+    const ay = a[1]
+    const az = a[2]
+    const aw = a[3]
+    const bx = b[0]
+    const by = b[1]
+    const bz = b[2]
+    const bw = b[3]
     const expected = [
       aw * bx + ax * bw + ay * bz - az * by,
       aw * by - ax * bz + ay * bw + az * bx,

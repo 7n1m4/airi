@@ -21,7 +21,10 @@ describe('driver coverage', () => {
     const callbacks: FrameRequestCallback[] = []
     const driver = createDriver({
       target: { apply: vi.fn(), release: vi.fn() },
-      requestFrame: cb => (callbacks.push(cb), 1),
+      requestFrame: (cb) => {
+        callbacks.push(cb)
+        return 1
+      },
       cancelFrame: vi.fn(),
       now: () => 0,
     })
@@ -55,7 +58,10 @@ describe('driver coverage', () => {
     const callbacks: FrameRequestCallback[] = []
     const driver = createDriver({
       target: { apply: vi.fn(), release: vi.fn() },
-      requestFrame: cb => (callbacks.push(cb), 1),
+      requestFrame: (cb) => {
+        callbacks.push(cb)
+        return 1
+      },
       cancelFrame: vi.fn(),
       now: () => 0,
     })
@@ -73,7 +79,10 @@ describe('driver coverage', () => {
     const driver = createDriver({
       target: { apply, release: vi.fn() },
       onOutput,
-      requestFrame: cb => (callbacks.push(cb), 1),
+      requestFrame: (cb) => {
+        callbacks.push(cb)
+        return 1
+      },
       cancelFrame: vi.fn(),
       now: () => 0,
     })
@@ -88,7 +97,10 @@ describe('driver coverage', () => {
     const callbacks: FrameRequestCallback[] = []
     const driver = createDriver({
       target: { apply, release: vi.fn() },
-      requestFrame: cb => (callbacks.push(cb), 1),
+      requestFrame: (cb) => {
+        callbacks.push(cb)
+        return 1
+      },
       cancelFrame: vi.fn(),
       now: () => 0,
     })

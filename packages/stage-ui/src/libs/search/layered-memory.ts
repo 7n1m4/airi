@@ -257,7 +257,7 @@ export const layeredMemory = {
     characterId?: string,
     options?: LayeredSearchOptions,
   ): Promise<LayeredSearchResult[]> {
-    console.log('[Telemetry:LayeredMemory:search:Start]', {
+    console.info('[Telemetry:LayeredMemory:search:Start]', {
       query,
       limit,
       characterId,
@@ -794,7 +794,7 @@ export const layeredMemory = {
         })
       }
 
-      console.log('[Telemetry:LayeredMemory:KGTraversal:Result]', {
+      console.info('[Telemetry:LayeredMemory:KGTraversal:Result]', {
         query,
         hasLedger: true,
         matchedEntityIdsCount: matchedEntityIds.size,
@@ -813,7 +813,7 @@ export const layeredMemory = {
       })
     }
     else {
-      console.log('[Telemetry:LayeredMemory:KGTraversal:Result]', {
+      console.info('[Telemetry:LayeredMemory:KGTraversal:Result]', {
         query,
         hasLedger: false,
         kgHitsCount: 0,
@@ -984,7 +984,7 @@ export const layeredMemory = {
       console.warn('[LayeredMemory] Search worker candidate retrieval failed, proceeding with in-memory KG hits:', workerErr)
     }
 
-    console.log('[Telemetry:LayeredMemory:WorkerRetrieval:Result]', {
+    console.info('[Telemetry:LayeredMemory:WorkerRetrieval:Result]', {
       query,
       subQueriesCount: subQueries.length,
       workerLimit,
@@ -1108,7 +1108,7 @@ export const layeredMemory = {
     }
 
     const sliced = finalHits.slice(0, returnLimit)
-    console.log('[Telemetry:LayeredMemory:search:Return]', {
+    console.info('[Telemetry:LayeredMemory:search:Return]', {
       query,
       returnLimit,
       totalMerged: mergedHits.length,

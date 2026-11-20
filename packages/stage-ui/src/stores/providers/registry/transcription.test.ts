@@ -21,7 +21,9 @@ describe('transcription registry coverage', () => {
       const t = provider.transcription('mimo-v2-omni')
       const fd = new FormData()
       fd.append('file', 'notblob' as any)
-      try { await t.fetch('url', { body: fd }) }
+      try {
+        await t.fetch('url', { body: fd })
+      }
       catch {}
       const fd2 = new FormData()
       fd2.append('file', new Blob([new Uint8Array([1])], { type: 'audio/mpeg' }))
@@ -40,27 +42,39 @@ describe('transcription registry coverage', () => {
       }
       // isAvailableBy
       if ('isAvailableBy' in meta && typeof meta.isAvailableBy === 'function') {
-        try { await meta.isAvailableBy() }
+        try {
+          await meta.isAvailableBy()
+        }
         catch { /* ignore */ }
       }
       // validators
       if (meta.validators?.validateProviderConfig) {
-        try { meta.validators.validateProviderConfig({}) }
+        try {
+          meta.validators.validateProviderConfig({})
+        }
         catch { /* ignore */ }
-        try { meta.validators.validateProviderConfig({ apiKey: 'x', baseUrl: 'https://example.com/v1/' }) }
+        try {
+          meta.validators.validateProviderConfig({ apiKey: 'x', baseUrl: 'https://example.com/v1/' })
+        }
         catch { /* ignore */ }
       }
       // capabilities listModels/listVoices
       if (meta.capabilities?.listModels) {
-        try { await meta.capabilities.listModels({ apiKey: 'x', baseUrl: 'https://example.com/v1/' }) }
+        try {
+          await meta.capabilities.listModels({ apiKey: 'x', baseUrl: 'https://example.com/v1/' })
+        }
         catch { /* ignore */ }
       }
       if (meta.capabilities && 'listVoices' in meta.capabilities && typeof meta.capabilities.listVoices === 'function') {
-        try { await meta.capabilities.listVoices({}) }
+        try {
+          await meta.capabilities.listVoices({})
+        }
         catch { /* ignore */ }
       }
       if (typeof meta.createProvider === 'function') {
-        try { await meta.createProvider({ apiKey: 'x', baseUrl: 'https://example.com/v1/', accessKeyId: 'a', accessKeySecret: 's', appKey: 'k', region: 'cn-shanghai', model: 'm', language: 'en' }) }
+        try {
+          await meta.createProvider({ apiKey: 'x', baseUrl: 'https://example.com/v1/', accessKeyId: 'a', accessKeySecret: 's', appKey: 'k', region: 'cn-shanghai', model: 'm', language: 'en' })
+        }
         catch { /* ignore */ }
       }
     }
@@ -72,7 +86,9 @@ describe('transcription registry coverage', () => {
     const t = provider.transcription('mimo-v2-omni')
     const fn = t.fetch
     // invalid body
-    try { await fn('url', { body: 'notformdata' }) }
+    try {
+      await fn('url', { body: 'notformdata' })
+    }
     catch { /* ignore */ }
     // empty file
     const fd = new FormData()
@@ -85,7 +101,9 @@ describe('transcription registry coverage', () => {
     globalThis.fetch = origFetch
     // non-ok
     globalThis.fetch = vi.fn().mockResolvedValue(new Response('err', { status: 500, statusText: 'ERR' })) as any
-    try { await fn('url', { body: fd }) }
+    try {
+      await fn('url', { body: fd })
+    }
     catch { /* ignore */ }
     globalThis.fetch = origFetch
   })
@@ -118,7 +136,9 @@ describe('transcription registry coverage', () => {
     // incomplete
     await expect(meta.createProvider({})).rejects.toThrow()
     // invalid region
-    try { meta.validators.validateProviderConfig({ accessKeyId: 'a', accessKeySecret: 's', appKey: 'k', region: 'bad' }) }
+    try {
+      meta.validators.validateProviderConfig({ accessKeyId: 'a', accessKeySecret: 's', appKey: 'k', region: 'bad' })
+    }
     catch {}
     const v = meta.validators.validateProviderConfig({ accessKeyId: 'a', accessKeySecret: 's', appKey: 'k', region: 'bad' })
     expect(v.valid).toBe(false)
@@ -130,8 +150,7 @@ describe('transcription registry coverage', () => {
     // mock listModels by importing? skip; cover catch via bad baseUrl
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('boom')) as any
     expect(await meta.capabilities.listModels({ apiKey: 'x', baseUrl: 'https://example.com/v1/' })).toEqual([])
-    // @ts-ignore
-    globalThis.fetch = undefined
+    globalThis.fetch = undefined as any
   })
 
   it('exercises openai audio validator reason', () => {

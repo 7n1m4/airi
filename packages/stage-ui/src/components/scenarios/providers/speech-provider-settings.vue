@@ -15,9 +15,9 @@ import {
   ProviderModelBrowser,
   ProviderSettingsContainer,
 } from '.'
+import { isKeylessProvider, isOptionalKeyProvider, keylessOrOptionalKey } from '../../../libs/providers/types'
 import { useSpeechStore } from '../../../stores/modules/speech'
 import { useProvidersStore } from '../../../stores/providers'
-import { isKeylessProvider, isOptionalKeyProvider, keylessOrOptionalKey } from '../../../libs/providers/types'
 
 const props = defineProps<{
   providerId: string

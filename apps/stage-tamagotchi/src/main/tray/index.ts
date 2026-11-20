@@ -45,7 +45,9 @@ export interface SetupTrayParams {
 }
 
 const setupTrayOnce = once((params: SetupTrayParams) => {
-  const trayImage = nativeImage.createFromPath(isMacOS ? macOSTrayIcon : icon).resize({ width: 16 })
+  // Asset paths are optional (icons are cosmetic); the shim reports an empty image
+  // for a missing path instead of accepting `undefined` as a filesystem path.
+  const trayImage = nativeImage.createFromPath((isMacOS ? macOSTrayIcon : icon) ?? '').resize({ width: 16 })
   trayImage.setTemplateImage(isMacOS)
 
   const appTray = new Tray(trayImage)

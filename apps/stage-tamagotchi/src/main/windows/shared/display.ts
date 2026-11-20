@@ -1,4 +1,5 @@
 import type { BrowserWindow, Rectangle } from 'electrobun/main'
+import type { BrowserWindow as ElectronBrowserWindow } from 'electron'
 
 import { Screen } from 'electrobun/main'
 
@@ -23,8 +24,9 @@ export function displayMatching(bounds: Rectangle) {
   return best
 }
 
-export function currentDisplayBounds(window: BrowserWindow) {
-  const { width, height, x, y } = window.getFrame()
+/** Accept both the ported Electrobun windows and the still-unported Electron ones. */
+export function currentDisplayBounds(window: BrowserWindow | ElectronBrowserWindow) {
+  const { width, height, x, y } = 'getFrame' in window ? window.getFrame() : window.getBounds()
   return displayMatching({ x, y, width, height }).bounds
 }
 
