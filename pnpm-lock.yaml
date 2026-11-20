@@ -294,9 +294,6 @@ catalogs:
     superjson:
       specifier: ^2.2.6
       version: 2.2.6
-    three:
-      specifier: ^0.183.1
-      version: 0.183.1
     three-stdlib:
       specifier: ^2.36.1
       version: 2.36.1
@@ -365,7 +362,6 @@ overrides:
   '@libp2p/record': 4.0.12
   '@multiformats/dns': 1.0.12
   array-flatten: npm:@nolyfill/array-flatten@^1.0.44
-  axios: npm:feaxios@^0.0.23
   is-core-module: npm:@nolyfill/is-core-module@^1.0.39
   isarray: npm:@nolyfill/isarray@^1.0.44
   onnxruntime-web: npm:onnxruntime-web@^1.24.2
@@ -373,6 +369,7 @@ overrides:
   safer-buffer: npm:@nolyfill/safer-buffer@^1.0.44
   side-channel: npm:@nolyfill/side-channel@^1.0.44
   string.prototype.matchall: npm:@nolyfill/string.prototype.matchall@^1.0.44
+  three: 0.183.1
   vite: ~6.2.5
   yaml: 2.9.1
 
@@ -821,10 +818,10 @@ importers:
         version: 3.23.0
       '@tresjs/cientos':
         specifier: ^5.4.0
-        version: 5.4.0(@tresjs/core@5.5.0(three@0.184.0)(vue@3.5.29(typescript@5.9.3)))(@types/three@0.183.1)(react@19.2.7)(three@0.184.0)(vue@3.5.29(typescript@5.9.3))
+        version: 5.4.0(@tresjs/core@5.5.0(three@0.183.1)(vue@3.5.29(typescript@5.9.3)))(@types/three@0.183.1)(react@19.2.7)(three@0.183.1)(vue@3.5.29(typescript@5.9.3))
       '@tresjs/core':
         specifier: ^5.5.0
-        version: 5.5.0(three@0.184.0)(vue@3.5.29(typescript@5.9.3))
+        version: 5.5.0(three@0.183.1)(vue@3.5.29(typescript@5.9.3))
       '@unocss/reset':
         specifier: ^66.6.2
         version: 66.6.2
@@ -955,8 +952,8 @@ importers:
         specifier: ^5.23.5
         version: 5.31.5
       three:
-        specifier: ^0.184.0
-        version: 0.184.0
+        specifier: 0.183.1
+        version: 0.183.1
       unified:
         specifier: ^11.0.5
         version: 11.0.5
@@ -1334,7 +1331,7 @@ importers:
         specifier: 'catalog:'
         version: 4.0.4(vue@3.5.29(typescript@5.9.3))
       three:
-        specifier: ^0.183.1
+        specifier: 0.183.1
         version: 0.183.1
       unified:
         specifier: 'catalog:'
@@ -1906,7 +1903,7 @@ importers:
         specifier: 'catalog:'
         version: 1.43.0
       three:
-        specifier: ^0.183.1
+        specifier: 0.183.1
         version: 0.183.1
     devDependencies:
       '@types/three':
@@ -2133,7 +2130,7 @@ importers:
     devDependencies:
       '@moeru/three-mmd':
         specifier: ^0.1.0-beta.3
-        version: 0.1.0-beta.3(@types/three@0.183.1)(three@0.184.0)
+        version: 0.1.0-beta.3(@types/three@0.183.1)(three@0.183.1)
       '@nekopaw/tempora':
         specifier: 'catalog:'
         version: 0.4.0-alpha.1
@@ -2566,8 +2563,8 @@ importers:
         specifier: ^7.0.0
         version: 7.0.0(encoding@0.1.13)
       three:
-        specifier: ^0.174.0
-        version: 0.174.0
+        specifier: 0.183.1
+        version: 0.183.1
       unified:
         specifier: 'catalog:'
         version: 11.0.5
@@ -2798,7 +2795,7 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0(patch_hash=fe957d02ee79f8ff3f2b8eaa4b3f2b4586a8182f002f1bf12d6a70df58cd4af4)(0736f5bd67d2e4de7e9fff36ad63fa2e)
       three:
-        specifier: ^0.183.1
+        specifier: 0.183.1
         version: 0.183.1
       vue:
         specifier: 'catalog:'
@@ -2844,7 +2841,7 @@ importers:
         specifier: 'catalog:'
         version: 3.0.4(typescript@5.9.3)(vue@3.5.29(typescript@5.9.3))
       three:
-        specifier: 'catalog:'
+        specifier: 0.183.1
         version: 0.183.1
       three-stdlib:
         specifier: 'catalog:'
@@ -2948,7 +2945,7 @@ importers:
         specifier: 'catalog:'
         version: 3.0.4(typescript@5.9.3)(vue@3.5.29(typescript@5.9.3))
       three:
-        specifier: ^0.183.1
+        specifier: 0.183.1
         version: 0.183.1
       vue:
         specifier: 'catalog:'
@@ -5537,7 +5534,7 @@ packages:
     resolution: {integrity: sha512-31rmU0YnUdfSDyPTsnk8OFjo/zAkS2BfaOyu4y0F0bt7Kz4IKrWkotngv+DcxECexFWSsyOqr0Fcmyubz9VvYA==}
     peerDependencies:
       '@types/three': ^0.180.0
-      three: ^0.180.0
+      three: 0.183.1
 
   '@mongodb-js/zstd@7.0.0':
     resolution: {integrity: sha512-mQ2s0pYYiav+tzCDR05Zptem8Ey2v8s11lri5RKGhTtL4COVCvVCk5vtyRYNT+9L8qSfyOqqefF9UtnW8mC5jA==}
@@ -6746,42 +6743,42 @@ packages:
   '@pixiv/three-vrm-animation@3.5.1':
     resolution: {integrity: sha512-zPfkktP6jOt1d5qPjx7WDwE1U7v95JUo/S0nzBB3AIWmhGPnjrnZ/63MHgZPpiI3Kj3kODXE4HYNkHOIo3mRAQ==}
     peerDependencies:
-      three: '>=0.137'
+      three: 0.183.1
 
   '@pixiv/three-vrm-core@3.5.1':
     resolution: {integrity: sha512-uKT9wBXHzE6U3sABdKwNnLOj28akQPGF8+P1EGdEb/j3Fcmn2qmFwUq7rbKwKJP8WGAHp++N1LJn3r+xVjyLBA==}
     peerDependencies:
-      three: '>=0.137'
+      three: 0.183.1
 
   '@pixiv/three-vrm-materials-hdr-emissive-multiplier@3.5.1':
     resolution: {integrity: sha512-BlKRo9Oa8fdVakXGptjTfBG+JpTlDWKEipBF+yQ2v9Vo13rIJXcNCv3HgpbxFDJh+BssKC5WH0Tuw0BE2UPLwg==}
     peerDependencies:
-      three: '>=0.137'
+      three: 0.183.1
 
   '@pixiv/three-vrm-materials-mtoon@3.5.1':
     resolution: {integrity: sha512-6zrSDsdiQRtzU0/ZUbRuLnjaqfhFmivQ2OBwpJgtjXuHjCZVcsR8GmiDk+0/6OFlaWymux/CpPidLKN9DWr0Mw==}
     peerDependencies:
-      three: '>=0.137'
+      three: 0.183.1
 
   '@pixiv/three-vrm-materials-v0compat@3.5.1':
     resolution: {integrity: sha512-pVzEQDDaKIwJ0DBtHl+Q9wr2FtkxauEkmsw9jt1ZoSk7QxI1vkhCAbWUXAS6XT5ttZ4izbhfNd9Brn4f5Kigxg==}
     peerDependencies:
-      three: '>=0.137'
+      three: 0.183.1
 
   '@pixiv/three-vrm-node-constraint@3.5.1':
     resolution: {integrity: sha512-Bywh9IpfEUbQxFijiksNZUOaAodLhgvlD5nZjsNwx6uOxYPfSYYJkxjLA3+wxwt6rT7bS41FEUBMBYAmdsXHkg==}
     peerDependencies:
-      three: '>=0.137'
+      three: 0.183.1
 
   '@pixiv/three-vrm-springbone@3.5.1':
     resolution: {integrity: sha512-ylsukk+2o9t06vMEiOqE1443FDQYpozbov375SE8phgCDqfmPe9YEEvAX3md0cCCqOfqMWuXdxzU8avWXXynTw==}
     peerDependencies:
-      three: '>=0.137'
+      three: 0.183.1
 
   '@pixiv/three-vrm@3.5.1':
     resolution: {integrity: sha512-B2u0uCi2SHO83ycrgOJVDbtgLtQpgWbDdHRQ4SCeu+CZ0Dh1If5RDM2oUIbMA0j/6o93T385iSj4FHn/7ZvdCg==}
     peerDependencies:
-      three: '>=0.137'
+      three: 0.183.1
 
   '@pixiv/types-vrm-0.0@3.5.1':
     resolution: {integrity: sha512-97XgNpLw0v6YPVqzTALIjPftyOZnkK8Rd4QWwlI5RVo96DASSTrPpdMw1HAwwcDEGHj35ru9Cxar97eUltkJug==}
@@ -7563,13 +7560,13 @@ packages:
     resolution: {integrity: sha512-JDyQFgs+YZrZU2gH2geeP5/N1YsQ6kMPZGERNMeh5lgyuXhJuzgw2K+gukGKKL6uX9+p+9dkYn6y0sysHnYF1w==}
     peerDependencies:
       '@tresjs/core': 5.5.0
-      three: '>=0.133'
+      three: 0.183.1
       vue: '>=3.5.17'
 
   '@tresjs/core@5.5.0':
     resolution: {integrity: sha512-wIHwPYWeBXO1LdDVRHPAt0YLjvqm8JYb6uliOkzLyWzHqVNVZ0qQjipGPT72mV87uQFUiIHF8EY8L2jiWxuUFw==}
     peerDependencies:
-      three: '>=0.133'
+      three: 0.183.1
       vue: '>=3.4'
 
   '@tweenjs/tween.js@23.1.3':
@@ -9221,7 +9218,7 @@ packages:
   camera-controls@2.10.1:
     resolution: {integrity: sha512-KnaKdcvkBJ1Irbrzl8XD6WtZltkRjp869Jx8c0ujs9K+9WD+1D7ryBsCiVqJYUqt6i/HR5FxT7RLASieUD+Q5w==}
     peerDependencies:
-      three: '>=0.126.1'
+      three: 0.183.1
 
   caniuse-lite@1.0.30001761:
     resolution: {integrity: sha512-JF9ptu1vP2coz98+5051jZ4PwQgd2ni8A+gYSN7EA7dPKIMf0pDlSUxhdmVOaV3/fYK5uWBkgSXJaRLr4+3A6g==}
@@ -13994,7 +13991,7 @@ packages:
     resolution: {integrity: sha512-g5O9B0hm9CvnM36+v7SFl39T7hmAlv541tU81ME8YeSb3i1CIP5/QdDeSB3A0la0bKNHpxpwxOVRo2wFTYEosQ==}
     peerDependencies:
       '@types/three': '*'
-      three: '*'
+      three: 0.183.1
 
   stats.js@0.17.0:
     resolution: {integrity: sha512-hNKz8phvYLPEcRkeG1rsGmV5ChMjKDAWU7/OJJdDErPBNChQXxCo3WZurGpnWc6gZhAzEPFad1aVgyOANH1sMw==}
@@ -14236,7 +14233,7 @@ packages:
     peerDependencies:
       '@react-three/fiber': '>=8.0'
       react: '>=18.0'
-      three: '>=0.154'
+      three: 0.183.1
     peerDependenciesMeta:
       '@react-three/fiber':
         optional: true
@@ -14246,21 +14243,15 @@ packages:
   three-mesh-bvh@0.9.8:
     resolution: {integrity: sha512-YphYvdXEZSXdz6iNdWJo1RB6qvSCRyiXPEVSvNU6xVWbLDOdSrfEIsJOpgFOnefdmVEvZ6M+sY0cjh9gl7MvdA==}
     peerDependencies:
-      three: '>= 0.159.0'
+      three: 0.183.1
 
   three-stdlib@2.36.1:
     resolution: {integrity: sha512-XyGQrFmNQ5O/IoKm556ftwKsBg11TIb301MB5dWNicziQBEs2g3gtOYIf7pFiLa0zI2gUwhtCjv9fmjnxKZ1Cg==}
     peerDependencies:
-      three: '>=0.128.0'
-
-  three@0.174.0:
-    resolution: {integrity: sha512-p+WG3W6Ov74alh3geCMkGK9NWuT62ee21cV3jEnun201zodVF4tCE5aZa2U122/mkLRmhJJUQmLLW1BH00uQJQ==}
+      three: 0.183.1
 
   three@0.183.1:
     resolution: {integrity: sha512-Psv6bbd3d/M/01MT2zZ+VmD0Vj2dbWTNhfe4CuSg7w5TuW96M3NOyCVuh9SZQ05CpGmD7NEcJhZw4GVjhCYxfQ==}
-
-  three@0.184.0:
-    resolution: {integrity: sha512-wtTRjG92pM5eUg/KuUnHsqSAlPM296brTOcLgMRqEeylYTh/CdtvKUvCyyCQTzFuStieWxvZb8mVTMvdPyUpxg==}
 
   throat@5.0.0:
     resolution: {integrity: sha512-fcwX4mndzpLQKBS1DVYhGAcYaYt7vsHNIvQV+WXMvnow5cgjPphq5CaayLaGsjRdSCKZFNGt7/GYAuXaNOiYCA==}
@@ -18544,10 +18535,10 @@ snapshots:
 
   '@moeru/std@0.1.0-beta.17': {}
 
-  '@moeru/three-mmd@0.1.0-beta.3(@types/three@0.183.1)(three@0.184.0)':
+  '@moeru/three-mmd@0.1.0-beta.3(@types/three@0.183.1)(three@0.183.1)':
     dependencies:
       '@types/three': 0.183.1
-      three: 0.184.0
+      three: 0.183.1
 
   '@mongodb-js/zstd@7.0.0':
     dependencies:
@@ -20458,23 +20449,6 @@ snapshots:
       - '@types/three'
       - react
 
-  '@tresjs/cientos@5.4.0(@tresjs/core@5.5.0(three@0.184.0)(vue@3.5.29(typescript@5.9.3)))(@types/three@0.183.1)(react@19.2.7)(three@0.184.0)(vue@3.5.29(typescript@5.9.3))':
-    dependencies:
-      '@tresjs/core': 5.5.0(three@0.184.0)(vue@3.5.29(typescript@5.9.3))
-      '@vueuse/core': 13.9.0(vue@3.5.29(typescript@5.9.3))
-      camera-controls: 2.10.1(three@0.184.0)
-      stats-gl: 2.4.2(@types/three@0.183.1)(three@0.184.0)
-      stats.js: 0.17.0
-      three: 0.184.0
-      three-custom-shader-material: 5.4.0(react@19.2.7)(three@0.184.0)
-      three-mesh-bvh: 0.9.8(three@0.184.0)
-      three-stdlib: 2.36.1(three@0.184.0)
-      vue: 3.5.29(typescript@5.9.3)
-    transitivePeerDependencies:
-      - '@react-three/fiber'
-      - '@types/three'
-      - react
-
   '@tresjs/core@5.5.0(three@0.183.1)(vue@3.5.29(typescript@5.9.3))':
     dependencies:
       '@pmndrs/pointer-events': 6.6.28
@@ -20482,15 +20456,6 @@ snapshots:
       '@vueuse/core': 13.9.0(vue@3.5.29(typescript@5.9.3))
       radashi: 12.7.1
       three: 0.183.1
-      vue: 3.5.29(typescript@5.9.3)
-
-  '@tresjs/core@5.5.0(three@0.184.0)(vue@3.5.29(typescript@5.9.3))':
-    dependencies:
-      '@pmndrs/pointer-events': 6.6.28
-      '@vue/devtools-api': 7.7.9
-      '@vueuse/core': 13.9.0(vue@3.5.29(typescript@5.9.3))
-      radashi: 12.7.1
-      three: 0.184.0
       vue: 3.5.29(typescript@5.9.3)
 
   '@tweenjs/tween.js@23.1.3': {}
@@ -22578,10 +22543,6 @@ snapshots:
   camera-controls@2.10.1(three@0.183.1):
     dependencies:
       three: 0.183.1
-
-  camera-controls@2.10.1(three@0.184.0):
-    dependencies:
-      three: 0.184.0
 
   caniuse-lite@1.0.30001761: {}
 
@@ -28116,11 +28077,6 @@ snapshots:
       '@types/three': 0.183.1
       three: 0.183.1
 
-  stats-gl@2.4.2(@types/three@0.183.1)(three@0.184.0):
-    dependencies:
-      '@types/three': 0.183.1
-      three: 0.184.0
-
   stats.js@0.17.0: {}
 
   statuses@1.5.0: {}
@@ -28397,23 +28353,9 @@ snapshots:
     optionalDependencies:
       react: 19.2.7
 
-  three-custom-shader-material@5.4.0(react@19.2.7)(three@0.184.0):
-    dependencies:
-      glsl-token-functions: 1.0.1
-      glsl-token-string: 1.0.1
-      glsl-tokenizer: 2.1.5
-      object-hash: 3.0.0
-      three: 0.184.0
-    optionalDependencies:
-      react: 19.2.7
-
   three-mesh-bvh@0.9.8(three@0.183.1):
     dependencies:
       three: 0.183.1
-
-  three-mesh-bvh@0.9.8(three@0.184.0):
-    dependencies:
-      three: 0.184.0
 
   three-stdlib@2.36.1(three@0.183.1):
     dependencies:
@@ -28425,21 +28367,7 @@ snapshots:
       potpack: 1.0.2
       three: 0.183.1
 
-  three-stdlib@2.36.1(three@0.184.0):
-    dependencies:
-      '@types/draco3d': 1.4.10
-      '@types/offscreencanvas': 2019.7.3
-      '@types/webxr': 0.5.24
-      draco3d: 1.5.7
-      fflate: 0.6.10
-      potpack: 1.0.2
-      three: 0.184.0
-
-  three@0.174.0: {}
-
   three@0.183.1: {}
-
-  three@0.184.0: {}
 
   throat@5.0.0: {}
 

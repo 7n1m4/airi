@@ -13,7 +13,6 @@ overrides:
   '@libp2p/record': 4.0.12
   '@multiformats/dns': 1.0.12
   array-flatten: npm:@nolyfill/array-flatten@^1.0.44
-  axios: npm:feaxios@^0.0.23
   is-core-module: npm:@nolyfill/is-core-module@^1.0.39
   isarray: npm:@nolyfill/isarray@^1.0.44
   onnxruntime-web: npm:onnxruntime-web@^1.24.2
@@ -21,6 +20,7 @@ overrides:
   safer-buffer: npm:@nolyfill/safer-buffer@^1.0.44
   side-channel: npm:@nolyfill/side-channel@^1.0.44
   string.prototype.matchall: npm:@nolyfill/string.prototype.matchall@^1.0.44
+  three: 0.183.1
   vite: ~6.2.5
   yaml: 2.9.1
 patchedDependencies:
