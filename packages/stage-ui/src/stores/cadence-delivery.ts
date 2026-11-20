@@ -537,11 +537,14 @@ export const useCadenceDeliveryStore = defineStore('cadence-delivery', () => {
       console.info('[Cadence] gate hold', { messageId: entry.messageId, bubble, revealed: entry.revealed })
     }
 
+    // Hoisted closures do not inherit the narrowing that ruled out `undefined`
+    // above, so pin the narrowed entry for them.
+    const activeEntry = entry
     return new Promise((resolve) => {
       function onAbort() {
-        const idx = entry.waiters.findIndex(w => w.resolve === settle)
+        const idx = activeEntry.waiters.findIndex(w => w.resolve === settle)
         if (idx >= 0)
-          entry.waiters.splice(idx, 1)
+          activeEntry.waiters.splice(idx, 1)
         resolve('aborted')
       }
       function settle(value: 'released' | 'aborted') {
