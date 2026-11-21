@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+import { resolveWebSocketUrl } from '@proj-airi/stage-ui/stores/mods/api/channel-server'
 import { FieldInput } from '@proj-airi/ui'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 withDefaults(defineProps<{
@@ -12,7 +14,8 @@ withDefaults(defineProps<{
 
 const { t } = useI18n()
 
-const derivedExample = 'ws://localhost:6121/ws'
+// Same derivation the channel store uses, so first paint matches daemon-mirrored gateway keys.
+const derivedExample = computed(() => resolveWebSocketUrl(key => localStorage.getItem(key)))
 // Empty = derive from the daemon-reported gateway settings (tls/hostname/port).
 const websocketUrl = useLocalStorageManualReset('settings/connection/websocket-url', '')
 const authToken = useLocalStorageManualReset('settings/connection/auth-token', '')
