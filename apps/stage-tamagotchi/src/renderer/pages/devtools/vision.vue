@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import type { SerializableDesktopCapturerSource } from '@proj-airi/electron-screen-capture'
-import type { SourcesOptions } from 'electron'
 
-import { useElectronScreenCapture } from '@proj-airi/electron-screen-capture/vue'
 import { useVisionStore } from '@proj-airi/stage-ui/stores/modules/vision'
 import { ATTENTION_GUARD_WORKLOAD_ID, useVisionOrchestratorStore, VISION_WORKLOADS } from '@proj-airi/stage-ui/stores/modules/vision/orchestrator'
 import { Button, FieldCheckbox, FieldRange, FieldSelect, SelectTab } from '@proj-airi/ui'
 import { useIntervalFn } from '@vueuse/core'
 import { computed, onBeforeUnmount, ref } from 'vue'
 
-import { getIpcRenderer } from '../../utils/electron'
+import { useUnsupportedScreenCapture } from '../../utils/screen-capture'
 
 interface ScreenCaptureSource extends SerializableDesktopCapturerSource {
   appIconURL?: string
@@ -28,12 +26,7 @@ const sourceCategory = ref<SourceCategory>('applications')
 const selectedSourceId = ref('')
 const activeStreams = ref<MediaStream[]>([])
 
-const sourcesOptions = ref<SourcesOptions>({
-  types: ['screen', 'window'],
-  fetchWindowIcons: true,
-})
-
-const { getSources } = useElectronScreenCapture(getIpcRenderer(), sourcesOptions)
+const { getSources } = useUnsupportedScreenCapture()
 
 const isWindowSource = (source: ScreenCaptureSource) => source.id.startsWith('window:')
 const isDisplaySource = (source: ScreenCaptureSource) => source.id.startsWith('screen:')

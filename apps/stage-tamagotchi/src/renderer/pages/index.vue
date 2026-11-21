@@ -6,12 +6,12 @@ import workletUrl from '@proj-airi/stage-ui/workers/vad/process.worklet?worker&u
 
 import { electron } from '@proj-airi/electron-eventa'
 import {
+  useElectronEventaContext,
   useElectronEventaInvoke,
   useElectronMouseInElement,
   useElectronMouseInWindow,
   useElectronRelativeMouse,
 } from '@proj-airi/electron-vueuse'
-import { debug } from '@proj-airi/stage-shared'
 import { useMmd } from '@proj-airi/stage-ui-mmd'
 import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
 import { WidgetStage } from '@proj-airi/stage-ui/components/scenes'
@@ -23,7 +23,6 @@ import { useLive2d } from '@proj-airi/stage-ui/stores/live2d'
 import { useLLM } from '@proj-airi/stage-ui/stores/llm'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useDiscordStore } from '@proj-airi/stage-ui/stores/modules/discord'
 import { useHearingSpeechInputPipeline, useHearingStore } from '@proj-airi/stage-ui/stores/modules/hearing'
 import { useLiveSessionStore } from '@proj-airi/stage-ui/stores/modules/live-session'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
@@ -45,6 +44,7 @@ import {
   electronCustomizerToggleVisibility,
   electronGetMainWindowConfig,
   electronGetStageDisabled,
+  electronMainWindowConfigChanged,
   electronOpenChat,
   electronOpenSettings,
   electronStageSetAlwaysOnTop,
@@ -81,6 +81,11 @@ const applySizePreset = useElectronEventaInvoke(electronApplySizePreset)
 const getMainWindowConfig = useElectronEventaInvoke(electronGetMainWindowConfig)
 const setIgnoreMouseEvents = useElectronEventaInvoke(electron.window.setIgnoreMouseEvents)
 const requestNotice = useElectronEventaInvoke(noticeWindowEventa.openWindow)
+
+// Shared view context installed by `view-context.ts`; raw `ipcRenderer.on` channels were
+// never carried over to Electrobun, so main→renderer pushes use eventa events instead.
+const eventaContext = useElectronEventaContext()
+let offMainWindowConfigChanged: (() => void) | undefined
 
 const modelStore = useModelStore()
 
@@ -677,6 +682,7 @@ watch(enabled, async (val) => {
 }, { immediate: true })
 
 onUnmounted(() => {
+  offMainWindowConfigChanged?.()
   void voiceInputBinding.update().catch(error => console.error('[Main Page] Failed to stop audio interaction:', error))
 })
 
@@ -856,43 +862,18 @@ onMounted(async () => {
     }])
   }
 
-  const ipcRenderer = window.electron?.ipcRenderer
-  if (ipcRenderer) {
-    ipcRenderer.on('toggle-mic-from-shortcut', () => {
-      const liveSessionStore = useLiveSessionStore()
-      const discordStore = useDiscordStore()
-
-      // If we are actively in a Discord Gemini voice call, ignore the local mic toggle hotkey
-      if (discordStore.voiceCall === 'gemini' && liveSessionStore.activeInputSource === 'discord' && liveSessionStore.isActive) {
-        debug('[Shortcut] Ignoring local mic toggle shortcut because Discord Gemini voice call is active.')
-        return
-      }
-
-      settingsAudioDeviceStore.enabled = !settingsAudioDeviceStore.enabled
-    })
-    ipcRenderer.on('chat-window-state', (...args) => {
-      const isOpen = args[1]
-      if (typeof isOpen !== 'boolean')
-        return
-      lastIpcChatOpen = isOpen
-      controlStripStore.chatOpen = isOpen
-    })
-    ipcRenderer.on('caption-window-state', (...args) => {
-      const isOpen = args[1]
-      if (typeof isOpen !== 'boolean')
-        return
-      lastIpcCaptionOpen = isOpen
-      controlStripStore.captionOpen = isOpen
-    })
-    ipcRenderer.on('stage-window-state', (...args) => {
-      const isOpen = args[1]
-      if (typeof isOpen !== 'boolean')
-        return
-      lastIpcStageEnabled = isOpen
-      controlStripStore.stageEnabled = isOpen
-    })
-    ipcRenderer.on('eventa:event:electron:windows:main:config-changed', (...args) => {
-      const config = asMainWindowConfig(args[1])
+  // NOTICE: the raw `ipcRenderer.on` channels are gone with the bridge. Four of them
+  // (`toggle-mic-from-shortcut`, `chat-window-state`, `caption-window-state`,
+  // `stage-window-state`) had no eventa tag and no ported main-side emitter; the Control
+  // Strip now reads authoritative state through the `electronGet*WindowState` invokes.
+  // `config-changed` does have an eventa tag, so subscribe through the shared view context.
+  watch(eventaContext, (ctx) => {
+    offMainWindowConfigChanged?.()
+    offMainWindowConfigChanged = undefined
+    if (!ctx)
+      return
+    offMainWindowConfigChanged = ctx.on(electronMainWindowConfigChanged, (event) => {
+      const config = asMainWindowConfig(event?.body)
       if (!config)
         return
 
@@ -920,7 +901,7 @@ onMounted(async () => {
       if (edge)
         controlStripStore.dockedEdge = edge
     })
-  }
+  }, { immediate: true })
 
   if (typeof window !== 'undefined') {
     window.addEventListener('control-strip:action', handleControlStripAction as EventListener)

@@ -372,24 +372,10 @@ function resetStats() {
   systemOneStore.resetUsageStats()
 }
 
-onMounted(() => {
-  const ipcRenderer = window.electron?.ipcRenderer
-  if (!ipcRenderer)
-    return
-
-  // `IpcRendererListener` is `(event, ...args: unknown[]) => void`, so the payload is narrowed here
-  // rather than declared in the callback signature.
-  const handleSetGroup = (...args: unknown[]) => {
-    const group = args[1]
-    if (typeof group !== 'string' || !CUSTOMIZER_CATALOG.some(g => g.id === group))
-      return
-    activeGroupId.value = group
-  }
-  ipcRenderer.on('set-customizer-group', handleSetGroup)
-  onUnmounted(() => {
-    ipcRenderer.removeListener('set-customizer-group', handleSetGroup)
-  })
-})
+// NOTICE: `set-customizer-group` used to arrive on a raw `ipcRenderer` channel. The
+// Electrobun main side (`windows/customizer/index.ts`) dropped that dispatch because the
+// bridge only carries eventa frames; group selection is driven by the renderer's own state.
+// No replacement listener is installed — see design doc §3.1 and the airi-vxt report.
 
 // Cleanup pointer listeners if component is unmounted mid-drag
 onUnmounted(() => {

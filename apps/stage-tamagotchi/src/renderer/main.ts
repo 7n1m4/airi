@@ -1,12 +1,18 @@
+/* eslint-disable perfectionist/sort-imports -- view-context must evaluate before App.vue's module graph; the sorter would move this side-effect import last. */
 import type { Plugin } from 'vue'
 import type { RouteRecordRaw } from 'vue-router'
+
+// Must be the first side-effect import: installs the Electrobun view context and the
+// electron-vueuse provider before the app graph (App.vue and its stores) evaluates.
+// No `window.electron` shim — call sites use the installed context directly.
+import './view-context'
 
 import Tres from '@tresjs/core'
 
 import { autoAnimatePlugin } from '@formkit/auto-animate/vue'
 import { defineInvoke } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/renderer'
 import { MotionPlugin } from '@vueuse/motion'
+import { getViewEventaContext } from '@proj-airi/electrobun-eventa/view'
 import { createPinia } from 'pinia'
 import { setupLayouts } from 'virtual:generated-layouts'
 import { createApp } from 'vue'
@@ -18,7 +24,6 @@ import App from './App.vue'
 import { widgetsAdd, widgetsClear } from '../shared/eventa'
 import { i18n } from './modules/i18n'
 
-import './install-bridge'
 import '@unocss/reset/tailwind.css'
 import 'splitpanes/dist/splitpanes.css'
 import 'vue-sonner/style.css'
@@ -38,6 +43,7 @@ import '@fontsource/gugi'
 import '@fontsource/kiwi-maru'
 import '@fontsource/m-plus-rounded-1c'
 import '@fontsource/sniglet'
+/* eslint-enable perfectionist/sort-imports */
 
 const pinia = createPinia()
 
@@ -72,12 +78,12 @@ if (typeof window !== 'undefined') {
     spawnSticker?: (stickerId: string, options?: { weight?: number, pos?: string, ttlMs?: number }) => Promise<string | undefined>
     clearStickers?: () => Promise<void>
   }
-  // Eventa's own invoke, not a raw `ipcRenderer.invoke`: main registers exactly one request
-  // method (`eventa:emit`, src/main/rpc/index.ts), so a per-channel invoke could only ever
-  // reject. `install-bridge` guarantees `window.electron.ipcRenderer` exists by now.
-  const ipcRenderer = window.electron?.ipcRenderer
-  const eventaAdapter = ipcRenderer ? createContext(ipcRenderer) : undefined
-  const context = eventaAdapter?.context
+  // The view-context module (first import) installed the shared Electrobun view
+  // context and published it to electron-vueuse before the app graph evaluated.
+  // Eventa's own invoke, not a raw `ipcRenderer.invoke`: main registers exactly one
+  // request method (`eventa:emit`, src/main/rpc/index.ts), so a per-channel invoke
+  // could only ever reject.
+  const context = getViewEventaContext()
   const addWidget = context ? defineInvoke(context, widgetsAdd) : undefined
   const clearWidget = context ? defineInvoke(context, widgetsClear) : undefined
 

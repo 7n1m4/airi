@@ -18,7 +18,6 @@
     ".": "./src/index.ts",
     "./vite": "./src/vite.ts",
     "./beat-sync": "./src/beat-sync/index.ts",
-    "./electron-renderer": "./src/electron-renderer.d.ts",
     "./composables": "./src/composables/index.ts",
     "./shortcuts": "./src/shortcuts.ts",
     "./utils/*": "./src/utils/*.ts",
@@ -34,6 +33,7 @@
   },
   "dependencies": {
     "@moeru/eventa": "catalog:",
+    "@proj-airi/electrobun-eventa": "workspace:^",
     "@vueuse/core": "catalog:",
     "@xsai/generate-text": "catalog:",
     "@xsai/shared": "catalog:",

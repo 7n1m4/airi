@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import type { SourcesOptions } from 'electron'
+import type { ScreenCaptureSourcesOptions } from '../utils/screen-capture'
 
-import { useElectronScreenCapture } from '@proj-airi/electron-screen-capture/vue'
 import { Button } from '@proj-airi/ui'
 import { useWindowFocus } from '@vueuse/core'
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
-import { onMounted, ref, toRef, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { getIpcRenderer, getPlatform } from '../utils/electron'
+import { isMacOSRenderer } from '../utils/platform'
+import { useUnsupportedScreenCapture } from '../utils/screen-capture'
 
-const props = defineProps<{
-  sourcesOptions: SourcesOptions
+// `sourcesOptions` is part of the public slot contract for this wrapper even though the
+// Electrobun shell cannot enumerate desktop sources; callers still pass it for parity.
+defineProps<{
+  sourcesOptions: ScreenCaptureSourcesOptions
 }>()
-
-const sourcesOptions = toRef(props, 'sourcesOptions')
 
 const hasPermissions = ref(false)
 const showDialog = ref(false)
@@ -26,11 +26,11 @@ const {
   selectWithSource,
   checkMacOSPermission,
   requestMacOSPermission,
-} = useElectronScreenCapture(getIpcRenderer(), sourcesOptions)
+} = useUnsupportedScreenCapture()
 const focused = useWindowFocus()
 
 async function checkPermissions() {
-  if (getPlatform() === 'darwin') {
+  if (isMacOSRenderer()) {
     const status = await checkMacOSPermission()
     hasPermissions.value = status === 'granted'
   }
@@ -43,7 +43,7 @@ async function checkPermissions() {
 }
 
 async function requestPermission() {
-  if (getPlatform() === 'darwin') {
+  if (isMacOSRenderer()) {
     await requestMacOSPermission()
   }
 }

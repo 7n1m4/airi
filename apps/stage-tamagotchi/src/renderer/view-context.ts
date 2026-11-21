@@ -1,6 +1,20 @@
-import { Electroview } from 'electrobun/view'
+/**
+ * Renderer entry bootstrap: install the shared Electrobun view eventa context.
+ *
+ * A module body on purpose, imported before the app graph. ESM hoists imports above
+ * statements, so installing from a statement in `main.ts` would run after `App.vue`'s
+ * module graph had already resolved its module-scope contexts. Splitting it out makes
+ * installation the first thing in the graph, for both HTML entries.
+ *
+ * This is NOT a compatibility bridge: no `window.electron` / `window.platform` is
+ * installed. Every call site uses `getViewEventaContext()` / `useElectronEventaContext()`
+ * instead. `new Electroview({ rpc })` is load-bearing — its constructor calls
+ * `rpc.setTransport(...)`, without which every `request`/`send` throws.
+ */
 
-import { installElectrobunRendererBridge } from './electrobun-bridge'
+import { getViewEventaContext, installViewEventa } from '@proj-airi/electrobun-eventa/view'
+import { setElectronEventaContextProvider } from '@proj-airi/electron-vueuse'
+import { Electroview } from 'electrobun/view'
 
 // keep in sync with AIRRPC in src/main/rpc/index.ts
 interface AiriRpcCapability {
@@ -18,18 +32,6 @@ interface AiriRpc {
   webview: AiriRpcCapability
 }
 
-/**
- * Self-installing entry for the `window.electron.ipcRenderer` bridge.
- *
- * A module body on purpose, imported before the app graph: ESM hoists imports above
- * statements, so an early statement inside `main.ts` would still run after `App`'s module
- * graph had already read `window.electron` (and `resolveIpcRenderer()` had already cached
- * `undefined`). Splitting it out makes installation happen as the first thing in the graph.
- *
- * `new Electroview({ rpc })` is load-bearing, not decoration: the constructor calls
- * `rpc.setTransport(this.createTransport())`. Without it the RPC has no transport and every
- * `request`/`send` throws, which is the whole failure this bridge exists to fix.
- */
 /**
  * `window.__electrobun` is normally installed by Electrobun's preload script, which CEF
  * injects only when the view was created with one — this app's views pass `preload: null`,
@@ -72,4 +74,7 @@ const rpc = Electroview.defineRPC<AiriRpc>({
 // eslint-disable-next-line no-new -- the instance exists only for its constructor side effects.
 new Electroview({ rpc })
 
-installElectrobunRendererBridge(rpc)
+// Publish the one view-wide context before the app graph evaluates, so module-level call
+// sites (the dating-sim store, image-journal tool, …) resolve it through either accessor.
+installViewEventa(rpc)
+setElectronEventaContextProvider(getViewEventaContext)

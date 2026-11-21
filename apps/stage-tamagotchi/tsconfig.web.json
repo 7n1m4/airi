@@ -43,8 +43,7 @@
       "vue-macros/macros-global",
       "unplugin-vue-router/client",
       "@types/audioworklet",
-      "unplugin-info/client",
-      "@proj-airi/stage-shared/electron-renderer"
+      "unplugin-info/client"
     ],
     "allowJs": true,
     "strict": true,

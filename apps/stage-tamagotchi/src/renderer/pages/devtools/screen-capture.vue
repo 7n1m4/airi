@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import type { SerializableDesktopCapturerSource } from '@proj-airi/electron-screen-capture'
-import type { SourcesOptions } from 'electron'
 
-import { useElectronScreenCapture } from '@proj-airi/electron-screen-capture/vue'
+import type { ScreenCaptureSourcesOptions } from '../../utils/screen-capture'
+
 import { Button, SelectTab } from '@proj-airi/ui'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import WithScreenCapture from '../../components/WithScreenCapture.vue'
 
-import { getIpcRenderer } from '../../utils/electron'
+import { useUnsupportedScreenCapture } from '../../utils/screen-capture'
 
 interface ScreenCaptureSource extends SerializableDesktopCapturerSource {
   appIconURL?: string
@@ -24,7 +24,7 @@ const activeStreams = ref<MediaStream[]>([])
 const sourceCategory = ref<SourceCategory>('applications')
 const hasFetchedOnce = ref(false)
 
-const sourcesOptions = ref<SourcesOptions>({
+const sourcesOptions = ref<ScreenCaptureSourcesOptions>({
   types: ['screen', 'window'],
   fetchWindowIcons: true,
 })
@@ -33,7 +33,7 @@ const { t } = useI18n()
 const {
   getSources,
   selectWithSource,
-} = useElectronScreenCapture(getIpcRenderer(), sourcesOptions)
+} = useUnsupportedScreenCapture()
 
 const categoryOptions = [
   { label: 'Applications', value: 'applications', icon: 'i-solar:window-frame-line-duotone' },

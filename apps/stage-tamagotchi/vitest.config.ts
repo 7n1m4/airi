@@ -5,7 +5,6 @@ import { defineConfig } from 'vitest/config'
 const appDir = fileURLToPath(new URL('.', import.meta.url))
 const electrobunStub = fileURLToPath(new URL('test-support/electrobun-main.ts', import.meta.url))
 const electrobunViewStub = fileURLToPath(new URL('test-support/electrobun-view.ts', import.meta.url))
-const electronShim = fileURLToPath(new URL('src/main/electron-shim.ts', import.meta.url))
 
 export default defineConfig({
   resolve: {
@@ -17,10 +16,8 @@ export default defineConfig({
       { find: /^electrobun$/, replacement: electrobunStub },
       { find: /^electrobun\/main$/, replacement: electrobunStub },
       { find: /^electrobun\/view$/, replacement: electrobunViewStub },
-      // The real `electron` package cannot be imported here: its postinstall binary
-      // was never downloaded, and the app aliases the specifier to the in-repo shim
-      // for runtime (see electrobun.config.ts). Mirror that for tests.
-      { find: /^electron$/, replacement: electronShim },
+      // No `electron` alias: the shim was deleted and src/main has no runtime `electron`
+      // imports left. A test that suddenly needs one is a real port gap, not a stub target.
     ],
   },
   test: {

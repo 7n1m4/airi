@@ -7,7 +7,7 @@ import analyserWorklet from '@nekopaw/tempora/worklet?url'
 
 import { defineInvoke, defineInvokeHandler } from '@moeru/eventa'
 import { startAnalyser as startTemporaAnalyser } from '@nekopaw/tempora'
-import { setupElectronScreenCapture } from '@proj-airi/electron-screen-capture/renderer'
+import { getViewEventaContext } from '@proj-airi/electrobun-eventa/view'
 
 import { isStageTamagotchi, isStageWeb, StageEnvironment } from '../environment'
 import { isElectronWindow } from '../window'
@@ -161,36 +161,12 @@ export function createBeatSyncDetector(options: CreateBeatSyncDetectorOptions): 
           throw new Error(`Electron window is required for this environment: ${options.env}`)
         }
 
-        // FIXME(Makito): Will refactor later
-        const { createContext } = await import('@moeru/eventa/adapters/electron/renderer')
-        const { selectWithSource } = setupElectronScreenCapture(createContext(window.electron.ipcRenderer).context)
-
-        const stream = await selectWithSource(
-          (sources) => {
-            if (sources.length === 0)
-              throw new Error('No screen source available')
-            return sources[0].id
-          },
-          async () => await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-            audio: true,
-          }),
-          { sourcesOptions: { types: ['screen'] } },
-        )
-
-        const videoTracks = stream.getVideoTracks()
-
-        videoTracks.forEach((track) => {
-          track.stop()
-          stream.removeTrack(track)
-        })
-
-        const node = ctx.createMediaStreamSource(stream)
-        stopSource = () => {
-          stream.getTracks().forEach(track => track.stop())
-        }
-
-        return node
+        // NOTICE (electrobun port): `desktopCapturer.getSources` and the
+        // `setDisplayMediaRequestHandler` that feeds `getDisplayMedia` have no Electrobun
+        // equivalent (design doc §1.2 / §3.1). The old Electron-adapter context over
+        // `window.electron.ipcRenderer` is gone with the bridge; fail loudly instead of
+        // returning an empty source list.
+        throw new Error('[electrobun-port] beat-sync desktop screen capture: desktopCapturer.getSources has no Electrobun equivalent')
       }
       default:
         throw new Error('Failed to start screen capture: Unsupported environment')
@@ -257,18 +233,18 @@ function getContext() {
   return context
 }
 
-let electronMainContext: EventContext<any, any> | undefined
 async function ensureElectronBeatSyncWindow() {
   if (!isStageTamagotchi())
     return
   if (typeof window === 'undefined' || !isElectronWindow(window))
     return
 
-  if (!electronMainContext) {
-    const { createContext } = await import('@moeru/eventa/adapters/electron/renderer')
-    electronMainContext = createContext(window.electron.ipcRenderer).context
-  }
-  await defineInvoke(electronMainContext, electronEnsureBeatSync)()
+  // The renderer entry installs this context before the app graph; the Electron-adapter
+  // context over `window.electron.ipcRenderer` is gone with the bridge.
+  const context = getViewEventaContext()
+  if (!context)
+    throw new Error('[electrobun-port] beat-sync: view eventa context is not installed')
+  await defineInvoke(context, electronEnsureBeatSync)()
 }
 
 export async function toggleBeatSync(enabled: boolean) {

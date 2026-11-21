@@ -4,7 +4,7 @@ import type { Tool } from '@xsai/shared-chat'
 import z from 'zod'
 
 import { defineInvoke } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/renderer'
+import { getElectronEventaContext } from '@proj-airi/electron-vueuse'
 import {
   resolveArtistryConfigFromStore,
   stageArtistryIntrusion,
@@ -16,7 +16,7 @@ import {
 import { tool } from '@xsai/tool'
 
 import { artistryGenerateHeadless, widgetsAdd } from '../../../../shared/eventa'
-import { getIpcRenderer } from '../../../utils/electron'
+import { notImplemented } from '../../../utils/port-error'
 
 export function getArtistryConfig(): ResolvedArtistryConfig {
   try {
@@ -27,9 +27,12 @@ export function getArtistryConfig(): ResolvedArtistryConfig {
   }
 }
 
-const { context } = createContext(getIpcRenderer())
-const generateHeadless = defineInvoke(context, artistryGenerateHeadless)
-const addWidget = defineInvoke(context, widgetsAdd)
+// The renderer entry installs this shared context before the app graph evaluates;
+// see `view-context.ts`. Keep the lookups lazy-safe: the tool module is imported by
+// unit tests that do not install a view, so a missing context fails loudly on use.
+const context = getElectronEventaContext()
+const generateHeadless = context ? defineInvoke(context, artistryGenerateHeadless) : undefined
+const addWidget = context ? defineInvoke(context, widgetsAdd) : undefined
 
 export const imageJournalParams = z.object({
   action: z.enum(['create', 'apply']).nullish().describe('Choose "create" to generate a new image, or "apply" to use an existing one. Defaults to "create".'),
@@ -107,6 +110,9 @@ export async function executeCreateImageJournalEntry(params: {
     const spawnMode = activeCard?.extensions?.airi?.artistry?.spawnMode
     const mode = params.mode || spawnMode || 'inline'
 
+    if (!generateHeadless)
+      notImplemented('renderer:artistryGenerateHeadless invoke')
+
     const artistryResult = await generateHeadless({
       prompt: artistryConfig.promptPrefix ? `${artistryConfig.promptPrefix} ${prompt}` : prompt,
       model: artistryConfig.model as string,
@@ -154,6 +160,8 @@ export async function executeCreateImageJournalEntry(params: {
 
     if (mode === 'widget' || mode === 'bg_widget') {
       try {
+        if (!addWidget)
+          notImplemented('renderer:widgetsAdd invoke')
         await addWidget({
           componentName: 'artistry',
           componentProps: {

@@ -47,16 +47,13 @@ export default {
       // Workspace packages whose package.json `main` points at a dist bundle need an explicit
       // alias; everything else resolves through pnpm.
       //
-      // `electron` → the in-repo shim is the load-bearing one: src/main still has ~40 modules
-      // written against Electron's `app`/`ipcMain`/`screen`… (wave 3/4 ports them). Aliasing the
-      // specifier to src/main/electron-shim.ts keeps the graph loadable and gives every unmapped
-      // call an explicit `not-implemented` error. Bun's `paths` alone is not enough — the root
-      // node_modules/electron symlink (another workspace's dep) wins resolution, so the alias must
-      // be here, and `electron` must NOT be in `external` (that makes Bun emit a real require).
+      // NOTICE: the old `electron` → src/main/electron-shim.ts alias is gone. src/main no longer
+      // imports the Electron runtime at all (the remaining `from 'electron'` lines are `import
+      // type`, erased by Bun), and the main event bus lives in src/main/eventa-bus.ts. Do NOT
+      // reintroduce the alias: it would hide a real missing port behind a fake module.
       alias: {
         '@proj-airi/i18n-bundle': join(appDir, '../../packages/i18n/src/dist-lite/messages.mjs'),
         '@proj-airi/server-runtime': join(appDir, '../../packages/server-runtime/src'),
-        'electron': join(appDir, 'src/main/electron-shim.ts'),
         // NOTICE: Bun's bundler applies the `node` export condition, so `h3` resolves to
         // h3/dist/_entries/node.mjs, whose `serve` is srvx's Node adapter (a node:http
         // server). crossws, resolving independently, still picks its Bun adapter — so the Bun

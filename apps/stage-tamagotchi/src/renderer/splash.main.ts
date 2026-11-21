@@ -1,7 +1,12 @@
+/* eslint-disable perfectionist/sort-imports -- view-context must evaluate before the rest of the splash module graph; the sorter would move this side-effect import last. */
 import type { StartupMilestoneId, StartupSnapshot } from '../shared/eventa'
 
+// Must be the first side-effect import: install the Electrobun view context and the
+// electron-vueuse provider before any app code reads them. No `window.electron` shim.
+import './view-context'
+
 import { defineInvoke } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/renderer'
+import { getViewEventaContext } from '@proj-airi/electrobun-eventa/view'
 import { version } from '~build/package'
 
 import {
@@ -11,8 +16,7 @@ import {
   electronSplashStateChanged,
   electronStageRelease,
 } from '../shared/eventa'
-
-import './install-bridge'
+/* eslint-enable perfectionist/sort-imports */
 
 // NOTICE: Milestone labels and hints tailored for the warm companion experience.
 // Kept self-contained so the splash paints instantly (<10ms) without waiting
@@ -211,10 +215,8 @@ btnCloseWindow?.addEventListener('click', () => {
   window.close()
 })
 
-// IPC & Eventa context
-const ipcRenderer = window.electron?.ipcRenderer
-const eventaAdapter = ipcRenderer ? createContext(ipcRenderer) : undefined
-const context = eventaAdapter?.context
+// IPC & Eventa context — the Electrobun view context installed by view-context.
+const context = getViewEventaContext()
 
 const getSnapshot = context ? defineInvoke(context, electronSplashGetSnapshot) : undefined
 const dismissSplash = context ? defineInvoke(context, electronSplashDismiss) : undefined
