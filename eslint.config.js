@@ -38,6 +38,13 @@ export default defineConfig({
     // re-emits its own formatting on every change, so any diagnostic here is
     // noise; the drift check (`pnpm run check:wire-types`) owns correctness.
     'packages/server-shared/src/types/generated/**',
+    // NOTICE: Flutter-generated caches (`flutter pub get` / `flutter test`). The
+    // JSON in them is machine-written and regenerated on every run, so every
+    // diagnostic is noise the generator will simply re-emit. Gitignored via the
+    // scoped apps/flutter/.gitignore; ESLint needs its own entry because flat
+    // config does not read .gitignore.
+    'apps/flutter/.dart_tool/**',
+    'apps/flutter/build/**',
     'apps/stage-tamagotchi/out/**',
     'apps/stage-tamagotchi/src/bindings/**',
     'apps/stage-tamagotchi/src-tauri/**',
