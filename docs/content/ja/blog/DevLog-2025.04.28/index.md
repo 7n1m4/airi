@@ -12,25 +12,25 @@ import airiMcpArch from '../../../en/blog/DevLog-2025.04.28/assets/airi-mcp-arch
 
 ## 日中の日常
 
-1週間前、私は AIRI のために携帯電話に接続するための MCP サーバー [AIRI-android](https://github.com/LemonNekoGH/AIRI-android) を書きましたが、これは AIRI が Android 携帯を操作するための前半部分にすぎません。AIRI はさらに MCP サーバーと対話できる必要があります。
+1週間前、私は Anima のために携帯電話に接続するための MCP サーバー [AIRI-android](https://github.com/LemonNekoGH/AIRI-android) を書きましたが、これは Anima が Android 携帯を操作するための前半部分にすぎません。Anima はさらに MCP サーバーと対話できる必要があります。
 
-この2日間で後半部分を完成させ、Tauri 用のプラグイン [#144](https://github.com/moeru-ai/AIRI/pull/144) を書きました。これで AIRI は MCP サーバーと対話できるようになり、既存のすべての MCP サーバーと対話できるようになりました。
+この2日間で後半部分を完成させ、Tauri 用のプラグイン [#144](https://github.com/moeru-ai/Anima/pull/144) を書きました。これで Anima は MCP サーバーと対話できるようになり、既存のすべての MCP サーバーと対話できるようになりました。
 
-興味があれば、これら2つのビデオをご覧ください。最初に AIRI の MCP サーバー設定をデモし、次に AIRI が Android 携帯と対話する様子をデモしています。
+興味があれば、これら2つのビデオをご覧ください。最初に Anima の MCP サーバー設定をデモし、次に Anima が Android 携帯と対話する様子をデモしています。
 
 <details>
-  <summary>AIRI の MCP サーバー設定</summary>
+  <summary>Anima の MCP サーバー設定</summary>
   <ThemedVideo controls muted src="/en/blog/DevLog-2025.04.28/assets/airi-mcp-settings.mp4" style="height: 640px;" />
 </details>
 
 <details>
-  <summary>AIRI が携帯電話で `Hello World` を入力</summary>
+  <summary>Anima が携帯電話で `Hello World` を入力</summary>
   <ThemedVideo controls muted src="/en/blog/DevLog-2025.04.28/assets/airi-mcp-input-text.mp4" />
 </details>
 
 開発中、考えを整理するために、LLM から Android 携帯を呼び出す図を描きました：
 
-<img :src="airiMcpArch" alt="AIRI 操作手机" :style="{ height: '640px', objectFit: 'contain' }" />
+<img :src="airiMcpArch" alt="Anima 操作手机" :style="{ height: '640px', objectFit: 'contain' }" />
 
 次に、私の開発プロセスを共有します。
 
@@ -170,18 +170,18 @@ invoke('call_tool', { name: 'input_swipe', args: { x1: 100, y1: 100, x2: 200, y2
 
 ## いくつかの問題
 
-1. デモビデオからわかるように、会話の中で、まず AIRI にツールリストを取得させ、次にテキストを入力させました。では、初期化時にツールリストを取得し、システムプロンプトに直接追加することはできないでしょうか？
+1. デモビデオからわかるように、会話の中で、まず Anima にツールリストを取得させ、次にテキストを入力させました。では、初期化時にツールリストを取得し、システムプロンプトに直接追加することはできないでしょうか？
    - Cursor はそうしています。MCP サーバーを開発しているとき、ツールリストを変更するたびに、有効にするには Cursor を再起動する必要があります。
    - これを行うと柔軟性が犠牲になるかもしれませんが、一般ユーザーは頻繁にツールリストを変更するでしょうか？
 
-2. AIRI が同時に複数の携帯電話に接続することを許可すべきでしょうか？AIRI は複数の携帯電話を使いたがるでしょうか？~~彼女はそれを使って通信詐欺をしたりしないでしょうか？~~
-3. 現在の AIRI リポジトリにはすでに Tauri アプリと Tauri プラグインがあることがわかります。どのように管理するのが良いでしょうか？CI はどのように設定すべきでしょうか？Tauri プラグインの Rust 側と JavaScript 側のバージョン番号をどのように同期させるべきでしょうか？
+2. Anima が同時に複数の携帯電話に接続することを許可すべきでしょうか？Anima は複数の携帯電話を使いたがるでしょうか？~~彼女はそれを使って通信詐欺をしたりしないでしょうか？~~
+3. 現在の Anima リポジトリにはすでに Tauri アプリと Tauri プラグインがあることがわかります。どのように管理するのが良いでしょうか？CI はどのように設定すべきでしょうか？Tauri プラグインの Rust 側と JavaScript 側のバージョン番号をどのように同期させるべきでしょうか？
 
 ## 将来やりたいこと
 
-- 画像の戻り値をサポートする。そうすれば AIRI は [前回の DevLog](./DevLog-2025.04.22.md) で示した Cursor のように、視覚能力を通じて携帯電話の内容を直接見て、どのように対話するかを決定できます。
-- AIRI にデバイスの使用方法を自己学習させる？デバイスごとに個別にプロンプトを書く必要がある場合、作業量は膨大になります。
-- マルチ MCP サーバーサポート。結局のところ、MCP は汎用インターフェースを提供しており、AIRI がさまざまなことを行えるようにします。AIRI は携帯電話の操作だけでは満足しないでしょう。
-- SSE サポート。これにより、ブラウザ内の AIRI も MCP サーバーを使用できるようになります。
+- 画像の戻り値をサポートする。そうすれば Anima は [前回の DevLog](./DevLog-2025.04.22.md) で示した Cursor のように、視覚能力を通じて携帯電話の内容を直接見て、どのように対話するかを決定できます。
+- Anima にデバイスの使用方法を自己学習させる？デバイスごとに個別にプロンプトを書く必要がある場合、作業量は膨大になります。
+- マルチ MCP サーバーサポート。結局のところ、MCP は汎用インターフェースを提供しており、Anima がさまざまなことを行えるようにします。Anima は携帯電話の操作だけでは満足しないでしょう。
+- SSE サポート。これにより、ブラウザ内の Anima も MCP サーバーを使用できるようになります。
 
 これで終わりです！この DevLog がそれほど退屈でなかったことを願っています！今後ももっと面白いコンテンツをお届けしたいと思います！

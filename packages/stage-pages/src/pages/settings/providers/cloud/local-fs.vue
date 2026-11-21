@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
-import { FieldInput } from '@proj-airi/ui'
+import { useSyncEngineStore } from '@proj-anima/stage-ui/stores/sync-engine'
+import { FieldInput } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
 

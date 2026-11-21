@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import type { ChatHistoryItem } from '@proj-airi/stage-ui/types/chat'
+import type { ChatHistoryItem } from '@proj-anima/stage-ui/types/chat'
 
-import { estimateTokens, formatTokenCount } from '@proj-airi/stage-shared'
+import { estimateTokens, formatTokenCount } from '@proj-anima/stage-shared'
 import {
   CharacterContextDialog,
   ChatImagesPopover,
   ChatMemoryPopover,
   ChatSessionModal,
   StageBackgroundDialogPicker,
-} from '@proj-airi/stage-ui/components'
-import { useChatComposer } from '@proj-airi/stage-ui/composables'
-import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
-import { buildSystemPrompt, useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useSettings, useSettingsAudioDevice, useSettingsChat } from '@proj-airi/stage-ui/stores/settings'
-import { BasicContentEditable } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/components'
+import { useChatComposer } from '@proj-anima/stage-ui/composables'
+import { useChatSessionStore } from '@proj-anima/stage-ui/stores/chat/session-store'
+import { buildSystemPrompt, useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useConsciousnessStore } from '@proj-anima/stage-ui/stores/modules/consciousness'
+import { useSettings, useSettingsAudioDevice, useSettingsChat } from '@proj-anima/stage-ui/stores/settings'
+import { BasicContentEditable } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { computed, ref, useTemplateRef } from 'vue'

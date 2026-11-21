@@ -3,7 +3,7 @@ import {
   toPCM16FromFloat32,
   toWav,
   toWavFromPCM16,
-} from '@proj-airi/audio/encoding'
+} from '@proj-anima/audio/encoding'
 import { describe, expect, it } from 'vitest'
 
 describe('wav and pcm encoding', () => {

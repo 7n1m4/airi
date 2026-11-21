@@ -1,6 +1,6 @@
-import type { Pose } from '@proj-airi/model-driver-magic-live2d'
+import type { Pose } from '@proj-anima/model-driver-magic-live2d'
 
-import { neutralPose } from '@proj-airi/model-driver-magic-live2d'
+import { neutralPose } from '@proj-anima/model-driver-magic-live2d'
 import { useBroadcastChannel } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { nextTick, shallowRef, watch } from 'vue'

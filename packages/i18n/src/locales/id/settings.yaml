@@ -10,8 +10,8 @@ animations:
 dialogs:
   onboarding:
     official:
-      title: Penyedia Resmi AIRI
-    title: Selamat Datang di AIRI!
+      title: Penyedia Resmi Anima
+    title: Selamat Datang di Anima!
     description: Mari siapkan penyedia AI pertama Anda untuk memulai.
     selectProvider: Pilih Penyedia AI
     configureProvider: Konfigurasikan {provider}
@@ -34,18 +34,18 @@ dialogs:
     next: Selanjutnya
     retry: Coba Lagi
     credentialsSafeLabel: Jaga keamanan kunci API dan kredensial Anda!
-    credentialsSafeLocal: AIRI berjalan sepenuhnya secara lokal di komputer Anda,
+    credentialsSafeLocal: Anima berjalan sepenuhnya secara lokal di komputer Anda,
       dan kami tidak akan pernah mencuri kredensial Anda untuk penyedia AI /
       LLM. Namun perlu diingat bahwa kunci API adalah informasi sensitif.
       Pastikan untuk menjaganya tetap aman dan jangan membagikannya kepada siapa
       pun.
-    credentialsSafeOpenSource: AIRI adalah proyek sumber terbuka di {github}, jika
+    credentialsSafeOpenSource: Anima adalah proyek sumber terbuka di {github}, jika
       Anda ingin memeriksa bagaimana kami mengelola kredensial Anda, silakan
       periksa kode kami.
-    enableChatCheck: Izinkan AIRI mengirim pesan "ping" ke model obrolan pertama
+    enableChatCheck: Izinkan Anima mengirim pesan "ping" ke model obrolan pertama
       yang tersedia untuk memeriksa ketersediaan
     start: Ayo Mulai!
-    loginPrompt: Masuk untuk menggunakan penyedia resmi AIRI demi pengalaman terbaik.
+    loginPrompt: Masuk untuk menggunakan penyedia resmi Anima demi pengalaman terbaik.
     loginAction: Masuk
     setupWithoutSigningIn: Siapkan dengan penyedia Anda sendiri
     flux: Flux
@@ -61,7 +61,7 @@ dialogs:
       notificationsTitle: Notifikasi
       notificationsDescription: Izinkan pengingat dan pembaruan status penting.
       microphoneTitle: Mikrofon
-      microphoneDescription: Izinkan AIRI menggunakan mikrofon Anda untuk masukan
+      microphoneDescription: Izinkan Anima menggunakan mikrofon Anda untuk masukan
         suara dan transkripsi.
       requestAction: Minta izin akses
       optionalHint: Anda dapat melanjutkan meskipun izin ini tidak diberikan.
@@ -101,7 +101,7 @@ controls-island:
 analytics:
   notice:
     title: Analitik penggunaan
-    description: AIRI mengumpulkan analitik penggunaan anonim untuk membantu kami
+    description: Anima mengumpulkan analitik penggunaan anonim untuk membantu kami
       memahami bagaimana aplikasi digunakan dan meningkatkan stabilitas. Tidak
       ada data pribadi yang dikumpulkan.
     privacyPrefix: Baca
@@ -184,14 +184,14 @@ live2d:
   theme-color-from-model:
     title: Ekstrak warna dari model
     description: |
-      Ekstrak warna dominan dari kanvas rendering saat ini. Klik pada warna untuk menerapkannya ke AIRI. Coba ekstrak beberapa kali dengan pose model yang berbeda jika warnanya belum sesuai keinginan.
+      Ekstrak warna dominan dari kanvas rendering saat ini. Klik pada warna untuk menerapkannya ke Anima. Coba ekstrak beberapa kali dengan pose model yang berbeda jika warnanya belum sesuai keinginan.
     button-extract:
       title: Ekstrak
   animation:
     title: Animasi
     motion-driver:
       title: Penggerak gerakan
-      description: Pilih bagaimana AIRI menghasilkan gerakan diam tubuh dan mata.
+      description: Pilih bagaimana Anima menghasilkan gerakan diam tubuh dan mata.
       options:
         universal:
           title: Universal
@@ -237,7 +237,7 @@ live2d:
       description: Paksa animasi berkedip menggunakan pengatur waktu eksternal
     blink-mode:
       title: Mode kedipan
-      description: Pilih kedipan bawaan model atau pengatur waktu kedipan paksa AIRI.
+      description: Pilih kedipan bawaan model atau pengatur waktu kedipan paksa Anima.
     idle-motion:
       title: Animasi diam (idle)
       no-motion: Tidak ada animasi yang tersedia
@@ -301,7 +301,7 @@ pages:
     connections:
       tab: Akun terhubung
       title: Akun terhubung
-      description: Masuk ke AIRI melalui penyedia ini. Putuskan tautan untuk mencabut
+      description: Masuk ke Anima melalui penyedia ini. Putuskan tautan untuk mencabut
         akses, lalu tautkan kembali untuk beralih ke akun lain.
       status:
         linked: Terhubung
@@ -319,9 +319,9 @@ pages:
         listFailed: Tidak dapat memuat akun yang terhubung.
         unlinkFailed: Tidak dapat memutuskan akun ini.
         linkFailed: Tidak dapat memulai alur penautan.
-        accountAlreadyLinkedToDifferentUser: Akun OAuth ini sudah terhubung ke akun AIRI
+        accountAlreadyLinkedToDifferentUser: Akun OAuth ini sudah terhubung ke akun Anima
           lain. Pilih akun penyedia yang berbeda, atau putuskan tautannya dari
-          akun AIRI lain terlebih dahulu.
+          akun Anima lain terlebih dahulu.
         oauthCallbackFailed: Kami tidak dapat menghubungkan akun OAuth ini. Coba lagi
           atau pilih akun penyedia lain.
         lastAccount: Ini adalah satu-satunya metode masuk Anda. Buat kata sandi terlebih
@@ -397,7 +397,7 @@ pages:
     delete: Hapus
     delete_card: Hapus Kartu
     delete_confirmation: Apakah Anda yakin ingin menghapus kartu ini?
-    description: Gunakan preset kartu karakter AIRI
+    description: Gunakan preset kartu karakter Anima
     description_label: Deskripsi
     drop_here: Lepaskan untuk mengunggah
     create_card: Buat Kartu baru
@@ -479,7 +479,7 @@ pages:
       model: Suara / Model
       voice: Suara / Pengisi Suara
     systemprompt: Prompt Sistem
-    title: Kartu AIRI
+    title: Kartu Anima
     try_different_search: Coba istilah pencarian yang berbeda
     export: Ekspor
     exported: Paket kartu berhasil diekspor
@@ -488,13 +488,13 @@ pages:
     import_missing_file: Paket kartu kehilangan berkas yang diperlukan
     import_invalid_file: Berkas paket kartu tidak valid
     upload: Unggah
-    upload_desc: Klik atau seret paket kartu AIRI untuk mengimpor
+    upload_desc: Klik atau seret paket kartu Anima untuk mengimpor
   memory:
     description: Tempat memori disimpan dan diatur
     title: Memori
   data:
     title: Data
-    description: Kelola data AIRI yang tersimpan, ekspor, dan atur ulang
+    description: Kelola data Anima yang tersimpan, ekspor, dan atur ulang
     sections:
       chats:
         title: Sesi obrolan
@@ -524,11 +524,11 @@ pages:
         delete: Hapus semua data
       desktop-folder:
         title: Buka folder data aplikasi
-        description: Buka folder data AIRI di pengelola berkas Anda.
+        description: Buka folder data Anima di pengelola berkas Anda.
         open: Buka folder
       desktop:
         title: Atur ulang pengaturan & status desktop
-        description: Bersihkan pengaturan desktop AIRI dan status runtime.
+        description: Bersihkan pengaturan desktop Anima dan status runtime.
         center: Pindahkan jendela desktop ke tengah layar
         reset: Atur ulang data desktop
     confirmations:
@@ -625,7 +625,7 @@ pages:
           name: Nano Banana (Pratinjau)
           description: Gunakan Google AI Studio untuk pratinjau gambar dan reaksi.
       card:
-        description: Konfigurasikan bagaimana AIRI menghasilkan gambar dan konten visual.
+        description: Konfigurasikan bagaimana Anima menghasilkan gambar dan konten visual.
         comfyui_empty: Belum ada alur kerja ComfyUI yang dikonfigurasikan. Buka
           Pengaturan > Modul > Artistry untuk mengonfigurasinya.
         exposed_fields: '{count} exposed fields'
@@ -706,7 +706,7 @@ pages:
       description: Bermain Factorio!
       title: Factorio
       enable: Aktifkan Integrasi Factorio
-      enable-description: Izinkan AIRI berinteraksi dengan permainan Factorio
+      enable-description: Izinkan Anima berinteraksi dengan permainan Factorio
       server-address: Alamat Server
       server-address-description: Alamat IP atau hostname server Factorio
       server-address-placeholder: Masukkan alamat server (misalnya localhost atau 192.168.1.100)
@@ -794,7 +794,7 @@ pages:
       description: Mengobrol & obrolan suara lewat Discord
       title: Discord
       enable: Aktifkan Integrasi Discord
-      enable-description: Izinkan AIRI berinteraksi melalui Discord
+      enable-description: Izinkan Anima berinteraksi melalui Discord
       token: Token Bot
       token-description: Token bot Discord Anda
       token-placeholder: Masukkan token bot Discord Anda
@@ -854,7 +854,7 @@ pages:
       description: Penjelajahan dan penggunaan X / Twitter
       title: X / Twitter
       enable: Aktifkan Integrasi X / Twitter
-      enable-description: Izinkan AIRI berinteraksi dengan X / Twitter
+      enable-description: Izinkan Anima berinteraksi dengan X / Twitter
       api-key: Kunci API
       api-key-description: Kunci API X / Twitter Anda
       api-key-placeholder: Masukkan kunci API X / Twitter Anda
@@ -870,9 +870,9 @@ pages:
       configured: X / Twitter telah dikonfigurasi dengan benar!
     web-search:
       title: Pencarian Web
-      description: Izinkan AIRI mencari web untuk informasi terkini
+      description: Izinkan Anima mencari web untuk informasi terkini
       enable: Aktifkan Pencarian Web
-      enable-description: Izinkan AIRI menelusuri web selama obrolan
+      enable-description: Izinkan Anima menelusuri web selama obrolan
       api-key: Kunci API Tavily
       api-key-description: Pencarian web didukung oleh Tavily. Dapatkan kunci API
         gratis di tavily.com.
@@ -880,7 +880,7 @@ pages:
       configured: Pencarian web telah dikonfigurasi dengan benar!
     mcp-server:
       title: Server MCP
-      description: Konfigurasikan server MCP dan bawa peralatannya ke dalam AIRI.
+      description: Konfigurasikan server MCP dan bawa peralatannya ke dalam Anima.
       config-path: Berkas konfigurasi
       runtime-title: Status waktu proses
       empty: Belum ada server MCP — klik "Tambah server" di bawah untuk membuatnya,
@@ -1170,7 +1170,7 @@ pages:
     helpinfo:
       title: Pertama kali di sini?
       description: |
-        AIRI memerlukan setidaknya satu penyedia {chat} yang dikonfigurasi untuk berpikir dan berperilaku semestinya. Anda dapat menganggapnya sebagai otak dari karakter yang hidup di dalam sistem AIRI.
+        Anima memerlukan setidaknya satu penyedia {chat} yang dikonfigurasi untuk berpikir dan berperilaku semestinya. Anda dapat menganggapnya sebagai otak dari karakter yang hidup di dalam sistem Anima.
     explained:
       chat: 'Penyedia model pembuatan teks. Contoh: OpenRouter, OpenAI, Ollama.'
       Speech: 'Penyedia model sintesis suara (text-to-speech). Contoh: ElevenLabs,
@@ -1309,7 +1309,7 @@ pages:
           cors:
             title: CORS Block Detected
             description: ComfyUI blocks requests from other applications by default. To
-              allow AIRI to connect, you must start ComfyUI with the
+              allow Anima to connect, you must start ComfyUI with the
               `--enable-cors-header "*"` flag.
             command: python main.py --enable-cors-header "*"
           workflows:
@@ -1323,7 +1323,7 @@ pages:
             remove: Remove
             config_snippet: Artistry Config Snippet
             copy_json: Copy JSON
-            paste_hint: Paste this into your AIRI Card artistry config to override these
+            paste_hint: Paste this into your Anima Card artistry config to override these
               nodes.
           upload:
             prompt: Drop or select a workflow_api.json file
@@ -1598,14 +1598,14 @@ pages:
         title: Prompt API
       official:
         title: Penyedia Resmi
-        description: Penyedia AI resmi oleh AIRI.
+        description: Penyedia AI resmi oleh Anima.
         speech-title: Penyedia Suara Resmi
-        speech-description: Penyedia sintesis suara (text-to-speech) resmi oleh AIRI.
+        speech-description: Penyedia sintesis suara (text-to-speech) resmi oleh Anima.
         speech-streaming-title: Official Streaming Speech Provider
         speech-streaming-description: Official low-latency text-to-speech provider by
-          AIRI (bidirectional WebSocket).
+          Anima (bidirectional WebSocket).
         transcription-title: Penyedia Transkripsi Resmi
-        transcription-description: Penyedia transkripsi (speech-to-text) resmi oleh AIRI.
+        transcription-description: Penyedia transkripsi (speech-to-text) resmi oleh Anima.
       transcriptions:
         playground:
           title: Area Uji Transkripsi
@@ -1626,14 +1626,14 @@ pages:
     server-auth-token:
       label: Token Pemasangan (Pairing)
       description: Perangkat lain menggunakan token ini untuk memasangkan dengan
-        server ini. AIRI menghasilkan token saat bidang ini kosong.
+        server ini. Anima menghasilkan token saat bidang ini kosong.
       placeholder: Buat otomatis
     qr:
       title: Pemasangan (Pairing)
       description: Pindai kode QR ini dengan aplikasi seluler. Aplikasi mencoba setiap
         alamat lokal dan menyimpan alamat pertama yang berfungsi.
       refresh: Segarkan
-      image-alt: Kode QR pemasangan AIRI
+      image-alt: Kode QR pemasangan Anima
       candidates: Kandidat alamat
       token-hint: Kode QR mencakup token pemasangan. Jangan bagikan kode QR secara publik.
       errors:
@@ -1642,7 +1642,7 @@ pages:
     qr-scan:
       title: Koneksi Cepat
       description: Pindai kode QR dari Tamagotchi untuk koneksi cepat
-      instructions: Arahkan kamera ke kode QR koneksi AIRI.
+      instructions: Arahkan kamera ke kode QR koneksi Anima.
       action: Pindai
       success:
         title: Alamat terhubung disimpan
@@ -1754,8 +1754,8 @@ pages:
           presets:
             default:
               colors:
-                color-1: Hijau AIRI
-              description: Warna tema kehijauan default dari AIRI untuk Anda!
+                color-1: Hijau Anima
+              description: Warna tema kehijauan default dari Anima untuk Anda!
               title: Warna Default
             morandi:
               colors:

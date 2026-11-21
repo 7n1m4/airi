@@ -3,7 +3,7 @@ import type { Ref, ShallowRef } from 'vue'
 
 import type { BackgroundOption } from './types'
 
-import { BasicInputFile } from '@proj-airi/ui'
+import { BasicInputFile } from '@proj-anima/ui'
 import { useObjectUrl } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { storeToRefs } from 'pinia'

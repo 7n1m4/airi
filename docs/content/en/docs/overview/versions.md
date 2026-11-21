@@ -1,6 +1,6 @@
 ---
 title: Versions
-description: Different versions of AIRI and how to get them
+description: Different versions of Anima and how to get them
 ---
 
 <script setup>
@@ -8,7 +8,7 @@ import ReleaseDownloads from '../../../../.vitepress/components/ReleaseDownloads
 import ReleasesList from '../../../../.vitepress/components/ReleasesList.vue'
 </script>
 
-AIRI offers multiple release channels to suit different needs. Whether you want the most stable experience or the latest features, we've got you covered.
+Anima offers multiple release channels to suit different needs. Whether you want the most stable experience or the latest features, we've got you covered.
 
 ## Stable Releases & Pre-releases
 

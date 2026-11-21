@@ -1,7 +1,7 @@
 import type { HackerAdapter, HackerMaterialControl, HackerPart, HackerTexture, HackerTextureId } from '../types'
 import type { VrmHiddenPrimitive } from '../vrm/glb-exporter'
 
-import { useModelStore } from '@proj-airi/stage-ui-three'
+import { useModelStore } from '@proj-anima/stage-ui-three'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 

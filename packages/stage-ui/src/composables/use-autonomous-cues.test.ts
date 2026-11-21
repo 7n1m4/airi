@@ -1,4 +1,4 @@
-import type { Card } from '@proj-airi/ccc'
+import type { Card } from '@proj-anima/ccc'
 
 import type { ModelCapabilityItem } from '../libs/character/model-capabilities'
 import type { CharacterCueAllowlist } from '../types/card.schema'

@@ -1,8 +1,8 @@
-import type { PrimaryDisplaySize, ScreenCaptureOptions, VisionDisplaySource, VisionWindowSource } from '@proj-airi/stage-shared'
+import type { PrimaryDisplaySize, ScreenCaptureOptions, VisionDisplaySource, VisionWindowSource } from '@proj-anima/stage-shared'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { isWithinSchedule, visionCaptureScreen, visionCheckPermission, visionGetPrimaryDisplaySize, visionListDisplays, visionListWindows, visionRequestPermission } from '@proj-airi/stage-shared'
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { isWithinSchedule, visionCaptureScreen, visionCheckPermission, visionGetPrimaryDisplaySize, visionListDisplays, visionListWindows, visionRequestPermission } from '@proj-anima/stage-shared'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'

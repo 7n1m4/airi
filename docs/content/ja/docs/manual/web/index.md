@@ -1,6 +1,6 @@
 ---
 title: Web 版のガイド
-description: Project AIRI の Web 版の使い方
+description: Project Anima の Web 版の使い方
 ---
 
 ::: warning 準備中

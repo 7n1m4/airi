@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/speech-transformer-math",
+  "name": "@proj-anima/speech-transformer-math",
   "type": "module",
   "version": "0.12.0-beta.5",
   "private": true,
@@ -33,7 +33,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@proj-airi/mathjson": "workspace:^",
+    "@proj-anima/mathjson": "workspace:^",
     "katex": "catalog:"
   }
 }

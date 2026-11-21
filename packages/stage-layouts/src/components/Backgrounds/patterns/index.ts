@@ -1,4 +1,4 @@
-import type { StageAtmosphere } from '@proj-airi/stage-ui/stores'
+import type { StageAtmosphere } from '@proj-anima/stage-ui/stores'
 import type { Component } from 'vue'
 
 import { markRaw } from 'vue'

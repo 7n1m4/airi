@@ -41,9 +41,9 @@ Phase 4 focuses on activating the multi-instance engine at runtime (`createProvi
 
 ## 2. Verification Status (Step 3)
 
-- `pnpm -F @proj-airi/stage-ui typecheck` $\rightarrow$ **PASS (0 errors)**
-- `pnpm -F @proj-airi/stage-ui test src/stores/providers/ --run` $\rightarrow$ **PASS (26/26 tests green)**
-- `pnpm -F @proj-airi/stage-pages typecheck` $\rightarrow$ **PASS (0 errors)**
+- `pnpm -F @proj-anima/stage-ui typecheck` $\rightarrow$ **PASS (0 errors)**
+- `pnpm -F @proj-anima/stage-ui test src/stores/providers/ --run` $\rightarrow$ **PASS (26/26 tests green)**
+- `pnpm -F @proj-anima/stage-pages typecheck` $\rightarrow$ **PASS (0 errors)**
 
 ---
 
@@ -72,9 +72,9 @@ Phase 4 focuses on activating the multi-instance engine at runtime (`createProvi
 ---
 
 ## 5. Verification Requirements
-- `pnpm -F @proj-airi/stage-ui typecheck` -> **PASS**
-- `pnpm -F @proj-airi/stage-ui test src/stores/providers/ --run` -> **PASS**
-- `pnpm -F @proj-airi/stage-pages typecheck` -> **PASS**
+- `pnpm -F @proj-anima/stage-ui typecheck` -> **PASS**
+- `pnpm -F @proj-anima/stage-ui test src/stores/providers/ --run` -> **PASS**
+- `pnpm -F @proj-anima/stage-pages typecheck` -> **PASS**
 
 ## Relevant Skills
 

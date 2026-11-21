@@ -4,7 +4,7 @@ import type { ComponentPublicInstance } from 'vue'
 
 import type { ChatActionMenuAction } from '.'
 
-import { isStageCapacitor, isStageWeb } from '@proj-airi/stage-shared'
+import { isStageCapacitor, isStageWeb } from '@proj-anima/stage-shared'
 import { useElementVisibility, useIntervalFn } from '@vueuse/core'
 import { createTimeline } from 'animejs'
 import {

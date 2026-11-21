@@ -25,11 +25,11 @@ import DemoDayHangzhou2 from '../../../en/blog/DevLog-2025.05.16/assets/demo-day
 import DemoDayHangzhou3 from '../../../en/blog/DevLog-2025.05.16/assets/demo-day-hangzhou-3.avif'
 </script>
 
-こんにちは！[Project AIRI](https://github.com/moeru-ai/airi) の発起人、[Neko](https://github.com/nekomeowww) です！
+こんにちは！[Project Anima](https://github.com/moeru-ai/airi) の発起人、[Neko](https://github.com/nekomeowww) です！
 
-Project AIRI の DevLog 更新が遅れてしまい申し訳ありません。私たちの遅延をお許しください。
+Project Anima の DevLog 更新が遅れてしまい申し訳ありません。私たちの遅延をお許しください。
 
-> 過去数ヶ月間、私たちは AIRI のために多くの素晴らしい DevLog を書き、開発の進捗状況を共有してきました。その中で、私たちはアイデアや理念を共有し、使用している技術やそこから得た芸術的なインスピレーションなどを説明しました...すべてを。
+> 過去数ヶ月間、私たちは Anima のために多くの素晴らしい DevLog を書き、開発の進捗状況を共有してきました。その中で、私たちはアイデアや理念を共有し、使用している技術やそこから得た芸術的なインスピレーションなどを説明しました...すべてを。
 >
 > - [v0.4.0 UI 更新](./DevLog-2025.03.20.mdx)
 > - [v0.4.0 リリース & 記憶機能紹介](./DevLog-2025.04.06.mdx)
@@ -38,7 +38,7 @@ Project AIRI の DevLog 更新が遅れてしまい申し訳ありません。�
 
 # 既視感
 
-過去数週間、Project AIRI 本体の主要タスクはしばらく進展がありませんでした。おそらく、2025年3月からの大規模な UI リファクタリングとリリースの後で少し疲れていたのかもしれません。大部分の作業はコミュニティのメンテナによって行われました。
+過去数週間、Project Anima 本体の主要タスクはしばらく進展がありませんでした。おそらく、2025年3月からの大規模な UI リファクタリングとリリースの後で少し疲れていたのかもしれません。大部分の作業はコミュニティのメンテナによって行われました。
 
 以下の分野での作業について、[@LemonNekoGH](https://github.com/LemonNekoGH)、[@RainbowBird](https://github.com/luoling8192)、[@LittleSound](https://github.com/LittleSound) に深く感謝します：
 
@@ -78,20 +78,20 @@ Project AIRI の DevLog 更新が遅れてしまい申し訳ありません。�
 > ああ、キャラクターカード展示の大部分の作業は [@LittleSound](https://github.com/LittleSound) によって完成・指導されました。本当にありがとうございます。
 
 - Tauri MCP サポート
-- AIRI を Android デバイスに接続
+- Anima を Android デバイスに接続
 
 これら2つは主要な更新と試みであり、この部分は [@LemonNekoGH](https://github.com/LemonNekoGH) によって行われました。彼女はこれらの内容についてさらに2つの DevLog を書き、舞台裏の技術的な詳細を共有しました。（Tauri 開発者やユーザーにとって非常に価値があると思います。）こちらで読むことができます：
 
 - [Android を制御する](./DevLog-2025.04.22.mdx)
 - [Tauri における MCP](./DevLog-2025.04.28.md)
 
-## Project AIRI 主要タスク
+## Project Anima 主要タスク
 
 ### 耳は聞き、口は話す
 
-4月15日から、AIRI の VAD（音声区間検出）、[ASR（自動音声認識）](https://huggingface.co/tasks/automatic-speech-recognition)、[TTS（テキスト読み上げ）](https://huggingface.co/tasks/text-to-speech) が非常に複雑で、使用や理解が難しいことに気づきました。その頃、私は [@himself65](https://github.com/himself65) と協力して、[Llama Index](https://www.llamaindex.ai/) の新しいプロジェクトのユースケースを改善・テストしていました。これはイベントベースの LLM ストリーミングトークンフローとオーディオバイトを処理するのに役立つライブラリで、[`llama-flow`](https://github.com/run-llama/llama-flow) と呼ばれています。
+4月15日から、Anima の VAD（音声区間検出）、[ASR（自動音声認識）](https://huggingface.co/tasks/automatic-speech-recognition)、[TTS（テキスト読み上げ）](https://huggingface.co/tasks/text-to-speech) が非常に複雑で、使用や理解が難しいことに気づきました。その頃、私は [@himself65](https://github.com/himself65) と協力して、[Llama Index](https://www.llamaindex.ai/) の新しいプロジェクトのユースケースを改善・テストしていました。これはイベントベースの LLM ストリーミングトークンフローとオーディオバイトを処理するのに役立つライブラリで、[`llama-flow`](https://github.com/run-llama/llama-flow) と呼ばれています。
 
-[`llama-flow`](https://github.com/run-llama/llama-flow) は本当に小さく、型安全に使用できます。それがなかった古い時代には、AIRI を駆動するためにデータを処理できるように、別の**キュー**構造と Vue のリアクティブ駆動ワークフローシステムを手動でラップし、多くの非同期タスクをリンクさせる必要がありました。
+[`llama-flow`](https://github.com/run-llama/llama-flow) は本当に小さく、型安全に使用できます。それがなかった古い時代には、Anima を駆動するためにデータを処理できるように、別の**キュー**構造と Vue のリアクティブ駆動ワークフローシステムを手動でラップし、多くの非同期タスクをリンクさせる必要がありました。
 
 その時、VAD、ASR、TTS ワークフローのデモを簡素化するために、より多くの例を実験し始めました。
 
@@ -199,7 +199,7 @@ npm install @velin-dev/core
 
 <img :src="DemoDayHangzhou1" alt="Demo Day @ Hangzhou" />
 
-これは私です。他の参加者と AIRI プロジェクトを共有し、そこで素晴らしい時間を過ごしました！多くの才能ある開発者、プロダクトデザイナー、起業家に会いました。
+これは私です。他の参加者と Anima プロジェクトを共有し、そこで素晴らしい時間を過ごしました！多くの才能ある開発者、プロダクトデザイナー、起業家に会いました。
 
 今日この DevLog で共有したほぼすべての内容と、愛されている AI VTuber Neuro-sama を紹介しました。
 

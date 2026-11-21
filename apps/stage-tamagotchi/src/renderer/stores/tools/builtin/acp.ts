@@ -2,7 +2,7 @@ import type { ElectronAcpRuntimeStatus, ElectronAcpSessionStatus } from '../../.
 
 import z from 'zod'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
 import { tool } from '@xsai/tool'
 
 import {

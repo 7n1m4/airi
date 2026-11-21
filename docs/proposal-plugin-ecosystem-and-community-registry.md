@@ -12,9 +12,9 @@
 
 As Project AIRI has grown across desktop (Electron `apps/stage-tamagotchi`), web (`apps/stage-web`), and mobile (`apps/stage-pocket`), external extensibility has evolved down two distinct historical tracks:
 1. **The In-Process / Drop-In Concept**: Early upstream experiments and PR #2541 (`Telltworose/feat/drop in plugins`) explored dropping arbitrary JavaScript/TypeScript folders into the Electron application directory. This approach stalled due to severe security vulnerabilities (unrestricted Node.js execution in the main process), merge conflicts, and platform incompatibility with web/mobile environments.
-2. **The Out-of-Process / Protocol-Driven Reality**: Our fork spearheaded the adoption of **Model Context Protocol (MCP)** for secure, isolated LLM tool calling via `stdio` subprocesses with card-level ACLs, and established the **WebSocket Channel Gateway** (`@proj-airi/server-sdk` on port `6121`) for external companion processes (such as the VS Code bridge, Claude Code CLI hook, and browser extensions).
+2. **The Out-of-Process / Protocol-Driven Reality**: Our fork spearheaded the adoption of **Model Context Protocol (MCP)** for secure, isolated LLM tool calling via `stdio` subprocesses with card-level ACLs, and established the **WebSocket Channel Gateway** (`@proj-anima/server-sdk` on port `6121`) for external companion processes (such as the VS Code bridge, Claude Code CLI hook, and browser extensions).
 
-Following the cleanup of legacy dormant stubs (`airi-plugin-bilibili-laplace`, `airi-plugin-homeassistant`) and the relocation of external bridges (moving `airi-plugin-claude-code` to `integrations/claude-code/`), this proposal defines the blueprint for **AIRI's Next-Generation Plugin Platform**:
+Following the cleanup of legacy dormant stubs (`airi-plugin-bilibili-laplace`, `airi-plugin-homeassistant`) and the relocation of external bridges (moving `anima-plugin-claude-code` to `integrations/claude-code/`), this proposal defines the blueprint for **AIRI's Next-Generation Plugin Platform**:
 * **Standardized Common Lifecycle Hooks**: A unified hook bus covering prompt assembly, tool execution, sensory events, audio pacing, and visual avatar reactions.
 * **Functional Starter Plugin Blueprints**: Ready-to-build, lightweight plugins that deliver immediate utility (Pomodoro Proctor, Media Announcer, Obsidian Journaler, System Vitals).
 * **Unified Add-ons & Plugins UI**: A dedicated Settings hub integrating runtime monitoring, permission management, and community discovery.
@@ -216,7 +216,7 @@ The source of truth is a version-controlled JSON catalog located in the project 
 ```
 
 ### 6.2 Community Submission Workflow
-1. **Developer Authors Plugin**: The author creates an open-source repository implementing either an MCP server, a Gateway Companion (`@proj-airi/server-sdk`), or a lifecycle hook.
+1. **Developer Authors Plugin**: The author creates an open-source repository implementing either an MCP server, a Gateway Companion (`@proj-anima/server-sdk`), or a lifecycle hook.
 2. **Submit PR**: The author submits a Pull Request adding their plugin descriptor to `catalog/community-plugins.json`.
 3. **Automated CI Verification**:
    - Validates JSON against the Valibot schema.
@@ -262,7 +262,7 @@ flowchart TD
 
 * **Phase 1: Cleanup & Staging (Completed)**:
   - Removed dormant stubs (`airi-plugin-bilibili-laplace`, `airi-plugin-homeassistant`).
-  - Relocated developer tools (`integrations/claude-code/airi-plugin-claude-code`).
+  - Relocated developer tools (`integrations/claude-code/anima-plugin-claude-code`).
   - Validated clean monorepo build and pnpm workspace resolution.
 * **Phase 2: Community Catalog & Discover UI**:
   - Implement `catalog/community-plugins.json` and client-side fetcher composable `useCommunityPlugins()`.

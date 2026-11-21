@@ -5,7 +5,7 @@ description: Detailed configuration of AI intelligence, speech synthesis, hearin
 
 # Intelligence & Modules
 
-This section covers the specialized components that give AIRI its intelligence and functionality.
+This section covers the specialized components that give Anima its intelligence and functionality.
 
 ## Modules
 
@@ -30,4 +30,4 @@ The **Providers** are the underlying services that power the Modules.
 - **Manage Providers**: Add and configure external services like OpenAI, Anthropic, Google Gemini, Ollama, and more.
 - **Health Checks**: Check connectivity and model availability for each provider directly from the dashboard.
 - **API Keys**: Securely store and manage your credentials for each service.
-- **Gateway**: Configuration for the local AIRI proxy used to interact with these providers.
+- **Gateway**: Configuration for the local Anima proxy used to interact with these providers.

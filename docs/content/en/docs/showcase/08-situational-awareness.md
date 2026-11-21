@@ -10,7 +10,7 @@ The **Situational Awareness & Pacing** engine grants characters continuous perip
 
 ![Situational Awareness Telemetry](/showcase/hero-08-situational-awareness.avif)
 
-AIRI gathers environmental telemetry without compromising user privacy:
+Anima gathers environmental telemetry without compromising user privacy:
 - **Active Window Telemetry**: Tracks active application titles (IDE, browser tabs, media players) to generate relevant conversational banter.
 - **Hardware Load Sensors**: Measures CPU, GPU, and RAM utilization to react with concern or amusement during heavy gaming or rendering workloads.
 - **AFK & Idle Detection**: Distinguishes between active typing, brief reading pauses, and extended away-from-keyboard states.
@@ -32,7 +32,7 @@ AIRI gathers environmental telemetry without compromising user privacy:
 ![Conversational Pacing & Audio Fillers](/showcase/pacing-audio-fillers.avif)
 
 Natural conversations include brief verbal pauses, thinking fillers, and emotional affirmations:
-- **Dynamic Spoken Fillers**: During long LLM inference turns, AIRI speaks brief contextual fillers (*"Hmm, let me see..."*, *"Give me a second..."*) to eliminate awkward silence.
+- **Dynamic Spoken Fillers**: During long LLM inference turns, Anima speaks brief contextual fillers (*"Hmm, let me see..."*, *"Give me a second..."*) to eliminate awkward silence.
 - **Prewarming & Audio Caching**: Pre-synthesizes high-probability filler phrases into an in-memory PCM cache for instantaneous playback.
 - **Seamless Answer Handoff**: Smoothly transitions from thinking filler audio into the generated main response without audio pops or clipping.
 

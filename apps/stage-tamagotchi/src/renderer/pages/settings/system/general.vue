@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import SettingsGeneralFields from '@proj-airi/stage-pages/components/settings-general-fields.vue'
+import SettingsGeneralFields from '@proj-anima/stage-pages/components/settings-general-fields.vue'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { FieldCheckbox } from '@proj-airi/ui'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { FieldCheckbox } from '@proj-anima/ui'
 import { onMounted, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'

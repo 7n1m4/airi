@@ -1,4 +1,4 @@
-import type { MathJson } from '@proj-airi/mathjson'
+import type { MathJson } from '@proj-anima/mathjson'
 
 import { describe, expect, it } from 'vitest'
 

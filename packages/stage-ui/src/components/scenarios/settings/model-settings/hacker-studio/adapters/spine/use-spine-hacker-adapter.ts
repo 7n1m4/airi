@@ -1,10 +1,10 @@
-import type { SpineHackerRuntime } from '@proj-airi/stage-ui-spine'
+import type { SpineHackerRuntime } from '@proj-anima/stage-ui-spine'
 
 import type { HackerAdapter, HackerApplyMeta, HackerPart, HackerTexture, HackerTextureId } from '../types'
 import type { SpinePageMutation } from './spine-exporter'
 import type { SpinePageTextureSwap } from './spine-texture'
 
-import { createSpinePageTexture, useSpineHackerRuntime } from '@proj-airi/stage-ui-spine'
+import { createSpinePageTexture, useSpineHackerRuntime } from '@proj-anima/stage-ui-spine'
 import { computed, ref, watch } from 'vue'
 
 import { useSettings } from '../../../../../../../stores/settings'

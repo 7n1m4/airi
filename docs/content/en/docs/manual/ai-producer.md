@@ -7,7 +7,7 @@ description: How to use the real-time AI Producer engine to generate contextual 
 
 When chatting or roleplaying with your companion, you might sometimes wonder: *"What should I say next?"* or *"Where should this story go?"*
 
-AIRI includes a dedicated **AI Producer Subsystem**—a secondary intelligence loop that runs alongside your active conversation to suggest creative responses, dramatic plot twists, and topic changes in real time.
+Anima includes a dedicated **AI Producer Subsystem**—a secondary intelligence loop that runs alongside your active conversation to suggest creative responses, dramatic plot twists, and topic changes in real time.
 
 ---
 

@@ -106,9 +106,9 @@ AIRI exposes 4 Whisper model tiers in [`packages/stage-ui/src/libs/inference/con
 ## 5. Testing & Verification
 
 1. **Typecheck Suites**:
-   * `pnpm -F @proj-airi/stage-ui typecheck`
-   * `pnpm -F @proj-airi/stage-pages typecheck`
-   * `pnpm -F @proj-airi/stage-tamagotchi typecheck`
+   * `pnpm -F @proj-anima/stage-ui typecheck`
+   * `pnpm -F @proj-anima/stage-pages typecheck`
+   * `pnpm -F @proj-anima/stage-tamagotchi typecheck`
 2. **Runtime Verification**:
    * Inspect browser console for Eventa streaming updates: `[V2 Hearing]` and `[Whisper Adapter]`.
    * Check WebGPU status in DevTools via `navigator.gpu`.

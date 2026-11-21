@@ -78,7 +78,7 @@ All rows marked **Port** are implemented runtime behavior, not conceptual scaffo
 | `packages/stage-shared/src/nan0-diagnostics.ts` | Port | Eventa | Typed, bounded renderer-to-main diagnostic contract | Typecheck |
 | `apps/stage-tamagotchi/src/main/services/airi/nan0-diagnostics.ts` | Port/adapt | Electron `userData`, shared contract | Optional JSONL sink, disabled by default, bounded batches and events, failure-isolated | Unit/smoke test; verify default produces no file |
 | `apps/stage-tamagotchi/src/main/index.ts` | Adapt minimally | `injeca`, `@moeru/eventa` | Register exactly one diagnostics service using the official composition pattern; no unrelated CORS/tray/URL changes | Desktop build and launch smoke test |
-| `packages/stage-ui/package.json` | Add runtime dependency | `@proj-airi/nan0-runtime` | Workspace resolution for canonical boundary | Frozen install after lock update, typecheck |
+| `packages/stage-ui/package.json` | Add runtime dependency | `@proj-anima/nan0-runtime` | Workspace resolution for canonical boundary | Frozen install after lock update, typecheck |
 | `packages/stage-shared/package.json` | Add runtime dependency only if shared diagnostic types import it | Runtime types | Avoid duplicated contract types | Typecheck |
 | `apps/stage-tamagotchi/package.json` | Add runtime dependency | Runtime and diagnostics service | Electron build resolution | Desktop build |
 | `pnpm-lock.yaml` | Regenerate mechanically | Workspace graph | Reproducible dependency graph only; no unrelated upgrades | Frozen install |
@@ -91,7 +91,7 @@ All rows marked **Port** are implemented runtime behavior, not conceptual scaffo
 | `packages/stage-ui/src/stores/nan0-config.ts` | Port/adapt pure config helpers | Supported `local_nan0`/`none` shape, schema version, defaults from the card's consciousness provider/model | Existing and new unit tests |
 | Card migration in AIRI card load path | Add deterministic migration | If cognition already exists, preserve explicit processor/enabled/provider/model and stamp current schema. If cognition is absent and `nan0/kernel-state/v1` exists, migrate only the active card, seeding provider/model from that card's consciousness module. Never convert all cards, names, explicit `none`, or another processor. Persist before recording completion; reruns are no-ops. | Unit tests for fresh, legacy, explicit-none, non-active, interrupted write, repeat, and restart cases |
 | `CardCreationDialog.vue` | Preserve official component; patch only typed cognition plumbing | Keep Richard's provider watcher, layout, tabs, and existing behavior | Stage-pages typecheck and visual inspection |
-| `CardCreationTabCognition.vue` | Adapt official tab | Use `@proj-airi/ui` controls and i18n; expose only real supported processor/provider/model/enabled settings; explain Nan0 ownership without assistant framing | Stage-pages typecheck and visual inspection |
+| `CardCreationTabCognition.vue` | Adapt official tab | Use `@proj-anima/ui` controls and i18n; expose only real supported processor/provider/model/enabled settings; explain Nan0 ownership without assistant framing | Stage-pages typecheck and visual inspection |
 | `packages/i18n/src/locales/en/settings.yaml` | Add managed keys | English Cognition labels, descriptions, ownership notice and options through `scripts/yaml-manager.js` | YAML manager readback and stage-pages build/typecheck |
 
 ## Explicit exclusions
@@ -122,4 +122,4 @@ All rows marked **Port** are implemented runtime behavior, not conceptual scaffo
 
 ## Known baseline condition
 
-Before integration, `pnpm -F @proj-airi/stage-ui typecheck` and the complete Electron build passed. The standalone `pnpm -F @proj-airi/stage-pages typecheck` reported one pre-existing error at `src/pages/settings/system/user-profile.vue(110,9)`: an object is assigned where a string is expected. Final validation reproduces that exact untouched error, while the supported `stage-tamagotchi` typecheck and production build pass.
+Before integration, `pnpm -F @proj-anima/stage-ui typecheck` and the complete Electron build passed. The standalone `pnpm -F @proj-anima/stage-pages typecheck` reported one pre-existing error at `src/pages/settings/system/user-profile.vue(110,9)`: an object is assigned where a string is expected. Final validation reproduces that exact untouched error, while the supported `stage-tamagotchi` typecheck and production build pass.

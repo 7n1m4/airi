@@ -1,8 +1,8 @@
-import type { Peer } from '@proj-airi/stage-shared'
+import type { Peer } from '@proj-anima/stage-shared'
 
 import type { ChatStreamEventContext, StreamingAssistantMessage } from '../types/chat'
 
-import { isCompanionAllowedForFriend, isNapChatEligible, isStageTamagotchi } from '@proj-airi/stage-shared'
+import { isCompanionAllowedForFriend, isNapChatEligible, isStageTamagotchi } from '@proj-anima/stage-shared'
 import { nanoid } from 'nanoid'
 import { defineStore, storeToRefs } from 'pinia'
 import { ref, watch } from 'vue'

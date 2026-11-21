@@ -1,9 +1,9 @@
 import type { Tool } from '@xsai/shared-chat'
 
-import { debug } from '@proj-airi/stage-shared'
-import { tryGetMcpToolBridge } from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
-import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
-import { useStickersStore } from '@proj-airi/stage-ui/stores/stickers'
+import { debug } from '@proj-anima/stage-shared'
+import { tryGetMcpToolBridge } from '@proj-anima/stage-ui/stores/mcp-tool-bridge'
+import { useArtistryStore } from '@proj-anima/stage-ui/stores/modules/artistry'
+import { useStickersStore } from '@proj-anima/stage-ui/stores/stickers'
 
 import { acpTools } from './acp'
 import { generateMotionTools } from './generate-motion'
@@ -34,7 +34,7 @@ export async function builtinTools(): Promise<Tool[]> {
 
   let hasAcpAgents = false
   try {
-    const { useElectronEventaInvoke } = await import('@proj-airi/electron-vueuse')
+    const { useElectronEventaInvoke } = await import('@proj-anima/electron-vueuse')
     const { electronAcpGetRuntimeStatus } = await import('../../../../shared/eventa')
     const getStatus = useElectronEventaInvoke(electronAcpGetRuntimeStatus)
     const acpStatus = await getStatus() as { agents?: unknown[] }

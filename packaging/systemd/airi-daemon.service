@@ -21,7 +21,7 @@ StartLimitIntervalSec=60
 [Service]
 Type=dbus
 BusName=org.moeru.airi.Daemon1
-ExecStart=%h/.local/bin/airi-daemon
+ExecStart=%h/.local/bin/anima-daemon
 Restart=on-failure
 RestartSec=2
 # Hardening
@@ -38,7 +38,7 @@ ProtectSystem=strict
 ProtectHome=read-only
 # The daemon now hosts the WS gateway (6121): the audit dir, plus the
 # server-channel dir (config + certs/) it owns outright.
-ReadWritePaths=%h/.local/share/airi-slint/audit %h/.local/share/airi-slint/server-channel
+ReadWritePaths=%h/.local/share/anima-slint/audit %h/.local/share/anima-slint/server-channel
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true

@@ -33,8 +33,8 @@
 | Test / Check | Command | Status |
 | :--- | :--- | :--- |
 | **DSL Engine Harness** | `pnpm test:dsl` | **52/52 PASSED** (6 scenarios) |
-| **Stage-UI Live2D Typecheck** | `pnpm -F @proj-airi/stage-ui-live2d typecheck` | **0 ERRORS (GREEN)** |
-| **Live2D Runtime Typecheck** | `pnpm -F @proj-airi/live2d-runtime typecheck` | **0 ERRORS (GREEN)** |
+| **Stage-UI Live2D Typecheck** | `pnpm -F @proj-anima/stage-ui-live2d typecheck` | **0 ERRORS (GREEN)** |
+| **Live2D Runtime Typecheck** | `pnpm -F @proj-anima/live2d-runtime typecheck` | **0 ERRORS (GREEN)** |
 | **Attention Ecology Harness** | `pnpm test:attention` | **8/8 PASSED** |
 
 ---

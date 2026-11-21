@@ -2,10 +2,10 @@
 import {
   DEFAULT_SANDBOX_SCRATCHPAD_INSTRUCTION,
   DEFAULT_SANDBOX_WORKSTATION_INSTRUCTION,
-} from '@proj-airi/stage-ui/constants/prompts/character-defaults'
-import { describeMusicProvisionFailure, ensureMcpServersForAllowedTools, ensureMusicToolProvisioned, readMusicMcpEndpoint, tryGetMcpToolBridge } from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { FieldInput } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/constants/prompts/character-defaults'
+import { describeMusicProvisionFailure, ensureMcpServersForAllowedTools, ensureMusicToolProvisioned, readMusicMcpEndpoint, tryGetMcpToolBridge } from '@proj-anima/stage-ui/stores/mcp-tool-bridge'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { FieldInput } from '@proj-anima/ui'
 import { computed, onMounted, ref, watch } from 'vue'
 
 withDefaults(defineProps<{

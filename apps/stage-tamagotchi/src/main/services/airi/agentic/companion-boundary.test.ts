@@ -1,8 +1,8 @@
-import type { CompanionConsent, CompanionShareCard, CompanionShareScope } from '@proj-airi/stage-shared/agentic'
+import type { CompanionConsent, CompanionShareCard, CompanionShareScope } from '@proj-anima/stage-shared/agentic'
 
 import type { NapChatRecapTurn } from './companion'
 
-import { NAP_CHAT_EXPIRY_MS, parseNapChatMessage } from '@proj-airi/stage-shared/agentic'
+import { NAP_CHAT_EXPIRY_MS, parseNapChatMessage } from '@proj-anima/stage-shared/agentic'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {

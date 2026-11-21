@@ -343,9 +343,9 @@ gantt
    - Clearing `localStorage` and opening chat without entering API keys must successfully connect to MiMo (`mimo-auto`) and receive an LLM reply.
    - Triggering autonomous artistry or `image_journal` must successfully generate an image via Pollinations without requiring ComfyUI.
 2. **Type Safety & Build Integrity**:
-   - `pnpm -F @proj-airi/stage-ui typecheck`
-   - `pnpm -F @proj-airi/stage-pages typecheck`
-   - `pnpm -F @proj-airi/stage-tamagotchi build`
+   - `pnpm -F @proj-anima/stage-ui typecheck`
+   - `pnpm -F @proj-anima/stage-pages typecheck`
+   - `pnpm -F @proj-anima/stage-tamagotchi build`
 3. **Storage Hygiene**:
    - Check `docs/data-catalog.md` to ensure all new keys (`settings/faculties/*`) are documented.
 4. **Git Status & Fork Safety**:

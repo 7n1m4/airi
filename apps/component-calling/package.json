@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/component-calling",
+  "name": "@proj-anima/component-calling",
   "type": "module",
   "private": true,
   "description": "Realtime audio",
@@ -21,7 +21,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@proj-airi/ui": "workspace:^",
+    "@proj-anima/ui": "workspace:^",
     "@valibot/to-json-schema": "1.0.0-rc.0",
     "@vueuse/core": "^14.2.1",
     "@xsai/generate-text": "catalog:",

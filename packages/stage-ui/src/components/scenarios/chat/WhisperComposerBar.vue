@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BasicContentEditable } from '@proj-airi/ui'
+import { BasicContentEditable } from '@proj-anima/ui'
 import { useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { onUnmounted, ref, useTemplateRef } from 'vue'

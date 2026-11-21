@@ -11,13 +11,13 @@ Validation date: 2026-07-19 (America/Chicago).
 | Command / check | Result | Evidence |
 | --- | --- | --- |
 | `pnpm install --frozen-lockfile` | Pass | All 57 workspace projects resolved; Electron/native dependency rebuild completed; the lockfile remained frozen. |
-| `pnpm -F @proj-airi/nan0-runtime typecheck` | Pass | Runtime public and internal contracts compile. |
-| `pnpm -F @proj-airi/nan0-runtime test` | Pass | 23 test files, 300 tests. |
-| `pnpm -F @proj-airi/stage-ui typecheck` | Pass | Includes chat hooks/orchestrator, Nan0 store/bridge, input persistence, Live Session guard, and card-store migration. |
+| `pnpm -F @proj-anima/nan0-runtime typecheck` | Pass | Runtime public and internal contracts compile. |
+| `pnpm -F @proj-anima/nan0-runtime test` | Pass | 23 test files, 300 tests. |
+| `pnpm -F @proj-anima/stage-ui typecheck` | Pass | Includes chat hooks/orchestrator, Nan0 store/bridge, input persistence, Live Session guard, and card-store migration. |
 | Focused Stage UI Vitest run for `nan0-config`, `nan0-renderer`, both bridge suites, input presence, tool authority, and response disposition | Pass | 7 files, 32 tests. |
-| `pnpm -F @proj-airi/stage-pages typecheck` | Inherited failure | Reproduces the exact pre-integration error in untouched `src/pages/settings/system/user-profile.vue(110,9)`: an object is assigned to a string. No Nan0 path appears in the diagnostic. The supported desktop typecheck/build below passes. |
-| `pnpm -F @proj-airi/stage-tamagotchi typecheck` | Pass | Electron main, preload, and renderer contracts compile. |
-| `pnpm -F @proj-airi/stage-tamagotchi build` | Pass | Main bundle: 800 modules. Renderer: 5,118 modules. Nan0 renderer chunk emitted. Only the checkpoint's non-failing Vite/UnoCSS warnings appeared. |
+| `pnpm -F @proj-anima/stage-pages typecheck` | Inherited failure | Reproduces the exact pre-integration error in untouched `src/pages/settings/system/user-profile.vue(110,9)`: an object is assigned to a string. No Nan0 path appears in the diagnostic. The supported desktop typecheck/build below passes. |
+| `pnpm -F @proj-anima/stage-tamagotchi typecheck` | Pass | Electron main, preload, and renderer contracts compile. |
+| `pnpm -F @proj-anima/stage-tamagotchi build` | Pass | Main bundle: 800 modules. Renderer: 5,118 modules. Nan0 renderer chunk emitted. Only the checkpoint's non-failing Vite/UnoCSS warnings appeared. |
 | `pnpm lint` | Analysis completed: 0 errors, 144 warnings | Repository-wide warnings include generated workers and existing fork code. Ported Nan0 has non-failing style warnings; no broad cleanup was performed. The Windows wrapper retained an open handle after printing `Finished`, so the orphaned lint process was stopped after the result was captured. |
 | `git diff --check` | Pass | No whitespace errors or conflict markers in the integration diff. |
 | `npx tsx scripts/yaml-manager.js audit packages/i18n/src/locales/en/settings.yaml` | Pass | No duplicate localization keys. |

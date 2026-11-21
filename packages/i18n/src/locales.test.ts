@@ -65,7 +65,7 @@ function checkDuplicateKeys(filePath: string): string[] {
   return duplicates
 }
 
-describe('@proj-airi/i18n locale integrity', () => {
+describe('@proj-anima/i18n locale integrity', () => {
   it('has all 10 canonical locales present in locales directory', () => {
     const dirs = fs.readdirSync(LOCALES_DIR, { withFileTypes: true })
       .filter(d => d.isDirectory())

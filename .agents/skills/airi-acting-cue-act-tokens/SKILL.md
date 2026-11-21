@@ -92,7 +92,7 @@ When history is replayed as inference context, `chat.ts` prefers `rawContent || 
 
 ## 7. Verification
 
-- `pnpm -F @proj-airi/stage-ui typecheck` for parser/categorizer/schema changes.
+- `pnpm -F @proj-anima/stage-ui typecheck` for parser/categorizer/schema changes.
 - Manual: chat a line → confirm `<|ACT:...|>`/`<|DELAY:...|>` never appear in rendered chat or TTS audio, DO fire an expression/motion on stage, and `rawContent` retains them (DevTools → IndexedDB).
 - Rehearsal Room: run one preset (single ACT, mixed, ACTOR) and confirm each cue fires.
 - Discord: confirm outbound replies contain no markers but tool-call rendering is intact.

@@ -99,8 +99,8 @@ Both exist. Choose the correct import path for the surface you are editing; do n
 ## Verification
 
 ```bash
-pnpm -F @proj-airi/stage-ui typecheck
-pnpm -F @proj-airi/stage-pages typecheck
+pnpm -F @proj-anima/stage-ui typecheck
+pnpm -F @proj-anima/stage-pages typecheck
 ```
 
 ## Related Skills & References

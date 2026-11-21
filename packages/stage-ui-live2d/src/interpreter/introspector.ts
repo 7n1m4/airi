@@ -4,7 +4,7 @@
  * normalized capability representation for the Gimmick Deck.
  */
 
-import type { DslMotionGroup } from '@proj-airi/live2d-runtime'
+import type { DslMotionGroup } from '@proj-anima/live2d-runtime'
 
 export interface GimmickSwitch {
   name: string

@@ -1,6 +1,6 @@
 import type { ChatHistoryItem } from '../../../types/chat'
 
-import { safeTruncate } from '@proj-airi/stage-shared'
+import { safeTruncate } from '@proj-anima/stage-shared'
 
 import { stripMarkers } from '../../../composables/response-categoriser'
 

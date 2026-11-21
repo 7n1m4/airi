@@ -34,7 +34,7 @@ The resumable build-state record for lifetime-artifact generation. Pillar 5 does
 
 ## Verification
 
-`pnpm -F @proj-airi/stage-ui typecheck`; runtime: start a provisioning run, reload the app mid-build, and confirm it resumes from the persisted phase rather than restarting.
+`pnpm -F @proj-anima/stage-ui typecheck`; runtime: start a provisioning run, reload the app mid-build, and confirm it resumes from the persisted phase rather than restarting.
 
 ## Sources
 

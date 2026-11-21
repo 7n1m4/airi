@@ -43,6 +43,6 @@ Read `docs/proposal-conversational-pacing-thinking-fillers.md` for design ration
 
 ## Verification
 
-For pacing logic, run the relevant existing tests under `packages/stage-ui/src/libs/pacing/` with `pnpm exec vitest run <test-path>`; the six suites cover coordinator, bridge, classifier, cache, prewarm, and policy. Typecheck affected stage-ui logic with `pnpm -F @proj-airi/stage-ui typecheck`.
+For pacing logic, run the relevant existing tests under `packages/stage-ui/src/libs/pacing/` with `pnpm exec vitest run <test-path>`; the six suites cover coordinator, bridge, classifier, cache, prewarm, and policy. Typecheck affected stage-ui logic with `pnpm -F @proj-anima/stage-ui typecheck`.
 
 Exercise cache hit, recoverable miss followed by another opportunity, decode failure, answer during preparation, answer during playback, cancellation during decode, and a late old-generation completion. Check diagnostics against audible behavior. Include an unresolved virtual profile and a long reasoning turn. Timing claims require runtime measurements; passing structural checks is not a latency benchmark.

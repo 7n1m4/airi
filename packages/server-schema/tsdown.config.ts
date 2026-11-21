@@ -1,4 +1,4 @@
-import DrizzleORMMigrations from '@proj-airi/unplugin-drizzle-orm-migrations/rolldown'
+import DrizzleORMMigrations from '@proj-anima/unplugin-drizzle-orm-migrations/rolldown'
 
 import { defineConfig } from 'tsdown'
 

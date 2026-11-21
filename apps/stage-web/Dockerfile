@@ -18,10 +18,10 @@ COPY . .
 RUN --mount=type=cache,id=pnpm-store,target=/root/.pnpm-store \
     pnpm install --frozen-lockfile
 
-RUN pnpm -F @proj-airi/stage-web run build && \
-    pnpm -F @proj-airi/docs run build:base && \
+RUN pnpm -F @proj-anima/stage-web run build && \
+    pnpm -F @proj-anima/docs run build:base && \
     mv ./docs/.vitepress/dist ./apps/stage-web/dist/docs && \
-    pnpm -F @proj-airi/stage-ui run story:build && \
+    pnpm -F @proj-anima/stage-ui run story:build && \
     mv ./packages/stage-ui/.histoire/dist ./apps/stage-web/dist/ui
 
 FROM nginx:stable-alpine AS production-stage

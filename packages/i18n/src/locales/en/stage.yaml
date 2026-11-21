@@ -1,7 +1,7 @@
 chat:
   message:
     character-name:
-      airi: AIRI
+      airi: Anima
       core-system: Core System
       you: You
     reasoning_only: The model only generated a reasoning response (chain of thought

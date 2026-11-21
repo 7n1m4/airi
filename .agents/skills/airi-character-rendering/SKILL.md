@@ -29,10 +29,10 @@ Before modifying expression systems, rendering loops, or model customization UI,
 ## 2. Overview & Surface Map
 
 AIRI supports 4 primary display model formats across dedicated packages under `packages/`:
-- **VRM (3D)**: Three.js rendering pipeline via `@pixiv/three-vrm` in `@proj-airi/stage-ui-three`.
-- **Live2D (2D)**: Canvas & WebGL Cubism pipeline via `pixi-live2d-display` and the Live2D Scripting DSL VM adapter in `@proj-airi/stage-ui-live2d`.
-- **Spine (2D)**: 2D skeletal animation rendering via Spine WebGL runtime in `@proj-airi/stage-ui-spine`.
-- **MMD (3D)**: MikuMikuDance model/motion pipeline via Three.js MMDLoader in `@proj-airi/stage-ui-mmd`.
+- **VRM (3D)**: Three.js rendering pipeline via `@pixiv/three-vrm` in `@proj-anima/stage-ui-three`.
+- **Live2D (2D)**: Canvas & WebGL Cubism pipeline via `pixi-live2d-display` and the Live2D Scripting DSL VM adapter in `@proj-anima/stage-ui-live2d`.
+- **Spine (2D)**: 2D skeletal animation rendering via Spine WebGL runtime in `@proj-anima/stage-ui-spine`.
+- **MMD (3D)**: MikuMikuDance model/motion pipeline via Three.js MMDLoader in `@proj-anima/stage-ui-mmd`.
 
 Model binary assets (GLB/VRM, moc3 ZIP, Spine json/atlas, PMX/VMD) are cached and indexed via `displayModelsStore` in `packages/stage-ui/src/stores/display-models.ts`.
 
@@ -144,10 +144,10 @@ Expressions can be activated via three distinct pathways:
 ## 7. Verification Workflows
 
 - **Typecheck**:
-  - `pnpm -F @proj-airi/stage-ui typecheck`
-  - `pnpm -F @proj-airi/stage-ui-three typecheck`
-  - `pnpm -F @proj-airi/stage-ui-live2d typecheck`
-  - `pnpm -F @proj-airi/stage-tamagotchi typecheck`
+  - `pnpm -F @proj-anima/stage-ui typecheck`
+  - `pnpm -F @proj-anima/stage-ui-three typecheck`
+  - `pnpm -F @proj-anima/stage-ui-live2d typecheck`
+  - `pnpm -F @proj-anima/stage-tamagotchi typecheck`
 
 ## Related Skills & References
 

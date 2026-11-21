@@ -36,7 +36,7 @@ The embedded Model Customizer provides deep authoring capabilities for avatar ri
 
 ![AI Expression Curation](/showcase/model-customizer-ai-curation.avif)
 
-- **AI Expression Curation**: Automatically analyzes blendshapes and parameters to suggest optimal facial expressions for AIRI's 10 canonical emotion keys.
+- **AI Expression Curation**: Automatically analyzes blendshapes and parameters to suggest optimal facial expressions for Anima's 10 canonical emotion keys.
 - **Spine 2D Skeletal Animation**: Native runtime support for Spine 2D models, including dynamic skins, physics attachments, and event callbacks.
 
 ![Spine 2D Skeletal Runtime](/showcase/model-customizer-motions-spine.avif)

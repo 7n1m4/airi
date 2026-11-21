@@ -1,4 +1,4 @@
-import type { GenerateOptions, Generator } from '@proj-airi/motion-driver-magic'
+import type { GenerateOptions, Generator } from '@proj-anima/motion-driver-magic'
 
 import type { OutputFilterFrame, OutputFilterOptions } from './filter'
 import type { Pose } from './pose'

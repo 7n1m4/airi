@@ -21,12 +21,12 @@ import process, { env, stderr, stdout } from 'node:process'
 import { Buffer } from 'node:buffer'
 import { fileURLToPath } from 'node:url'
 
-import messages from '@proj-airi/i18n-bundle'
+import messages from '@proj-anima/i18n-bundle'
 import Electrobun, { BuildConfig, Screen, Utils } from 'electrobun/main'
 
 import { Format, LogLevel, setGlobalFormat, setGlobalHookPostLog, setGlobalLogLevel, useLogg } from '@guiiai/logg'
 import { defineInvokeHandler } from '@moeru/eventa'
-import { DEFAULT_CORS_BYPASS_URLS } from '@proj-airi/stage-shared'
+import { DEFAULT_CORS_BYPASS_URLS } from '@proj-anima/stage-shared'
 import { createLoggLogger, injeca, lifecycle } from 'injeca'
 import { isLinux } from 'std-env'
 
@@ -219,11 +219,11 @@ void fileLoggerPromise.then((fileLogger) => {
 // lockfile equivalent (see app/single-instance.ts).
 const singleInstance = claimSingleInstance(userDataPath, 'main')
 if (!singleInstance.primary) {
-  console.info('[@proj-airi/stage-tamagotchi] Another instance owns the profile; exiting.')
+  console.info('[@proj-anima/stage-tamagotchi] Another instance owns the profile; exiting.')
   process.exit(0)
 }
 
-// TODO(port): initScreenCaptureForMain() — @proj-airi/electron-screen-capture is Electron-only
+// TODO(port): initScreenCaptureForMain() — @proj-anima/electron-screen-capture is Electron-only
 // (desktopCapturer); the Electrobun equivalent is Screen.captureRegion (wave 4).
 // TODO(port): BrowserWindow.prototype method guards + `isDestroyed` wrappers — the registry's
 // WeakSet replaces them (see windows/registry.ts).
@@ -510,7 +510,7 @@ async function boot() {
       })
 
       defineInvokeHandler(context, electronCaptionToggleVisibility, async (enabled?: boolean) => {
-        console.info('[@proj-airi/stage-tamagotchi] [Main] Caption visibility toggle triggered via Control Island. enabled:', enabled)
+        console.info('[@proj-anima/stage-tamagotchi] [Main] Caption visibility toggle triggered via Control Island. enabled:', enabled)
         if (enabled !== undefined)
           captionOpenFromRenderer = enabled
         await (deps.captionWindow as CaptionLike).toggleVisibility(enabled)
@@ -518,7 +518,7 @@ async function boot() {
 
       defineInvokeHandler(context, electronGetChatWindowState, async () => {
         const isOpen = Boolean(get('chat')?.isVisible())
-        console.info('[@proj-airi/stage-tamagotchi] [Main] Retrieved chat window state:', isOpen)
+        console.info('[@proj-anima/stage-tamagotchi] [Main] Retrieved chat window state:', isOpen)
         return isOpen
       })
 
@@ -537,7 +537,7 @@ async function boot() {
       })
 
       defineInvokeHandler(context, electronCaptionSyncDocking, async (dock) => {
-        console.info('[@proj-airi/stage-tamagotchi] [Main] Caption docking sync triggered via Control Island:', dock)
+        console.info('[@proj-anima/stage-tamagotchi] [Main] Caption docking sync triggered via Control Island:', dock)
         const appConfig = deps.appConfig.get()
         if (appConfig) {
           const windows = appConfig.windows ?? []
@@ -566,7 +566,7 @@ async function boot() {
       })
 
       defineInvokeHandler(context, electronStageToggleVisibility, async (enabled: boolean) => {
-        console.info('[@proj-airi/stage-tamagotchi] [Main] Actor Stage visibility changed:', enabled)
+        console.info('[@proj-anima/stage-tamagotchi] [Main] Actor Stage visibility changed:', enabled)
         setStageVisibleState(enabled)
         if (enabled)
           get('stage')?.show()
@@ -648,7 +648,7 @@ async function boot() {
       setTimeout(() => {
         if (splashDismissed)
           return
-        console.warn('[@proj-airi/stage-tamagotchi] [Main] Splash did not dismiss in time, forcing coordinated reveal.')
+        console.warn('[@proj-anima/stage-tamagotchi] [Main] Splash did not dismiss in time, forcing coordinated reveal.')
         splashDismissed = true
         if (!registryIsDestroyed(mainWindowView as never))
           mainWindowView && get('main')?.show()
@@ -687,7 +687,7 @@ onBeforeQuit(async () => {
     await injeca.stop()
   }
   catch (err) {
-    console.error('[@proj-airi/stage-tamagotchi] Error during DI shutdown:', err)
+    console.error('[@proj-anima/stage-tamagotchi] Error during DI shutdown:', err)
   }
 
   try {
@@ -698,14 +698,14 @@ onBeforeQuit(async () => {
     sensorsService?.stop()
   }
   catch (err) {
-    console.error('[@proj-airi/stage-tamagotchi] Failed to stop sensors service:', err)
+    console.error('[@proj-anima/stage-tamagotchi] Failed to stop sensors service:', err)
   }
 
   try {
     flushAllConfigs()
   }
   catch (err) {
-    console.error('[@proj-airi/stage-tamagotchi] Failed to flush configs:', err)
+    console.error('[@proj-anima/stage-tamagotchi] Failed to flush configs:', err)
   }
 
   // NOTICE: drop main-side bus subscriptions after the DI container stops so no late
@@ -716,7 +716,7 @@ onBeforeQuit(async () => {
     cleanupMicToggleShortcut()
   }
   catch (err) {
-    console.error('[@proj-airi/stage-tamagotchi] Failed to release global shortcuts:', err)
+    console.error('[@proj-anima/stage-tamagotchi] Failed to release global shortcuts:', err)
   }
 
   // NOTICE: The session log must close last, and the quit must happen even if a step above threw.
@@ -724,7 +724,7 @@ onBeforeQuit(async () => {
     await (await fileLoggerPromise).close()
   }
   catch (err) {
-    console.error('[@proj-airi/stage-tamagotchi] Failed to close the session log:', err)
+    console.error('[@proj-anima/stage-tamagotchi] Failed to close the session log:', err)
   }
 })
 

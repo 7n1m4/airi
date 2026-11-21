@@ -25,11 +25,11 @@ import DemoDayHangzhou2 from './assets/demo-day-hangzhou-2.avif'
 import DemoDayHangzhou3 from './assets/demo-day-hangzhou-3.avif'
 </script>
 
-大家好！我是 [Neko](https://github.com/nekomeowww)，[Project AIRI](https://github.com/moeru-ai/airi) 的发起者！
+大家好！我是 [Neko](https://github.com/nekomeowww)，[Project Anima](https://github.com/moeru-ai/airi) 的发起者！
 
-很抱歉在 Project AIRI 的 DevLog 更新上有所延迟，请原谅我们的拖延。
+很抱歉在 Project Anima 的 DevLog 更新上有所延迟，请原谅我们的拖延。
 
-> 在过去的几个月里，我们为 AIRI 写了许多精彩的 DevLog，分享我们的开发进展，在其中我们分享了想法、理念，解释了我们使用的技术、从中获得的艺术灵感...一切的一切。
+> 在过去的几个月里，我们为 Anima 写了许多精彩的 DevLog，分享我们的开发进展，在其中我们分享了想法、理念，解释了我们使用的技术、从中获得的艺术灵感...一切的一切。
 >
 > - [v0.4.0 UI 更新](./DevLog-2025.03.20.mdx)
 > - [v0.4.0 发布 & 记忆功能介绍](./DevLog-2025.04.06.mdx)
@@ -38,7 +38,7 @@ import DemoDayHangzhou3 from './assets/demo-day-hangzhou-3.avif'
 
 # 似曾相识
 
-在过去的几周里，Project AIRI 本身的主要任务有一段时间没有进展，也许我在 2025 年 3 月以来的大规模 UI 重构和发布后有些疲惫。大部分工作都是由社区维护者完成的，
+在过去的几周里，Project Anima 本身的主要任务有一段时间没有进展，也许我在 2025 年 3 月以来的大规模 UI 重构和发布后有些疲惫。大部分工作都是由社区维护者完成的，
 
 非常感谢 [@LemonNekoGH](https://github.com/LemonNekoGH)、[@RainbowBird](https://github.com/luoling8192) 和 [@LittleSound](https://github.com/LittleSound) 在以下领域所做的工作：
 
@@ -78,20 +78,20 @@ import DemoDayHangzhou3 from './assets/demo-day-hangzhou-3.avif'
 > 哦，角色卡展示的大部分工作都是由 [@LittleSound](https://github.com/LittleSound) 完成和指导的，非常感谢。
 
 - Tauri MCP 支持
-- 连接 AIRI 到 Android 设备
+- 连接 Anima 到 Android 设备
 
 这两个是主要的更新和尝试，这部分工作由 [@LemonNekoGH](https://github.com/LemonNekoGH) 完成，她为这些内容写了另外两篇 DevLog，分享了幕后的技术细节。（我想对 Tauri 开发者和用户来说很有价值。）你可以在这里阅读它们：
 
 - [控制 Android](./DevLog-2025.04.22.mdx)
 - [Tauri 中的 MCP](./DevLog-2025.04.28.md)
 
-## Project AIRI 主要任务
+## Project Anima 主要任务
 
 ### 耳朵在听，嘴巴在说
 
-从 4 月 15 日开始，我发现 AIRI 中的 VAD（语音激活检测）、[ASR（即自动语音识别）](https://huggingface.co/tasks/automatic-speech-recognition) 和 [TTS（文本转语音）](https://huggingface.co/tasks/text-to-speech) 都非常复杂且难以使用和理解，在那个时候，我正在与 [@himself65](https://github.com/himself65) 合作改进和测试来自 [Llama Index](https://www.llamaindex.ai/) 的新项目的用例，这是一个帮助处理基于事件的 LLM 流式令牌流和音频字节的库，叫做 [`llama-flow`](https://github.com/run-llama/llama-flow)。
+从 4 月 15 日开始，我发现 Anima 中的 VAD（语音激活检测）、[ASR（即自动语音识别）](https://huggingface.co/tasks/automatic-speech-recognition) 和 [TTS（文本转语音）](https://huggingface.co/tasks/text-to-speech) 都非常复杂且难以使用和理解，在那个时候，我正在与 [@himself65](https://github.com/himself65) 合作改进和测试来自 [Llama Index](https://www.llamaindex.ai/) 的新项目的用例，这是一个帮助处理基于事件的 LLM 流式令牌流和音频字节的库，叫做 [`llama-flow`](https://github.com/run-llama/llama-flow)。
 
-[`llama-flow`](https://github.com/run-llama/llama-flow) 真的很小，而且使用起来类型安全。在没有它的旧时代，我必须手动包装另一个**队列**结构，以及 Vue 的响应式驱动的工作流系统，将许多异步任务链接在一起，以便能够处理数据来驱动 AIRI。
+[`llama-flow`](https://github.com/run-llama/llama-flow) 真的很小，而且使用起来类型安全。在没有它的旧时代，我必须手动包装另一个**队列**结构，以及 Vue 的响应式驱动的工作流系统，将许多异步任务链接在一起，以便能够处理数据来驱动 Anima。
 
 那时我开始实验更多的例子，简化 VAD、ASR、TTS 工作流的演示。
 
@@ -199,7 +199,7 @@ npm install @velin-dev/core
 
 <img :src="DemoDayHangzhou1" alt="Demo Day @ 杭州" />
 
-这是我，我与其他参与者分享了 AIRI 项目，我们在那里度过了美好的时光！遇到了许多有才华的开发者、产品设计师和企业家。
+这是我，我与其他参与者分享了 Anima 项目，我们在那里度过了美好的时光！遇到了许多有才华的开发者、产品设计师和企业家。
 
 介绍了我今天在这篇 DevLog 中分享的几乎所有内容，还有备受喜爱的 AI VTuber Neuro-sama。
 

@@ -32,7 +32,7 @@ Append this test after the existing `describe` block:
 it('keeps stage mount independent from the experimental DuckDB runtime', () => {
   const source = readFileSync(new URL('./ControlStripHost.vue', import.meta.url), 'utf8')
 
-  expect(source).not.toContain('@proj-airi/drizzle-duckdb-wasm')
+  expect(source).not.toContain('@proj-anima/drizzle-duckdb-wasm')
   expect(source).not.toContain('getImportUrlBundles')
   expect(source).not.toContain('memory_test')
   expect(source).toContain('if (isElectron.value)\n    state.value = \'mounted\'')
@@ -44,7 +44,7 @@ it('keeps stage mount independent from the experimental DuckDB runtime', () => {
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui' exec vitest run src/components/scenes/runtime.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui' exec vitest run src/components/scenes/runtime.test.ts
 ```
 
 Expected: FAIL because `ControlStripHost.vue` still imports DuckDB, creates `memory_test`, and sets mounted unconditionally.
@@ -68,7 +68,7 @@ The Web branch must not write `mounted`; its `RendererStage` child owns the same
 - [ ] **Step 4: Prove no production import remains**
 
 ```powershell
-rg -n '@proj-airi/drizzle-duckdb-wasm|memory_test|getImportUrlBundles' apps/stage-web packages/stage-ui --glob '!**/dist/**' --glob '!**/node_modules/**'
+rg -n '@proj-anima/drizzle-duckdb-wasm|memory_test|getImportUrlBundles' apps/stage-web packages/stage-ui --glob '!**/dist/**' --glob '!**/node_modules/**'
 ```
 
 Expected: only Vite optimize-deps exclusions and package metadata remain. Do not remove the DuckDB workspace package or dependency metadata in this task; the design scope only removes the unconditional stage import.
@@ -78,8 +78,8 @@ Expected: only Vite optimize-deps exclusions and package metadata remain. Do not
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui' exec vitest run src/components/scenes/runtime.test.ts
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui' exec vitest run src/components/scenes/runtime.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui' typecheck
 ```
 
 Expected: focused test PASS; Stage UI typecheck exits 0.
@@ -189,7 +189,7 @@ describe('startCharacterFirstInitialization', () => {
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' exec vitest run src/modules/app-startup.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' exec vitest run src/modules/app-startup.test.ts
 ```
 
 Expected: FAIL because `app-startup.ts` does not exist.
@@ -288,8 +288,8 @@ Do not expose optional service readiness as stage readiness.
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' exec vitest run src/modules/app-startup.test.ts
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' exec vitest run src/modules/app-startup.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' typecheck
 ```
 
 Expected: tests PASS; Web typecheck exits 0.
@@ -382,7 +382,7 @@ describe('createRuntimeOnlyLive2dArchive', () => {
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' exec vitest run build/live2d-runtime-archive.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' exec vitest run build/live2d-runtime-archive.test.ts
 ```
 
 Expected: FAIL because the transformer module is missing.
@@ -489,8 +489,8 @@ runtimeOnlyLive2dArchives([
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' exec vitest run build/live2d-runtime-archive.test.ts
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' exec vitest run build/live2d-runtime-archive.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' typecheck
 ```
 
 Expected: tests PASS and Web typecheck exits 0.
@@ -518,7 +518,7 @@ if ((Get-Content 'apps\stage-web\.env.production' -Raw -Encoding UTF8) -notmatch
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
 $env:NODE_OPTIONS = '--max-old-space-size=4096'
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' build
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' build
 if ($LASTEXITCODE -ne 0) { throw 'Stage Web build failed' }
 
 $free = @(Get-ChildItem 'apps\stage-web\dist\assets\hiyori_free_zh-*.zip')
@@ -583,7 +583,7 @@ describe('stageWebWorkbox', () => {
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' exec vitest run src/modules/pwa-cache.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' exec vitest run src/modules/pwa-cache.test.ts
 ```
 
 Expected: FAIL because `pwa-cache.ts` is missing.
@@ -702,8 +702,8 @@ The runtime precache is below 1 MiB, so registration can occur after the charact
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' exec vitest run src/modules/pwa-cache.test.ts src/modules/pwa-navigation.test.ts src/modules/app-startup.test.ts
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' exec vitest run src/modules/pwa-cache.test.ts src/modules/pwa-navigation.test.ts src/modules/app-startup.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' typecheck
 ```
 
 Expected: all tests PASS and Web typecheck exits 0.
@@ -731,7 +731,7 @@ if ((Get-Content 'apps\stage-web\.env.production' -Raw -Encoding UTF8) -notmatch
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
 $env:NODE_OPTIONS = '--max-old-space-size=4096'
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' build
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' build
 if ($LASTEXITCODE -ne 0) { throw 'Stage Web build failed' }
 
 $dist = (Resolve-Path 'apps\stage-web\dist').Path
@@ -973,9 +973,9 @@ $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
 & "$nodeRoot\node.exe" 'node_modules\vitest\vitest.mjs' run --root packages/stage-ui-live2d src/components/scenes/live2d/model-load-state.test.ts
 & "$nodeRoot\node.exe" 'node_modules\vitest\vitest.mjs' run --root packages/stage-ui-spine src/components/scenes/spine/model-load-state.test.ts
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui-live2d' typecheck
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui-spine' typecheck
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui-live2d' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui-spine' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui' typecheck
 ```
 
 Expected: both tests PASS and all three typechecks exit 0.
@@ -1048,8 +1048,8 @@ it('keeps a temporary fallback out of the persisted model selection', () => {
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' exec vitest run src/modules/model-load-recovery.test.ts
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui' exec vitest run src/components/scenes/runtime.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' exec vitest run src/modules/model-load-recovery.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui' exec vitest run src/components/scenes/runtime.test.ts
 ```
 
 Expected: Web test FAIL because the recovery module is missing; Stage UI test FAIL because the temporary model method does not exist.
@@ -1156,7 +1156,7 @@ Replace Live2D and Spine `:model-id="stageModelSelected"` plus Three `:model-ide
 
 - [ ] **Step 6: Handle recovery and final error in the home page**
 
-Import `Button` from `@proj-airi/ui`, `useI18n` from `vue-i18n`, and `decideModelLoadRecovery` from `../modules/model-load-recovery`. Replace `lastReloadReason` in the settings refs with `stageModelActiveId`. Add:
+Import `Button` from `@proj-anima/ui`, `useI18n` from `vue-i18n`, and `decideModelLoadRecovery` from `../modules/model-load-recovery`. Replace `lastReloadReason` in the settings refs with `stageModelActiveId`. Add:
 
 ```ts
 const { t } = useI18n()
@@ -1276,14 +1276,14 @@ The `modelLoadStatusMessage` computed value uses the existing `loading` key and 
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' exec vitest run src/modules/model-load-recovery.test.ts src/modules/app-startup.test.ts
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui' exec vitest run src/components/scenes/runtime.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' exec vitest run src/modules/model-load-recovery.test.ts src/modules/app-startup.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui' exec vitest run src/components/scenes/runtime.test.ts
 & "$nodeRoot\node.exe" 'node_modules\vitest\vitest.mjs' run --root packages/stage-ui-live2d src/components/scenes/live2d/model-load-state.test.ts
 & "$nodeRoot\node.exe" 'node_modules\vitest\vitest.mjs' run --root packages/stage-ui-spine src/components/scenes/spine/model-load-state.test.ts
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui-live2d' typecheck
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui-spine' typecheck
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui' typecheck
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui-live2d' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui-spine' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' typecheck
 ```
 
 Expected: all focused tests PASS and all four typechecks exit 0.
@@ -1501,8 +1501,8 @@ if ($pnpmVersion -ne '10.32.1') { throw "Unexpected pnpm: $pnpmVersion" }
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui' exec vitest run src/components/scenes/runtime.test.ts
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' exec vitest run src/modules/app-startup.test.ts src/modules/pwa-cache.test.ts src/modules/pwa-navigation.test.ts src/modules/model-load-recovery.test.ts build/live2d-runtime-archive.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui' exec vitest run src/components/scenes/runtime.test.ts
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' exec vitest run src/modules/app-startup.test.ts src/modules/pwa-cache.test.ts src/modules/pwa-navigation.test.ts src/modules/model-load-recovery.test.ts build/live2d-runtime-archive.test.ts
 & "$nodeRoot\node.exe" 'node_modules\vitest\vitest.mjs' run --root packages/stage-ui-live2d src/components/scenes/live2d/model-load-state.test.ts
 & "$nodeRoot\node.exe" 'node_modules\vitest\vitest.mjs' run --root packages/stage-ui-spine src/components/scenes/spine/model-load-state.test.ts
 ```
@@ -1514,10 +1514,10 @@ Expected: all focused tests PASS.
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui-live2d' typecheck
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui-spine' typecheck
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-ui' typecheck
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui-live2d' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui-spine' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-ui' typecheck
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' typecheck
 ```
 
 Expected: all commands exit 0. A new failure blocks deployment.
@@ -1533,7 +1533,7 @@ if ($head -ne $upstream) { throw 'HEAD must equal upstream before build' }
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
 $env:NODE_OPTIONS = '--max-old-space-size=4096'
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' build
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' build
 if ($LASTEXITCODE -ne 0) { throw 'Stage Web build failed' }
 ```
 
@@ -1585,7 +1585,7 @@ Start the preview in a long-running terminal session:
 ```powershell
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' preview --host 127.0.0.1 --port 4173
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' preview --host 127.0.0.1 --port 4173
 ```
 
 Use the `playwright` skill with a fresh Chromium desktop context at `1440x900`. Record navigation timing, FCP, the first `modelLoaded`/mounted time, requests, transferred bytes, Cache Storage entries/bytes, and screenshots. Assert no DuckDB request, no `api.airi.build`, no page error, a nontransparent character canvas, cold character visibility within 8 seconds, warm visibility within 2 seconds, chat input usability, and settings navigation.
@@ -1626,7 +1626,7 @@ if ((Get-Content 'apps\stage-web\.env.production' -Raw -Encoding UTF8) -notmatch
 $nodeRoot = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64'
 $env:PATH = "$nodeRoot;$env:PATH"
 $env:NODE_OPTIONS = '--max-old-space-size=4096'
-& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-airi/stage-web' build
+& "$nodeRoot\node.exe" "$nodeRoot\node_modules\corepack\dist\pnpm.js" -F '@proj-anima/stage-web' build
 if ($LASTEXITCODE -ne 0) { throw 'Stage Web build failed' }
 
 $dist = (Resolve-Path 'apps\stage-web\dist').Path

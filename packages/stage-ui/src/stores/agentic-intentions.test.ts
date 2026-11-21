@@ -1,4 +1,4 @@
-import type { AgenticIntention, IntentionRankingPolicy } from '@proj-airi/stage-shared/agentic'
+import type { AgenticIntention, IntentionRankingPolicy } from '@proj-anima/stage-shared/agentic'
 
 import { describe, expect, it } from 'vitest'
 

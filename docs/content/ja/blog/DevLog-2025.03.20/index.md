@@ -19,7 +19,7 @@ import SteinsGateMayori from '../../../en/blog/DevLog-2025.03.20/assets/steins-g
 
 またお会いしましたね！前回の開発ログから10日が経ちました。
 
-ユーザーインターフェースに多くの改善を加え、より多くの LLM プロバイダーや音声プロバイダーを統合できるようにし、Discord、bilibili、その他多くのソーシャルメディアプラットフォームで初めて AIRI を公開しました。
+ユーザーインターフェースに多くの改善を加え、より多くの LLM プロバイダーや音声プロバイダーを統合できるようにし、Discord、bilibili、その他多くのソーシャルメディアプラットフォームで初めて Anima を公開しました。
 
 お伝えしたいことがたくさんあります。
 
@@ -59,7 +59,7 @@ import SteinsGateMayori from '../../../en/blog/DevLog-2025.03.20/assets/steins-g
 
 <ThemedVideo muted autoplay src="/en/blog/DevLog-2025.03.20/assets/histoire-first-look.mp4" />
 
-OKLCH パレット全体を一度にキャンバスに展開して参照することができます。しかし、色を試して Project AIRI のテーマと同じ感覚を得るには、少し不完全ですよね？
+OKLCH パレット全体を一度にキャンバスに展開して参照することができます。しかし、色を試して Project Anima のテーマと同じ感覚を得るには、少し不完全ですよね？
 
 そこで、まずカラースライダーを再実装して、より適切な感じにしました：
 
@@ -68,7 +68,7 @@ OKLCH パレット全体を一度にキャンバスに展開して参照する�
 
 これでスライダーがよりプロフェッショナルになりました。
 
-ロゴとデフォルトの緑色は、AIRI のテーマに合わせて置き換えることができます。そのため、UI ページ専用に別のロゴをデザインしました：
+ロゴとデフォルトの緑色は、Anima のテーマに合わせて置き換えることができます。そのため、UI ページ専用に別のロゴをデザインしました：
 
 <img class="light" :src="HistoireLogo" alt="project airi logo for histoire" />
 <img class="dark" :src="HistoireLogoDark" alt="project airi logo for histoire" />

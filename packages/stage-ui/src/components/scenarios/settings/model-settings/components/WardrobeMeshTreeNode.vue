@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DiscoveredMeshNode } from '@proj-airi/stage-ui-three'
+import type { DiscoveredMeshNode } from '@proj-anima/stage-ui-three'
 
 import { computed, ref, watch } from 'vue'
 

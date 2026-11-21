@@ -1,4 +1,4 @@
-import type { ActiveWindowEntry, SystemLoadAverages } from '@proj-airi/stage-shared'
+import type { ActiveWindowEntry, SystemLoadAverages } from '@proj-anima/stage-shared'
 
 import { describe, expect, it } from 'vitest'
 

@@ -8,8 +8,8 @@ import type {
 
 import JSZip from 'jszip'
 
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { useLive2d } from '@proj-airi/stage-ui-live2d'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { useLive2d } from '@proj-anima/stage-ui-live2d'
 import { nanoid } from 'nanoid'
 import { safeParse } from 'valibot'
 

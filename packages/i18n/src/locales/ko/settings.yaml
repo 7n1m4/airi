@@ -9,7 +9,7 @@ animations:
     title: 페이지별 전환 사용
 dialogs:
   onboarding:
-    title: AIRI에 오신 것을 환영합니다!
+    title: Anima에 오신 것을 환영합니다!
     description: 시작하기 위해 당신의 첫 번째 AI 제공자를 설정해 보겠습니다.
     selectProvider: AI 제공자를 선택해주세요
     configureProvider: '{provider} 구성'
@@ -74,7 +74,7 @@ dialogs:
       relu: ReLU
       relu_desc: 당신의 데이터와 마음과 함께 진화하는 영혼의 유대.
       aria: Dr. Aria
-      aria_desc: AIRI 연구 계층을 관리하는 총명하고 기민한 안내자.
+      aria_desc: Anima 연구 계층을 관리하는 총명하고 기민한 안내자.
       lupin: 루핀 (Lupin)
       lupin_desc: 날카로운 본능과 보호심을 지닌 충직한 늑대 소녀.
       import: 커스텀
@@ -83,7 +83,7 @@ dialogs:
 language:
   title: 언어
   description: >
-    AIRI 인터페이스의 언어를 바꿉니다. 다만 캐릭터의 응답 언어는 변경되지 않습니다.
+    Anima 인터페이스의 언어를 바꿉니다. 다만 캐릭터의 응답 언어는 변경되지 않습니다.
 controls-island:
   icon-size:
     title: 아일랜드 아이콘 크기 조정
@@ -151,7 +151,7 @@ pages:
     delete: 삭제
     delete_card: 카드 삭제
     delete_confirmation: 이 카드를 삭제하시겠습니까?
-    description: AIRI 캐릭터 카드 프리셋 사용
+    description: Anima 캐릭터 카드 프리셋 사용
     description_label: 설명
     drop_here: 여기로 끌어서 업로드
     create_card: 새로운 카드 만들기
@@ -196,7 +196,7 @@ pages:
         consciousness_model: 이 캐릭터에 대한 의식 모델(AI 모델)을 선택합니다.
         speech_model: 이 캐릭터의 음성 합성 모델과 음성을 선택합니다.
         identity_prompting: 이 필드들은 캐릭터 정의에 도움이 되지만, 현재 별도의 런타임 레이어로 분리되어 있지는 않습니다. 시스템
-          프롬프트는 AIRI의 활성 프롬프트 조합에 직접 사용됩니다. 히스토리 후속 지침은 주로 카드 호환성과 향후 프롬프트
+          프롬프트는 Anima의 활성 프롬프트 조합에 직접 사용됩니다. 히스토리 후속 지침은 주로 카드 호환성과 향후 프롬프트
           파이프라인을 위해 유지되므로, 실시간 동작 차이를 기대하지 않고 지금 작성해 두셔도 좋습니다.
       errors:
         name: 이름은 유효하거나 비어 있지 않아야 합니다.
@@ -225,7 +225,7 @@ pages:
       model: 음성 합성 / 모델
       voice: 음성 합성 / 음성
     systemprompt: 시스템 프롬프트
-    title: AIRI 카드
+    title: Anima 카드
     try_different_search: 다른 검색어를 시도해보세요
     upload: 업로드
     upload_desc: 클릭 또는 파일을 드래그하여 업로드
@@ -234,7 +234,7 @@ pages:
     title: 메모리
   data:
     title: 데이터
-    description: 저장된 AIRI 데이터, 내보낸 항목, 초기화된 항목 관리
+    description: 저장된 Anima 데이터, 내보낸 항목, 초기화된 항목 관리
     sections:
       chats:
         title: 채팅 세션
@@ -263,7 +263,7 @@ pages:
         delete: 모든 데이터 삭제
       desktop:
         title: 데스크탑 설정 및 상태 초기화
-        description: AIRI 데스크탑 설정 및 런타임 상태를 전부 지웁니다.
+        description: Anima 데스크탑 설정 및 런타임 상태를 전부 지웁니다.
         reset: 데스크탑 데이터 지우기
       characters:
         title: 캐릭터
@@ -401,7 +401,7 @@ pages:
       description: Factorio 플레이 중!
       title: Factorio
       enable: Factorio 통합 사용
-      enable-description: AIRI가 Factorio를 접근하기 위해 허용
+      enable-description: Anima가 Factorio를 접근하기 위해 허용
       server-address: 서버 주소
       server-address-description: Factorio 서버의 IP 주소 및 호스트 이름
       server-address-placeholder: '서버 주소 입력 (예시: localhost 및 192.168.1.100)'
@@ -420,7 +420,7 @@ pages:
             description: 적절한 음성 인식 제공자 선택
           hotkey:
             title: 마이크 토글 단축키
-            description: 키보드 잠금 키(Scroll, Caps 또는 Num Lock)로 마이크를 전환합니다. 키보드 LED가 AIRI의 마이크
+            description: 키보드 잠금 키(Scroll, Caps 또는 Num Lock)로 마이크를 전환합니다. 키보드 LED가 Anima의 마이크
               상태와 동기화됩니다.
             options:
               scroll: Scroll Lock
@@ -436,7 +436,7 @@ pages:
       description: Discord를 통한 채팅 및 음성 채팅
       title: Discord
       enable: Discord 통합 사용
-      enable-description: AIRI가 Discord를 접근하기 위해 허용
+      enable-description: Anima가 Discord를 접근하기 위해 허용
       token: 봇 토큰
       token-description: 당신의 Discord 봇 토큰
       token-placeholder: Discord 봇 토큰을 입력해주세요
@@ -475,7 +475,7 @@ pages:
       controls:
         title: 제어 및 모달리티
         vision: VLM (비전) 이미지 수신 활성화
-        vision-description: AIRI가 Discord의 이미지 첨부 파일을 읽고 처리할 수 있도록 허용합니다
+        vision-description: Anima가 Discord의 이미지 첨부 파일을 읽고 처리할 수 있도록 허용합니다
     speech:
       description: 음성 합성
       sections:
@@ -530,7 +530,7 @@ pages:
       description: X / 트위터 탐색 및 사용량
       title: X / 트위터
       enable: X / 트위터 통합 사용
-      enable-description: AIRI가 X / 트위터를 접근하기 위해 허용
+      enable-description: Anima가 X / 트위터를 접근하기 위해 허용
       api-key: API 키
       api-key-description: X / 트위터의 API 키
       api-key-placeholder: X / 트위터의 API 키를 입력해주세요
@@ -600,7 +600,7 @@ pages:
     helpinfo:
       title: 여기 처음 오셨나요?
       description: >
-        AIRI는 적어도 하나의 {chat} 제공자가 올바르게 생각하고 행동하도록 구성되어야 합니다. AIRI 시스템에 거주하는 캐릭터의
+        Anima는 적어도 하나의 {chat} 제공자가 올바르게 생각하고 행동하도록 구성되어야 합니다. Anima 시스템에 거주하는 캐릭터의
         두뇌라고 생각할 수 있습니다.
     catalog:
       edit:
@@ -1030,7 +1030,7 @@ pages:
         description: Moss TTS를 사용하는 로컬 온디바이스 텍스트 음성 변환 엔진.
       airi-audio-server:
         description: 고성능 신경망 오디오 서버 - 제로샷 음성 복제 및 준언어 표현 태그를 지원하는 로컬 C++ 추론
-        title: AIRI Audio Server
+        title: Anima Audio Server
       alibaba-cloud:
         description: Model Studio - Alibaba Cloud의 대규모 모델 서비스 플랫폼
         title: 알리바바 클라우드 (Alibaba Cloud)
@@ -1276,7 +1276,7 @@ pages:
         개발 모드에서 모바일(pocket)의 HTTPS 연결을 허용하려면 WSS(WebSocket Secure)를 활성화하십시오. 이
         설정은 자체 서명된 인증서를 자동으로 생성합니다.
     server-hostname:
-      label: AIRI Gateway Hostname
+      label: Anima Gateway Hostname
       description: Set zero (0.0.0.0) to bind to all available IP addresses on your
         WiFi network. Otherwise, bind this to 127.0.0.1 for maximum local
         security.
@@ -1336,7 +1336,7 @@ pages:
                 vivid: 선명함 (네온)
                 monochrome: 모노크롬 (흑백)
               reset:
-                title: AIRI 시안으로 초기화
+                title: Anima 시안으로 초기화
           title: 색상 구성표
         developer:
           title: 개발자 옵션
@@ -1392,8 +1392,8 @@ pages:
           presets:
             default:
               colors:
-                color-1: AIRI 녹색
-              description: AIRI가 가져온 기본 녹색 테마 색상!
+                color-1: Anima 녹색
+              description: Anima가 가져온 기본 녹색 테마 색상!
               title: 기본 색상
             morandi:
               colors:
@@ -1517,7 +1517,7 @@ pages:
         double-enter: Double Enter
   docs:
     title: 문서
-    description: AIRI 사용법과 다양한 기능을 알아보세요
+    description: Anima 사용법과 다양한 기능을 알아보세요
     sections:
       overview: 개요
       manual: 매뉴얼
@@ -1537,7 +1537,7 @@ sections:
 theme:
   title: 테마
   description: |
-    AIRI의 전반적인 테마를 바꿉니다.
+    Anima의 전반적인 테마를 바꿉니다.
 title: 설정
 voices: 음성
 vrm:
@@ -1624,7 +1624,7 @@ providers:
 privacy:
   remote-sync:
     title: 클라우드 동기화 활성화
-    description: 기본적으로 꺼져 있습니다. 비활성화 시 AIRI는 로컬에서만 작동하며 원격 세션을 가져오거나
+    description: 기본적으로 꺼져 있습니다. 비활성화 시 Anima는 로컬에서만 작동하며 원격 세션을 가져오거나
       airi-api.moeru.ai로 채팅 기록을 동기화하지 않습니다.
 groups:
   character:

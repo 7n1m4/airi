@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FieldCheckbox } from '@proj-airi/ui'
+import { FieldCheckbox } from '@proj-anima/ui'
 import { computed, ref, watch } from 'vue'
 
 import { useConsciousnessStore } from '../../../stores/modules/consciousness'

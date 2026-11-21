@@ -9,12 +9,12 @@ import { useConsciousnessStore } from './modules/consciousness'
 import { useProactivityStore } from './proactivity'
 import { useProvidersStore } from './providers'
 
-vi.mock('@proj-airi/electron-vueuse', () => ({
+vi.mock('@proj-anima/electron-vueuse', () => ({
   useElectronEventaInvoke: () => () => {},
 }))
 
-vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@proj-airi/stage-shared')>()
+vi.mock('@proj-anima/stage-shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@proj-anima/stage-shared')>()
   return {
     ...actual,
     debug: vi.fn(),

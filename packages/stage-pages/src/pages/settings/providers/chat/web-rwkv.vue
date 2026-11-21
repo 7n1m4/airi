@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { WebRwkvModelInfo } from '@proj-airi/stage-ui/libs/inference'
+import type { WebRwkvModelInfo } from '@proj-anima/stage-ui/libs/inference'
 import type { RemovableRef } from '@vueuse/core'
 
 import {
@@ -8,17 +8,17 @@ import {
   ProviderBasicSettings,
   ProviderSettingsContainer,
   ProviderSettingsLayout,
-} from '@proj-airi/stage-ui/components'
+} from '@proj-anima/stage-ui/components'
 import {
   DEFAULT_WEB_RWKV_MODEL,
   formatBytes,
   getWebRwkvAdapter,
   isModelCached,
   WEB_RWKV_MODELS,
-} from '@proj-airi/stage-ui/libs/inference'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { buildRwkvPrompt, createThinkPrefixStripper } from '@proj-airi/stage-ui/stores/providers/web-rwkv'
-import { Button, FieldCheckbox, FieldInput } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/libs/inference'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { buildRwkvPrompt, createThinkPrefixStripper } from '@proj-anima/stage-ui/stores/providers/web-rwkv'
+import { Button, FieldCheckbox, FieldInput } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'

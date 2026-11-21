@@ -2,9 +2,9 @@
 import type { SynthesisProposal } from '../../../../../../composables/use-card-synthesis'
 import type { StoryProposalItem } from '../stores/useOnboardingV3Draft'
 
-import { SPOTLIGHT_MODELS } from '@proj-airi/stage-ui/constants'
-import { STARTER_CHARACTERS } from '@proj-airi/stage-ui/constants/prompts/character-defaults'
-import { Button } from '@proj-airi/ui'
+import { SPOTLIGHT_MODELS } from '@proj-anima/stage-ui/constants'
+import { STARTER_CHARACTERS } from '@proj-anima/stage-ui/constants/prompts/character-defaults'
+import { Button } from '@proj-anima/ui'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

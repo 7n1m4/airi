@@ -50,7 +50,7 @@ Note: a second background store exists in `packages/stage-layouts/src/stores/bac
 
 ## Verification
 
-`pnpm -F @proj-airi/stage-ui typecheck`; runtime: trigger a manual `image_journal create` tool call and separately an AA-enabled turn, confirm both land as `type:'journal'` `BackgroundEntry` with correct character/universe scoping.
+`pnpm -F @proj-anima/stage-ui typecheck`; runtime: trigger a manual `image_journal create` tool call and separately an AA-enabled turn, confirm both land as `type:'journal'` `BackgroundEntry` with correct character/universe scoping.
 
 ## Sources
 

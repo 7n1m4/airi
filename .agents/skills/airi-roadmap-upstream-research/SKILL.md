@@ -60,7 +60,7 @@ This fork (`dasilva333/airi`) has undergone deep, structural architectural shift
 9. **Native In-Process Memory & Cognition vs. External Daemon Bridges (Cortico PR #2634)**:
    - This fork is strictly 100% in-process: character memory is powered natively by the Eight Pillars (STMM daily summaries, LTMM immutable Sacred Journal, Echo chips, distilled Lifetime Artifacts, and Orama hybrid search) stored directly in client-side IndexedDB (`local:*`) and `localforage`.
    - It requires zero secondary terminal processes, zero daemons, and maintains full parity across Desktop (Electron), Web, and Mobile (Capacitor).
-   - Upstream PR #2634 proposes offloading character cognition and persona to an external Cortico daemon (`@proj-airi/cortico-bridge` on `ws://localhost:6122`), breaking single-command launch (`pnpm dev:bridge` requirement), gutting native memory settings pages, breaking Web/Mobile compatibility, and relying on raw unindexed host directory scans. **External persona daemons are auto-rejects for core adoption.**
+   - Upstream PR #2634 proposes offloading character cognition and persona to an external Cortico daemon (`@proj-anima/cortico-bridge` on `ws://localhost:6122`), breaking single-command launch (`pnpm dev:bridge` requirement), gutting native memory settings pages, breaking Web/Mobile compatibility, and relying on raw unindexed host directory scans. **External persona daemons are auto-rejects for core adoption.**
 
 ## Upstream Radar Watchlist (High-Interest Monitored PRs)
 

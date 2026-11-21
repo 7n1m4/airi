@@ -1,4 +1,4 @@
-import type { AgenticHttpStatusResponse, AgenticOsConfig } from '@proj-airi/stage-shared/agentic'
+import type { AgenticHttpStatusResponse, AgenticOsConfig } from '@proj-anima/stage-shared/agentic'
 
 /**
  * The local HTTP endpoint for OS automation (Home Assistant, scripts, cron).

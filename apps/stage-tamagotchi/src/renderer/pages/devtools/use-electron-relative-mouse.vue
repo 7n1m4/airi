@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useElectronMouse, useElectronRelativeMouse, useElectronWindowBounds } from '@proj-airi/electron-vueuse'
+import { useElectronMouse, useElectronRelativeMouse, useElectronWindowBounds } from '@proj-anima/electron-vueuse'
 
 const { x: cursorX, y: cursorY } = useElectronMouse()
 

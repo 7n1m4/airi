@@ -1,7 +1,7 @@
-import type { DesktopWindowInfo, DockModeConfig, DockModeStatus, DockPosition } from '@proj-airi/electron-eventa'
+import type { DesktopWindowInfo, DockModeConfig, DockModeStatus, DockPosition } from '@proj-anima/electron-eventa'
 
-import { dockModeStatusChanged } from '@proj-airi/electron-eventa'
-import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
+import { dockModeStatusChanged } from '@proj-anima/electron-eventa'
+import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
 import { useLocalStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'

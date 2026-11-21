@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { resolveSettingsBackRoute } from '@proj-airi/stage-pages/composables/settings-topology'
-import { PageHeader } from '@proj-airi/stage-ui/components'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
+import { resolveSettingsBackRoute } from '@proj-anima/stage-pages/composables/settings-topology'
+import { PageHeader } from '@proj-anima/stage-ui/components'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
 import { computed, ref, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterView, useRoute, useRouter } from 'vue-router'

@@ -1,7 +1,7 @@
 # String untuk shell desktop Slint (Slint): splash, strip kontrol, jendela, dan
 # halaman placeholder.
 app:
-  name: AIRI
+  name: Anima
   tagline: Teman AI kamu, di desktopmu.
   version-label: Versi
 splash:
@@ -12,27 +12,27 @@ splash:
     stage_ready: Menyiapkan panggung…
 strip:
   tooltips:
-    avatar: AIRI
+    avatar: Anima
     mic: alihkan Mikrofon
     chat: Obrolan
     stage: Panggung
     settings: Pengaturan
-    about: Tentang AIRI
+    about: Tentang Anima
     collapse: Ciutkan
     expand: Bentangkan
     theme: Alihkan mode gelap / terang
     language: Ubah bahasa
-    quit: Keluar dari AIRI
+    quit: Keluar dari Anima
     caption: Takarir
 chat:
-  title: AIRI — Obrolan
+  title: Anima — Obrolan
   recent: Terbaru
   new: Chat baru
   search-placeholder: Cari chat…
   delete-session: Hapus chat
   empty-title: Mulai percakapan
   empty-subtitle: Pesan Anda disimpan secara lokal di perangkat ini.
-  input-placeholder: Pesan untuk AIRI…
+  input-placeholder: Pesan untuk Anima…
   send: Kirim
   stop: Berhenti
   streaming: Mengalir…
@@ -46,7 +46,7 @@ chat:
     import: Impor kartu…
     import-error: 'Kartu tidak dapat diimpor — bukan kartu CCv2/CCv3 yang valid (png atau json).'
 settings:
-  title: AIRI — Pengaturan
+  title: Anima — Pengaturan
   description: Konfigurasikan asisten AI kamu.
   nav:
     providers: Penyedia
@@ -77,7 +77,7 @@ settings:
     modules: 'Modul'
   theme-page:
     title: Tema
-    description: Personalisasi warna dan tampilan AIRI.
+    description: Personalisasi warna dan tampilan Anima.
     hue: Hue aksen
     chroma: Pengali kroma
     dark: Mode gelap
@@ -152,17 +152,17 @@ providers:
     aws_secret_access_key: Kunci Akses Rahasia AWS
     account_id: ID Akun Cloudflare
 about:
-  title: AIRI — Tentang
-  app-name: AIRI
+  title: Anima — Tentang
+  app-name: Anima
   tagline: Teman AI kamu, di desktopmu.
-  body: AIRI adalah teman AI desktop — makhluk digital yang bisa bicara, melihat, dan bereaksi. Dibangun dengan Rust, Slint 6
+  body: Anima adalah teman AI desktop — makhluk digital yang bisa bicara, melihat, dan bereaksi. Dibangun dengan Rust, Slint 6
     dan Slint.
   license: Berlisensi GPL-3.0-or-later. Slint digunakan di bawah ketentuan GPL-nya.
   source-label: Kode sumber
   source-url: https://github.com/moeru-ai/airi
-  credit: Dibuat oleh Neko Ayaka dan para kontributor AIRI.
+  credit: Dibuat oleh Neko Ayaka dan para kontributor Anima.
   check-update: Periksa pembaruan
-  update-up-to-date: AIRI sudah yang terbaru.
+  update-up-to-date: Anima sudah yang terbaru.
   update-available: 'Pembaruan tersedia:'
 stage:
   description: Tampilkan dan posisikan jendela panggung melayang dengan pendamping AI Anda.
@@ -191,7 +191,7 @@ stage:
     head: Kepala
     none: Tidak ada
     preview: Pratinjau
-    previewSample: Begini tampilan takarir saat AIRI berbicara.
+    previewSample: Begini tampilan takarir saat Anima berbicara.
   stripSection:
     title: Bilah kontrol
     hint: Pilih kontrol panggung mana yang tampil di bilah kontrol.
@@ -239,7 +239,7 @@ audio:
   save: Simpan
   saveError: Gagal menyimpan. Coba lagi.
 profile:
-  description: Siapa kamu bagi AIRI.
+  description: Siapa kamu bagi Anima.
   identitySection: Identitas
   name: Nama tampilan
   namePlaceholder: Nama kamu
@@ -253,7 +253,7 @@ profile:
   save: Simpan
   saveError: Gagal menyimpan. Coba lagi.
 notify:
-  replyReady: AIRI telah membalas
+  replyReady: Anima telah membalas
 common:
   close: Tutup
 
@@ -326,7 +326,7 @@ models:
     paid: Berbayar / Komisi
     visit: Kunjungi
     knowRepository: Tahu repositori model hebat lainnya?
-    knowRepositoryHint: Bantu komunitas AIRI tumbuh dengan merekomendasikan lebih banyak repositori, alat, atau arsip gratis.
+    knowRepositoryHint: Bantu komunitas Anima tumbuh dengan merekomendasikan lebih banyak repositori, alat, atau arsip gratis.
     submitOnGithub: Kirim di GitHub
     formats:
       all: Semua Format
@@ -339,9 +339,9 @@ onboarding:
   deferredNotice: 'Penyelesaian first-run belum terhubung di build Slint ini — layar-layar ini hanya presentasi. Tombol yang menyelesaikan atau melewati wizard akan terbuka setelah store onboarding tersedia.'
   deferredTip: 'Belum terhubung — store onboarding first-run akan mengaktifkan aksi ini.'
   v3:
-    brand: 'Pengaturan Companion AIRI'
+    brand: 'Pengaturan Companion Anima'
     stageReady: 'Panggung siap'
-    heroTitle: 'Selamat datang di AIRI'
+    heroTitle: 'Selamat datang di Anima'
     heroSubtitle: 'Panggung companionmu — diatur dalam hitungan menit, 100% di mesinmu.'
     companionQuote: 'Halo! Aku companion digital otonommu. Mau percakapan suara, penampilan panggung kreatif, atau kehadiran desktop yang tenang, aku siap beradaptasi dengan duniamu.'
     pillWebgpu: 'Inti WebGPU lokal'
@@ -356,7 +356,7 @@ notice:
   deferredTip: 'Membutuhkan jembatan aksi jendela pemberitahuan (windowAction / pageMounted / pageUnmounted), yang belum ada di build Slint.'
   index:
     title: 'Pemberitahuan'
-    subtitle: 'Proses utama AIRI menampilkan jendela pemberitahuan sementara untuk prompt satu kali. Halaman ini mencantumkan pemberitahuan yang dibawa aplikasi desktop.'
+    subtitle: 'Proses utama Anima menampilkan jendela pemberitahuan sementara untuk prompt satu kali. Halaman ini mencantumkan pemberitahuan yang dibawa aplikasi desktop.'
     surfaces: 'Permukaan pemberitahuan'
     fadeOnHoverTitle: 'Tutorial Fade on Hover'
     fadeOnHoverSubtitle: 'Menjelaskan perilaku sembunyi otomatis yang memudar karakter saat kursor mendekat.'
@@ -392,13 +392,13 @@ modules:
   entries:
     memory:
       blurb: 'Memori jangka pendek & panjang, jurnal dan retrieval untuk companion-mu.'
-      reason: 'Siap di Slint — rute dikelola navigasi pengaturan; backend mendarat di airi-core memory (journal, retrieval, embeddings); permukaan pengaturan tiba di wave ini.'
+      reason: 'Siap di Slint — rute dikelola navigasi pengaturan; backend mendarat di anima-core memory (journal, retrieval, embeddings); permukaan pengaturan tiba di wave ini.'
     speech:
       blurb: 'Keluaran suara text-to-speech untuk companion-mu.'
-      reason: 'Siap di Slint — backend mendarat di airi-speech (26 definisi TTS + Kokoro); permukaan pengaturan TTS/STT Slint tiba di wave ini.'
+      reason: 'Siap di Slint — backend mendarat di anima-speech (26 definisi TTS + Kokoro); permukaan pengaturan TTS/STT Slint tiba di wave ini.'
     hearing:
       blurb: 'Input mikrofon, deteksi aktivitas suara dan transkripsi.'
-      reason: 'Siap di Slint — backend mendarat di airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); permukaan pengaturan pendengaran Slint tiba di wave ini.'
+      reason: 'Siap di Slint — backend mendarat di anima-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); permukaan pengaturan pendengaran Slint tiba di wave ini.'
     vision:
       blurb: 'Persepsi visual layar dan kamera.'
       reason: 'Ditunda — tanpa stack vision di Slint (moondream/blip/apple-core-ai tidak ada di registri Rust); hidup di aplikasi Electron hari ini.'
@@ -424,7 +424,7 @@ modules:
       blurb: 'Cadangkan snapshot ke penyimpananmu sendiri (BYOS).'
       reason: 'Tersambung — target folder lokal, verifikasi/restore snapshot; S3/mesh/selektif belum disambungkan.'
     pluginHost:
-      blurb: 'Host untuk paket plugin AIRI.'
+      blurb: 'Host untuk paket plugin Anima.'
       reason: 'Hanya scaffold — tanpa penemuan/pengaktifan/bus kapabilitas; dibebaskan untuk Slint v1; main process Electron yang meng-host plugin.'
     vrm:
       blurb: 'Render model VRM dan scene stage.'
@@ -454,7 +454,7 @@ memory:
   shortTerm:
     title: 'Jangka pendek & retrieval'
     badge: 'Terhubung'
-    note: 'topK membatasi berapa banyak memori yang diambil dan diinjeksikan per prompt (1–20). Peringkat retrieval menggabungkan kemiripan semantik (bobot 0.75) dengan tumpang tindih leksikal (bobot 0.25) di airi-core; pipeline chat mengonsumsinya selama memori aktif.'
+    note: 'topK membatasi berapa banyak memori yang diambil dan diinjeksikan per prompt (1–20). Peringkat retrieval menggabungkan kemiripan semantik (bobot 0.75) dengan tumpang tindih leksikal (bobot 0.25) di anima-core; pipeline chat mengonsumsinya selama memori aktif.'
   topK:
     label: 'Retrieval top-k'
     description: 'Berapa banyak memori yang dapat diinjeksikan retrieval per prompt (1–20).'
@@ -467,7 +467,7 @@ memory:
     refresh: 'Segarkan'
     emptyTitle: 'Belum ada entri jurnal'
     emptySubtitle: 'Belum ada entri jurnal — memori chat mengisinya saat Anda memakai aplikasi.'
-  footer: 'Preferensi dan jurnal tersimpan di vault SQLite airi-store (airi.sqlite) untuk profil ini. Memori memperbesar konteks chat — tidak ada yang keluar dari mesin kecuali ke penyedia LLM yang dikonfigurasi.'
+  footer: 'Preferensi dan jurnal tersimpan di vault SQLite anima-store (airi.sqlite) untuk profil ini. Memori memperbesar konteks chat — tidak ada yang keluar dari mesin kecuali ke penyedia LLM yang dikonfigurasi.'
   saveError: 'Gagal menyimpan — lihat baris status untuk detail.'
   time:
     justNow: 'baru saja'
@@ -479,7 +479,7 @@ hearing:
   description: 'Input mikrofon dan preferensi mendengar untuk companion-mu.'
   enable:
     title: 'Aktifkan pendengaran'
-    description: 'Mencatat bahwa Anda ingin AIRI mendengar Anda. Berlaku saat pipeline capture mendarat — menyimpan ini tidak membuka mikrofon Anda.'
+    description: 'Mencatat bahwa Anda ingin Anima mendengar Anda. Berlaku saat pipeline capture mendarat — menyimpan ini tidak membuka mikrofon Anda.'
   mode:
     title: 'Mode mendengar'
     caption: 'Auto mendengar terus-menerus (memerlukan pipeline capture); PTT mendengar hanya saat tombol ditahan.'
@@ -491,7 +491,7 @@ hearing:
     caption: 'Pendaftaran pintasan global belum tersambung di build ini — nilainya disimpan tetapi belum ada pintasan yang aktif.'
   device:
     title: 'Perangkat input'
-    caption: 'Pilih mikrofon yang akan dipakai AIRI setelah pipeline capture mendarat.'
+    caption: 'Pilih mikrofon yang akan dipakai Anima setelah pipeline capture mendarat.'
     emptyTitle: 'Tidak ada perangkat input terdaftar'
     emptySubtitle: 'Build Slint belum bisa mendaftar mikrofon — capture audio belum tersambung.'
     useDefault: 'Default sistem'
@@ -500,7 +500,7 @@ hearing:
   nav: 'Pendengaran'
 speech:
   title: 'Bicara'
-  description: 'Text-to-speech untuk AIRI. Pilih penyedia dari katalog, sesuaikan suara dan kecepatan, lalu tulis file sampel untuk memeriksanya. Status port berasal dari registri speech Rust apa adanya.'
+  description: 'Text-to-speech untuk Anima. Pilih penyedia dari katalog, sesuaikan suara dan kecepatan, lalu tulis file sampel untuk memeriksanya. Status port berasal dari registri speech Rust apa adanya.'
   providers:
     caption: 'Penyedia text-to-speech'
     empty: 'Katalog penyedia gagal dimuat — lihat konsol.'
@@ -521,19 +521,19 @@ speech:
     caption: 'Sintesis sampel'
     description: 'Sintesis sampel pendek dengan penyedia terpilih dan tulis ke file baru di direktori profil Anda. Menggunakan endpoint default penyedia; tidak ada yang diputar.'
     label: 'Teks sampel'
-    placeholder: 'Halo, aku AIRI.'
+    placeholder: 'Halo, aku Anima.'
     button: 'Sintesis sampel'
     written: 'Sampel ditulis:'
     notPlayable: 'File sampel ditulis ke disk dan belum bisa diputar di dalam aplikasi — buka dengan pemutar sistem Anda.'
   stt:
     caption: 'Speech-to-text'
     title: 'Speech-to-text hidup di tempat lain (belum tersambung di sini)'
-    body: 'airi-stt mem-port klien STT: Whisper (in-process, whisper-rs), klien OpenAI-compatible /audio/transcriptions, klien Deepgram streaming, dan Aliyun NLS (streaming, token pra-terbit diperlukan). Permukaan hearing Slint yang akan mengendalikannya belum ada — halaman ini hanya mengonfigurasi text-to-speech.'
+    body: 'anima-stt mem-port klien STT: Whisper (in-process, whisper-rs), klien OpenAI-compatible /audio/transcriptions, klien Deepgram streaming, dan Aliyun NLS (streaming, token pra-terbit diperlukan). Permukaan hearing Slint yang akan mengendalikannya belum ada — halaman ini hanya mengonfigurasi text-to-speech.'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
   caption: 'Status, sakelar per sumber, kill switch dan log audit lokal untuk daemon awareness opt-in. Tidak ada di sini yang bertindak sendiri.'
-  daemonDownTitle: 'airi-daemon tidak berjalan'
+  daemonDownTitle: 'anima-daemon tidak berjalan'
   daemonDownSubtitle: 'Daemon awareness adalah layanan sesi pengguna opt-in. Instruksi dev-run: packaging/README.md.'
   retry: 'Coba lagi'
   killSwitch:
@@ -627,7 +627,7 @@ widgets:
 
 data:
   title: 'Data'
-  description: 'Semua yang disimpan AIRI secara lokal di perangkat ini — ekspor, impor, atau bersihkan riwayat berat.'
+  description: 'Semua yang disimpan Anima secara lokal di perangkat ini — ekspor, impor, atau bersihkan riwayat berat.'
   status:
     notWired: 'Ekspor belum terhubung ke backend Rust — lihat catatan fase'
     actionNotWired: 'Aksi ini belum terhubung ke backend Rust — lihat catatan fase'
@@ -759,9 +759,9 @@ data:
 
 mcp:
   title: 'Server & Alat MCP'
-  description: 'Hubungkan dan kelola server Model Context Protocol (MCP) untuk memberi AIRI kapabilitas alat yang extensible.'
-  deferredTip: 'Belum terhubung — klien MCP hadir di jalur terpisah (airi-mcp). Pratinjau ini hanya menampilkan tata letak; tidak ada yang membaca atau menulis konfigurasimu.'
-  deferredNotice: 'Jembatan MCP belum terhubung. Server yang ditampilkan adalah default yang terdokumentasi di Electron, bukan konfigurasimu — setiap kontrol di bawah inert sampai jalur airi-mcp tiba.'
+  description: 'Hubungkan dan kelola server Model Context Protocol (MCP) untuk memberi Anima kapabilitas alat yang extensible.'
+  deferredTip: 'Belum terhubung — klien MCP hadir di jalur terpisah (anima-mcp). Pratinjau ini hanya menampilkan tata letak; tidak ada yang membaca atau menulis konfigurasimu.'
+  deferredNotice: 'Jembatan MCP belum terhubung. Server yang ditampilkan adalah default yang terdokumentasi di Electron, bukan konfigurasimu — setiap kontrol di bawah inert sampai jalur anima-mcp tiba.'
   notWiredBadge: 'Belum terhubung'
   tabs:
     manage: 'Kelola'
@@ -773,7 +773,7 @@ mcp:
     configPathHint: "Default Electron adalah app.getPath('appData') + '/airi/mcp.json'; jembatan Slint akan mengikuti konvensi yang sama. Path yang ditampilkan bersifat ilustratif, tidak dibaca dari disk."
     configuredServers: 'Server Terkonfigurasi'
     documentedExample: 'Contoh dokumentasi'
-    exampleNote: 'Ditampilkan sebagai dokumentasi — ini konfigurasi bawaan AIRI Desktop (Electron main), bukan server yang pernah dihubungkan AIRI.'
+    exampleNote: 'Ditampilkan sebagai dokumentasi — ini konfigurasi bawaan Anima Desktop (Electron main), bukan server yang pernah dihubungkan Anima.'
     serverStateUnknown: 'Tidak diketahui'
     transportStdio: 'Stdio lokal'
     toolsNone: '0 alat'
@@ -834,7 +834,7 @@ mcp:
 
 discord:
   title: 'Discord'
-  description: 'Jembatan pesan antara companion AIRI-mu dengan server Discord dan pesan langsung.'
+  description: 'Jembatan pesan antara companion Anima-mu dengan server Discord dan pesan langsung.'
   deferredNotice: 'Modul Discord belum terhubung ke gateway Rust. Koneksi bot, perilaku relay, dan routing akses ditampilkan sebagai pratinjau struktural — setiap aksi dinonaktifkan sampai jembatan gateway hadir.'
   deferredTip: 'Membutuhkan jembatan gateway Discord (siklus hidup websocket, penyimpanan token, layanan Rust) di build Slint.'
   tabs:
@@ -848,7 +848,7 @@ discord:
     tokenDescription: 'Token bot Discord-mu dari Developer Portal.'
     tokenPlaceholder: 'Tempel token bot-mu…'
     ownerLabel: 'Owner Bot / Username Utama'
-    ownerDescription: 'Handle Discord-mu (mis. dasilva333). AIRI secara otomatis menyelesaikan ID akunmu untuk hak istimewa owner & sinkron memori.'
+    ownerDescription: 'Handle Discord-mu (mis. dasilva333). Anima secara otomatis menyelesaikan ID akunmu untuk hak istimewa owner & sinkron memori.'
     ownerPlaceholder: 'mis. dasilva333'
     ownerIdPending: 'ID Owner terselesaikan: belum — butuh jembatan gateway.'
     connect: 'Hubungkan'
@@ -957,7 +957,7 @@ cloudSync:
     endpointPlaceholder: 'https://s3.amazonaws.com'
     bucketLabel: 'Nama Bucket'
     bucketDescription: 'Nama bucket cloud-mu.'
-    bucketPlaceholder: 'my-airi-sync'
+    bucketPlaceholder: 'my-anima-sync'
     regionLabel: 'Region'
     regionDescription: 'Region bucket-mu (default us-east-1 jika dikosongkan).'
     regionPlaceholder: 'us-east-1'
@@ -972,7 +972,7 @@ cloudSync:
     localCaption: 'Pengaturan Berbagi Lokal'
     localPathLabel: 'Path Direktori Cadangan'
     localPathDescription: 'Path absolut ke folder sync lokalmu atau drive jaringan yang dimount (NAS / berbagi Samba).'
-    localPathPlaceholder: '/Volumes/AIRI-Backup-Share'
+    localPathPlaceholder: '/Volumes/Anima-Backup-Share'
     testConnection: 'Uji Koneksi'
   sync:
     title: 'Sinkronisasi'
@@ -1001,11 +1001,11 @@ cloudSync:
   mesh:
     title: 'Sinkronisasi Mesh Lokal'
     enableLabel: 'Aktifkan Sinkronisasi Mesh libp2p'
-    enableDescription: 'Sinkronkan memori, kredensial vault, dan kartu companion langsung dengan instance AIRI lain di jaringan lokalmu.'
+    enableDescription: 'Sinkronkan memori, kredensial vault, dan kartu companion langsung dengan instance Anima lain di jaringan lokalmu.'
     memoryLabel: 'Memori (STMM / LTMM / Event Ledger)'
     vaultLabel: 'Vault (kredensial BYOS)'
     companionsLabel: 'Companion (kartu karakter)'
-    targetDescription: 'Disinkronkan dengan instance AIRI yang dipasangkan lewat libp2p.'
+    targetDescription: 'Disinkronkan dengan instance Anima yang dipasangkan lewat libp2p.'
   actions:
     title: 'Tindakan Manual'
     manualTitle: 'Sinkronisasi Manual'
@@ -1062,7 +1062,7 @@ cloudSync:
     cancel: 'Batal'
 pluginHost:
   title: 'Plugin Host'
-  description: 'Inspeksi dan kelola plugin AIRI: manifest yang ditemukan, aktivasi, sesi termuat, dan kapabilitas yang diumumkan.'
+  description: 'Inspeksi dan kelola plugin Anima: manifest yang ditemukan, aktivasi, sesi termuat, dan kapabilitas yang diumumkan.'
   notWiredBadge: 'Belum terhubung'
   deferredTip: 'Belum terhubung — belum ada host plugin di build Slint. Pratinjau ini hanya menampilkan tata letak; tidak ada yang menemukan, memuat, atau menyimpan plugin.'
   deferredNotice: 'Host plugin tidak terhubung di build ini. Tidak ada manifest yang ditemukan dari disk, tidak ada plugin yang dimuat, dan setiap kontrol di bawah inert sampai host plugin Slint (atau jembatan gaya-Electron) hadir.'
@@ -1081,7 +1081,7 @@ pluginHost:
     configLabel: 'Penyimpan aktivasi'
     portLabel: 'Port'
     portValue: 'Tidak ada — host di dalam proses'
-    portHint: 'Host plugin Electron berjalan di dalam proses utama dan tidak memiliki port TCP. Port 6121 milik server kanal AIRI (SERVER_CHANNEL_PORT) dan tidak terkait dengan host plugin.'
+    portHint: 'Host plugin Electron berjalan di dalam proses utama dan tidak memiliki port TCP. Port 6121 milik server kanal Anima (SERVER_CHANNEL_PORT) dan tidak terkait dengan host plugin.'
   installed:
     section: 'Plugin Terpasang'
     emptyTitle: 'Tidak ada plugin terpasang di build ini'
@@ -1113,7 +1113,7 @@ pluginHost:
     portLabel: 'Port'
     portDescription: 'Port hipotetis host. Host asli berada di dalam proses dan tidak memilikinya.'
     portPlaceholder: 'Tidak terhubung'
-    portHint: 'Port 6121 adalah server kanal AIRI (SERVER_CHANNEL_PORT), bukan host plugin. Nilai apa pun di sini akan menjadi fiksi.'
+    portHint: 'Port 6121 adalah server kanal Anima (SERVER_CHANNEL_PORT), bukan host plugin. Nilai apa pun di sini akan menjadi fiksi.'
     logLevelLabel: 'Level Log'
     pluginDirLabel: 'Direktori Plugin'
     pluginDirPlaceholder: '<userData>/plugins/v1'

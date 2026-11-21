@@ -12,7 +12,7 @@ import profile from '../../assets/lip-sync-profile.json' with { type: 'json' }
 
 // NOTICE:
 // Cross-package source import (no package.json dependency) to reach the shared
-// AudioContext. Root cause: the audio context is owned by `@proj-airi/stage-ui`,
+// AudioContext. Root cause: the audio context is owned by `@proj-anima/stage-ui`,
 // which in turn depends on this package, so adding it as a dependency would
 // create a cycle. The VRM renderer reaches the same store the same way.
 // Source: packages/stage-ui-three/src/composables/vrm/lip-sync.ts.

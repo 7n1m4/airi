@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores'
-import { useNan0Store } from '@proj-airi/stage-ui/stores/modules/nan0'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores'
+import { useNan0Store } from '@proj-anima/stage-ui/stores/modules/nan0'
 import { computed, onMounted, ref, watch } from 'vue'
 
 const cardStore = useAiriCardStore()

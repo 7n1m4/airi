@@ -37,7 +37,7 @@ Daily continuity blocks distilled from chat history — one block per character 
 
 ## Verification
 
-`pnpm -F @proj-airi/stage-ui typecheck`; runtime: trigger a rebuild in Settings → Memory (Short-Term lane, `airi-memory-ui-pages`) and confirm per-day block writes in `local:memory/short-term/{userId}`.
+`pnpm -F @proj-anima/stage-ui typecheck`; runtime: trigger a rebuild in Settings → Memory (Short-Term lane, `airi-memory-ui-pages`) and confirm per-day block writes in `local:memory/short-term/{userId}`.
 
 ## Sources
 

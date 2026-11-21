@@ -1,7 +1,7 @@
 # live2d-dsl-harness
 
 Headless Phase 1 verification for the Live2D **DSL interpreter virtual machine** — driving
-[`@proj-airi/live2d-runtime`](../../../packages/live2d-runtime/) (the canonical, render-agnostic
+[`@proj-anima/live2d-runtime`](../../../packages/live2d-runtime/) (the canonical, render-agnostic
 engine) directly against the extracted model fixtures under `apps/stage-edge/.models/`.
 
 ## What it asserts

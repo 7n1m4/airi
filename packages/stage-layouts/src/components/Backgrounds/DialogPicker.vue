@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BackgroundPickerDialog } from '@proj-airi/stage-ui/components'
+import { BackgroundPickerDialog } from '@proj-anima/stage-ui/components'
 import { storeToRefs } from 'pinia'
 
 import { useBackgroundStore } from '../../stores/background'

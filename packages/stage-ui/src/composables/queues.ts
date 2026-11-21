@@ -1,10 +1,10 @@
-import type { UseQueueReturn } from '@proj-airi/stream-kit'
+import type { UseQueueReturn } from '@proj-anima/stream-kit'
 
 import type { Emotion, EmotionPayload } from '../constants/emotions'
 
 import { sleep } from '@moeru/std'
-import { debug } from '@proj-airi/stage-shared'
-import { createQueue } from '@proj-airi/stream-kit'
+import { debug } from '@proj-anima/stage-shared'
+import { createQueue } from '@proj-anima/stream-kit'
 
 import { EMOTION_VALUES } from '../constants/emotions'
 import { useAiriCardStore } from '../stores/modules/airi-card'

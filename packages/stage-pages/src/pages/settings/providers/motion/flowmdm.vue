@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { MotionGenerationResult } from '@proj-airi/stage-ui/stores/modules/text-to-motion'
+import type { MotionGenerationResult } from '@proj-anima/stage-ui/stores/modules/text-to-motion'
 
-import { useCustomVrmAnimationsStore } from '@proj-airi/stage-ui-three'
-import { useTextToMotionStore } from '@proj-airi/stage-ui/stores/modules/text-to-motion'
-import { Button, FieldInput } from '@proj-airi/ui'
+import { useCustomVrmAnimationsStore } from '@proj-anima/stage-ui-three'
+import { useTextToMotionStore } from '@proj-anima/stage-ui/stores/modules/text-to-motion'
+import { Button, FieldInput } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'

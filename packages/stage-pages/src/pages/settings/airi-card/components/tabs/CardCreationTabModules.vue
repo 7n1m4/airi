@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { DisplayModel } from '@proj-airi/stage-ui/stores/display-models'
+import type { DisplayModel } from '@proj-anima/stage-ui/stores/display-models'
 
-import VoiceCreatorModal from '@proj-airi/stage-ui/components/scenarios/dialogs/VoiceCreatorModal.vue'
+import VoiceCreatorModal from '@proj-anima/stage-ui/components/scenarios/dialogs/VoiceCreatorModal.vue'
 
-import { ModelSelectorDialog } from '@proj-airi/stage-ui/components/scenarios/dialogs/model-selector'
-import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { Select } from '@proj-airi/ui/components/form'
+import { ModelSelectorDialog } from '@proj-anima/stage-ui/components/scenarios/dialogs/model-selector'
+import { useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { Select } from '@proj-anima/ui/components/form'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 

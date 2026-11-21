@@ -1,4 +1,4 @@
-import messages from '@proj-airi/i18n/locales'
+import messages from '@proj-anima/i18n/locales'
 
 import { createI18n } from 'vue-i18n'
 

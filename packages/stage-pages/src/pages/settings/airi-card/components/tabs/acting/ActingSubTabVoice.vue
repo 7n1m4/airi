@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SpeechCapabilitiesInfo } from '@proj-airi/stage-ui/stores/providers'
+import type { SpeechCapabilitiesInfo } from '@proj-anima/stage-ui/stores/providers'
 
 interface Props {
   selectedSpeechProviderLabel: string

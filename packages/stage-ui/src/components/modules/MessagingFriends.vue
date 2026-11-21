@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { AmbassadorCard, ExternalFriend, FriendRequest, Peer } from '@proj-airi/stage-shared'
+import type { AmbassadorCard, ExternalFriend, FriendRequest, Peer } from '@proj-anima/stage-shared'
 
 import type { NapTurn } from '../../stores/nap-chat'
 
-import { extractHandleAlias, isCompanionAllowedForFriend, isExternalFriend, isNapChatEligible, isSameAccountDevice, resolveAmbassadorTagline, resolveEmbassyCompanionId } from '@proj-airi/stage-shared'
-import { Button, FieldCheckbox, FieldInput, FieldSelect } from '@proj-airi/ui'
+import { extractHandleAlias, isCompanionAllowedForFriend, isExternalFriend, isNapChatEligible, isSameAccountDevice, resolveAmbassadorTagline, resolveEmbassyCompanionId } from '@proj-anima/stage-shared'
+import { Button, FieldCheckbox, FieldInput, FieldSelect } from '@proj-anima/ui'
 import { useClipboard } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import {

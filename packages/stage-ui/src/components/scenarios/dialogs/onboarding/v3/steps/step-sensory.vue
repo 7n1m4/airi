@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useProactivityStore } from '@proj-airi/stage-ui/stores/proactivity'
-import { formatSensorPayload } from '@proj-airi/stage-ui/stores/proactivity-telemetry'
+import { useProactivityStore } from '@proj-anima/stage-ui/stores/proactivity'
+import { formatSensorPayload } from '@proj-anima/stage-ui/stores/proactivity-telemetry'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 

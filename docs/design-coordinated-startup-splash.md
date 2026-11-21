@@ -342,7 +342,7 @@ The core store (`packages/stage-ui/src/stores/startup-resources.ts`) is authored
 - [x] Add `selectedModelId === 'none'` guard to `packages/stage-ui/src/stores/settings/stage-model.ts`.
 
 ### Phase 4: Verification & Parity Audit
-- [x] Run `pnpm -F @proj-airi/stage-tamagotchi typecheck`.
+- [x] Run `pnpm -F @proj-anima/stage-tamagotchi typecheck`.
 - [x] Verify startup flow with text-only companion (`displayModelId === 'none'`).
 - [x] Verify startup flow with avatar companion (Live2D / VRM).
 - [x] Verify `--disable-webgl-stage` CLI flag.

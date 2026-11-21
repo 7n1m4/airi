@@ -42,7 +42,7 @@ Paths below are relative to `packages/stage-pages/src/pages/settings/modules/`.
 
 ## Verification
 
-For page changes, `pnpm -F @proj-airi/stage-pages typecheck`. Exercise no artifacts, existing artifacts, search failure/fallback, a running job, an interrupted resumable job, and a failed job. Switch characters during work, close/reopen the modal, resume, and restart. Confirm scope in store calls and persisted results. Check deletions and re-synthesis retain the intended confirmation.
+For page changes, `pnpm -F @proj-anima/stage-pages typecheck`. Exercise no artifacts, existing artifacts, search failure/fallback, a running job, an interrupted resumable job, and a failed job. Switch characters during work, close/reopen the modal, resume, and restart. Confirm scope in store calls and persisted results. Check deletions and re-synthesis retain the intended confirmation.
 
 ## Plans versus implementation
 

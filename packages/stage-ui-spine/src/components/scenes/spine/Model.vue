@@ -5,7 +5,7 @@ import type { SpineAnimationManager } from '../../../composables/spine'
 import type { Emotion } from '../../../constants/emotions'
 import type { SpineModelVariant } from '../../../utils/spine-zip-loader'
 
-import { debug } from '@proj-airi/stage-shared'
+import { debug } from '@proj-anima/stage-shared'
 import { Mutex } from 'es-toolkit'
 import { storeToRefs } from 'pinia'
 import { nextTick, onMounted, onUnmounted, ref, toRef, watch } from 'vue'

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { Oklch } from '@proj-airi/chromatic'
+import type { Oklch } from '@proj-anima/chromatic'
 
-import { chromaticPaletteFrom } from '@proj-airi/chromatic'
+import { chromaticPaletteFrom } from '@proj-anima/chromatic'
 import { useElementBounding, useThrottleFn } from '@vueuse/core'
 import { computed, inject, ref, toRef, watch } from 'vue'
 

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { SETTINGS_CATALOG_ITEMS } from '@proj-airi/stage-pages/composables/settings-topology'
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { CheckBar, IconItem, RippleGrid } from '@proj-airi/stage-ui/components'
-import { useRippleGridState } from '@proj-airi/stage-ui/composables/use-ripple-grid-state'
-import { useSettings } from '@proj-airi/stage-ui/stores/settings'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { SETTINGS_CATALOG_ITEMS } from '@proj-anima/stage-pages/composables/settings-topology'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { CheckBar, IconItem, RippleGrid } from '@proj-anima/stage-ui/components'
+import { useRippleGridState } from '@proj-anima/stage-ui/composables/use-ripple-grid-state'
+import { useSettings } from '@proj-anima/stage-ui/stores/settings'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 

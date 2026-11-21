@@ -16,14 +16,14 @@ The Gateway now prioritizes **Security by Default** and **Accountability** for a
 
 ### 2. Handshake Accountability (Traceability)
 Every WebSocket client in the AIRI ecosystem must now identify itself during the initial `module:authenticate` handshake.
-- **Caller ID:** A unique string identifying the connecting application (e.g., `stage-web`, `vscode-airi`, `python-agent-01`).
+- **Caller ID:** A unique string identifying the connecting application (e.g., `stage-web`, `vscode-anima`, `python-agent-01`).
 - **Purpose:** A brief description of the connection's intent (e.g., "Primary UI control", "Log monitoring", "Model inference").
 
 These fields are stored in the `AuthenticatedPeer` metadata and logged in the Gateway console, providing a clear audit trail of all active connections and their origins.
 
 ### 3. Graceful Failure & Backoff
 To prevent "hot loops" when an outdated or misconfigured client tries to connect:
-- **Client Sleep:** The `@proj-airi/server-sdk` implements a 5-second backoff when receiving an authentication error.
+- **Client Sleep:** The `@proj-anima/server-sdk` implements a 5-second backoff when receiving an authentication error.
 - **Runtime Interception:** `server-runtime` kills connections immediately if they fail authentication, preventing they from sending or receiving any system events.
 
 ## User Interface & Configuration

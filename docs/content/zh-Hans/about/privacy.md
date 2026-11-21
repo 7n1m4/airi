@@ -1,9 +1,9 @@
 ---
 title: 隐私政策
-description: Project AIRI 的隐私政策
+description: Project Anima 的隐私政策
 ---
 
-本隐私政策适用于由 Project AIRI 团队（以下简称“服务提供商”）创建的移动设备应用程序 AIRI（也称为 Project AIRI 应用程序，以下简称“应用程序”）。该应用程序作为开源服务及部分付费商业服务提供。本服务按“原样”提供。
+本隐私政策适用于由 Project Anima 团队（以下简称“服务提供商”）创建的移动设备应用程序 Anima（也称为 Project Anima 应用程序，以下简称“应用程序”）。该应用程序作为开源服务及部分付费商业服务提供。本服务按“原样”提供。
 
 ## 信息收集与使用
 

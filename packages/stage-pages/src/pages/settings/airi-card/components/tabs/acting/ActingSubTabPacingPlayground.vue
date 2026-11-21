@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { Message } from '@xsai/shared-chat'
 
-import { needleClient } from '@proj-airi/stage-ui/libs/inference'
-import { BoundedCategoryClassifier } from '@proj-airi/stage-ui/libs/pacing/category-classifier'
-import { getThinkingAudio } from '@proj-airi/stage-ui/libs/pacing/pacing-cache'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { useSystemOneStore } from '@proj-airi/stage-ui/stores/modules/system-one'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { DEFAULT_PACING_FILLERS } from '@proj-airi/stage-ui/types/pacing'
+import { needleClient } from '@proj-anima/stage-ui/libs/inference'
+import { BoundedCategoryClassifier } from '@proj-anima/stage-ui/libs/pacing/category-classifier'
+import { getThinkingAudio } from '@proj-anima/stage-ui/libs/pacing/pacing-cache'
+import { useConsciousnessStore } from '@proj-anima/stage-ui/stores/modules/consciousness'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { useSystemOneStore } from '@proj-anima/stage-ui/stores/modules/system-one'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { DEFAULT_PACING_FILLERS } from '@proj-anima/stage-ui/types/pacing'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 interface Props {
@@ -571,7 +571,7 @@ async function startLabTurn() {
       throw new Error(`Provider "${activeBrainProvider.value}" is not configured or unavailable. Please check settings.`)
     }
 
-    const { useLLM } = await import('@proj-airi/stage-ui/stores/llm')
+    const { useLLM } = await import('@proj-anima/stage-ui/stores/llm')
     const llm = useLLM()
 
     const messages: Message[] = [

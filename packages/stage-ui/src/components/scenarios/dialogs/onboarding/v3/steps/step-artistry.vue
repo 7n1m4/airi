@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
 import {
   artistryComfyHealthCheck,
   POLLINATIONS_DEFAULT_MODELS,
   REPLICATE_IMAGEGEN_PRESETS,
-} from '@proj-airi/stage-shared'
-import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
-import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
+} from '@proj-anima/stage-shared'
+import { useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
+import { useArtistryStore } from '@proj-anima/stage-ui/stores/modules/artistry'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 

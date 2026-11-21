@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Live2DMotionMagicProfileId } from '../profiles'
 
-import { FieldCheckbox, FieldSelect } from '@proj-airi/ui'
+import { FieldCheckbox, FieldSelect } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'

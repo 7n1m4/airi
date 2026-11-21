@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ColorPalette, Section } from '@proj-airi/stage-ui/components'
-import { DEFAULT_THEME_COLORS_CHROMA_MULTIPLIER, DEFAULT_THEME_COLORS_HUE, useSettings } from '@proj-airi/stage-ui/stores/settings'
-import { ColorHueRange, FieldRange } from '@proj-airi/ui'
+import { ColorPalette, Section } from '@proj-anima/stage-ui/components'
+import { DEFAULT_THEME_COLORS_CHROMA_MULTIPLIER, DEFAULT_THEME_COLORS_HUE, useSettings } from '@proj-anima/stage-ui/stores/settings'
+import { ColorHueRange, FieldRange } from '@proj-anima/ui'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 

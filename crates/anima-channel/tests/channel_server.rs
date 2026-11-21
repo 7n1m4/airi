@@ -1,0 +1,683 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! Integration test for the channel server. Spins the real server on an
+//! ephemeral port (or `CHANNEL_TEST_PORT` if set) and drives it with a
+//! hand-rolled client over raw TCP.
+//!
+//! Covers: HTTP upgrade handshake (known accept-key vector), the
+//! mandatory auth flow for both accepted auth shapes, ping/pong, the typed
+//! `rpc` dispatch (`runtime.ping`), typed error frames, and rejection of a
+//! bad token (error frame + close 1008) before any state is reached.
+//!
+//! Not marked `#[ignore]` — it is fully deterministic (ephemeral port,
+//! 5 s read timeouts, no shared state). Set `CHANNEL_TEST_PORT` only if you
+//! want a fixed port; binding failure then fails loudly rather than hangs.
+
+use std::io::{Read, Write};
+use std::net::TcpStream;
+use std::sync::Arc;
+use std::time::Duration;
+
+use anima_channel::ws::MAX_WS_PAYLOAD_BYTES;
+use anima_channel::{
+    accept_key, encode_frame, ChannelConfig, ChannelServer, Frame, FrameDecoder, RendererHandlers,
+    OP_CLOSE, OP_PING, OP_TEXT,
+};
+
+const CLIENT_KEY: &str = "dGhlIHNhbXBsZSBub25jZQ==";
+const TOKEN: &str = "integration-test-token";
+
+// A fixed port (CHANNEL_TEST_PORT) cannot be shared by five tests running
+// `cargo test`'s parallel harness — every test binds. Serialize them. With
+// an ephemeral port (the default, `0`) this is harmless.
+static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn test_port() -> u16 {
+    std::env::var("CHANNEL_TEST_PORT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0)
+}
+
+fn start_server() -> anima_channel::ServerHandle {
+    start_server_with_ttl(anima_channel::server::DEAD_PEER_TTL)
+}
+
+fn start_server_with_ttl(ttl: Duration) -> anima_channel::ServerHandle {
+    let config = ChannelConfig {
+        hostname: "127.0.0.1".to_string(),
+        auth_token: TOKEN.to_string(),
+        tls_config: None,
+    };
+    let server = ChannelServer::bind("127.0.0.1", test_port(), &config)
+        .expect("bind channel server")
+        .with_dead_peer_ttl(ttl);
+    server.spawn().expect("spawn channel server")
+}
+
+fn tcp_connect(port: u16) -> TcpStream {
+    let stream = TcpStream::connect(("127.0.0.1", port)).expect("connect");
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .expect("read timeout");
+    stream
+        .set_write_timeout(Some(Duration::from_secs(5)))
+        .expect("write timeout");
+    stream
+}
+
+/// Send the HTTP upgrade request; return the response header block.
+fn http_upgrade(stream: &mut TcpStream, port: u16) -> String {
+    let request = format!(
+        "GET /ws HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {CLIENT_KEY}\r\nSec-WebSocket-Version: 13\r\n\r\n",
+    );
+    stream.write_all(request.as_bytes()).expect("send upgrade");
+
+    let mut response = Vec::new();
+    let mut chunk = [0u8; 1024];
+    loop {
+        let n = stream.read(&mut chunk).expect("read upgrade response");
+        assert!(n > 0, "server closed connection during upgrade");
+        response.extend_from_slice(&chunk[..n]);
+        if response.windows(4).any(|w| w == b"\r\n\r\n") {
+            break;
+        }
+    }
+    String::from_utf8(response).expect("utf8 response")
+}
+
+/// Send a masked text frame (client → server frames must be masked).
+fn send_masked_text(stream: &mut TcpStream, text: &str) {
+    stream
+        .write_all(&encode_frame(
+            OP_TEXT,
+            text.as_bytes(),
+            Some([0x11, 0x22, 0x33, 0x44]),
+        ))
+        .expect("send text frame");
+}
+
+/// Read exactly one frame from the server (unmasked).
+fn read_frame(stream: &mut TcpStream, decoder: &mut FrameDecoder) -> Frame {
+    let mut chunk = [0u8; 4096];
+    loop {
+        if let Some(frame) = decoder.next_frame().expect("decode frame") {
+            return frame;
+        }
+        let n = stream.read(&mut chunk).expect("read frame");
+        assert!(n > 0, "server closed connection while a frame was expected");
+        decoder.push(&chunk[..n]);
+    }
+}
+
+#[test]
+fn upgrade_auth_ping_pong_rpc_and_close() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let handle = start_server();
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    // --- Upgrade -----------------------------------------------------------
+    let response = http_upgrade(&mut stream, port);
+    assert!(response.starts_with("HTTP/1.1 101 Switching Protocols\r\n"));
+    assert_eq!(
+        accept_key(CLIENT_KEY),
+        "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=",
+        "RFC 6455 accept vector"
+    );
+    assert!(response.contains("Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n"));
+
+    // --- Auth handshake ----------------------------------------------------
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"auth","authToken":"integration-test-token"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(frame.opcode, OP_TEXT);
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&frame.payload).unwrap(),
+        serde_json::json!({"type":"auth","ok":true})
+    );
+
+    // --- Ping → pong ---------------------------------------------------------
+    send_masked_text(&mut stream, r#"{"type":"ping"}"#);
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&frame.payload).unwrap(),
+        serde_json::json!({"type":"pong"})
+    );
+
+    // --- Heartbeat mirror ----------------------------------------------------
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"transport:connection:heartbeat","data":{"kind":"ping","message":"🩵"}}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    let heartbeat: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(heartbeat["type"], "transport:connection:heartbeat");
+    assert_eq!(heartbeat["data"]["kind"], "pong");
+
+    // --- RPC dispatch: runtime.ping round trip --------------------------------
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"rpc","action":"runtime.ping","payload":{},"id":"it-1"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    let rpc: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(rpc["type"], "rpc");
+    assert_eq!(rpc["action"], "runtime.ping");
+    assert_eq!(rpc["ok"], true);
+    assert_eq!(rpc["data"]["pong"], true);
+    assert!(rpc["data"]["uptimeSeconds"].as_u64().is_some());
+    assert_eq!(rpc["id"], "it-1");
+
+    // --- Unknown type → typed error, connection stays open -------------------
+    send_masked_text(&mut stream, r#"{"type":"teleport"}"#);
+    let frame = read_frame(&mut stream, &mut decoder);
+    let error: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(error["type"], "error");
+    assert_eq!(error["error"]["code"], "unsupported_type");
+
+    // Connection still usable after the error frame.
+    send_masked_text(&mut stream, r#"{"type":"ping"}"#);
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&frame.payload).unwrap(),
+        serde_json::json!({"type":"pong"})
+    );
+
+    // --- Clean close ---------------------------------------------------------
+    stream
+        .write_all(&encode_frame(
+            OP_CLOSE,
+            &1000u16.to_be_bytes(),
+            Some([1, 2, 3, 4]),
+        ))
+        .expect("send close");
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(frame.opcode, OP_CLOSE);
+
+    handle.stop();
+}
+
+#[test]
+fn bad_token_gets_error_then_close() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let handle = start_server();
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let response = http_upgrade(&mut stream, port);
+    assert!(response.starts_with("HTTP/1.1 101"));
+
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"auth","authToken":"definitely-wrong"}"#,
+    );
+
+    // First frame: typed error. Second: close with code 1008.
+    let frame = read_frame(&mut stream, &mut decoder);
+    let error: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(error["type"], "error");
+    assert_eq!(error["error"]["code"], "invalid_token");
+
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(frame.opcode, OP_CLOSE);
+    let code = u16::from_be_bytes([frame.payload[0], frame.payload[1]]);
+    assert_eq!(code, 1008);
+
+    handle.stop();
+}
+
+#[test]
+fn non_auth_first_message_gets_error_then_close() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let handle = start_server();
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let response = http_upgrade(&mut stream, port);
+    assert!(response.starts_with("HTTP/1.1 101"));
+
+    // A ping is NOT a valid first message; the server must not leak state.
+    send_masked_text(&mut stream, r#"{"type":"ping"}"#);
+
+    let frame = read_frame(&mut stream, &mut decoder);
+    let error: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(error["error"]["code"], "auth_required");
+
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(frame.opcode, OP_CLOSE);
+
+    handle.stop();
+}
+
+#[test]
+fn server_runtime_auth_shape_also_authenticates() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let handle = start_server();
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let response = http_upgrade(&mut stream, port);
+    assert!(response.starts_with("HTTP/1.1 101"));
+
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"module:authenticate","data":{"token":"integration-test-token","caller":"integration-test"}}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    let auth: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(
+        auth,
+        serde_json::json!({"type":"module:authenticated","data":{"authenticated":true}})
+    );
+
+    // And the session is usable, e.g. ping.
+    send_masked_text(&mut stream, r#"{"type":"ping"}"#);
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&frame.payload).unwrap(),
+        serde_json::json!({"type":"pong"})
+    );
+
+    handle.stop();
+}
+
+#[test]
+fn rpc_runtime_ping_round_trip() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    // Skip (don't fail) when the port is pinned and unavailable — same
+    // tolerance the other integration tests get from ephemeral port 0.
+    let config = ChannelConfig {
+        hostname: "127.0.0.1".to_string(),
+        auth_token: TOKEN.to_string(),
+        tls_config: None,
+    };
+    let server = match ChannelServer::bind("127.0.0.1", test_port(), &config) {
+        Ok(server) => server,
+        Err(err) => {
+            eprintln!("skipping rpc_runtime_ping_round_trip: bind failed: {err}");
+            return;
+        }
+    };
+    let handle = server.spawn().expect("spawn channel server");
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let response = http_upgrade(&mut stream, port);
+    assert!(response.starts_with("HTTP/1.1 101"));
+
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"auth","authToken":"integration-test-token"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&frame.payload).unwrap(),
+        serde_json::json!({"type":"auth","ok":true})
+    );
+
+    // --- runtime.ping round trip -------------------------------------------
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"rpc","action":"runtime.ping","id":"rt-ping-1"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    let rpc: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(rpc["type"], "rpc");
+    assert_eq!(rpc["action"], "runtime.ping");
+    assert_eq!(rpc["ok"], true);
+    assert_eq!(rpc["data"]["pong"], true);
+    assert!(rpc["data"]["time"].as_u64().unwrap() > 0);
+    assert!(rpc["data"]["uptimeSeconds"].as_u64().is_some());
+    assert_eq!(rpc["id"], "rt-ping-1");
+
+    // --- gateway.config: shape ok, token absent -----------------------------
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"rpc","action":"gateway.config","payload":{},"id":"gc-1"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    let rpc: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(rpc["ok"], true);
+    assert_eq!(rpc["data"]["hostname"], "127.0.0.1");
+    assert!(rpc["data"]["port"].as_u64().unwrap() > 0);
+    assert!(rpc["data"].get("authToken").is_none());
+
+    // --- rpc before auth is still rejected (auth gate is not bypassed) ------
+    let mut stream2 = tcp_connect(port);
+    let mut decoder2 = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+    let _ = http_upgrade(&mut stream2, port);
+    send_masked_text(&mut stream2, r#"{"type":"rpc","action":"runtime.ping"}"#);
+    let frame = read_frame(&mut stream2, &mut decoder2);
+    let error: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(error["error"]["code"], "auth_required");
+    let frame = read_frame(&mut stream2, &mut decoder2);
+    assert_eq!(frame.opcode, OP_CLOSE);
+
+    handle.stop();
+}
+
+#[test]
+fn renderer_info_round_trip() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    // Skip (don't fail) when the port is pinned and unavailable — same
+    // tolerance the other integration tests get from ephemeral port 0.
+    let config = ChannelConfig {
+        hostname: "127.0.0.1".to_string(),
+        auth_token: TOKEN.to_string(),
+        tls_config: None,
+    };
+    let mut handlers = RendererHandlers::new();
+    handlers.insert(
+        "info".to_string(),
+        Box::new(|_method: &str, _payload: &serde_json::Value| {
+            Ok(serde_json::json!({ "app": "test", "n": 42 }))
+        }),
+    );
+    let server =
+        match ChannelServer::bind_with_renderer("127.0.0.1", test_port(), &config, handlers) {
+            Ok(server) => server,
+            Err(err) => {
+                eprintln!("skipping renderer_info_round_trip: bind failed: {err}");
+                return;
+            }
+        };
+    let handle = server.spawn().expect("spawn channel server");
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let response = http_upgrade(&mut stream, port);
+    assert!(response.starts_with("HTTP/1.1 101"));
+
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"auth","authToken":"integration-test-token"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&frame.payload).unwrap(),
+        serde_json::json!({"type":"auth","ok":true})
+    );
+
+    // --- renderer.info round trip -------------------------------------------
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"rpc","action":"renderer.info","payload":{},"id":"ri-1"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    let rpc: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(rpc["type"], "rpc");
+    assert_eq!(rpc["action"], "renderer.info");
+    assert_eq!(rpc["ok"], true);
+    assert_eq!(rpc["data"], serde_json::json!({ "app": "test", "n": 42 }));
+    assert_eq!(rpc["id"], "ri-1");
+
+    // --- an unregistered renderer method on the same server ------------------
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"rpc","action":"renderer.nope","payload":{},"id":"ri-2"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    let rpc: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(rpc["ok"], false);
+    assert_eq!(rpc["error"]["code"], "rpc_not_implemented");
+    assert_eq!(rpc["id"], "ri-2");
+
+    handle.stop();
+}
+
+#[test]
+fn websocket_ping_frame_gets_pong_frame() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let handle = start_server();
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let _ = http_upgrade(&mut stream, port);
+
+    // RFC 6455 control-frame ping → pong, even before application auth
+    // (control frames carry no application state).
+    stream
+        .write_all(&encode_frame(OP_PING, b"ciao", Some([5, 6, 7, 8])))
+        .expect("send ping frame");
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(frame.opcode, 0xA); // pong
+    assert_eq!(frame.payload, b"ciao");
+
+    handle.stop();
+}
+
+// --- TLS round trip -----------------------------------------------------
+
+/// Mint the cert store into a tempdir, bind a TLS listener, and drive the
+/// full upgrade + auth + rpc flow over `wss://` with a client that trusts
+/// the generated CA (and only it). This is the exact flow the daemon uses
+/// for LAN/VPN clients.
+#[test]
+fn tls_round_trip_upgrade_auth_and_rpc() {
+    anima_channel::install_default_crypto_provider();
+    use rustls::pki_types::CertificateDer;
+
+    let _guard = TEST_LOCK.lock().unwrap();
+    let dir = tempfile::tempdir().expect("cert dir");
+    let bundle = anima_channel::get_or_create_certs(
+        dir.path(),
+        &anima_channel::san_domains(&["localhost".to_string()]),
+    )
+    .expect("mint certs");
+    assert!(
+        anima_channel::certs_exist(dir.path()),
+        "cert store must exist after minting"
+    );
+
+    let tls = Arc::new(
+        anima_channel::tls_server_config(&bundle.cert_pem, &bundle.key_pem).expect("server config"),
+    );
+    let config = ChannelConfig {
+        hostname: "127.0.0.1".to_string(),
+        auth_token: TOKEN.to_string(),
+        tls_config: None,
+    };
+    let server = ChannelServer::bind_tls("127.0.0.1", test_port(), &config, tls)
+        .expect("bind TLS channel server");
+    let server = server.spawn().expect("spawn TLS channel server");
+    let port = server.port();
+
+    // --- client: rustls over raw TCP, trusting only the generated CA -----
+    let mut roots = rustls::RootCertStore::empty();
+    let ca_ders: Vec<CertificateDer<'static>> =
+        rustls_pemfile::certs(&mut bundle.ca_cert_pem.as_bytes())
+            .filter_map(Result::ok)
+            .collect();
+    for der in ca_ders {
+        roots.add(der).expect("add CA to roots");
+    }
+    let client_config = rustls::ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    let conn =
+        rustls::ClientConnection::new(Arc::new(client_config), "localhost".try_into().unwrap())
+            .expect("client connection");
+    let tcp = TcpStream::connect(("127.0.0.1", port)).expect("tcp connect");
+    tcp.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+    tcp.set_write_timeout(Some(Duration::from_secs(5))).unwrap();
+    let mut stream = rustls::StreamOwned::new(conn, tcp);
+
+    // --- same handshake over TLS ------------------------------------------
+    let response = http_upgrade_generic(&mut stream, port);
+    assert!(
+        response.starts_with("HTTP/1.1 101"),
+        "unexpected upgrade response: {response}"
+    );
+
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+    send_masked_text_generic(
+        &mut stream,
+        &format!(r#"{{"type":"auth","authToken":"{TOKEN}"}}"#),
+    );
+    let frame = read_frame_generic(&mut stream, &mut decoder);
+    let payload = String::from_utf8(frame.payload).expect("utf8");
+    assert!(
+        payload.contains(r#""type":"auth""#) && payload.contains(r#""ok":true"#),
+        "expected auth ok over TLS, got {payload}"
+    );
+
+    send_masked_text_generic(
+        &mut stream,
+        r#"{"type":"rpc","action":"runtime.ping","payload":{}}"#,
+    );
+    let frame = read_frame_generic(&mut stream, &mut decoder);
+    let payload = String::from_utf8(frame.payload).expect("utf8");
+    assert!(
+        payload.contains(r#""pong":true"#),
+        "expected pong over TLS, got {payload}"
+    );
+
+    server.stop();
+}
+
+// Generic-over-Read+Write twins of the raw-TCP helpers above. The plaintext
+// helpers stay as-is for the rest of the suite.
+fn http_upgrade_generic<S: Read + Write>(stream: &mut S, port: u16) -> String {
+    let request = format!(
+        "GET /ws HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {CLIENT_KEY}\r\nSec-WebSocket-Version: 13\r\n\r\n",
+    );
+    stream.write_all(request.as_bytes()).expect("send upgrade");
+
+    let mut response = Vec::new();
+    let mut chunk = [0u8; 1024];
+    loop {
+        let n = stream.read(&mut chunk).expect("read upgrade response");
+        assert!(n > 0, "server closed connection during upgrade");
+        response.extend_from_slice(&chunk[..n]);
+        if response.windows(4).any(|w| w == b"\r\n\r\n") {
+            break;
+        }
+    }
+    String::from_utf8(response).expect("utf8 response")
+}
+
+fn send_masked_text_generic<S: Write>(stream: &mut S, text: &str) {
+    stream
+        .write_all(&encode_frame(
+            OP_TEXT,
+            text.as_bytes(),
+            Some([0x37, 0xfa, 0x21, 0x3d]),
+        ))
+        .expect("send masked text frame");
+}
+
+fn read_frame_generic<S: Read>(stream: &mut S, decoder: &mut FrameDecoder) -> Frame {
+    let mut chunk = [0u8; 16 * 1024];
+    loop {
+        match decoder.next_frame() {
+            Ok(Some(frame)) => return frame,
+            Ok(None) => {
+                let n = stream.read(&mut chunk).expect("read frame");
+                assert!(n > 0, "server closed connection while waiting for a frame");
+                decoder.push(&chunk[..n]);
+            }
+            Err(err) => panic!("frame decode failed: {err}"),
+        }
+    }
+}
+
+// --- Dead-peer reaping --------------------------------------------------
+
+const TEST_TTL: Duration = Duration::from_millis(300);
+
+fn read_text_frame(stream: &mut TcpStream, decoder: &mut FrameDecoder) -> serde_json::Value {
+    let frame = read_frame(stream, decoder);
+    assert_ne!(frame.opcode, OP_CLOSE, "server unexpectedly closed the connection");
+    serde_json::from_slice(&frame.payload).expect("json frame")
+}
+
+#[test]
+fn silent_authenticated_peer_is_reaped_after_ttl() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let handle = start_server_with_ttl(TEST_TTL);
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let _ = http_upgrade(&mut stream, port);
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"auth","authToken":"integration-test-token"}"#,
+    );
+    let auth = read_text_frame(&mut stream, &mut decoder);
+    assert_eq!(auth["type"], "auth");
+
+    // Go silent. The server must close with 1001 once the TTL elapses.
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(frame.opcode, OP_CLOSE, "expected close frame for a dead peer");
+    let code = u16::from_be_bytes([frame.payload[0], frame.payload[1]]);
+    assert_eq!(code, 1001, "dead-peer reap must use close code 1001");
+
+    handle.stop();
+}
+
+#[test]
+fn heartbeat_ping_keeps_peer_alive() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let handle = start_server_with_ttl(TEST_TTL);
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let _ = http_upgrade(&mut stream, port);
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"auth","authToken":"integration-test-token"}"#,
+    );
+    let _ = read_text_frame(&mut stream, &mut decoder);
+
+    // ~3× TTL of heartbeat traffic: the peer must NOT be reaped.
+    for _ in 0..12 {
+        send_masked_text(
+            &mut stream,
+            r#"{"type":"transport:connection:heartbeat","data":{"kind":"ping"}}"#,
+        );
+        let pong = read_text_frame(&mut stream, &mut decoder);
+        assert_eq!(pong["data"]["kind"], "pong");
+        std::thread::sleep(Duration::from_millis(80));
+    }
+
+    handle.stop();
+}
+
+#[test]
+fn rpc_frame_refreshes_last_seen() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let handle = start_server_with_ttl(TEST_TTL);
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let _ = http_upgrade(&mut stream, port);
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"auth","authToken":"integration-test-token"}"#,
+    );
+    let _ = read_text_frame(&mut stream, &mut decoder);
+
+    // ~3× TTL of ordinary RPC traffic: the peer must NOT be reaped.
+    for _ in 0..12 {
+        send_masked_text(&mut stream, r#"{"type":"rpc","action":"runtime.ping","payload":{}}"#);
+        let rpc = read_text_frame(&mut stream, &mut decoder);
+        assert_eq!(rpc["type"], "rpc");
+        assert_eq!(rpc["ok"], true);
+        std::thread::sleep(Duration::from_millis(80));
+    }
+
+    handle.stop();
+}

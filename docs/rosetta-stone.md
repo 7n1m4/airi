@@ -59,12 +59,12 @@ Concept-to-file-path index for rapid context retrieval. Use this to find where a
 
 | Concept | Path | Notes |
 | :--- | :--- | :--- |
-| `CoreService` (daemon-owned core) | `crates/airi-daemon/src/core.rs` | Clone, Arc<Mutex<CoreInner>>; ONLY place daemon touches core state. `open(profile)` fails closed; `snapshot()`; `status_reply()`. |
-| `Gateway` (holds core) | `crates/airi-daemon/src/gateway.rs` | `renderer_handlers(&self.core)` registers only `core.status`. |
-| `CoreStatusReply` (wire DTO) | `crates/airi-channel/src/wire.rs` | additive, read-only, no secrets. |
-| `core.status` (RPC action) | `crates/airi-channel/src/dispatch.rs` | resolves via renderer-handler registry by exact action name. |
-| `GatewayClient::core_status` | `crates/airi-channel/src/client.rs` | mirrors `runtime_status`. |
-| `DaemonMode` / `select_mode` | `crates/airi-slint/src/daemon_mode.rs` | pure mode selection; default Disabled; NOT wired into GUI startup (pending). |
+| `CoreService` (daemon-owned core) | `crates/anima-daemon/src/core.rs` | Clone, Arc<Mutex<CoreInner>>; ONLY place daemon touches core state. `open(profile)` fails closed; `snapshot()`; `status_reply()`. |
+| `Gateway` (holds core) | `crates/anima-daemon/src/gateway.rs` | `renderer_handlers(&self.core)` registers only `core.status`. |
+| `CoreStatusReply` (wire DTO) | `crates/anima-channel/src/wire.rs` | additive, read-only, no secrets. |
+| `core.status` (RPC action) | `crates/anima-channel/src/dispatch.rs` | resolves via renderer-handler registry by exact action name. |
+| `GatewayClient::core_status` | `crates/anima-channel/src/client.rs` | mirrors `runtime_status`. |
+| `DaemonMode` / `select_mode` | `crates/anima-slint/src/daemon_mode.rs` | pure mode selection; default Disabled; NOT wired into GUI startup (pending). |
 ## 2. Core UI & Surfaces
 
 | Concept | Path |
@@ -424,7 +424,7 @@ Implementation guide: [Director orchestration](../.agents/skills/airi-director-o
 Canonical contract (upstream-aligned):
 - **Canonical module**: `packages/stage-shared/src/transport.ts` — `TransportAdapter` interface: `TransportId` (`'cloudflare-edge' | 'libp2p-mesh' | 'loopback'`), `TransportStatus`, `TransportMessage<T>`, `TransportHandler<T>`, and the upstream lifecycle/delivery methods `start` / `stop` / `sendToPeer` / `broadcast` / `subscribe`. Also exports `CloudflareEdgeTransportConfig` and `createLoopbackTransport()`.
 - **Optional sovereignty extras (fork-only, all optional so upstream adapters port verbatim)**: `TransportCapabilities` (`isLocalOnly`, `supportsMultiParty`, `supportsMeshGossip`, `requiresExternalRelay`) exposed as `capabilities?`, plus `initialize?`, `dispose?`, `publish?`. Sovereign builds gate relay-requiring adapters via `capabilities?.requiresExternalRelay`.
-- **Back-compat shim**: `packages/stage-shared/src/transport-adapter.ts` re-exports `./transport` (legacy `@proj-airi/stage-shared/transport-adapter` imports keep resolving).
+- **Back-compat shim**: `packages/stage-shared/src/transport-adapter.ts` re-exports `./transport` (legacy `@proj-anima/stage-shared/transport-adapter` imports keep resolving).
 - **Registry contract**: `packages/stage-shared/src/transport-registry.ts` — `TransportRegistry` (`register` / `get` / `list` / `initialize(id, sovereign)`).
 - **Sovereign implementation**: `apps/stage-tamagotchi/src/main/services/airi/transport-registry.ts` — `createTransportRegistry()`; refuses adapters with `requiresExternalRelay === true` in sovereign mode and calls `adapter.initialize ?? adapter.start`.
 - **Adapters**: `apps/stage-tamagotchi/src/main/services/airi/libp2p/transport-adapter.ts` (`createLibp2pTransportAdapter`); `packages/stage-ui/src/libs/transport/cloudflare-edge-transport.ts`; `packages/stage-ui/src/libs/transport/embassy-socket.ts`.
@@ -606,7 +606,7 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 | `docs/design-web-stage-pages-deployment.md` | Web Stage GitHub Pages deployment architecture & surface reference |
 | `apps/stage-tamagotchi/src/main/services/airi/` | Main process services (discord, widgets, MCP) |
 | `scripts/` | Utility scripts (`yaml-manager.js`, `pr_summary.sh`) |
-| `crates/` | Rust runtime core: `airi-daemon` (hosts the WS/wss gateway via `airi-channel`), `airi-slint` (native shell), `airi-core` |
+| `crates/` | Rust runtime core: `anima-daemon` (hosts the WS/wss gateway via `anima-channel`), `anima-slint` (native shell), `anima-core` |
 | `docs/` | Proposal docs, reference sheets, how-to guides |
 | `docs/content/en/docs/` | In-app manual content (vitepress) |
 | `scripts/motion-export/` | ONNX texture-export lineage (`compile_onnx.py`, `inspect_sampler.py`, `test_onnx_parity.py`) |
@@ -680,7 +680,7 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 ### HMR & State Lifecycle Resilience
 
 - **HMR State & Multi-Window Pitfalls**: Without `acceptHMRUpdate`, saving `.ts` store files triggers full page reloads across open Electron windows. Wiring soft HMR (`acceptHMRUpdate`) patches store state in-place, but requires 0A–0D taxonomy gates: (0A) Prerequisite module splits for multi-store files (`hearing.ts`, `character/index.ts`); (0B) Pure state stores; (0C) Vertical completion gate landing single `dispose` ledgers, `effectScope()` disposers, async epoch guards, and `acceptHMRUpdate` atomically in one change; (0D) Hard invalidation (`import.meta.hot.invalidate()`) for WebGPU allocators, workers, and AudioContext.
-- **Key Mitigation Rules**: (1) Exactly ONE `import.meta.hot.dispose()` callback per module to prevent Vite `disposeMap` overwrites; (2) `hmrEpoch` checks post-await in streaming loops; (3) Controlled accept callbacks for ABI invalidation before store patching; (4) Repository-relative links and `pnpm -F @proj-airi/stage-tamagotchi dev` execution.
+- **Key Mitigation Rules**: (1) Exactly ONE `import.meta.hot.dispose()` callback per module to prevent Vite `disposeMap` overwrites; (2) `hmrEpoch` checks post-await in streaming loops; (3) Controlled accept callbacks for ABI invalidation before store patching; (4) Repository-relative links and `pnpm -F @proj-anima/stage-tamagotchi dev` execution.
 - **Canonical Reference**: Full technical architecture, remedies, and mitigation strategies are documented in [`docs/project-hmr-resilience-architecture.md`](./project-hmr-resilience-architecture.md).
 
 ### Multi-Window Single-Leader Cognition (Nan0 & Stage Architecture)

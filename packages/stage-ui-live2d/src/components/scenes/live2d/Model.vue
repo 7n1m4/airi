@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { Application } from '@pixi/app'
-import type { DslMotionGroup } from '@proj-airi/live2d-runtime'
+import type { DslMotionGroup } from '@proj-anima/live2d-runtime'
 
 import type { PixiLive2DInternalModel } from '../../../composables/live2d'
 
 import JSZip from 'jszip'
 
-import { DSLVirtualMachine } from '@proj-airi/live2d-runtime'
-import { listenBeatSyncBeatSignal } from '@proj-airi/stage-shared/beat-sync'
-import { useTheme } from '@proj-airi/ui'
+import { DSLVirtualMachine } from '@proj-anima/live2d-runtime'
+import { listenBeatSyncBeatSignal } from '@proj-anima/stage-shared/beat-sync'
+import { useTheme } from '@proj-anima/ui'
 import { breakpointsTailwind, until, useBreakpoints, useBroadcastChannel, useDebounceFn } from '@vueuse/core'
 import { formatHex } from 'culori'
 import { Mutex } from 'es-toolkit'

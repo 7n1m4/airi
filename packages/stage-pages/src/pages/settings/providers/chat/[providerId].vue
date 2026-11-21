@@ -9,11 +9,11 @@ import {
   ProviderSettingsContainer,
   ProviderSettingsLayout,
   ProviderValidationAlerts,
-} from '@proj-airi/stage-ui/components'
-import { useProviderValidation } from '@proj-airi/stage-ui/composables/use-provider-validation'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { FieldCheckbox } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/components'
+import { useProviderValidation } from '@proj-anima/stage-ui/composables/use-provider-validation'
+import { useConsciousnessStore } from '@proj-anima/stage-ui/stores/modules/consciousness'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { FieldCheckbox } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'

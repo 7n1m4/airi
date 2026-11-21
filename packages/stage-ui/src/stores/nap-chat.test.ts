@@ -3,7 +3,7 @@ import type { NapChatModelGateInput, NapChatSession } from './companion'
 import type { AiriCard } from './modules/airi-card'
 
 import { createTestingPinia } from '@pinia/testing'
-import { companionServiceNapChatConsent, companionServiceNapChatConsumeNonce, companionServiceNapChatDecideProposal } from '@proj-airi/stage-shared'
+import { companionServiceNapChatConsent, companionServiceNapChatConsumeNonce, companionServiceNapChatDecideProposal } from '@proj-anima/stage-shared'
 import { setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -66,7 +66,7 @@ const napChatConsent = companionServiceNapChatConsent
  * re-register it explicitly rather than depending on the fallthrough.
  */
 bridgeReplies.set(napChatConsent, () => ({ granted: true }))
-vi.mock('@proj-airi/electron-vueuse', () => ({
+vi.mock('@proj-anima/electron-vueuse', () => ({
   useElectronEventaInvoke: (invoke: { id: string }) => async (payload: unknown) => {
     const handler = bridgeReplies.get(invoke)
     if (handler)

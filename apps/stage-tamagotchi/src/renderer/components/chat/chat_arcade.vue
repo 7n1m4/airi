@@ -6,21 +6,21 @@ import type {
   CatalogGame,
   GameAdapter,
   TurnPlan,
-} from '@proj-airi/stage-ui/types'
+} from '@proj-anima/stage-ui/types'
 
 import JSZip from 'jszip'
 import localforage from 'localforage'
 
-import { ArcadeGhostCursor, ArcadeGridOverlay } from '@proj-airi/stage-ui/components'
-import { burnCoordinateGridToCanvas, burnCoordinateGridToDataUrl, diffUtils, useArcadeAgent } from '@proj-airi/stage-ui/composables'
-import { useCharacterStore } from '@proj-airi/stage-ui/stores/character'
-import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
-import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
-import { useChatStreamStore } from '@proj-airi/stage-ui/stores/chat/stream-store'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useArcadeKnowledgeStore } from '@proj-airi/stage-ui/stores/modules/arcade-knowledge'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
+import { ArcadeGhostCursor, ArcadeGridOverlay } from '@proj-anima/stage-ui/components'
+import { burnCoordinateGridToCanvas, burnCoordinateGridToDataUrl, diffUtils, useArcadeAgent } from '@proj-anima/stage-ui/composables'
+import { useCharacterStore } from '@proj-anima/stage-ui/stores/character'
+import { useChatOrchestratorStore } from '@proj-anima/stage-ui/stores/chat'
+import { useChatSessionStore } from '@proj-anima/stage-ui/stores/chat/session-store'
+import { useChatStreamStore } from '@proj-anima/stage-ui/stores/chat/stream-store'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useArcadeKnowledgeStore } from '@proj-anima/stage-ui/stores/modules/arcade-knowledge'
+import { useConsciousnessStore } from '@proj-anima/stage-ui/stores/modules/consciousness'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
 import { useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'

@@ -2,7 +2,7 @@
 
 ![Settings Hub & The Engine Room](/showcase/hero-01-settings-hub.avif)
 
-The **Settings Hub & The Engine Room** serves as the central command center for Project AIRI. Designed around a responsive **RippleGrid** architectural surface, it organizes over 70 configurable subsystem facets into 10 rapid-access control zones, complete with responsive orientation switching, accent palette theming, and an integrated upstream comparison inspector.
+The **Settings Hub & The Engine Room** serves as the central command center for Project Anima. Designed around a responsive **RippleGrid** architectural surface, it organizes over 70 configurable subsystem facets into 10 rapid-access control zones, complete with responsive orientation switching, accent palette theming, and an integrated upstream comparison inspector.
 
 ---
 
@@ -35,7 +35,7 @@ Configures hosted and on-device intelligence backends:
 ![Resilient Fallbacks](/showcase/settings-modules-resilient-fallbacks.avif)
 
 Guarantees high-availability stage performance:
-- **Automated Fallback Cascade**: If a primary cloud provider rate-limits or returns a 5xx error, AIRI gracefully transitions to secondary or local offline models without dropping dialogue continuity.
+- **Automated Fallback Cascade**: If a primary cloud provider rate-limits or returns a 5xx error, Anima gracefully transitions to secondary or local offline models without dropping dialogue continuity.
 - **Provider Health Monitoring**: Real-time ping latency and error counters tracked per provider instance.
 
 ### 3. Voice Studio & DSP Console
@@ -69,7 +69,7 @@ Complete sovereignty over your companion's memory and state:
 
 ## Key Capabilities
 
-- **RippleGrid Command Center**: 10 categorized quick-action shortcuts across all AIRI subsystems.
+- **RippleGrid Command Center**: 10 categorized quick-action shortcuts across all Anima subsystems.
 - **Responsive Landscape & Portrait Views**: Flawless reflow across widescreen displays and compact sidecar windows.
 - **Theme & Accent Palette Engine**: 5 built-in colorways with real-time CSS variable interpolation.
 - **Multiple Provider Instances**: Configure separate accounts and routing rules per provider backend.

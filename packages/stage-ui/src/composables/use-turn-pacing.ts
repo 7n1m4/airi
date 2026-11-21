@@ -1,4 +1,4 @@
-import type { PlaybackItem } from '@proj-airi/pipelines-audio'
+import type { PlaybackItem } from '@proj-anima/pipelines-audio'
 import type { Ref } from 'vue'
 
 import type { AiriThinkingFiller } from '../types/card.schema'

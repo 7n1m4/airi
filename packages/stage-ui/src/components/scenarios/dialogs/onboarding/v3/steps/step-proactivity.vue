@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useVisionSources } from '@proj-airi/stage-ui/composables'
-import { useVisionStore } from '@proj-airi/stage-ui/stores/modules/vision'
-import { useProactivityStore } from '@proj-airi/stage-ui/stores/proactivity'
-import { Button } from '@proj-airi/ui'
+import { useVisionSources } from '@proj-anima/stage-ui/composables'
+import { useVisionStore } from '@proj-anima/stage-ui/stores/modules/vision'
+import { useProactivityStore } from '@proj-anima/stage-ui/stores/proactivity'
+import { Button } from '@proj-anima/ui'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'

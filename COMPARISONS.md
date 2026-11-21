@@ -86,57 +86,57 @@ Every companion in this ecosystem was built to solve a specific problem. Underst
 ### 🐾 VPet (Virtual Pet Simulator)
 - **Where it shines:** Unrivaled desktop presence and physics simulation. VPet features true Win32 desktop window physics—gravity, collision, climbing, throwing, and active pet state/hunger simulation. Its Steam Workshop modding community is the largest in the desktop companion space with thousands of user-created sprites and animations.
 - **Architectural trade-off:** LLM conversational intelligence and speech are community plugin wrappers layered onto a classic 2D sprite engine, rather than an integrated multimodal cognitive loop.
-- **How AIRI Approaches This:** VPet delivers classic 2D desktop pet physics; AIRI provides an in-app AI character creator that synthesizes custom companion personalities, voice bindings, and story prompts.
+- **How Anima Approaches This:** VPet delivers classic 2D desktop pet physics; Anima provides an in-app AI character creator that synthesizes custom companion personalities, voice bindings, and story prompts.
 
 ### 🦀 Komorebi (Interactive Assistant)
 - **Where it shines:** Native Rust efficiency, instant boot times, and minimal memory footprint. Built on Tauri 2, it runs completely offline using local Piper ONNX and llama.cpp. It is the only companion with a local training engine that adapts character personality LoRAs directly from user response feedback.
 - **Architectural trade-off:** Embodiment is strictly limited to 2D Live2D avatars, and its tool execution and voice pipelines rely on sequential, single-threaded processing loops.
-- **How AIRI Approaches This:** Komorebi achieves offline execution by bundling Piper ONNX; AIRI runs **100% offline directly in-process** via native neural speech engines (Kokoro-WebGPU, Pocket-TTS with 26 voice embeddings, and MOSS-TTS) alongside local in-browser LLMs—delivering local offline presence without background server daemons while supporting 3D VRM, Live2D, Spine, and MMD embodiment.
+- **How Anima Approaches This:** Komorebi achieves offline execution by bundling Piper ONNX; Anima runs **100% offline directly in-process** via native neural speech engines (Kokoro-WebGPU, Pocket-TTS with 26 voice embeddings, and MOSS-TTS) alongside local in-browser LLMs—delivering local offline presence without background server daemons while supporting 3D VRM, Live2D, Spine, and MMD embodiment.
 
 ### 🎭 Project N.E.K.O.
 - **Where it shines:** Desktop OS task automation and database transparency. Features an active web-based CRUD table for direct inspection, search, and deletion of live SQLite memory rows, alongside an agent server for real-time computer use and desktop screen perception.
 - **Architectural trade-off:** Requires coordinating a multi-process stack (Steam client, Python environment, background brokers, and local GPT-SoVITS daemons), with voice conditioning dependent on external server processes.
-- **How AIRI Approaches This:** While N.E.K.O. provides a web table over raw SQLite rows, AIRI provides **4 dedicated CRUD management hubs** across each temporal tier (Daily Summaries, Sacred Journal, Lifetime Artifacts, Echoes) with live reactive token telemetry. For desktop perception, AIRI deploys a **Cascaded Salience Gate** (lightweight OCR vs. Moondream2 VLM caching) to sample frames only on meaningful display changes rather than continuous raw frame ingestion, backed by a bounded tool-calling loop (`maxSteps: 10`) featuring native `text_journal` semantic RAG, toggleable `image_journal` context management, and per-character MCP tool visibility scoping.
+- **How Anima Approaches This:** While N.E.K.O. provides a web table over raw SQLite rows, Anima provides **4 dedicated CRUD management hubs** across each temporal tier (Daily Summaries, Sacred Journal, Lifetime Artifacts, Echoes) with live reactive token telemetry. For desktop perception, Anima deploys a **Cascaded Salience Gate** (lightweight OCR vs. Moondream2 VLM caching) to sample frames only on meaningful display changes rather than continuous raw frame ingestion, backed by a bounded tool-calling loop (`maxSteps: 10`) featuring native `text_journal` semantic RAG, toggleable `image_journal` context management, and per-character MCP tool visibility scoping.
 
 ### 🎙️ Open-LLM-VTuber
 - **Where it shines:** Unmatched speech-provider breadth. Integrates 19 distinct individual synthesis engines (spanning CosyVoice, MeloTTS, Sherpa-ONNX, XTTS-v2, and Cartesia), making it the premier multi-engine voice testbed for VTuber streaming setups.
 - **Architectural trade-off:** Operates as a split-architecture client/server system (Python backend requiring conda/venv environments + separate web/desktop frontend) rather than an integrated standalone companion application.
-- **How AIRI Approaches This:** Open-LLM-VTuber is a specialized backend voice and streaming router; AIRI is an all-in-one standalone companion runtime that pairs 23 registered speech interfaces with in-process voice cloning, conversational turn pacing (thinking fillers and subconscious asides), and dynamic actor voice switching mid-dialogue.
+- **How Anima Approaches This:** Open-LLM-VTuber is a specialized backend voice and streaming router; Anima is an all-in-one standalone companion runtime that pairs 23 registered speech interfaces with in-process voice cloning, conversational turn pacing (thinking fillers and subconscious asides), and dynamic actor voice switching mid-dialogue.
 
 ### 🌐 Amica
 - **Where it shines:** Clean, focused 3D VRM presentation with zero installation. Amica runs effortlessly in modern web browsers, rendering 3D VRMs with smooth blendshapes, look-at camera tracking, and client-side Silero VAD voice interruption.
 - **Architectural trade-off:** Memory is limited to a flat sliding context window, and local speech generation requires configuring external local server daemons or secondary RVC post-processing hops.
-- **How AIRI Approaches This:** Both projects offer zero-install web runtimes, but Amica deliberately focuses on a streamlined, single-screen avatar chat interface; AIRI expands into a complete companion operating environment with multi-tier temporal memory, in-process WebGPU speech synthesis, in-app texture editing, and desktop overlay stages.
+- **How Anima Approaches This:** Both projects offer zero-install web runtimes, but Amica deliberately focuses on a streamlined, single-screen avatar chat interface; Anima expands into a complete companion operating environment with multi-tier temporal memory, in-process WebGPU speech synthesis, in-app texture editing, and desktop overlay stages.
 
 ### 🛡️ NekoGPT
 - **Where it shines:** Industrial-grade concurrency and strict contract boundaries. NekoGPT isolates SQLite database transactions, archive compression, and audio streaming into dedicated background worker threads, preventing event-loop blocking and UI stutter during heavy tasks.
 - **Architectural trade-off:** Distributed primarily as a commercial Steam product, focusing on curated 2D Live2D characters rather than user-imported 3D VRM pipelines or open customization.
-- **How AIRI Approaches This:** NekoGPT prioritizes rock-solid worker thread isolation and commercial stability for curated 2D visual novel-style characters; AIRI provides an open, hackable runtime with extensive 3D/2D model custody, procedural motion diffusion, and user-owned cloud synchronization.
+- **How Anima Approaches This:** NekoGPT prioritizes rock-solid worker thread isolation and commercial stability for curated 2D visual novel-style characters; Anima provides an open, hackable runtime with extensive 3D/2D model custody, procedural motion diffusion, and user-owned cloud synchronization.
 
 ### 🍵 Utsuwa
 - **Where it shines:** Polished, low-friction desktop installation. Utsuwa offers one of the simplest setup experiences for 3D VRM companions, pairing a clean transparent desktop overlay with a built-in local embedding indexer for conversational memory.
 - **Architectural trade-off:** Relies on push-to-talk by default rather than continuous duplex interruption, and voice cloning requires setting up an external HTTP voice daemon.
-- **How AIRI Approaches This:** Utsuwa focuses on minimal setup; AIRI provides a **streamlined onboarding flow** with an automated **2-phase model analysis engine** that reads the imported VRM's blendshape tree, classifies facial expressions, and synthesizes model-tailored acting prompts automatically—delivering deeper avatar custody with zero manual bone or slider mapping.
+- **How Anima Approaches This:** Utsuwa focuses on minimal setup; Anima provides a **streamlined onboarding flow** with an automated **2-phase model analysis engine** that reads the imported VRM's blendshape tree, classifies facial expressions, and synthesizes model-tailored acting prompts automatically—delivering deeper avatar custody with zero manual bone or slider mapping.
 
 ### 📺 AITuberKit
 - **Where it shines:** Built specifically for live streaming and content creation. Features native YouTube live chat scraping, superchat trigger handling, and deep integration with the Japanese speech synthesis ecosystem (VOICEVOX, AivisSpeech, Style-Bert-VITS2).
 - **Architectural trade-off:** Recent v2.0+ licensing shifts impose custom commercial restrictions, and long-term memory requires external orchestration through Dify or third-party RAG services.
-- **How AIRI Approaches This:** AITuberKit is tailored for audience-facing YouTube broadcasting and stream monetization; AIRI is designed for 1-on-1 private companion presence, featuring 4-tier local temporal memory, offline WebGPU execution, and permissive open-source licensing (MIT).
+- **How Anima Approaches This:** AITuberKit is tailored for audience-facing YouTube broadcasting and stream monetization; Anima is designed for 1-on-1 private companion presence, featuring 4-tier local temporal memory, offline WebGPU execution, and permissive open-source licensing (MIT).
 
 ### 🌸 Soul of Waifu
 - **Where it shines:** Turnkey bundled neural voice conversion. Ships with an integrated RVC v2 pipeline, allowing users to apply custom voice timbre transfer across diverse models without manual audio routing.
 - **Architectural trade-off:** Conversational flow is limited to single-turn request loops, and voice customization relies on post-processing audio conversion passes that add latency rather than direct speech parameter control.
-- **How AIRI Approaches This:** Soul of Waifu uses an external RVC model to resynthesize voice timbre; AIRI integrates an in-engine **Audio Effects Studio** that applies real-time modular presets—Cathedral reverberation, Robotic droid comb filtering, ASMR warmth, Retro radio filters, stereo spatial panning, and playback speed/pitch tuning across *all* integrated speech providers—paired with hot-reloaded phonetic string substitution for names and jargon.
+- **How Anima Approaches This:** Soul of Waifu uses an external RVC model to resynthesize voice timbre; Anima integrates an in-engine **Audio Effects Studio** that applies real-time modular presets—Cathedral reverberation, Robotic droid comb filtering, ASMR warmth, Retro radio filters, stereo spatial panning, and playback speed/pitch tuning across *all* integrated speech providers—paired with hot-reloaded phonetic string substitution for names and jargon.
 
 ### 🌱 Upstream AIRI (`moeru-ai/airi`)
 - **Where it shines:** Turnkey commercial setup convenience, diverse embodiment (VRM, Live2D, Spine, MMD, Tachie / PNGTuber, Godot VRM 0.x sidecar), and computer-use MCP automation. Users can enter a payment card via Stripe to access pre-configured hosted cloud models, bypassing the friction of sourcing API keys.
 - **Architectural trade-off:** Steers toward a centralized hosted subscription model with prepaid credit proxies and account-based cloud sync, moving away from offline-first local custody toward hosted infrastructure.
-- **How AIRI Approaches This:** Upstream optimizes for commercial cloud convenience; this fork optimizes for **user-first sovereignty and local execution with portable profiles**. AIRI provides support for all 5 senses as local, offline-capable models, paired with:
+- **How Anima Approaches This:** Upstream optimizes for commercial cloud convenience; this fork optimizes for **user-first sovereignty and local execution with portable profiles**. Anima provides support for all 5 senses as local, offline-capable models, paired with:
   - **Live Free-Tier Catalog**: Built-in catalog with quick-add providers, inline connection testing, and model discovery without cloud subscriptions.
   - **Root Launcher Accessibility**: Bundled root `.bat` and `.sh` convenience launchers so non-technical users can `git clone` and launch immediately with one click.
   - **BYOS Sovereignty**: Zero online accounts; backup and sync directly to user-owned S3, Cloudflare R2, or KV storage.
 
-### 💫 AIRI (`dasilva333/airi`)
+### 💫 Anima (`dasilva333/airi`)
 - **Where it shines:** Deep multimodal integration, user-first custody, and zero-friction accessibility. Features 3 in-process WebGPU/WASM neural speech engines running offline without background server daemons, reference voice cloning, 4-tier temporal memory (`text_journal` semantic RAG + System 1 nan0 consciousness + Lifetime artifacts + Echoes), context-toggleable `image_journal` (preventing prompt pollution), per-character MCP tool scoping, an Autonomous Visual Director, and bundled one-click root launchers.
 - **Trade-off:** The sheer breadth of the runtime creates a steeper initial learning curve and higher configuration surface than single-purpose desktop pets or web-only viewers.
 

@@ -1,7 +1,7 @@
 import type { LifetimeMemoryArtifact } from '../types/lifetime-memory'
 import type { AiriCard } from './modules/airi-card'
 
-import { companionServiceGetConsent } from '@proj-airi/stage-shared'
+import { companionServiceGetConsent } from '@proj-anima/stage-shared'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -20,7 +20,7 @@ import { useAiriCardStore } from './modules/airi-card'
  */
 const bridgeReplies = new Map<object, (payload: unknown) => unknown>()
 bridgeReplies.set(companionServiceGetConsent, () => ({ granted: false, scope: 'card-only', grantedAt: undefined }))
-vi.mock('@proj-airi/electron-vueuse', () => ({
+vi.mock('@proj-anima/electron-vueuse', () => ({
   useElectronEventaInvoke: (invoke: { id: string }) => async (payload: unknown) => {
     const handler = bridgeReplies.get(invoke)
     if (handler)

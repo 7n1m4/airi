@@ -140,7 +140,7 @@ async function main() {
     // Step 5: Run the build:win script
     console.info(`\n🔨 Compiling Windows Setup executable and portable ZIP...`)
     try {
-      execute('pnpm -F @proj-airi/stage-tamagotchi run build:win')
+      execute('pnpm -F @proj-anima/stage-tamagotchi run build:win')
     }
     catch {
       console.error('❌ Build execution failed.')

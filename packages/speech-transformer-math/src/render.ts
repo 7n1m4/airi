@@ -1,9 +1,9 @@
-import type { MathJson } from '@proj-airi/mathjson'
+import type { MathJson } from '@proj-anima/mathjson'
 
 import type { RenderHandlers } from './extension'
 import type { FractionPart, FractionShape, MathLocale } from './locale'
 
-import { argsOf, headOf, isFunction, isNumber, isSymbol, isText, nothing, textOf } from '@proj-airi/mathjson'
+import { argsOf, headOf, isFunction, isNumber, isSymbol, isText, nothing, textOf } from '@proj-anima/mathjson'
 
 import { operatorHeads, rawHead, relationHeads } from './heads'
 import { greekNames } from './locale'

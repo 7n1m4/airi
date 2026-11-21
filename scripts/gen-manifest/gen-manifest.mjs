@@ -499,7 +499,7 @@ function i18nKeys() {
       'Locale layout: `base.yaml` (prompt/edition/toaster), `settings.yaml`, `stage.yaml` (chat/speech), `onboarding.yaml`, `docs/*.yaml`, `tamagotchi/{settings,stage}.yaml`, `tamagotchi/electron/tray.yaml`, `server/*.yaml` (id only).',
       '',
       `Locales: **${locales.length}** — ${locales.join(', ')}`,
-      `English reference leaf-key count (mapping keys only): **${enTotal}**. Note: \`airi-i18n\` build.rs (serde_yaml flatten) reports 1329 keys for en because it also counts sequence items; the two counts differ by design and serve as a cross-check.`,
+      `English reference leaf-key count (mapping keys only): **${enTotal}**. Note: \`anima-i18n\` build.rs (serde_yaml flatten) reports 1329 keys for en because it also counts sequence items; the two counts differ by design and serve as a cross-check.`,
       '',
       ...lines,
     ].join('\n'),

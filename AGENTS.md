@@ -2,12 +2,12 @@
 
 ## 0. The Pivot: What This Repo Is Becoming (read first, verify before citing)
 
-AIRI is no longer "a desktop pet app". It is pivoting to the **agent-runtime core of a personal agentic OS**: one long-lived Rust core owns state; every UI (Electrobun/Vue app, Slint native app, web) is a **thin WebSocket client** of the daemon.
+Anima is no longer "a desktop pet app". It is pivoting to the **agent-runtime core of a personal agentic OS**: one long-lived Rust core owns state; every UI (Electrobun/Vue app, Slint native app, web) is a **thin WebSocket client** of the daemon.
 
-- **Architecture:** `crates/airi-daemon` hosts the WS/wss gateway (port 6121, loopback by default; `wss://` + a locally minted CA beyond loopback). `crates/airi-channel` defines the Rust-canonical wire protocol and the D-Bus control surface (`GetGatewayConfig` / `ApplyGatewayConfig` / `RegenerateGatewayToken` on `org.moeru.airi.Daemon1`); specta exports those types to TypeScript (drift-checked in CI). `crates/airi-slint` is the native shell. `apps/stage-tamagotchi` is Electrobun (not Electron).
+- **Architecture:** `crates/anima-daemon` hosts the WS/wss gateway (port 6121, loopback by default; `wss://` + a locally minted CA beyond loopback). `crates/anima-channel` defines the Rust-canonical wire protocol and the D-Bus control surface (`GetGatewayConfig` / `ApplyGatewayConfig` / `RegenerateGatewayToken` on `org.moeru.airi.Daemon1`); specta exports those types to TypeScript (drift-checked in CI). `crates/anima-slint` is the native shell. `apps/stage-tamagotchi` is Electrobun (not Electron).
 - **Thin-client rule:** when the daemon answers on the session bus, clients bind nothing on 6121 — no token mint, no WS server. The app talks to the daemon via `busctl --user --json=short` (see `apps/stage-tamagotchi/src/main/services/airi/daemon-gateway.ts`). If the daemon does not answer, the app falls back to its in-app path (macOS/Windows remain functional until the daemon ports).
 - **Canonical docs:** [`docs/design-daemon-gateway.md`](./docs/design-daemon-gateway.md) (design + invariants + threat model), [`docs/rosetta-stone.md`](./docs/rosetta-stone.md) (concept → code map), [`docs/data-catalog.md`](./docs/data-catalog.md) (persisted keys), [`docs/proposal-unified-rust-native-app.md`](./docs/proposal-unified-rust-native-app.md) (mobile direction; the Capacitor stage-pocket is purged). [`README.md`](./README.md) carries the under-construction notice: this is a work-in-progress mid-pivot, not a daily driver.
-- **Verify, don't believe:** `cargo test --workspace --locked`, the wire-types drift check, `pnpm -F @proj-airi/stage-ui typecheck`. Tamagotchi `typecheck:node` is env-red for pre-existing reasons; check whether changed files appear in the errors instead.
+- **Verify, don't believe:** `cargo test --workspace --locked`, the wire-types drift check, `pnpm -F @proj-anima/stage-ui typecheck`. Tamagotchi `typecheck:node` is env-red for pre-existing reasons; check whether changed files appear in the errors instead.
 - Mid-pivot state (merged increments, pending work, branch state) belongs in the tracker and the docs above, not in this file — check the tree and those docs before citing them from memory.
 
 ## 0.5 User-Authorized Autonomy and Experimental Main
@@ -55,7 +55,7 @@ AIRI is no longer "a desktop pet app". It is pivoting to the **agent-runtime cor
 - If work in another repository is genuinely necessary, ask the user to identify or authorize the intended workspace before crossing that boundary.
 - Avoid broad formatting, cleanup, or unrelated refactoring. Prefer the smallest coherent diff that solves the requested problem.
 - Upstream (`dasilva333/airi`) MAY be inspected, fetched, and compared against for mergeability and upstream alignment (read-only reference operations: `git fetch upstream`, `git show upstream/<branch>:<path>`, `gh` API reads, `git diff upstream/main...HEAD` for review). Never push to, rebase onto, or merge from `upstream` without explicit current user authorization — those remain write/history operations, not reference reads.
-- `crates/` is the Rust runtime core (`airi-daemon` hosts the WS/wss gateway, `airi-channel` the wire protocol, `airi-slint` the native shell); the desktop application is in `apps/stage-tamagotchi` (Electrobun, not Electron).
+- `crates/` is the Rust runtime core (`anima-daemon` hosts the WS/wss gateway, `anima-channel` the wire protocol, `anima-slint` the native shell); the desktop application is in `apps/stage-tamagotchi` (Electrobun, not Electron).
 
 ## 6. Git, Commits, and Releases
 
@@ -78,7 +78,7 @@ AIRI is no longer "a desktop pet app". It is pivoting to the **agent-runtime cor
 
 - Follow the nearest established project pattern before introducing new abstractions.
 - For service composition and typed IPC/RPC, prefer the established `injeca` and `@moeru/eventa` patterns documented in the Rosetta Stone.
-- Prefer `@proj-airi/ui` components and Iconify icons over raw controls or bespoke SVGs where existing primitives fit the task.
+- Prefer `@proj-anima/ui` components and Iconify icons over raw controls or bespoke SVGs where existing primitives fit the task.
 - Prefer UnoCSS to Tailwind. For substantial UnoCSS class lists, use readable Vue class arrays rather than attribute-mode syntax. Reuse existing animations when practical.
 - Avoid unnecessary backward-compatibility guards and shims. Introduce them when the supported compatibility requirements justify the additional complexity.
 - Put translations in `packages/i18n`. Before finding or editing YAML settings keys, consult [`docs/settings-yaml.md`](./docs/settings-yaml.md) and follow its documented `scripts/yaml-manager.js` workflow.

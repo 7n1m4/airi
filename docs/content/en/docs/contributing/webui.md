@@ -1,6 +1,6 @@
 ---
 title: Web UI
-description: Contribute to Project AIRI
+description: Contribute to Project Anima
 ---
 
 ### Stage Web (Browser version for [airi.moeru.ai](https://airi.moeru.ai))

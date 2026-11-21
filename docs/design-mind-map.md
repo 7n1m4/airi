@@ -212,8 +212,8 @@ Users should not have to leave the Mind Map and dig into Settings just to manage
 
 ### New Dependencies to Install
 ```bash
-pnpm -F @proj-airi/stage-pages add d3-force d3-zoom
-pnpm -F @proj-airi/stage-pages add -D @types/d3-force @types/d3-zoom
+pnpm -F @proj-anima/stage-pages add d3-force d3-zoom
+pnpm -F @proj-anima/stage-pages add -D @types/d3-force @types/d3-zoom
 ```
 *(Combined bundle impact: **< 25 KB gzipped**, avoiding monolithic D3 bloat)*
 

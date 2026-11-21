@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Dev-only .deb assembler for airi-slint (user decision 2026-11-12: "dev release
+# Dev-only .deb assembler for anima-slint (user decision 2026-11-12: "dev release
 # for now" — nothing here is a production release or suitable for distribution).
 #
 # Builds a `airi-slint-dev` package from the local cargo target dir:
-#   1. `cargo build -p airi-slint` (debug — fast; a dev artifact is allowed to be fat).
+#   1. `cargo build -p anima-slint` (debug — fast; a dev artifact is allowed to be fat).
 #      Pass --release to package a release binary instead.
 #   2. Stages the Debian layout (DEBIAN/control + /usr/bin, /usr/share/applications,
 #      /usr/share/icons/hicolor/512x512/apps, /usr/share/doc/airi-slint-dev).
@@ -27,10 +27,10 @@ VERSION="0.1.0~dev1"
 PKG="airi-slint-dev"
 OUT="$ROOT/dist/${PKG}_${VERSION}_amd64.deb"
 STAGE="$ROOT/dist/${PKG}_${VERSION}_amd64"
-BIN="$ROOT/target/${PROFILE}/airi-slint"
+BIN="$ROOT/target/${PROFILE}/anima-slint"
 
-echo "==> building airi-slint (${PROFILE})"
-cargo build -p airi-slint ${PROFILE:+$([ "$PROFILE" = release ] && echo --release)}
+echo "==> building anima-slint (${PROFILE})"
+cargo build -p anima-slint ${PROFILE:+$([ "$PROFILE" = release ] && echo --release)}
 
 echo "==> staging package tree"
 rm -rf "$STAGE"
@@ -41,9 +41,9 @@ mkdir -p \
   "$STAGE/usr/share/icons/hicolor/512x512/apps" \
   "$STAGE/usr/share/doc/${PKG}"
 
-install -m 0755 "$BIN" "$STAGE/usr/bin/airi-slint"
-install -m 0644 "$ROOT/packaging/airi-slint.desktop" "$STAGE/usr/share/applications/airi-slint.desktop"
-install -m 0644 "$ROOT/packaging/airi-slint.png"     "$STAGE/usr/share/icons/hicolor/512x512/apps/airi-slint.png"
+install -m 0755 "$BIN" "$STAGE/usr/bin/anima-slint"
+install -m 0644 "$ROOT/packaging/anima-slint.desktop" "$STAGE/usr/share/applications/anima-slint.desktop"
+install -m 0644 "$ROOT/packaging/anima-slint.png"     "$STAGE/usr/share/icons/hicolor/512x512/apps/anima-slint.png"
 install -m 0644 "$ROOT/packaging/LICENSE.txt"      "$STAGE/usr/share/doc/${PKG}/copyright"
 cat > "$STAGE/usr/share/doc/${PKG}/changelog" <<EOF2
 ${PKG} (${VERSION}) unstable; urgency=low

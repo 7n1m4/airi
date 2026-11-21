@@ -24,7 +24,7 @@ onMounted(async () => {
 })
 ```
 
-先週、私たちの企業デザイナー/アーティストが Project AIRI のロゴの最初のデザイン案を提出してくれました。
+先週、私たちの企業デザイナー/アーティストが Project Anima のロゴの最初のデザイン案を提出してくれました。
 ロゴの全体的なスタイルはこんな感じでした：
 
 ![](/en/blog/DevLog-2025.03.05/assets/airi-logos-v1.avif)
@@ -62,7 +62,7 @@ onMounted(async () => {
 
 ![](/en/blog/DevLog-2025.03.05/assets/airi-logos-final.avif)
 
-今日の遅くには、Project AIRI の[ドキュメントサイト](https://airi.build)を正式に公開する予定です。
+今日の遅くには、Project Anima の[ドキュメントサイト](https://airi.build)を正式に公開する予定です。
 私自身や他の開発者、アーティストのためのリファレンスやガイドを提供するためです。
 
 ついに完成しました！新しいデザインのロゴと配色はすでに[ドキュメントサイト](https://airi.build)に統合されています：

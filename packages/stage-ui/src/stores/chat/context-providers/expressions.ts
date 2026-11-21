@@ -1,8 +1,8 @@
 import type { ContextMessage } from '../../../types/chat'
 
-import { ContextUpdateStrategy } from '@proj-airi/server-sdk'
-import { useLive2d } from '@proj-airi/stage-ui-live2d'
-import { useModelStore } from '@proj-airi/stage-ui-three'
+import { ContextUpdateStrategy } from '@proj-anima/server-sdk'
+import { useLive2d } from '@proj-anima/stage-ui-live2d'
+import { useModelStore } from '@proj-anima/stage-ui-three'
 import { nanoid } from 'nanoid'
 
 const EXPRESSIONS_CONTEXT_ID = 'system:expressions'

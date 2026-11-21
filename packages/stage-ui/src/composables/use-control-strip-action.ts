@@ -1,5 +1,5 @@
-import { useModelStore } from '@proj-airi/stage-ui-three'
-import { useTheme } from '@proj-airi/ui'
+import { useModelStore } from '@proj-anima/stage-ui-three'
+import { useTheme } from '@proj-anima/ui'
 import { useBroadcastChannel } from '@vueuse/core'
 import { toast } from 'vue-sonner'
 

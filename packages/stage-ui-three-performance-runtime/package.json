@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/stage-ui-three-performance-runtime",
+  "name": "@proj-anima/stage-ui-three-performance-runtime",
   "type": "module",
   "private": true,
   "description": "Runtime timeline + blackboard utilities for stage-ui-three performances",

@@ -1,6 +1,6 @@
 # Stable Release & Build Guide
 
-This document captures the lessons learned and the specific technical steps required to successfully build and release stable versions of the AIRI Electron application, particularly focusing on overcoming environment-related build failures.
+This document captures the lessons learned and the specific technical steps required to successfully build and release stable versions of the Anima Electron application, particularly focusing on overcoming environment-related build failures.
 
 ## 1. Release Workflow
 
@@ -46,8 +46,8 @@ pnpm run ci:status --release
 
 Because the Mac agent dispatches the GitHub Actions `Release: Linux Desktop` workflow immediately after publishing macOS/iOS assets, by the time the Windows build and smoke test finish, the cloud Linux builds should be ready or completing. Verify that all 14 release assets are attached:
 - **macOS**: `arm64.dmg` and `arm64-mac.zip`
-- **iOS**: `AIRI-[version]-ios.ipa`
-- **Android**: `AIRI-[version]-pocket.apk`
+- **iOS**: `Anima-[version]-ios.ipa`
+- **Android**: `Anima-[version]-pocket.apk`
 - **Windows**: `windows-x64-setup.exe` and portable `windows-x64.zip`
 - **Linux x64**: `.deb`, `.rpm`, `.flatpak`
 - **Linux arm64**: `.deb`, `.rpm`, `.flatpak`
@@ -62,7 +62,7 @@ If you prefer or need to run individual steps manually:
 1. **Build Windows Executable**:
    Execute the build command from the `stage-tamagotchi` workspace:
    ```bash
-   pnpm -F @proj-airi/stage-tamagotchi run build:win
+   pnpm -F @proj-anima/stage-tamagotchi run build:win
    ```
    This runs `electron-builder --win` after performing necessary typechecks and production builds.
 
@@ -101,7 +101,7 @@ Electron renderer processes are browser environments. Many modern dependencies (
 2. **Custom Shimming**: Implement a virtual `node:crypto` shim (e.g., `apps/stage-tamagotchi/src/renderer/shims/node-crypto.ts`) that maps `node:crypto.webcrypto` to `window.crypto`.
 
 ### DuckDB Environment Leakage
-`@proj-airi/duckdb-wasm` (and its dependencies) may attempt to load Node.js-specific WASM loaders or bundles even in the renderer.
+`@proj-anima/duckdb-wasm` (and its dependencies) may attempt to load Node.js-specific WASM loaders or bundles even in the renderer.
 
 **Solution:**
 Use a custom Vite plugin (e.g., `force-node-crypto-shim` in our config) to intercept `resolveId` and redirected any path like `bundles/default-node` to `bundles/default-browser`.
@@ -125,7 +125,7 @@ To avoid build failures due to transient network issues (e.g., downloading VRM m
 
 - **Alias Conflicts**: If an alias doesn't work, it might be due to relative path resolution within `node_modules`. Use **regex aliases** in Vite configuration to catch all variations.
 - **Typecheck Failures**: If adding an alias breaks typechecks, ensure the shim file exports types compatible with the original module, or use `// @ts-ignore` sparingly in the shim itself.
-- **File Locks**: If `electron-builder` fails with an `IOException` (e.g., "process cannot access the file app.asar"), it is likely that an instance of AIRI or a file watcher is locking the artifact. Refer to the process safety guidelines below.
+- **File Locks**: If `electron-builder` fails with an `IOException` (e.g., "process cannot access the file app.asar"), it is likely that an instance of Anima or a file watcher is locking the artifact. Refer to the process safety guidelines below.
 
 ---
 

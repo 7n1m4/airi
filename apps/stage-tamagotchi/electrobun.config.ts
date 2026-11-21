@@ -36,7 +36,7 @@ const chromiumFlags = {
 
 export default {
   app: {
-    name: 'AIRI',
+    name: 'Anima',
     identifier: 'ai.moeru.airi',
     version: pkg.version,
   },
@@ -52,8 +52,8 @@ export default {
       // type`, erased by Bun), and the main event bus lives in src/main/eventa-bus.ts. Do NOT
       // reintroduce the alias: it would hide a real missing port behind a fake module.
       alias: {
-        '@proj-airi/i18n-bundle': join(appDir, '../../packages/i18n/src/dist-lite/messages.mjs'),
-        '@proj-airi/server-runtime': join(appDir, '../../packages/server-runtime/src'),
+        '@proj-anima/i18n-bundle': join(appDir, '../../packages/i18n/src/dist-lite/messages.mjs'),
+        '@proj-anima/server-runtime': join(appDir, '../../packages/server-runtime/src'),
         // NOTICE: Bun's bundler applies the `node` export condition, so `h3` resolves to
         // h3/dist/_entries/node.mjs, whose `serve` is srvx's Node adapter (a node:http
         // server). crossws, resolving independently, still picks its Bun adapter — so the Bun

@@ -40,11 +40,11 @@ echo "[1/3] Building packages..."
 pnpm run build:packages
 
 echo "[2/3] Building Tamagotchi production assets..."
-pnpm -F @proj-airi/stage-tamagotchi run build
+pnpm -F @proj-anima/stage-tamagotchi run build
 
 echo "[3/3] Starting Tamagotchi in Preview Mode..."
 if [ -f "apps/stage-tamagotchi/electron.vite.config.local.ts" ]; then
-  pnpm -F @proj-airi/stage-tamagotchi start --config electron.vite.config.local.ts -- "$@"
+  pnpm -F @proj-anima/stage-tamagotchi start --config electron.vite.config.local.ts -- "$@"
 else
-  pnpm -F @proj-airi/stage-tamagotchi start -- "$@"
+  pnpm -F @proj-anima/stage-tamagotchi start -- "$@"
 fi

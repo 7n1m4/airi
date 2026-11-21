@@ -1,11 +1,11 @@
 ---
 title: Settings Overview
-description: A high-level overview of the AIRI configuration system.
+description: A high-level overview of the Anima configuration system.
 ---
 
 # Settings Overview
 
-AIRI is designed to be highly configurable, allowing you to tailor the AI's personality, intelligence, and visual expression to your liking.
+Anima is designed to be highly configurable, allowing you to tailor the AI's personality, intelligence, and visual expression to your liking.
 
 ## Configuration Categories
 

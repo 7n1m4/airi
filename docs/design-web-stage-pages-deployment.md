@@ -63,8 +63,8 @@ Key build steps in the workflow:
 - Uses `pnpm/action-setup@v4` (reading version directly from `package.json`'s `packageManager`).
 - Uses `pnpm install --no-frozen-lockfile` for CI build stability.
 - Runs `pnpm run build:packages`.
-- Builds Docs: `BASE_URL=/airi/ pnpm -F @proj-airi/docs run build`.
-- Builds Stage-Web: `BASE_URL=/airi/web-stage/ pnpm -F @proj-airi/stage-web run build`.
+- Builds Docs: `BASE_URL=/airi/ pnpm -F @proj-anima/docs run build`.
+- Builds Stage-Web: `BASE_URL=/airi/web-stage/ pnpm -F @proj-anima/stage-web run build`.
 - Bundles: `cp -r apps/stage-web/dist docs/.vitepress/dist/web-stage`.
 - Deploys to GitHub Pages via `actions/deploy-pages@v4`.
 
@@ -84,7 +84,7 @@ Runs `build:packages`, builds both docs and web-stage with their respective `BAS
 ```bash
 pnpm run build:web:pages
 # or inside apps/stage-web:
-pnpm -F @proj-airi/stage-web run build:pages
+pnpm -F @proj-anima/stage-web run build:pages
 ```
 
 ### Triggering Manual CI Deployment

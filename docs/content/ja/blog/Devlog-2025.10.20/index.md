@@ -3,7 +3,7 @@ title: DevLog @ 2025.10.20
 category: DevLog
 date: 2025-10-20
 excerpt: |
-  AIRI プロジェクトの最新の進捗状況、Tauri から Electron への移行、新しい Live2D モデル、およびさまざまなオープンソースプロジェクトの更新を共有します。
+  Anima プロジェクトの最新の進捗状況、Tauri から Electron への移行、新しい Live2D モデル、およびさまざまなオープンソースプロジェクトの更新を共有します。
 preview-cover:
 # TODO
 ---
@@ -50,7 +50,7 @@ Control Island
 
 > 「[Vue](https://velin-dev.netlify.app/#/) でプロンプトを書くことができます！」
 
-5月に私たち自身が実装したプロンプトライブラリを共有したことを覚えていますか？RainbowBird の努力と寄付のおかげで、現在 Velin も Moeru AI の一員です。AIRI のほぼすべてのプロンプトは Velin によって駆動されていますが、クロスプラットフォーム機能を心配する必要はありません。Velin は Node.js 環境でも使用できます！
+5月に私たち自身が実装したプロンプトライブラリを共有したことを覚えていますか？RainbowBird の努力と寄付のおかげで、現在 Velin も Moeru AI の一員です。Anima のほぼすべてのプロンプトは Velin によって駆動されていますが、クロスプラットフォーム機能を心配する必要はありません。Velin は Node.js 環境でも使用できます！
 
 <img src="/en/blog/DevLog-2025.10.20/assets/velin.png" alt="velin.png" />
 
@@ -64,7 +64,7 @@ Control Island
 
 ## プロジェクトの発展状況
 
-現在、Moeru AI と Project AIRI はどちらも非常に大きな組織になっており、機械学習、データ処理、フロントエンド、バックエンドなどさまざまな分野をカバーする 50 以上のオリジナルリポジトリを持ち、TypeScript/Python/Rust/Go などの複数の言語を使用しています。
+現在、Moeru AI と Project Anima はどちらも非常に大きな組織になっており、機械学習、データ処理、フロントエンド、バックエンドなどさまざまな分野をカバーする 50 以上のオリジナルリポジトリを持ち、TypeScript/Python/Rust/Go などの複数の言語を使用しています。
 
 合計フォロワー数はすでに 800 人を超えています。これは1年前に私たちが設立したばかりの頃には想像もできなかったことです。皆さん、本当にありがとうございます。
 
@@ -75,7 +75,7 @@ Moeru AI
 
 <img src="/en/blog/DevLog-2025.10.20/assets/project-airi.png" alt="project-airi.png" />
 <div style="text-align: center; font-size: 0.875rem; color: #666; margin-top: 0.5rem;">
-Project AIRI
+Project Anima
 </div>
 
 ## 純粋な Rust TTS 実装

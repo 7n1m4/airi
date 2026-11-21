@@ -1,5 +1,5 @@
 /**
- * @proj-airi/live2d-runtime
+ * @proj-anima/live2d-runtime
  *
  * Headless Live2D DSL runtime & VarFloats state engine.
  * See docs/project-standalone-live2d-engine-plan.md §0 (Reconciled Architecture).

@@ -39,12 +39,12 @@ jobs:
       - run: pnpm run build:packages
 
       - name: Build docs
-        run: pnpm -F @proj-airi/docs run build
+        run: pnpm -F @proj-anima/docs run build
         env:
           BASE_URL: /airi/
 
       - name: Build stage-web
-        run: pnpm -F @proj-airi/stage-web run build
+        run: pnpm -F @proj-anima/stage-web run build
         env:
           BASE_URL: /airi/web-stage/
 

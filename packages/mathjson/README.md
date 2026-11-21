@@ -1,4 +1,4 @@
-# @proj-airi/mathjson
+# @proj-anima/mathjson
 
 Types and small helpers for the MathJSON of the speech transformers. The package has no dependency.
 
@@ -9,7 +9,7 @@ Types and small helpers for the MathJSON of the speech transformers. The package
 
 ## Do not use it for
 
-- Parsing or reading formulas. Use `@proj-airi/speech-transformer-math`.
+- Parsing or reading formulas. Use `@proj-anima/speech-transformer-math`.
 - Full MathJSON with evaluation. Use `@cortex-js/compute-engine`.
 
 ## Shape
@@ -26,5 +26,5 @@ headOf(expression) // => 'Add'
 ## Checks
 
 ```sh
-pnpm -F @proj-airi/mathjson typecheck
+pnpm -F @proj-anima/mathjson typecheck
 ```

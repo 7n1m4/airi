@@ -1,5 +1,5 @@
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { useLocalStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'

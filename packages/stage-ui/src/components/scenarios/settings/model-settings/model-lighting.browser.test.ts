@@ -1,11 +1,11 @@
-import { computeDirectionalLightOrbit } from '@proj-airi/stage-shared'
+import { computeDirectionalLightOrbit } from '@proj-anima/stage-shared'
 import { createPinia, disposePinia, setActivePinia } from 'pinia'
 import { describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
 
 describe('model Lighting Settings & Reactivity', () => {
   it('persists and updates VRM directional and ambient light settings', async () => {
-    const { useModelStore } = await import('@proj-airi/stage-ui-three')
+    const { useModelStore } = await import('@proj-anima/stage-ui-three')
     const pinia = createPinia()
     setActivePinia(pinia)
 
@@ -42,7 +42,7 @@ describe('model Lighting Settings & Reactivity', () => {
   })
 
   it('persists and updates MMD directional and ambient light settings with aliases', async () => {
-    const { useMmd } = await import('@proj-airi/stage-ui-mmd/stores/mmd')
+    const { useMmd } = await import('@proj-anima/stage-ui-mmd/stores/mmd')
     const pinia = createPinia()
     setActivePinia(pinia)
 

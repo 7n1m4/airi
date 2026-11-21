@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AnalyzedSentenceEffects } from '@proj-airi/stage-shared/utils/caption-sentiment'
+import type { AnalyzedSentenceEffects } from '@proj-anima/stage-shared/utils/caption-sentiment'
 
 import {
   drawCanvas6PointStar,
@@ -8,9 +8,9 @@ import {
   drawCanvasHeart,
   drawCanvasInteriorMask,
   drawCanvasRaindrop,
-} from '@proj-airi/stage-shared/utils/caption-canvas2d'
-import { poseToCaptionTransform } from '@proj-airi/stage-shared/utils/caption-perspective'
-import { analyzeCaptionSentence, subChunkText } from '@proj-airi/stage-shared/utils/caption-sentiment'
+} from '@proj-anima/stage-shared/utils/caption-canvas2d'
+import { poseToCaptionTransform } from '@proj-anima/stage-shared/utils/caption-perspective'
+import { analyzeCaptionSentence, subChunkText } from '@proj-anima/stage-shared/utils/caption-sentiment'
 import { useBroadcastChannel } from '@vueuse/core'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 

@@ -9,17 +9,17 @@
 ## Context
 
 The awareness audit log is an append-only, redacted JSONL at
-`<data_dir>/airi-slint/audit/awareness-audit.jsonl` (path contract in
-`crates/airi-channel/src/audit.rs:14-27`). Two distinct lifecycles exist and
+`<data_dir>/anima-slint/audit/awareness-audit.jsonl` (path contract in
+`crates/anima-channel/src/audit.rs:14-27`). Two distinct lifecycles exist and
 must not be confused:
 
 - **Active file** — the daemon prunes it to a **7-day window on startup**
-  (`RETENTION_MS` at `crates/airi-daemon/src/audit.rs:19`; `prune_on_start` at
-  `crates/airi-daemon/src/audit.rs:146-191`). The prune reads and rewrites only
+  (`RETENTION_MS` at `crates/anima-daemon/src/audit.rs:19`; `prune_on_start` at
+  `crates/anima-daemon/src/audit.rs:146-191`). The prune reads and rewrites only
   `self.path`, the active file.
 - **Archives** — `clear_audit()` (the only archiving entry point,
-  `crates/airi-slint/src/bridges/daemon.rs:865-897`) calls
-  `archive_audit_file()` (`crates/airi-channel/src/audit.rs:70-92`), which
+  `crates/anima-slint/src/bridges/daemon.rs:865-897`) calls
+  `archive_audit_file()` (`crates/anima-channel/src/audit.rs:70-92`), which
   **renames** the active file to `<name>.cleared-<unix-ts>[-<counter>]` in the
   same directory. The `-<counter>` suffix handles same-second collisions
   (`audit.rs:85-89`); a missing file is a no-op success
@@ -28,15 +28,15 @@ must not be confused:
 Actual behavior today: every `clear_audit()` call archives the current active
 file; the daemon recreates a fresh active file on the next append. **No code
 anywhere rotates, ages out, or deletes `.cleared-*` files** — grep finds only
-their creation and tests (`crates/airi-channel/src/audit.rs:125-139`, whose
+their creation and tests (`crates/anima-channel/src/audit.rs:125-139`, whose
 name is `archive_never_overwrites_and_keeps_history`). The 7-day prune does
 not touch them. Archives therefore accumulate **forever**, growing disk usage
 without bound, one archive per clear. The bridge doc comment already states
 the intent: "never deletes or truncates history … so the forensic trail
-survives" (`crates/airi-slint/src/bridges/daemon.rs:67-72`).
+survives" (`crates/anima-slint/src/bridges/daemon.rs:67-72`).
 
 Reachability: `clear_audit()` is a Rust method on `DaemonState`
-(`crates/airi-slint/src/bridges/daemon.rs:626`). It has **no callers** in the
+(`crates/anima-slint/src/bridges/daemon.rs:626`). It has **no callers** in the
 repository and no `.slint` binding — there is no GUI deletion path today.
 
 ## Decision
@@ -54,13 +54,13 @@ repository and no `.slint` binding — there is no GUI deletion path today.
    Any reduction of archive data must be an explicitly-authorized,
    out-of-band, operator-driven filesystem action (e.g. an operator directly
    removing specific `.cleared-*` files under
-   `<data_dir>/airi-slint/audit/`). It must never be automatic, scheduled, or
+   `<data_dir>/anima-slint/audit/`). It must never be automatic, scheduled, or
    built into the daemon or any client. Such an action requires fresh,
    explicit authorization from the owner for each occurrence.
 
 4. **Owner:** the AIRI **daemon/ops operator** — the party that runs the
-   `airi-daemon` session service and owns its data directory
-   (`<data_dir>/airi-slint/audit/awareness-audit.jsonl` and its archives). This
+   `anima-daemon` session service and owns its data directory
+   (`<data_dir>/anima-slint/audit/awareness-audit.jsonl` and its archives). This
    owner is the only party who may authorize the privileged manual deletion in
    (3). No UI end user is granted that authority.
 

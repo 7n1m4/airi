@@ -1,4 +1,4 @@
-import type { MmdTextureFile } from '@proj-airi/stage-ui-mmd/utils/mmd-zip-extractor'
+import type { MmdTextureFile } from '@proj-anima/stage-ui-mmd/utils/mmd-zip-extractor'
 
 import type { ModelCapabilityItem } from '../libs/character/model-capabilities'
 import type { AiriOutfit } from './modules/airi-card'
@@ -6,13 +6,13 @@ import type { AiriOutfit } from './modules/airi-card'
 import JSZip from 'jszip'
 import localforage from 'localforage'
 
-import { debug } from '@proj-airi/stage-shared'
-import { decodeCp437Mojibake, isMojibakeMatch } from '@proj-airi/stage-ui-live2d/utils/live2d-cp437'
-import { loadLive2DModelPreview as generateLive2DPreview } from '@proj-airi/stage-ui-live2d/utils/live2d-preview'
-import { loadMMDModelPreview as generateMmdPreview } from '@proj-airi/stage-ui-mmd/utils/mmd-preview'
-import { loadSpineModelPreview as generateSpinePreview } from '@proj-airi/stage-ui-spine/utils/spine-preview'
-import { detectSpineVersionFromBinary, detectSpineVersionFromJson } from '@proj-airi/stage-ui-spine/utils/spine-version'
-import { loadVrmModelPreview as generateVrmPreview } from '@proj-airi/stage-ui-three/utils/vrm-preview'
+import { debug } from '@proj-anima/stage-shared'
+import { decodeCp437Mojibake, isMojibakeMatch } from '@proj-anima/stage-ui-live2d/utils/live2d-cp437'
+import { loadLive2DModelPreview as generateLive2DPreview } from '@proj-anima/stage-ui-live2d/utils/live2d-preview'
+import { loadMMDModelPreview as generateMmdPreview } from '@proj-anima/stage-ui-mmd/utils/mmd-preview'
+import { loadSpineModelPreview as generateSpinePreview } from '@proj-anima/stage-ui-spine/utils/spine-preview'
+import { detectSpineVersionFromBinary, detectSpineVersionFromJson } from '@proj-anima/stage-ui-spine/utils/spine-version'
+import { loadVrmModelPreview as generateVrmPreview } from '@proj-anima/stage-ui-three/utils/vrm-preview'
 import { until, useBroadcastChannel } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { acceptHMRUpdate, defineStore } from 'pinia'
@@ -23,8 +23,8 @@ import { storage } from '../database/storage'
 import { buildExpressionCapabilities, buildMotionCapabilities } from '../libs/character/model-capabilities'
 import { convertSpineSkeleton } from '../utils/spine-converter/converter'
 
-import '@proj-airi/stage-ui-live2d/utils/live2d-zip-loader'
-import '@proj-airi/stage-ui-live2d/utils/live2d-opfs-registration'
+import '@proj-anima/stage-ui-live2d/utils/live2d-zip-loader'
+import '@proj-anima/stage-ui-live2d/utils/live2d-opfs-registration'
 
 export enum DisplayModelFormat {
   Live2dZip = 'live2d-zip',
@@ -57,7 +57,7 @@ export interface DisplayModelCloud {
   _searchKey?: string
 }
 
-export { DEFAULT_VFX_MAPPINGS } from '@proj-airi/stage-ui-three/vfx'
+export { DEFAULT_VFX_MAPPINGS } from '@proj-anima/stage-ui-three/vfx'
 
 export type DisplayModel
   = | DisplayModelFile

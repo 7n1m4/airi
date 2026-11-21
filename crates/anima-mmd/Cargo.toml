@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "anima-mmd"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "MMD (MikuMikuDance) model runtime for Anima — PMX/PMD/VMD parsers (P10 M0 lane)"
+
+[dependencies]
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+# Test-only: extracts the user-supplied .zip in the env-gated live_zip test.
+# Not part of the crate's normal dependency surface.
+zip = { workspace = true }

@@ -4,8 +4,8 @@ import type { BrowserWindow } from 'electron'
 import type { ElectronWindowLifecycleState } from '../../../shared/eventa'
 
 import { defineInvokeHandler } from '@moeru/eventa'
-import { bounds, startLoopGetBounds } from '@proj-airi/electron-eventa'
-import { createRendererLoop } from '@proj-airi/electron-vueuse/main'
+import { bounds, startLoopGetBounds } from '@proj-anima/electron-eventa'
+import { createRendererLoop } from '@proj-anima/electron-vueuse/main'
 
 import {
   electron,

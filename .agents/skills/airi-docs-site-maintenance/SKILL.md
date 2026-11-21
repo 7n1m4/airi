@@ -51,7 +51,7 @@ description: >-
 
 ## Verification
 
-- Validation command: `pnpm -F @proj-airi/docs build` (or `pnpm dev:docs` to preview locally).
+- Validation command: `pnpm -F @proj-anima/docs build` (or `pnpm dev:docs` to preview locally).
 - Always verify that all cross-references in `docs/shared-sidebar.ts` resolve to existing markdown files.
 
 ## Related Skills & References

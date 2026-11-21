@@ -2,7 +2,7 @@ import type { CommonRequestOptions } from '@xsai/shared'
 import type { Message } from '@xsai/shared-chat'
 import type { Infer, Schema } from 'xsschema'
 
-import { generateObject as sharedGenerateObject } from '@proj-airi/stage-shared'
+import { generateObject as sharedGenerateObject } from '@proj-anima/stage-shared'
 
 type SchemaOrString<S extends Schema | undefined | unknown> = S extends unknown ? string : S extends Schema ? Infer<S> : never
 

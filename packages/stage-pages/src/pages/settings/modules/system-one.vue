@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useSystemOneStore } from '@proj-airi/stage-ui/stores/modules/system-one'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Alert } from '@proj-airi/ui'
+import { useSystemOneStore } from '@proj-anima/stage-ui/stores/modules/system-one'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Alert } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'

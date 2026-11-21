@@ -31,9 +31,9 @@ export type {
   AutoUpdaterState,
   AutoUpdaterStatus,
   UpdateChannel,
-} from '@proj-airi/electron-eventa/electron-updater'
+} from '@proj-anima/electron-eventa/electron-updater'
 export {
   autoUpdater,
   electronAutoUpdaterStateChanged,
   updateChannels,
-} from '@proj-airi/electron-eventa/electron-updater'
+} from '@proj-anima/electron-eventa/electron-updater'

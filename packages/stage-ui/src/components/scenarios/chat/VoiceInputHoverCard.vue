@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { MicToggleHotkey } from '@proj-airi/stage-shared/shortcuts'
+import type { MicToggleHotkey } from '@proj-anima/stage-shared/shortcuts'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { electronGetMicToggleHotkey, electronSetMicToggleHotkey } from '@proj-airi/stage-shared/shortcuts'
-import { Checkbox } from '@proj-airi/ui'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { electronGetMicToggleHotkey, electronSetMicToggleHotkey } from '@proj-anima/stage-shared/shortcuts'
+import { Checkbox } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'

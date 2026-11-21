@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { SearchItem } from '@proj-airi/stage-ui/constants'
+import type { SearchItem } from '@proj-anima/stage-ui/constants'
 
-import { convertCatalogItemToSearchItem, getAllCatalogItems, rankSearchResults } from '@proj-airi/stage-ui/constants'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
+import { convertCatalogItemToSearchItem, getAllCatalogItems, rankSearchResults } from '@proj-anima/stage-ui/constants'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
 import { onClickOutside, useMediaQuery } from '@vueuse/core'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'

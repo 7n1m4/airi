@@ -8,9 +8,9 @@ date: 2025-04-22
 
 こんにちは、[@LemonNeko](https://github.com/LemonNekoGH) です。今回は私が DevLog の執筆に参加し、開発ストーリーを皆さんと共有します。
 
-2ヶ月前、私たちは AIRI の Web 版を Electron に移植しました [#7](https://github.com/moeru-ai/airi/pull/7)（現在は Tauri を使用してリファクタリングされています 🤣 [#90](https://github.com/moeru-ai/airi/pull/90)）。これにより、デスクトップペットとして画面に表示できるようになりました。同時に、AIRI が携帯電話を使えるようにするというアイデアが浮かびましたが、なかなか着手できませんでした。
+2ヶ月前、私たちは Anima の Web 版を Electron に移植しました [#7](https://github.com/moeru-ai/airi/pull/7)（現在は Tauri を使用してリファクタリングされています 🤣 [#90](https://github.com/moeru-ai/airi/pull/90)）。これにより、デスクトップペットとして画面に表示できるようになりました。同時に、Anima が携帯電話を使えるようにするというアイデアが浮かびましたが、なかなか着手できませんでした。
 
-先週末（2025.04.20）、少し時間を割いて、ADB と対話できる MCP サーバーのデモ [airi-android](https://github.com/LemonNekoGH/airi-android) を作成しました。これにより、AIRI に携帯電話と対話する最も基本的な機能が提供されました（実際、ほとんどの LLM はこれを通じて携帯電話と対話できます）。デモ動画はこちらです：
+先週末（2025.04.20）、少し時間を割いて、ADB と対話できる MCP サーバーのデモ [airi-android](https://github.com/LemonNekoGH/airi-android) を作成しました。これにより、Anima に携帯電話と対話する最も基本的な機能が提供されました（実際、ほとんどの LLM はこれを通じて携帯電話と対話できます）。デモ動画はこちらです：
 
 <ThemedVideo controls muted src="/en/blog/DevLog-2025.04.22/assets/cursor-open-settings.mp4" />
 
@@ -66,6 +66,6 @@ LLM に具体的にどのように携帯電話を操作させるかはまだ考�
 emulator -avd Pixel_6_Pro_API_34
 ```
 
-次は、AIRI デスクトップペットに MCP サーバーを接続して、何をしたがるか見てみるつもりです。もしかしたら、現在の ReLU のように、Telegram を開いて私たちとおしゃべりするかもしれません（Telegram の API を使うのではなく）。
+次は、Anima デスクトップペットに MCP サーバーを接続して、何をしたがるか見てみるつもりです。もしかしたら、現在の ReLU のように、Telegram を開いて私たちとおしゃべりするかもしれません（Telegram の API を使うのではなく）。
 
 この少し長くてあまり中身がないかもしれない DevLog を最後まで読んでいただきありがとうございます。また次回お会いしましょう！

@@ -1,4 +1,4 @@
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { useLocalStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 

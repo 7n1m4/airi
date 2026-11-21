@@ -365,7 +365,7 @@ Mobile users interact with companions across diverse aesthetic preferences. To s
 
 **Root Cause**: In `apps/stage-pocket/src/main.ts`, the router was configured with `createWebHistory()` (HTML5 pushState history). When packaged natively inside Capacitor for iOS, WKWebView serves the local asset bundle from `capacitor://localhost/index.html`. `createWebHistory()` parses `window.location.pathname` as `"/index.html"`. Because Vue Router only defined routes for `"/"`, `"/settings"`, etc., `/index.html` resulted in zero matched routes (`matched: []`). `<RouterView>` rendered `undefined`, yielding a completely blank white screen.
 
-**Fix**: Always configure `createRouter({ history: createWebHashHistory() })` for `apps/stage-pocket`. Hash routing (`capacitor://localhost/index.html#/`) maps `#` / `#/` directly to the `/` root route, completely avoiding the `/index.html` path mismatch in native WKWebView. In addition, always ensure `npx cap sync ios` is executed after running `pnpm -F @proj-airi/stage-pocket build` to copy the fresh `dist/` bundle into `apps/stage-pocket/ios/App/App/public/` before creating Xcode archives.
+**Fix**: Always configure `createRouter({ history: createWebHashHistory() })` for `apps/stage-pocket`. Hash routing (`capacitor://localhost/index.html#/`) maps `#` / `#/` directly to the `/` root route, completely avoiding the `/index.html` path mismatch in native WKWebView. In addition, always ensure `npx cap sync ios` is executed after running `pnpm -F @proj-anima/stage-pocket build` to copy the fresh `dist/` bundle into `apps/stage-pocket/ios/App/App/public/` before creating Xcode archives.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: 环境配置与基础准备
-description: 参与并贡献 Project AIRI
+description: 参与并贡献 Project Anima
 ---
 
 你好呀！感谢你有兴趣参与这个项目。本指南将帮助你快速上手
@@ -187,7 +187,7 @@ git add .
 git commit -m "<your-commit-message>"
 ```
 
-### 将你的代码推送（push）至先前 fork 或者拥有写入权限的 AIRI 仓库
+### 将你的代码推送（push）至先前 fork 或者拥有写入权限的 Anima 仓库
 
 ```shell
 git push origin <your-branch-name> -u

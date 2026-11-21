@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AudioStudio from '@proj-airi/stage-ui/components/scenarios/settings/model-settings/audio-studio.vue'
+import AudioStudio from '@proj-anima/stage-ui/components/scenarios/settings/model-settings/audio-studio.vue'
 </script>
 
 <template>

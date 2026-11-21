@@ -1,5 +1,5 @@
 import type { createContext } from '@moeru/eventa/adapters/electron/main'
-import type { SandboxCompileRequest, SandboxCompileResult } from '@proj-airi/stage-shared'
+import type { SandboxCompileRequest, SandboxCompileResult } from '@proj-anima/stage-shared'
 
 import fs from 'node:fs/promises'
 import os from 'node:os'
@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 
 import { defineInvokeHandler } from '@moeru/eventa'
-import { electronSandboxCompileTypeScript } from '@proj-airi/stage-shared'
+import { electronSandboxCompileTypeScript } from '@proj-anima/stage-shared'
 
 const require = createRequire(import.meta.url)
 

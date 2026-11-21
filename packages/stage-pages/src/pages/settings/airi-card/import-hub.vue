@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button } from '@proj-airi/ui'
+import { Button } from '@proj-anima/ui'
 import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'

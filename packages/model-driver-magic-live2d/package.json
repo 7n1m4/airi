@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/model-driver-magic-live2d",
+  "name": "@proj-anima/model-driver-magic-live2d",
   "type": "module",
   "version": "0.12.0-beta.5",
   "private": true,
@@ -34,7 +34,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@proj-airi/motion-driver-magic": "workspace:^",
+    "@proj-anima/motion-driver-magic": "workspace:^",
     "es-toolkit": "catalog:"
   },
   "devDependencies": {}

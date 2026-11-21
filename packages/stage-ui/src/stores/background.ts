@@ -1,6 +1,6 @@
 import localforage from 'localforage'
 
-import { debug } from '@proj-airi/stage-shared'
+import { debug } from '@proj-anima/stage-shared'
 import { useBroadcastChannel, useLocalStorage } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { defineStore } from 'pinia'

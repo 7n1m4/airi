@@ -1,17 +1,17 @@
-import type { AiriCard } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import type { CardCustomSticker } from '@proj-airi/stage-ui/types/card.schema'
+import type { AiriCard } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import type { CardCustomSticker } from '@proj-anima/stage-ui/types/card.schema'
 
 import JSZip from 'jszip'
 import localforage from 'localforage'
 
-import { exportToJSON } from '@proj-airi/ccc'
-import { useDataMaintenance } from '@proj-airi/stage-ui/composables/use-data-maintenance'
-import { getLatestSelfie } from '@proj-airi/stage-ui/libs/character-media-resolver'
-import { useBackgroundStore } from '@proj-airi/stage-ui/stores/background'
-import { DisplayModelFormat, useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { useSettingsStageModel } from '@proj-airi/stage-ui/stores/settings/stage-model'
+import { exportToJSON } from '@proj-anima/ccc'
+import { useDataMaintenance } from '@proj-anima/stage-ui/composables/use-data-maintenance'
+import { getLatestSelfie } from '@proj-anima/stage-ui/libs/character-media-resolver'
+import { useBackgroundStore } from '@proj-anima/stage-ui/stores/background'
+import { DisplayModelFormat, useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { useSettingsStageModel } from '@proj-anima/stage-ui/stores/settings/stage-model'
 import { storeToRefs } from 'pinia'
 import { toRaw } from 'vue'
 
@@ -501,8 +501,8 @@ export function useCardExport() {
           const modelInput = previewModel.type === 'file' ? previewModel.file : (previewModel as any).url
           if (previewModel.format === DisplayModelFormat.VRM) {
             const [{ loadVrmModelPreview }, { useModelStore }] = await Promise.all([
-              import('@proj-airi/stage-ui-three/utils/vrm-preview'),
-              import('@proj-airi/stage-ui-three'),
+              import('@proj-anima/stage-ui-three/utils/vrm-preview'),
+              import('@proj-anima/stage-ui-three'),
             ])
             const modelStore = useModelStore()
             const liveSnapshot = await loadVrmModelPreview(modelInput, modelStore.activeExpressions)
@@ -511,8 +511,8 @@ export function useCardExport() {
           }
           else if (previewModel.format === DisplayModelFormat.Live2dZip) {
             const [{ loadLive2DModelPreview }, { useModelStore }] = await Promise.all([
-              import('@proj-airi/stage-ui-live2d/utils/live2d-preview'),
-              import('@proj-airi/stage-ui-three'),
+              import('@proj-anima/stage-ui-live2d/utils/live2d-preview'),
+              import('@proj-anima/stage-ui-three'),
             ])
             const modelStore = useModelStore()
             const liveSnapshot = await loadLive2DModelPreview(modelInput, modelStore.activeExpressions)

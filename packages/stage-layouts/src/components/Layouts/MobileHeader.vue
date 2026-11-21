@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { estimateTokens } from '@proj-airi/stage-shared'
-import { BrainModelPicker } from '@proj-airi/stage-ui/components'
-import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
+import { estimateTokens } from '@proj-anima/stage-shared'
+import { BrainModelPicker } from '@proj-anima/stage-ui/components'
+import { useChatSessionStore } from '@proj-anima/stage-ui/stores/chat/session-store'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'

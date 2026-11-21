@@ -546,8 +546,8 @@ This complements **Web-RWKV 0.1B** (the background attention guard) by providing
 ## Verification Results
 
 ### Automated Validation
-- `pnpm -F @proj-airi/stage-ui typecheck`: **PASSED** (0 errors)
-- `pnpm -F @proj-airi/stage-pages typecheck`: **PASSED** (0 errors)
+- `pnpm -F @proj-anima/stage-ui typecheck`: **PASSED** (0 errors)
+- `pnpm -F @proj-anima/stage-pages typecheck`: **PASSED** (0 errors)
 
 ### Manual Verification Checklist
 1. Open **Settings → Providers → Chat → WebLLM** (`/settings/providers/chat/web-llm`).

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { resolveArcadeProfile } from '@proj-airi/stage-ui/composables/arcade'
+import { resolveArcadeProfile } from '@proj-anima/stage-ui/composables/arcade'
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { computed, ref, watch } from 'vue'
 

@@ -12,8 +12,8 @@
  * `rpc.setTransport(...)`, without which every `request`/`send` throws.
  */
 
-import { getViewEventaContext, installViewEventa } from '@proj-airi/electrobun-eventa/view'
-import { setElectronEventaContextProvider } from '@proj-airi/electron-vueuse'
+import { getViewEventaContext, installViewEventa } from '@proj-anima/electrobun-eventa/view'
+import { setElectronEventaContextProvider } from '@proj-anima/electron-vueuse'
 import { Electroview } from 'electrobun/view'
 
 // keep in sync with AIRRPC in src/main/rpc/index.ts

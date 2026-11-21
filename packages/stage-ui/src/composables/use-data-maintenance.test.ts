@@ -192,7 +192,7 @@ vi.mock('../stores/settings', () => ({
   }),
 }))
 
-vi.mock('@proj-airi/stage-ui-live2d', () => ({
+vi.mock('@proj-anima/stage-ui-live2d', () => ({
   useLive2d: () => ({
     resetState: vi.fn(),
   }),

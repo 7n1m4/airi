@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { OAuthProvider } from '@proj-airi/stage-ui/libs/auth'
+import type { OAuthProvider } from '@proj-anima/stage-ui/libs/auth'
 
-import { LoginDrawer } from '@proj-airi/stage-ui/components/auth'
-import { fetchSession, signIn } from '@proj-airi/stage-ui/libs/auth'
-import { Button } from '@proj-airi/ui'
+import { LoginDrawer } from '@proj-anima/stage-ui/components/auth'
+import { fetchSession, signIn } from '@proj-anima/stage-ui/libs/auth'
+import { Button } from '@proj-anima/ui'
 import { useMediaQuery } from '@vueuse/core'
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'

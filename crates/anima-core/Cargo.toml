@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "anima-core"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+
+[features]
+default = [ "local-llm" ]
+# Native in-process llama.cpp GGUF provider (anima-local-llm → llama-cpp-2,
+# native C++ build). Native GGUF is on by default; disable with
+# --no-default-features to drop the llama.cpp native build.
+local-llm = [ "dep:anima-local-llm" ]
+
+[dependencies]
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+base64 = "0.22"
+png = { workspace = true }
+futures-util = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+anima-store = { path = "../anima-store" }
+anima-llm = { path = "../anima-llm" }
+anima-local-llm = { path = "../anima-local-llm", optional = true }
+reqwest = { workspace = true }
+rusqlite = { workspace = true }
+dirs = { workspace = true }
+semver = "1"
+
+[dev-dependencies]
+tempfile = { workspace = true }
+mockito = { workspace = true }
+tokio = { workspace = true, features = [
+  "macros",
+  "rt-multi-thread"
+] }

@@ -10,7 +10,7 @@ export interface BeatSyncWindowManager {
  * Beat-sync owns its own MPA entry (`beat-sync.html`); it has no hash route and no base
  * window services (the renderer talks to the channel server directly).
  *
- * `initScreenCaptureForWindow` from `@proj-airi/electron-screen-capture` is deliberately
+ * `initScreenCaptureForWindow` from `@proj-anima/electron-screen-capture` is deliberately
  * dropped: `desktopCapturer` has no Electrobun equivalent (docs/design-electrobun-port.md §3.1).
  */
 export function setupBeatSync(): BeatSyncWindowManager {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DisplayModel } from '../../../../stores/display-models'
 
-import { Button } from '@proj-airi/ui'
+import { Button } from '@proj-anima/ui'
 import { useMediaQuery, useResizeObserver, useScreenSafeArea } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogTrigger, VisuallyHidden } from 'reka-ui'

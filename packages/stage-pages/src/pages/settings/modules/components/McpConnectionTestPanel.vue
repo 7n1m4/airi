@@ -3,11 +3,11 @@ import type {
   McpConfigFile,
   McpServerConfig,
   McpTestResult,
-} from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
+} from '@proj-anima/stage-ui/stores/mcp-tool-bridge'
 
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { isHttpServerConfig, tryGetMcpToolBridge } from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
-import { Button, Callout, FieldInput, FieldSelect } from '@proj-airi/ui'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { isHttpServerConfig, tryGetMcpToolBridge } from '@proj-anima/stage-ui/stores/mcp-tool-bridge'
+import { Button, Callout, FieldInput, FieldSelect } from '@proj-anima/ui'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{

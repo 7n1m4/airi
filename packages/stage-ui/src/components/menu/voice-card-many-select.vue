@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Alert } from '@proj-airi/ui'
+import { Alert } from '@proj-anima/ui'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import VoiceCard from './voice-card.vue'

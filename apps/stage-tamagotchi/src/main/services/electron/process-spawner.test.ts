@@ -1,8 +1,8 @@
 import type { EventContext } from '@moeru/eventa'
-import type { ElectronExecuteShellCommandResult } from '@proj-airi/stage-shared'
+import type { ElectronExecuteShellCommandResult } from '@proj-anima/stage-shared'
 
 import { createContext, defineEventa } from '@moeru/eventa'
-import { electronExecuteShellCommand } from '@proj-airi/stage-shared'
+import { electronExecuteShellCommand } from '@proj-anima/stage-shared'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createProcessSpawnerService } from './process-spawner'

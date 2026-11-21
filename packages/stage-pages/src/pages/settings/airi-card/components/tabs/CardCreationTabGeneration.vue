@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { BrainModelPicker } from '@proj-airi/stage-ui/components/scenarios/chat'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { FieldCheckbox, FieldInput, FieldTextArea, Select } from '@proj-airi/ui'
+import { BrainModelPicker } from '@proj-anima/stage-ui/components/scenarios/chat'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { FieldCheckbox, FieldInput, FieldTextArea, Select } from '@proj-anima/ui'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import DOMPurify from 'dompurify'
 
-import { healMozibake } from '@proj-airi/stage-shared'
-import { Button } from '@proj-airi/ui'
+import { healMozibake } from '@proj-anima/stage-shared'
+import { Button } from '@proj-anima/ui'
 import { AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogOverlay, AlertDialogPortal, AlertDialogRoot, AlertDialogTitle } from 'reka-ui'
 import { onMounted, ref, watch, watchPostEffect } from 'vue'
 

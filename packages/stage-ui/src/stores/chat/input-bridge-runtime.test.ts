@@ -23,8 +23,8 @@ const mockBridgePost = vi.fn((_payload: ChatInputBridgePayload) => {
   }
 })
 
-vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
-  const mod = await importOriginal<typeof import('@proj-airi/stage-shared')>()
+vi.mock('@proj-anima/stage-shared', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@proj-anima/stage-shared')>()
   return {
     ...mod,
     isStageTamagotchi: () => mockIsTamagotchi,

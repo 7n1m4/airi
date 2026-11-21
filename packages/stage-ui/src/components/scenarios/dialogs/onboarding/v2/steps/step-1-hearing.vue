@@ -2,9 +2,9 @@
 import type { ProgressPayload } from '../../../../../../libs/inference/protocol'
 import type { ProviderMetadata } from '../../../../../../stores/providers'
 
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { useAudioAnalyzer, useAudioRecorder } from '@proj-airi/stage-ui/composables'
-import { Button, FieldSelect } from '@proj-airi/ui'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { useAudioAnalyzer, useAudioRecorder } from '@proj-anima/stage-ui/composables'
+import { Button, FieldSelect } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'

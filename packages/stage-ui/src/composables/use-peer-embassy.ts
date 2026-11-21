@@ -1,10 +1,10 @@
-import type { AmbassadorCard } from '@proj-airi/stage-shared'
+import type { AmbassadorCard } from '@proj-anima/stage-shared'
 
 import {
   buildRequestSignaturePayload,
   sanitizeIntroMessage,
   sanitizeTaglineMessage,
-} from '@proj-airi/stage-shared'
+} from '@proj-anima/stage-shared'
 import { ref } from 'vue'
 
 export interface NormalizedAddress {

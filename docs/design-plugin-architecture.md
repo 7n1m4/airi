@@ -15,7 +15,7 @@ The plugin system adheres to four core principles:
 
 1. **Isolation by Default**: Plugins run in their own execution contexts (either separate Node/ESM module boundaries or independent external processes), ensuring crashes or resource leaks cannot freeze the transparent avatar stage or audio pipeline.
 2. **Dual-Plane Separation**: Administrative lifecycle, configuration, permissions, and UI contributions run strictly on a **Control Plane**, while continuous high-rate sensory streams (vision frames, audio PCM, game coordinates) flow across a dedicated **Data Plane**.
-3. **Transport Agnosticism**: Whether communicating via in-memory event buses, Electron IPC (`@moeru/eventa`), or network WebSockets (`@proj-airi/server-runtime`), plugins share standardized protocol contracts (`@proj-airi/plugin-protocol`).
+3. **Transport Agnosticism**: Whether communicating via in-memory event buses, Electron IPC (`@moeru/eventa`), or network WebSockets (`@proj-anima/server-runtime`), plugins share standardized protocol contracts (`@proj-anima/plugin-protocol`).
 4. **Dual-Architecture Model**: AIRI supports two complementary plugin patterns:
    - **Host-Managed Local Plugins (In-Process / Electron)**: Managed by AIRI's internal `PluginHost`, discovered from user storage, and loaded inside the desktop runtime.
    - **External Network Plugins / Bridges (Out-of-Process / WebSocket)**: Run as standalone daemons, background scripts, or browser extensions in any programming language, connecting to AIRI's central WebSocket message bus.
@@ -138,7 +138,7 @@ Host-managed plugins can be inspected and managed in real time via AIRI's built-
 
 ## 4. Architecture 2: External WebSocket Plugins & Bridges
 
-External plugins run out-of-process and communicate with AIRI over WebSockets (`@proj-airi/server-runtime`). This is the canonical approach for game integrations, chat bots, and external hardware bridges.
+External plugins run out-of-process and communicate with AIRI over WebSockets (`@proj-anima/server-runtime`). This is the canonical approach for game integrations, chat bots, and external hardware bridges.
 
 ### 4.1 Connection & Security Boundary
 
@@ -188,7 +188,7 @@ sequenceDiagram
 To feed passive situational awareness into the character without interrupting speech, emit `context:update` events.
 
 ```typescript
-import { ContextUpdateStrategy } from '@proj-airi/server-sdk'
+import { ContextUpdateStrategy } from '@proj-anima/server-sdk'
 import { nanoid } from 'nanoid'
 
 client.send({
@@ -253,7 +253,7 @@ AIRI includes documented real-world plugin designs demonstrating how to apply th
 
 - **Goal**: Allow the VTuber avatar to read incoming Twitch chat messages and react immediately to high-tier events (subscriptions, bits, raids).
 - **Implementation Strategy**:
-  - Out-of-process daemon connecting via `@proj-airi/server-sdk`.
+  - Out-of-process daemon connecting via `@proj-anima/server-sdk`.
   - Chat messages map to `context:update` with `lane: "twitch:chat"` and strategy `AppendSelf`.
   - Subs, bits, and raids map to `spark:notify` with `kind: "alarm"` and `urgency: "immediate"`.
   - Config schema declares `channelName`, `twitchOAuthToken`, and `airiAuthToken`.
@@ -315,17 +315,17 @@ AIRI includes documented real-world plugin designs demonstrating how to apply th
 
 ### Scenario 2: Authoring an External WebSocket Bridge (TypeScript)
 
-1. Create a standalone Node/TS project with `@proj-airi/server-sdk`:
+1. Create a standalone Node/TS project with `@proj-anima/server-sdk`:
    ```bash
    mkdir airi-discord-bridge && cd airi-discord-bridge
    pnpm init
-   pnpm add @proj-airi/server-sdk nanoid
+   pnpm add @proj-anima/server-sdk nanoid
    pnpm add -D typescript @types/node tsx
    ```
 
 2. Implement `bridge.ts`:
    ```typescript
-   import { Client, ContextUpdateStrategy, WebSocketEventSource } from '@proj-airi/server-sdk'
+   import { Client, ContextUpdateStrategy, WebSocketEventSource } from '@proj-anima/server-sdk'
    import { nanoid } from 'nanoid'
 
    const client = new Client({
@@ -381,7 +381,7 @@ AIRI includes documented real-world plugin designs demonstrating how to apply th
 
 3. **Reconnection Spamming**:
    - Cause: Using an outdated SDK client without exponential backoff.
-   - Fix: Ensure `@proj-airi/server-sdk` is up to date; use `client.updateToken(newToken)` rather than recreating client instances in loops.
+   - Fix: Ensure `@proj-anima/server-sdk` is up to date; use `client.updateToken(newToken)` rather than recreating client instances in loops.
 
 4. **Context Flooding**:
    - Cause: Using `ContextUpdateStrategy.AppendSelf` for rapidly changing single-value state (e.g., GPS or coordinate streaming), causing context window overflow.

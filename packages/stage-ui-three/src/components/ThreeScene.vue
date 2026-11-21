@@ -13,8 +13,8 @@ import type { DirectionalLight, Scene, SphericalHarmonics3, Texture, WebGLRender
 
 import type { Vec3 } from '../stores/model-store'
 
-import { computeDirectionalLightOrbit } from '@proj-airi/stage-shared'
-import { Screen } from '@proj-airi/ui'
+import { computeDirectionalLightOrbit } from '@proj-anima/stage-shared'
+import { Screen } from '@proj-anima/ui'
 import { TresCanvas } from '@tresjs/core'
 import { defaultWindow, useElementBounding, useEventListener } from '@vueuse/core'
 import { formatHex } from 'culori'

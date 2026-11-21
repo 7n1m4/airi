@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { BackgroundItem } from '../../stores/background'
 
-import { BackgroundGradientOverlay } from '@proj-airi/stage-ui/components'
-import { useBackgroundStore as useStageUiBackgroundStore } from '@proj-airi/stage-ui/stores'
+import { BackgroundGradientOverlay } from '@proj-anima/stage-ui/components'
+import { useBackgroundStore as useStageUiBackgroundStore } from '@proj-anima/stage-ui/stores'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 

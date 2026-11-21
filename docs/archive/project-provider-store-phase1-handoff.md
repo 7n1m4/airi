@@ -79,7 +79,7 @@ Replace inline metadata dictionary declarations in `providers.ts` with calls to 
 
 After completing the extraction, run workspace typecheck to verify zero broken imports or type mismatches:
 ```bash
-pnpm -F @proj-airi/stage-ui typecheck
+pnpm -F @proj-anima/stage-ui typecheck
 ```
 
 ## Relevant Skills

@@ -1,6 +1,6 @@
-import type { DiscordCommandDefinition, DiscordEventLogEntry, DiscordInboundMessage, DiscordInteractionPayload, DiscordServiceStatus } from '@proj-airi/stage-shared'
+import type { DiscordCommandDefinition, DiscordEventLogEntry, DiscordInboundMessage, DiscordInteractionPayload, DiscordServiceStatus } from '@proj-anima/stage-shared'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
 import {
   debug,
   discordServiceForceSync,
@@ -16,10 +16,10 @@ import {
   discordServiceStop,
   discordServiceSummon,
   normalizeSearchText,
-} from '@proj-airi/stage-shared'
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
-import { useLive2d } from '@proj-airi/stage-ui-live2d'
-import { useModelStore } from '@proj-airi/stage-ui-three'
+} from '@proj-anima/stage-shared'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
+import { useLive2d } from '@proj-anima/stage-ui-live2d'
+import { useModelStore } from '@proj-anima/stage-ui-three'
 import { useBroadcastChannel } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, onMounted, onUnmounted, ref, toRaw, watch } from 'vue'

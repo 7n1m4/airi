@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { estimateTokens } from '@proj-airi/stage-shared'
-import { MarkdownRenderer } from '@proj-airi/stage-ui/components'
-import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
-import { useMemoryLifetimeStore } from '@proj-airi/stage-ui/stores/memory-lifetime'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { Button } from '@proj-airi/ui'
+import { estimateTokens } from '@proj-anima/stage-shared'
+import { MarkdownRenderer } from '@proj-anima/stage-ui/components'
+import { useChatSessionStore } from '@proj-anima/stage-ui/stores/chat/session-store'
+import { useMemoryLifetimeStore } from '@proj-anima/stage-ui/stores/memory-lifetime'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { Button } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 

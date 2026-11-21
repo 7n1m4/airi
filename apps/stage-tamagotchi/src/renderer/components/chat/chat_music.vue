@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import localforage from 'localforage'
 
-import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
-import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
-import { useChatStreamStore } from '@proj-airi/stage-ui/stores/chat/stream-store'
+import { useChatOrchestratorStore } from '@proj-anima/stage-ui/stores/chat'
+import { useChatSessionStore } from '@proj-anima/stage-ui/stores/chat/session-store'
+import { useChatStreamStore } from '@proj-anima/stage-ui/stores/chat/stream-store'
 import {
   describeMusicProvisionFailure,
   ensureMusicToolProvisioned,
   readMusicMcpEndpoint,
   tryGetMcpToolBridge,
-} from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
+} from '@proj-anima/stage-ui/stores/mcp-tool-bridge'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useConsciousnessStore } from '@proj-anima/stage-ui/stores/modules/consciousness'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 

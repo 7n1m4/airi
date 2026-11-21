@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useMmd } from '@proj-airi/stage-ui-mmd'
-import { useCustomVrmAnimationsStore } from '@proj-airi/stage-ui-three'
+import { useMmd } from '@proj-anima/stage-ui-mmd'
+import { useCustomVrmAnimationsStore } from '@proj-anima/stage-ui-three'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 

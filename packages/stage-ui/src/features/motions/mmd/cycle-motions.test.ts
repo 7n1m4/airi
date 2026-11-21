@@ -1,4 +1,4 @@
-import { parseMmdCycleAnimations, resolveBuiltinMmdAnimationUrl } from '@proj-airi/stage-ui-mmd'
+import { parseMmdCycleAnimations, resolveBuiltinMmdAnimationUrl } from '@proj-anima/stage-ui-mmd'
 import { describe, expect, it } from 'vitest'
 
 describe('mmd parseMmdCycleAnimations', () => {

@@ -5,7 +5,7 @@ description: A complete guide to creating rich, multi-actor AI character cards u
 
 # AnimaDex Character Creator
 
-The **AnimaDex Wizard** is AIRI's guided character creation engine. Instead of forcing you to write complex system prompts and JSON schemas by hand, the AnimaDex Wizard guides you through a 4-step process—drawing from a built-in catalog of over 36,000 popular characters, automatically linking 3D/2D models, assigning fitting voice personalities, and synthesizing rich roleplay cards.
+The **AnimaDex Wizard** is Anima's guided character creation engine. Instead of forcing you to write complex system prompts and JSON schemas by hand, the AnimaDex Wizard guides you through a 4-step process—drawing from a built-in catalog of over 36,000 popular characters, automatically linking 3D/2D models, assigning fitting voice personalities, and synthesizing rich roleplay cards.
 
 ---
 
@@ -36,7 +36,7 @@ To open the wizard:
 ---
 
 ### Step 2: Roster Binding & Auto-Voice Setup
-- **Model Auto-Linking**: AIRI uses Jaccard similarity tag-matching to automatically detect if you have a matching VRM or Live2D model in your library.
+- **Model Auto-Linking**: Anima uses Jaccard similarity tag-matching to automatically detect if you have a matching VRM or Live2D model in your library.
 - **Voice & Personality Assignment**: Click **Auto-Configure Voice** to let the LLM analyze the character's archetype and recommend fitting TTS voices, pitch modifications, and resting idle animations.
 
 ---
@@ -50,7 +50,7 @@ To open the wizard:
 
 ### Step 4: Card Synthesis & Generation
 - Click **"Synthesize Character Card"**.
-- AIRI generates the full CCv3-compliant character card, complete with:
+- Anima generates the full CCv3-compliant character card, complete with:
   - First Message & Greeting.
   - Character Persona & Behavioral Guidelines.
   - Acting Instructions & `<|ACT:...|>` emotion cue mappings.

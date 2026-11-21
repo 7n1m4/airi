@@ -45,7 +45,7 @@ import ReLUStickerWow from '../../../en/blog/DevLog-2025.04.06/assets/relu-stick
 
 ### 記憶システム
 
-最近、数ヶ月準備してきた Project AIRI の「記憶アップデート」に備えて、[`telegram-bot`](https://github.com/moeru-ai/airi/tree/main/services/telegram-bot) をリファクタリングしています。
+最近、数ヶ月準備してきた Project Anima の「記憶アップデート」に備えて、[`telegram-bot`](https://github.com/moeru-ai/airi/tree/main/services/telegram-bot) をリファクタリングしています。
 
 実装後の記憶システムを、現在最も先進的で強力かつ堅牢なものにする予定であり、その思想の多くは現実世界の人間の記憶システムから深くインスピレーションを得ています。
 
@@ -401,10 +401,10 @@ const combinedScore = sql<number>`((1.2 * ${similarity}) + (0.2 * ${timeRelevanc
 
   HuggingFace Spaces へのプロジェクトのデプロイを支援する [`hfup`](https://github.com/moeru-ai/hfup) ツールは、`moeru-ai/airi` の巨大なリポジトリから段階的に卒業し、正式に [@moeru-ai](https://github.com/moeru-ai) 組織の下に移行しました（移行操作は不要で、`hfup` をインストールし続けるだけで使用できます）。非常に有意義なことに、`hfup` は時代についていくために、開発支援として [rolldown](https://rolldown.rs/) と [oxlint](https://oxc.rs/docs/guide/usage/linter) も採用しました。これを機に rolldown、rolldown-vite、oxc の開発に参加できることを願っています。移行プロセス中の [@sxzz](https://github.com/sxzz) の支援に深く感謝します。
 
-- `@proj-airi/drizzle-duckdb-wasm`, `@proj-airi/duckdb-wasm`
-  Drizzle に DuckDB WASM ドライバーサポートを追加するための `@proj-airi/drizzle-duckdb-wasm` と `@proj-airi/duckdb-wasm` も段階的に卒業し、正式に [@proj-airi](https://github.com/proj-airi) 組織の下に移行しました（移行操作は不要で、元のパッケージをインストールし続けるだけで使用できます）。
+- `@proj-anima/drizzle-duckdb-wasm`, `@proj-anima/duckdb-wasm`
+  Drizzle に DuckDB WASM ドライバーサポートを追加するための `@proj-anima/drizzle-duckdb-wasm` と `@proj-anima/duckdb-wasm` も段階的に卒業し、正式に [@proj-airi](https://github.com/proj-airi) 組織の下に移行しました（移行操作は不要で、元のパッケージをインストールし続けるだけで使用できます）。
 
-プロジェクトの速度は大幅に向上しました。今月中に `@proj-airi/providers-transformers` を `xsai` の下に正式に卒業させる予定です。
+プロジェクトの速度は大幅に向上しました。今月中に `@proj-anima/providers-transformers` を `xsai` の下に正式に卒業させる予定です。
 
 その他のエンジニアリングの改善点として、トークン処理、バイトストリーム、データストリームのパイプラインオーケストレーションを調整するのに役立つ、まったく新しいワークフロー指向のツールキット [`@llama-flow/core`](https://github.com/run-llama/@llama-flow/core) も統合しました。彼らのリポジトリをチェックしてください、本当に使いやすいです！
 
@@ -426,7 +426,7 @@ const combinedScore = sql<number>`((1.2 * ${similarity}) + (0.2 * ${timeRelevanc
   </div>
 </div>
 
-もちろん、モデル、声、Project AIRI がサポートするすべてのモジュール 🎉 を設定する機能を含むエディタも含まれています。
+もちろん、モデル、声、Project Anima がサポートするすべてのモジュール 🎉 を設定する機能を含むエディタも含まれています。
 
 [@luoling8192](https://github.com/luoling8192) に本当に感謝します！
 
@@ -489,9 +489,9 @@ const combinedScore = sql<number>`((1.2 * ${similarity}) + (0.2 * ${timeRelevanc
 - Featherless.ai プロバイダーのサポート
 - Gemini プロバイダーのサポート（[@asukaminato0721](https://github.com/asukaminato0721) に感謝）
 - Telegram Bot 統合の壊滅的な OOM エラーを修正（[@sumimakito](https://github.com/sumimakito)、[@kwaa](https://github.com/kwaa)、[@QiroNT](https://github.com/QiroNT) に感謝）
-- Project AIRI の特別 DevLog 用に 98.css 統合を追加（[@OverflowCat](https://github.com/OverflowCat) に感謝）
+- Project Anima の特別 DevLog 用に 98.css 統合を追加（[@OverflowCat](https://github.com/OverflowCat) に感謝）
 
-> これは Project AIRI の特別版開発ログです。主なインスピレーションは [@OverflowCat](https://github.com/OverflowCat) のブログ記事 [ModTran](https://blog.xinshijiededa.men/modtran/) から得ており、コードスタイルは [@OverflowCat](https://github.com/OverflowCat) の https://github.com/OverflowCat/blog/blob/0a92f916629ad942b7da84b894759fde1616bf37/src/components/98/98.ts での実装を大いに参考にしています。
+> これは Project Anima の特別版開発ログです。主なインスピレーションは [@OverflowCat](https://github.com/OverflowCat) のブログ記事 [ModTran](https://blog.xinshijiededa.men/modtran/) から得ており、コードスタイルは [@OverflowCat](https://github.com/OverflowCat) の https://github.com/OverflowCat/blog/blob/0a92f916629ad942b7da84b894759fde1616bf37/src/components/98/98.ts での実装を大いに参考にしています。
 >
 > 彼女が書いたブログ記事は素晴らしく、私が詳しくないほぼすべての内容をカバーしています。ぜひチェックしてみてください。きっと気に入るはずです。
 

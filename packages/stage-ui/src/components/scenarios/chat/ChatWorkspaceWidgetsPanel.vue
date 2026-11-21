@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { MountedWidget, PersistedWidget } from '../../../libs/sandbox'
 
-import { useTheme } from '@proj-airi/ui'
+import { useTheme } from '@proj-anima/ui'
 import { useLocalStorage } from '@vueuse/core'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'

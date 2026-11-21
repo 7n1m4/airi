@@ -241,7 +241,7 @@ Step 3 decomposes the advanced inference capabilities from our `web-rwkv.vue` pr
 ### Step 4: Identity, Avatar Sheet & Voice Configuration
 Before saving the card into the local library:
 - **Identity Fields**: Editable Name (prefilled, e.g. "glyph-v2") and Nickname.
-- **Avatar Selection Sheet**: Reuses `ModelSelectorDialog` (from Staging / `@proj-airi/stage-ui/components/scenarios/dialogs/model-selector`) to open the standard 3D VRM / Live2D / 2D avatar picker modal without reinventing the wheel.
+- **Avatar Selection Sheet**: Reuses `ModelSelectorDialog` (from Staging / `@proj-anima/stage-ui/components/scenarios/dialogs/model-selector`) to open the standard 3D VRM / Live2D / 2D avatar picker modal without reinventing the wheel.
 - **Voice Selection Widget**: A compact dropdown right alongside the avatar selector pulling from installed TTS voice profiles (`useSpeechStore`).
 - **Zero-Bloat Invariant Verification**: Checklist confirming Zero Git Leakage, Null System Prompt, and Constant $O(1)$ Memory.
 - **Commit Action**: **"Forge Character Card"** commits the card to `useAiriCardStore`, writing `extensions.airi.rwkv` and navigating to the card inspector.

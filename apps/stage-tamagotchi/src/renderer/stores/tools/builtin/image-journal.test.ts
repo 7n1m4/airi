@@ -29,13 +29,13 @@ vi.mock('@moeru/eventa', () => ({
 // The tool now resolves the shared Electrobun view context instead of building an
 // Electron-adapter context over `window.electron`. `defineInvoke` is mocked above, so a
 // truthy placeholder is all the context accessor needs to return.
-vi.mock('@proj-airi/electron-vueuse', () => ({
+vi.mock('@proj-anima/electron-vueuse', () => ({
   getElectronEventaContext: () => ({}),
 }))
 
 const mockGetSessionMessages = vi.fn().mockReturnValue([])
 
-vi.mock('@proj-airi/stage-ui/stores', () => ({
+vi.mock('@proj-anima/stage-ui/stores', () => ({
   resolveArtistryConfigFromStore: vi.fn().mockReturnValue({
     provider: 'pollinations',
     model: '',

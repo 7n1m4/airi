@@ -9,7 +9,7 @@ preview-cover:
   dark: "@assets('./assets/structure-after.avif')"
 ---
 
-Hello, I'm [@LemonNeko](https://github.com/LemonNekoGH), one of the maintainers of AIRI.
+Hello, I'm [@LemonNeko](https://github.com/LemonNekoGH), one of the maintainers of Anima.
 
 ## Review
 

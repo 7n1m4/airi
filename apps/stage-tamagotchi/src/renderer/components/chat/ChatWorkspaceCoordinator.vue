@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CharacterAvatar } from '@proj-airi/stage-ui/components'
+import { CharacterAvatar } from '@proj-anima/stage-ui/components'
 
 withDefaults(
   defineProps<{

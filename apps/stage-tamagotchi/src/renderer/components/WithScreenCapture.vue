@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ScreenCaptureSourcesOptions } from '../utils/screen-capture'
 
-import { Button } from '@proj-airi/ui'
+import { Button } from '@proj-anima/ui'
 import { useWindowFocus } from '@vueuse/core'
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { onMounted, ref, watch } from 'vue'

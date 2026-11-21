@@ -11,7 +11,7 @@ shell:
   previous: 返回
   next: 继续
   skip: 稍后设置
-  brand: AIRI 伴侣设置
+  brand: Anima 伴侣设置
   stageReady: 舞台就绪
   closeSetup: 关闭设置 (稍后继续)
   placeholderNotice: 该模块正在配置中，您可以继续进行下一步。
@@ -19,7 +19,7 @@ steps:
   welcome:
     label: 欢迎
     subtitle: 私人伴侣工作室
-    heroTitle: 欢迎使用 AIRI
+    heroTitle: 欢迎使用 Anima
     heroSubtitle: 专属于你的虚拟伴侣舞台 —— 几分钟内快速配置，100% 本地私密运行。
     companionQuote: 你好！我是你的自主数字伴侣。无论你需要语音对话、富有表现力的舞台演出，还是安静的桌面陪伴，我都时刻准备融入你的世界。
     pills:
@@ -32,13 +32,13 @@ steps:
       setupLater: 稍后设置
     dialog:
       savedTitle: 设置已保存
-      savedDescription: 你可以随时通过 macOS 菜单栏或系统托盘中的 AIRI 图标重新打开伴侣配置：
+      savedDescription: 你可以随时通过 macOS 菜单栏或系统托盘中的 Anima 图标重新打开伴侣配置：
       trayItem: 伴侣设置与登录 (V3)
       continue: 继续设置
       closeToTray: 最小化到托盘
       close: Close
       comebackLead: If you want to come back to this later, just
-      desktopInstruction: right-click the AIRI system tray icon and click Companion Wizard.
+      desktopInstruction: right-click the Anima system tray icon and click Companion Wizard.
       webInstruction: tap the cog icon in the top-right to open Settings, then go
         Guided Tours → Companion Wizard.
       webSettingsPath: Settings → Guided Tours → Companion Wizard
@@ -55,7 +55,7 @@ steps:
       badge: 本地优先
       action: 本地继续
     stepBadge: 架构分流 · 步骤 {current} / {total}
-    companionGreeting: 欢迎来到 AIRI！请选择舞台的运行架构。您可以完全在本地离线运行，也可以登录账号以实现多设备同步。
+    companionGreeting: 欢迎来到 Anima！请选择舞台的运行架构。您可以完全在本地离线运行，也可以登录账号以实现多设备同步。
     local:
       badge: 离线优先
       title: 本地伴侣 (完全隔离)
@@ -73,7 +73,7 @@ steps:
     description: 自定义你的界面显示语言、深浅主题以及专属的个性强调色。
     languageSection:
       title: 显示语言
-      description: 选择 AIRI 的界面首选语言，之后可随时更改。
+      description: 选择 Anima 的界面首选语言，之后可随时更改。
     themeSection:
       title: 主题模式
       description: 选择你喜欢的外观色彩模式。
@@ -138,7 +138,7 @@ steps:
       earth: 大地与植物
       ocean: 海洋与天空
       royal: 皇室与花卉
-    resetToSignatureAiriCyan: 重置为 AIRI 标志性青色
+    resetToSignatureAiriCyan: 重置为 Anima 标志性青色
     preventsRemoteCloudSyncFromOverwritingThisMachineSLanguageAndTheme: 防止远程云同步覆盖此设备的语言和主题
     nextHint: 继续前往体验原型
   experience:
@@ -409,7 +409,7 @@ steps:
     title: 角色灵魂与人格特征
     description: 挑选或定制伴侣的根本身份、口癖习惯以及故事背景设定。
     presetCards:
-      airi: AIRI (默认自主伴侣灵魂)
+      airi: Anima (默认自主伴侣灵魂)
       custom: 自定义伴侣角色卡
       import: 导入角色卡 (PNG / JSON)
     characterName: 伴侣名称
@@ -899,7 +899,7 @@ steps:
       optional: 已跳过/可选
       actionRequired: 待配置处理
     greetingCard: 首次登台对白预览 (Turn 0)
-    launchButton: 启动 AIRI 舞台
+    launchButton: 启动 Anima 舞台
     launching: 正在唤醒舞台...
 quickStart:
   title: 60秒极速启动

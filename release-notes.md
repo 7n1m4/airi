@@ -1,4 +1,4 @@
-# 🚀 AIRI v0.9.37-stable.20261008 — Release Notes
+# 🚀 Anima v0.9.37-stable.20261008 — Release Notes
 
 This release introduces two major breakthroughs in AI companion design: the **Emotion Calibration Studio & Rehearsal Room**—giving creators an interactive 3-step environment (`Meet` ➔ `Name` ➔ `Verify`) to calibrate avatar expressions with live face framing, diagnostic probes, and System-1 emotion classification—and the **RWKV Persona Foundry**, which unlocks **Zero-Prompt Recurrent State Cartridges** (`.state.bin`) to bake companion lore and speaking style directly into the model's recurrent hidden state without consuming a single prompt token.
 
@@ -29,12 +29,12 @@ Alongside visual calibration and state conditioning, companions now feature **St
 
 ### 🖼️ Emotion Stickers & Dual Viewport Reactions
 * **Custom Reaction Sticker Uploads**: You can now upload custom sticker collections directly to any character card via the Card Editor's Acting > Stickers sub-tab.
-* **12 Bundled Chibi AIRI & Lupin Stickers**: Ships with both the classic chibi AIRI reaction suite and a brand-new set of animated Lupin reaction stickers.
+* **12 Bundled Chibi Anima & Lupin Stickers**: Ships with both the classic chibi Anima reaction suite and a brand-new set of animated Lupin reaction stickers.
 * **Dual Viewport Reaction Slappers**: Emotion stickers dynamically render inline within chat response bubbles and slap onto the active 3D/2D Stage canvas for heightened visual personality.
 * **Prefix-Cache Aligned Directives**: Sticker trigger prompts are structured deterministically in prompt templates to prevent evicting KV caches during active conversations.
 
 ### 🌐 Extensible Tooling: Remote Streamable HTTP MCP Servers
-* **Remote Streamable HTTP Transport**: Expanded the Model Context Protocol (MCP) beyond local stdio processes, enabling AIRI to connect directly to external MCP servers over streamable HTTP/HTTPS.
+* **Remote Streamable HTTP Transport**: Expanded the Model Context Protocol (MCP) beyond local stdio processes, enabling Anima to connect directly to external MCP servers over streamable HTTP/HTTPS.
 * **Secure Remote Header Authentication**: Configure custom authorization headers (`Authorization: Bearer <token>`) per remote server to securely connect to private cloud-hosted or intranet MCP tool suites.
 * **Streamable Remote Badges**: The Settings MCP management dashboard now visually identifies remote HTTP endpoints and monitors live connection health.
 
@@ -48,7 +48,7 @@ Alongside visual calibration and state conditioning, companions now feature **St
 * **EmbeddingGemma 2 (Q4) Semantic Vector Search**: Migrated the local on-device memory search worker to `EmbeddingGemma 2` (Q4 ONNX) with 256-dimensional Matryoshka representation learning (MRL) and asymmetric task prefixing (`query:` vs `title: ... | text: ...`), delivering substantially higher recall for companion memories.
 * **Opper Model Provider**: Added native support for the Opper provider platform, complete with structured outputs, function calling, and distributed tracing.
 * **Provider-Level Token Usage Dashboard**: The Usage Stats settings card now tracks and visualizes prompt, completion, and reasoning token consumption segmented by provider.
-* **Tray-Only Menu Bar Mode**: Added a setting to hide AIRI's application icon from the macOS Dock and Windows taskbar, allowing your companion to run entirely as a sleek menu-bar / system tray accessory.
+* **Tray-Only Menu Bar Mode**: Added a setting to hide Anima's application icon from the macOS Dock and Windows taskbar, allowing your companion to run entirely as a sleek menu-bar / system tray accessory.
 * **Settings Reset & Storage Resilience**: Resolved an issue in `useLocalStorageManualReset` where resetting deeply-nested settings failed to restore default values due to reactive proxy sharing.
 * **Prompt Token Bloat Protection**: Prevented heavy base64 image data payloads from leaking into text journal tool responses, keeping prompt contexts lean.
 * **Tilde Syntax Code Fences**: Upgraded the Markdown parser to render and syntax-highlight code blocks wrapped in `~~~` fences alongside standard triple backticks.
@@ -57,7 +57,7 @@ Alongside visual calibration and state conditioning, companions now feature **St
 
 ## 🌐 Community & Upstream Radar
 * **Chibi Emotion Stickers**: Ported and adapted the chibi reaction sticker suite from upstream PR [#2714](https://github.com/moeru-ai/airi/pull/2714) by **@reverieach**, extending it with custom user uploads and dual in-chat/on-stage viewport slapping.
-* **Remote MCP over Streamable HTTP**: Inspired by upstream PR [#2821](https://github.com/moeru-ai/airi/pull/2821) by **@clansty**, bringing remote HTTP/HTTPS streaming transports and header security to AIRI's MCP tool bridge.
+* **Remote MCP over Streamable HTTP**: Inspired by upstream PR [#2821](https://github.com/moeru-ai/airi/pull/2821) by **@clansty**, bringing remote HTTP/HTTPS streaming transports and header security to Anima's MCP tool bridge.
 * **Opper Model Provider**: Integrated the Opper platform provider from upstream PR [#2842](https://github.com/moeru-ai/airi/pull/2842) by **@johan-opper**.
 * **VRM Frame Rate Limiting & Layout Performance**: Adopted frame rate bounding and head-pose layout thrashing mitigations from upstream PRs [#2609](https://github.com/moeru-ai/airi/pull/2609) and [#2608](https://github.com/moeru-ai/airi/pull/2608) by **@Penluna**.
 * **Tray-Only Dock Presence & Animation Checkbars**: Sourced the tray-only app icon setting from upstream PR [#2700](https://github.com/moeru-ai/airi/pull/2700) and accessible toggle checkbars from [#2740](https://github.com/moeru-ai/airi/pull/2740) by **@Penluna**.

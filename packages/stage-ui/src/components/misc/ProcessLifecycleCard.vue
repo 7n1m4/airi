@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ProcessSpawnerInstance } from '../../composables/use-process-spawner'
 
-import { FieldInput } from '@proj-airi/ui'
+import { FieldInput } from '@proj-anima/ui'
 import { toRefs } from 'vue'
 
 const props = withDefaults(defineProps<{

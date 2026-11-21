@@ -1,8 +1,8 @@
 import type { CommandLogEntry, ExecResult, MountedWidget, SandboxChannelMessage, VirtualFileEntry } from './types'
 
 import { defineInvoke, defineInvokeEventa } from '@moeru/eventa'
-import { getElectronEventaContext } from '@proj-airi/electron-vueuse'
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
+import { getElectronEventaContext } from '@proj-anima/electron-vueuse'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
 import { Bash } from 'just-bash'
 
 import { widgetsRepo } from '../../database/repos/widgets.repo'

@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import type { WebGPUCapabilities } from '@proj-airi/stage-shared/webgpu'
-import type { KokoroVoiceProfile } from '@proj-airi/stage-ui/stores/providers/kokoro-audio-utils'
+import type { WebGPUCapabilities } from '@proj-anima/stage-shared/webgpu'
+import type { KokoroVoiceProfile } from '@proj-anima/stage-ui/stores/providers/kokoro-audio-utils'
 import type { SpeechProvider } from '@xsai-ext/providers/utils'
 
-import { detectWebGPU, getCachedWebGPUCapabilities } from '@proj-airi/stage-shared/webgpu'
+import { detectWebGPU, getCachedWebGPUCapabilities } from '@proj-anima/stage-shared/webgpu'
 import {
   SpeechPlayground,
   SpeechProviderSettings,
-} from '@proj-airi/stage-ui/components'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
+} from '@proj-anima/stage-ui/components'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
 import {
   deleteKokoroVoiceProfile,
   deriveKokoroStyleVectorFromAudio,
@@ -17,9 +17,9 @@ import {
 
   preprocessKokoroReferenceAudio,
   saveKokoroVoiceProfile,
-} from '@proj-airi/stage-ui/stores/providers/kokoro-audio-utils'
-import { getDefaultKokoroModel } from '@proj-airi/stage-ui/workers/kokoro/constants'
-import { Button, Callout, Input, Progress, Select } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/stores/providers/kokoro-audio-utils'
+import { getDefaultKokoroModel } from '@proj-anima/stage-ui/workers/kokoro/constants'
+import { Button, Callout, Input, Progress, Select } from '@proj-anima/ui'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'

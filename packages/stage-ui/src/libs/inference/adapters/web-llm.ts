@@ -23,7 +23,7 @@ import type { ProgressPayload } from '../protocol'
 
 import { defineStreamInvoke } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/webworkers'
-import { defaultPerfTracer } from '@proj-airi/stage-shared'
+import { defaultPerfTracer } from '@proj-anima/stage-shared'
 import { Mutex } from 'async-mutex'
 
 import webLlmWorkerUrl from '../../../workers/web-llm/worker.ts?worker&url'

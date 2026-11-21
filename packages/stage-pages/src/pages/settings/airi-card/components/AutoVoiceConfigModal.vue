@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { createAudioBlob } from '@proj-airi/stage-shared'
-import { useIdleAnimations } from '@proj-airi/stage-ui/composables'
-import { voicePresets } from '@proj-airi/stage-ui/constants/voices'
-import { useLLM } from '@proj-airi/stage-ui/stores/llm'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { useSystemOneStore } from '@proj-airi/stage-ui/stores/modules/system-one'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Button } from '@proj-airi/ui'
+import { createAudioBlob } from '@proj-anima/stage-shared'
+import { useIdleAnimations } from '@proj-anima/stage-ui/composables'
+import { voicePresets } from '@proj-anima/stage-ui/constants/voices'
+import { useLLM } from '@proj-anima/stage-ui/stores/llm'
+import { useConsciousnessStore } from '@proj-anima/stage-ui/stores/modules/consciousness'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { useSystemOneStore } from '@proj-anima/stage-ui/stores/modules/system-one'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Button } from '@proj-anima/ui'
 import {
   DialogContent,
   DialogOverlay,

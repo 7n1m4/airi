@@ -9,7 +9,7 @@ preview-cover:
   dark: "@assets('/en/blog/DevLog-2025.07.18/assets/structure-after.avif')"
 ---
 
-こんにちは、AIRI メンテナーの一人、[@LemonNeko](https://github.com/LemonNekoGH) です。
+こんにちは、Anima メンテナーの一人、[@LemonNeko](https://github.com/LemonNekoGH) です。
 
 ## 振り返り
 

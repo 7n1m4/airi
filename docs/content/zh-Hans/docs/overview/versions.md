@@ -1,6 +1,6 @@
 ---
 title: 版本与下载
-description: AIRI 的不同版本以及如何获取它们
+description: Anima 的不同版本以及如何获取它们
 ---
 
 <script setup>
@@ -8,7 +8,7 @@ import ReleaseDownloads from '../../../../.vitepress/components/ReleaseDownloads
 import ReleasesList from '../../../../.vitepress/components/ReleasesList.vue'
 </script>
 
-AIRI 提供多个发布渠道以满足不同需求。无论你想要最稳定的体验还是最新的功能,我们都能满足你的需求。
+Anima 提供多个发布渠道以满足不同需求。无论你想要最稳定的体验还是最新的功能,我们都能满足你的需求。
 
 ## 稳定版本 & 预发布版本
 

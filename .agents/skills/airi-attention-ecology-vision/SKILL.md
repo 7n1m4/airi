@@ -106,8 +106,8 @@ This runs `scripts/tests/attention-ecology-harness/live-desktop-dashboard.ts`, c
 
 ## 5. Verification Workflows
 
-- **Typecheck**: `pnpm -F @proj-airi/stage-ui typecheck`
-- **Unit Tests**: `pnpm -F @proj-airi/stage-ui test packages/stage-ui/src/stores/modules/vision/orchestrator.test.ts`
+- **Typecheck**: `pnpm -F @proj-anima/stage-ui typecheck`
+- **Unit Tests**: `pnpm -F @proj-anima/stage-ui test packages/stage-ui/src/stores/modules/vision/orchestrator.test.ts`
 - **DevTools Inspection**: Open `/devtools/vision` in app settings to inspect live screen capture frames, perceptual hashes, and salience scores.
 
 ---

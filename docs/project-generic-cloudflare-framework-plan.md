@@ -66,7 +66,7 @@ The central Pinia store encapsulates all Cloudflare credentials, OAuth tokens, s
 - **Worker Script**: `airi-cors-proxy` deployed to `https://airi-cors-proxy.<subdomain>.workers.dev`
 - **Purpose**: Eliminates browser CORS blocks on `stage-web` when interacting with Cloudflare REST APIs, KV storage, or third-party AI endpoints.
 - **Route Handlers**:
-  - `GET /health` $\rightarrow$ `{ "status": "ok", "worker": "@proj-airi/stage-edge" }`
+  - `GET /health` $\rightarrow$ `{ "status": "ok", "worker": "@proj-anima/stage-edge" }`
   - `OPTIONS /cors-proxy` $\rightarrow$ HTTP 204 with permissive preflight headers (`Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods: *`, `Access-Control-Allow-Headers: *`, `Access-Control-Max-Age: 86400`).
   - `GET/POST/PUT/DELETE /cors-proxy?url=<target_url>` $\rightarrow$ Strips browser host/origin headers, forwards payload to upstream, and injects permissive CORS response headers.
 
@@ -88,7 +88,7 @@ The central Pinia store encapsulates all Cloudflare credentials, OAuth tokens, s
     ```json
     {
       "s3Endpoint": "https://<account_id>.r2.cloudflarestorage.com",
-      "s3Bucket": "airi-sync",
+      "s3Bucket": "anima-sync",
       "s3Region": "auto",
       "s3AccessKeyId": "...",
       "s3SecretAccessKey": "...",
@@ -185,7 +185,7 @@ npx tsx apps/stage-edge/scripts/inspect-kv.ts
 | **Worker Target 1 (`airi-cors-proxy`)** | ✅ **COMPLETE** | Deployed live to `https://airi-cors-proxy.<subdomain>.workers.dev`. Handles `OPTIONS`, `/cors-proxy?url=...` with wildcard headers. |
 | **Worker Target 2 (`airi-kv-*`)** | ✅ **COMPLETE** | CloudflareStageDeployer compiles and uploads multi-part worker bundles, binds Discord secrets, and handles webhook interactions. |
 | **Worker Target 3 (`airi-edge-vault`)** | ✅ **COMPLETE** | Saves and auto-restores S3/R2 credentials in `airi-edge-vault` KV namespace for 1-click multi-device onboarding. |
-| **Canonical Shared CORS Constants** | ✅ **COMPLETE** | Centralized in `@proj-airi/stage-shared` (`DEFAULT_CORS_BYPASS_URLS`, `DEFAULT_SKIP_CORS_HOSTS`, `isCorsBypassTarget`, `setupWebCorsProxy`). |
+| **Canonical Shared CORS Constants** | ✅ **COMPLETE** | Centralized in `@proj-anima/stage-shared` (`DEFAULT_CORS_BYPASS_URLS`, `DEFAULT_SKIP_CORS_HOSTS`, `isCorsBypassTarget`, `setupWebCorsProxy`). |
 | **Transparent Web Fetch Interceptor** | ✅ **COMPLETE** | Global `fetch` interceptor active on `stage-web` and `stage-pocket`. Automatically rewrites CORS-blocked provider requests to the proxy. |
 | **Onboarding Step 2 (Choose Your Path)** | ✅ **COMPLETE** | Web PKCE handshake with automatic `GET /accounts` resolution and Edge Vault credential check. |
 | **Onboarding Step 3 (Edge Services)** | ✅ **COMPLETE** | Active subdomain detection (`r1ch4rd`), R2 companion backup scanning, and auto-restoration. |

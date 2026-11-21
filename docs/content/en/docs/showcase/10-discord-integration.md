@@ -2,7 +2,7 @@
 
 ![Discord Gateway & Connected Surfaces](/showcase/hero-10-discord-surfaces.avif)
 
-The **Discord Gateway & Connected Surfaces** subsystem bridges AIRI directly into Discord servers, group chats, and direct messages. Featuring dual execution targets — **Local PC Gateway** and **Cloudflare Workers 24/7 Edge Relay** — it enables characters to participate in text and voice channels, analyze image attachments via VLM, and run autonomously around the clock without keeping your desktop on.
+The **Discord Gateway & Connected Surfaces** subsystem bridges Anima directly into Discord servers, group chats, and direct messages. Featuring dual execution targets — **Local PC Gateway** and **Cloudflare Workers 24/7 Edge Relay** — it enables characters to participate in text and voice channels, analyze image attachments via VLM, and run autonomously around the clock without keeping your desktop on.
 
 ---
 
@@ -10,7 +10,7 @@ The **Discord Gateway & Connected Surfaces** subsystem bridges AIRI directly int
 
 ![Discord Bot Connection Deck](/showcase/discord-bot-connection.avif)
 
-AIRI supports two distinct deployment modes based on your infrastructure needs:
+Anima supports two distinct deployment modes based on your infrastructure needs:
 - **Local (This PC) Mode**: The bot connects directly from your desktop app. Commands and voice audio route through your local LLM and TTS pipeline, with immediate sync to your active desktop stage.
 - **Cloud Relay Studio**: Deploys a stateless, 24/7 character instance to Cloudflare Workers with Edge KV memory. Your companion responds on Discord even when your computer is shut down.
 
@@ -31,7 +31,7 @@ Granular routing controls ensure characters only speak when and where intended:
 
 ## 1-Click Cloudflare Edge Deployment
 
-AIRI includes a guided wizard to package and publish characters to Cloudflare Workers:
+Anima includes a guided wizard to package and publish characters to Cloudflare Workers:
 
 ### Step 1: Session History Seeding
 

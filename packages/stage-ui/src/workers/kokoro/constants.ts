@@ -3,7 +3,7 @@
  * Centralized constants for Kokoro TTS to avoid duplication
  */
 
-import type { WebGPUCapabilities } from '@proj-airi/stage-shared/webgpu'
+import type { WebGPUCapabilities } from '@proj-anima/stage-shared/webgpu'
 
 /**
  * Platform types for Kokoro models

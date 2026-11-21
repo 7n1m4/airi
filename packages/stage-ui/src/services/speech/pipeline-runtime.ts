@@ -1,9 +1,9 @@
-import type { createSpeechPipeline, IntentHandle, IntentOptions, TextToken } from '@proj-airi/pipelines-audio'
+import type { createSpeechPipeline, IntentHandle, IntentOptions, TextToken } from '@proj-anima/pipelines-audio'
 
 import type { SpeechIntentStartPayload, SpeechIntentTokenPayload } from './bus'
 
-import { createPushStream } from '@proj-airi/pipelines-audio'
-import { debug } from '@proj-airi/stage-shared'
+import { createPushStream } from '@proj-anima/pipelines-audio'
+import { debug } from '@proj-anima/stage-shared'
 import { Mutex } from 'es-toolkit'
 import { nanoid } from 'nanoid'
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useSettings } from '@proj-airi/stage-ui/stores/settings'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useSettings } from '@proj-anima/stage-ui/stores/settings'
 import { Vibrant } from 'node-vibrant/browser'
 import { defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -13,7 +13,7 @@ interface ModelSettingsExposed {
 }
 
 const ModelSettings = defineAsyncComponent({
-  loader: () => import('@proj-airi/stage-ui/components/scenarios/settings/model-settings/index.vue'),
+  loader: () => import('@proj-anima/stage-ui/components/scenarios/settings/model-settings/index.vue'),
   loadingComponent: ModelSettingsSkeleton,
   delay: 0,
 })

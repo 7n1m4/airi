@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useStickersStore } from '@proj-airi/stage-ui/stores/stickers'
+import { useStickersStore } from '@proj-anima/stage-ui/stores/stickers'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const props = defineProps<{

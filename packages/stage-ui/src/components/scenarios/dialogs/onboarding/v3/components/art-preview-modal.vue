@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { artistryGenerateHeadless, formatCorsProxyUrl } from '@proj-airi/stage-shared'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { artistryGenerateHeadless, formatCorsProxyUrl } from '@proj-anima/stage-shared'
 import {
   DialogContent,
   DialogOverlay,

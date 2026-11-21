@@ -1,9 +1,9 @@
 ---
 title: プロジェクト概要
-description: Project AIRI の概要 — プライベートで持続的なキャラクターランタイム
+description: Project Anima の概要 — プライベートで持続的なキャラクターランタイム
 ---
 
-# Project AIRI
+# Project Anima
 
 **管理されない存在。（Presence without custody）**
 
@@ -15,7 +15,7 @@ description: Project AIRI の概要 — プライベートで持続的なキャ�
 
 ## 機能の集合体ではなく、「ひとりのキャラクター」として
 
-AIRI は**キャラクターランタイム**です。
+Anima は**キャラクターランタイム**です。
 
 キャラクターには、持ち運べる「アイデンティティ」、切り替えられる「感覚」、置き換えられる「声」、交換できる「身体」、深まり続ける「記憶」、そして可能性を拡張する「ツール」があります。それぞれの能力は独立して進化しても、それらをつなぐキャラクターの存在は途切れることなく一貫性を保ち続けます。
 
@@ -25,9 +25,9 @@ AIRI は**キャラクターランタイム**です。
 
 ## キャラクター・スタック（The Character Stack）
 
-| 領域 | AIRI が提供するもの |
+| 領域 | Anima が提供するもの |
 |---|---|
-| **Identity（アイデンティティ）** | ポータブルな AIRI カード、キャラクタープロファイル、演技ディレクション（ACTキュー）、個別キャラクター設定 |
+| **Identity（アイデンティティ）** | ポータブルな Anima カード、キャラクタープロファイル、演技ディレクション（ACTキュー）、個別キャラクター設定 |
 | **Continuity（持続性・記憶）** | 8層の記憶アーキテクチャ：短期認知（STMM）、長期テキスト日記、生涯アーカイブ、エコーチップ |
 | **Perception（知覚・認識）** | 聴覚入力、画面視覚知覚、画像理解、デスクトップ状況把握、関心度ゲート |
 | **Mind（知性・思考）** | 差し替え可能なクラウド/ローカルLLM、プロンプト統合、認知的ストリーミングパイプライン |
@@ -41,7 +41,7 @@ AIRI は**キャラクターランタイム**です。
 
 ## はじめかた
 
-AIRI は Web とデスクトップの両方に対応しています。
+Anima は Web とデスクトップの両方に対応しています。
 
 <div flex gap-2 w-full justify-center text-xl>
   <div w-full flex flex-col items-center gap-2 border="2 solid gray-500/10" rounded-lg px-2 pt-6 pb-4>
@@ -98,4 +98,4 @@ AIRI は Web とデスクトップの両方に対応しています。
 
 このプロジェクトへの貢献方法は [Contributing](../contributing/) をご覧ください。
 
-Project AIRI の UI を設計・改善するための参考資料は [Design Guidelines](../contributing/design-guidelines/resources) を参照してください。
+Project Anima の UI を設計・改善するための参考資料は [Design Guidelines](../contributing/design-guidelines/resources) を参照してください。

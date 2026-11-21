@@ -44,7 +44,7 @@ Automated reviews from Gemini, Codex, and Copilot identified several "landmines"
 
 ### 🧪 Capability & UX Improvements
 
-- **fp16 Capability Filtering**: `kokoroModelsToModelInfo` should filter by `fp16Supported` capability (retrieved from `@proj-airi/stage-shared/webgpu`) so users don't hit "Avoidable Runtime Failures" on non-fp16 hardware.
+- **fp16 Capability Filtering**: `kokoroModelsToModelInfo` should filter by `fp16Supported` capability (retrieved from `@proj-anima/stage-shared/webgpu`) so users don't hit "Avoidable Runtime Failures" on non-fp16 hardware.
 - **Device Transparency**: Adapters currently assume `webgpu` and report it to the UI immediately. We will update the logic to wait for the worker's `model-ready` response to report the *actual* backend (WebGPU vs WASM fallback).
 - **Idle Preloading**: `use-model-preload.ts` claims to use `requestIdleCallback` but uses `setTimeout`. We will align the implementation with the documentation (using `requestIdleCallback` with proper fallbacks).
 - **Whisper Hook Restoration**: We will restore `onStart` and `onError` hook calls in the `useWhisper` composable.

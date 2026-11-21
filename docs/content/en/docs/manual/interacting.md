@@ -5,7 +5,7 @@ description: Explore all the ways to communicate and converse with your companio
 
 # Ways to Talk & Interact
 
-Project AIRI is designed to feel alive across multiple sensory channels. You are not limited to typing in a standard chat box—you can speak aloud via push-to-talk, engage in continuous natural conversations with open-mic voice activity detection, experience sub-second real-time streaming with Gemini Live, or chat through Discord.
+Project Anima is designed to feel alive across multiple sensory channels. You are not limited to typing in a standard chat box—you can speak aloud via push-to-talk, engage in continuous natural conversations with open-mic voice activity detection, experience sub-second real-time streaming with Gemini Live, or chat through Discord.
 
 ---
 
@@ -29,14 +29,14 @@ The persistent Desktop Chatbox is your primary hub for deep interactions.
   - **Left Sidebar**: Navigation drawer with shortcuts to the Studio, Media Library, Eternal Memory Thread, and Event Ledger.
   - **Main Conversation Stream**: Interleaved message bubbles, tool-call cards, and emotion tokens.
   - **Right Context Rail**: Shows active memory chips (Echo Chips), current mood, and active character cards.
-- **Journal Chips**: Text and image journal entries written by AIRI appear inline as interactive chips. Clicking a chip opens the full entry or image preview.
+- **Journal Chips**: Text and image journal entries written by Anima appear inline as interactive chips. Clicking a chip opens the full entry or image preview.
 - **Composer Toolbar**: Use the bottom composer bar to send messages, attach images for vision analysis, trigger suggestion prompts (AI Producer), or toggle between characters.
 
 ---
 
 ## 3. Voice Input: Push-to-Talk vs. Open Mic
 
-You can talk to AIRI directly using your microphone.
+You can talk to Anima directly using your microphone.
 
 ### Setting Up Hearing (STT)
 1. Open **Settings &rarr; Modules &rarr; Speech-to-Text (Hearing)**.
@@ -45,25 +45,25 @@ You can talk to AIRI directly using your microphone.
 
 ### Push-to-Talk (PTT)
 - Press and hold your configured PTT key (configured in **Settings &rarr; General &rarr; Shortcuts**).
-- Speak your message. When you release the key, AIRI transcribes your speech, sends it to the mind model, and replies with synthesized voice.
+- Speak your message. When you release the key, Anima transcribes your speech, sends it to the mind model, and replies with synthesized voice.
 
 ### Open Mic with Voice Activity Detection (VAD)
-- When enabled in the Control Strip or Settings, AIRI listens continuously.
+- When enabled in the Control Strip or Settings, Anima listens continuously.
 - The built-in Silero VAD / WebRTC VAD detects when you start speaking and automatically finalizes the turn when you pause.
 
 > [!TIP]
-> **VAD Sensitivity**: If AIRI cuts you off too early, increase the **Silence Detection Threshold** in Hearing Settings to allow for natural pauses while thinking.
+> **VAD Sensitivity**: If Anima cuts you off too early, increase the **Silence Detection Threshold** in Hearing Settings to allow for natural pauses while thinking.
 
 ---
 
 ## 4. Gemini Live API (Bidirectional Audio)
 
-For ultra-low latency, conversational audio that feels like a real phone call, AIRI supports Google's **Gemini Live Bidi WebSocket streaming**.
+For ultra-low latency, conversational audio that feels like a real phone call, Anima supports Google's **Gemini Live Bidi WebSocket streaming**.
 
 ### What Makes Gemini Live Different?
 - **Native Audio-to-Audio**: Instead of separate STT &rarr; Text LLM &rarr; TTS hops, Gemini processes your raw audio PCM stream and generates conversational speech audio directly.
 - **Sub-Second Latency**: Audio starts streaming back in under 500ms.
-- **Natural Interruptions**: If AIRI is speaking and you start talking, the audio output immediately stops, yielding the floor back to you naturally.
+- **Natural Interruptions**: If Anima is speaking and you start talking, the audio output immediately stops, yielding the floor back to you naturally.
 
 ### How to Enable Gemini Live
 1. Go to **Settings &rarr; Providers &rarr; Google Gemini** and enter your Gemini API Key.
@@ -75,11 +75,11 @@ For ultra-low latency, conversational audio that feels like a real phone call, A
 
 ## 5. Discord Integration
 
-AIRI can run as a Discord bot on your personal server:
+Anima can run as a Discord bot on your personal server:
 
-- **Text Chat**: Mention `@AIRI` or reply to her messages in any authorized channel.
+- **Text Chat**: Mention `@Anima` or reply to her messages in any authorized channel.
 - **Slash Commands**: Use `/chat`, `/steer`, `/voice join`, or `/voice leave` to control the bot.
-- **Voice Channels**: When in a voice channel, AIRI listens to users speaking and responds with synthesized voice directly into the Discord voice room.
+- **Voice Channels**: When in a voice channel, Anima listens to users speaking and responds with synthesized voice directly into the Discord voice room.
 
 *(See the [Discord Commands Reference](/en/docs/manual/config/discord-commands) for full setup instructions.)*
 
@@ -87,6 +87,6 @@ AIRI can run as a Discord bot on your personal server:
 
 ## 6. Interruptions & Stopping Output
 
-If AIRI is speaking or generating a long response and you want to stop her:
+If Anima is speaking or generating a long response and you want to stop her:
 - Click the **Stop** button on the floating Control Strip or Chat composer.
 - In Gemini Live mode, simply speak aloud—the system detects your voice and cancels in-flight playback immediately.

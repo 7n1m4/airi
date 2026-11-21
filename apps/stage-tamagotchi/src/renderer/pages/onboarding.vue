@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { OnboardingV2 } from '@proj-airi/stage-ui/components'
-import { useTheme } from '@proj-airi/ui'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { OnboardingV2 } from '@proj-anima/stage-ui/components'
+import { useTheme } from '@proj-anima/ui'
 import { computed } from 'vue'
 
 import { electronOnboardingClose, electronOpenChat, electronStageToggleVisibility } from '../../shared/eventa'

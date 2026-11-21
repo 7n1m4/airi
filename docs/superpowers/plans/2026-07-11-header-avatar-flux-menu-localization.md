@@ -82,7 +82,7 @@ describe('header avatar account menu', () => {
 Run in PowerShell:
 
 ```powershell
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-layouts exec vitest run src/components/Layouts/HeaderAvatar.test.ts
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-layouts exec vitest run src/components/Layouts/HeaderAvatar.test.ts
 ```
 
 Expected: FAIL because `HeaderAvatar.vue` does not read `credits`, does not contain `to="/settings/flux"`, still contains the four English literals, and the new locale keys do not exist.
@@ -185,7 +185,7 @@ sessionListErrorFallback: 无法加载活跃会话，请稍后重试。
 Run:
 
 ```powershell
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-layouts exec vitest run src/components/Layouts/HeaderAvatar.test.ts
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-layouts exec vitest run src/components/Layouts/HeaderAvatar.test.ts
 ```
 
 Expected: PASS, 3 tests passed.
@@ -193,8 +193,8 @@ Expected: PASS, 3 tests passed.
 - [ ] **Step 7: Run package type checks**
 
 ```powershell
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-layouts typecheck
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-web typecheck
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-layouts typecheck
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-web typecheck
 ```
 
 Expected: both commands exit 0 with no TypeScript errors.
@@ -226,7 +226,7 @@ Expected: one implementation commit containing only the four files above.
 
 ```powershell
 $env:NODE_OPTIONS = '--max-old-space-size=4096'
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-web build
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-web build
 ```
 
 Expected: exit 0 and a fresh `apps/stage-web/dist/index.html` referencing `/assets/index-*.js`.

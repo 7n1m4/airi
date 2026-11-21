@@ -260,7 +260,7 @@ settings:
         meshSync: 'Mesh Sync'
         enableMeshSync: 'Enable libp2p Mesh Sync'
         enableMeshSyncDesc: 'Sync memory, vault credentials, and companion cards
-          directly with other AIRI instances on your local network'
+          directly with other Anima instances on your local network'
         syncTargets: 'Sync Targets'
         memory: 'Memory (STMM / LTMM / Event Ledger)'
         vault: 'Vault (BYOS credentials)'
@@ -283,12 +283,12 @@ settings:
       running: 'Running'
       stopped: 'Stopped'
       enableMesh: 'Enable Local Mesh'
-      enableMeshDesc: 'Start the libp2p node to discover and sync with other AIRI
+      enableMeshDesc: 'Start the libp2p node to discover and sync with other Anima
         instances on your network'
       peerId: 'Peer ID'
       copy: 'Copy'
       nodeName: 'Node Name'
-      nodeNamePlaceholder: 'AIRI Node'
+      nodeNamePlaceholder: 'Anima Node'
       save: 'Save'
       listenAddresses: 'Listen Addresses'
       connections: 'Connections'
@@ -320,7 +320,7 @@ settings:
       ping: 'Ping'
       meshSync: 'Local Mesh Sync'
       meshSyncDesc: 'Sync memory, vault credentials, and companion cards with paired
-        AIRI instances'
+        Anima instances'
       syncTargets: 'Sync Targets'
       memory: 'Memory (STMM / LTMM / Event Ledger)'
       vault: 'Vault (BYOS credentials)'
@@ -336,9 +336,9 @@ settings:
       messageData: 'Message data'
       publish: 'Publish'
       pairingInvitation: 'Pairing Invitation'
-      pairingDesc: 'Scan this QR code with another AIRI instance, or share the code below.'
+      pairingDesc: 'Scan this QR code with another Anima instance, or share the code below.'
       close: 'Close'
-      notElectron: 'Local Mesh requires the AIRI desktop app'
+      notElectron: 'Local Mesh requires the Anima desktop app'
       noIdentityOrAddresses: 'Node must be running with an identity to pair'
       noPeers: 'No peers discovered yet'
       actions: 'Actions'
@@ -353,7 +353,7 @@ settings:
       bootstrapPeerPlaceholder: 'Enter a multiaddr'
       topicPlaceholder: 'Enter a topic name'
       magicCode: 'Pairing Code'
-      magicCodeDesc: 'Share this code with another AIRI instance to pair'
+      magicCodeDesc: 'Share this code with another Anima instance to pair'
       pairedDevices: 'Paired Devices'
       noPairedDevices: 'No paired devices yet'
       pairedAt: 'Paired'
@@ -381,17 +381,17 @@ settings:
       description: 'Autonomous companion behaviour driven by presence detection,
         memory, and the System-1 decision engine'
       autonomousMode: 'Autonomous Behaviour'
-      autonomousModeDesc: 'Choose when AIRI is allowed to act on its own memory
+      autonomousModeDesc: 'Choose when Anima is allowed to act on its own memory
         without you speaking first. Unlike proactive heartbeats, which check in
         while you are at your desk, an autonomous cycle acts when the machine is
         considered unattended.'
       modeDisabled: 'Disabled'
-      modeDisabledDesc: 'AIRI never acts autonomously. Heartbeats and manual chat work as usual.'
+      modeDisabledDesc: 'Anima never acts autonomously. Heartbeats and manual chat work as usual.'
       modeWhenAway: 'When away'
-      modeWhenAwayDesc: 'AIRI runs an autonomous cycle only when presence is derived
+      modeWhenAwayDesc: 'Anima runs an autonomous cycle only when presence is derived
         as away — extended idle with no interaction.'
       modeAlways: 'Always'
-      modeAlwaysDesc: 'AIRI runs an autonomous cycle whenever the cooldown elapses,
+      modeAlwaysDesc: 'Anima runs an autonomous cycle whenever the cooldown elapses,
         including while you are present. Use with care: this is the
         interruption-heavy mode.'
       cooldown: 'Cooldown between cycles'
@@ -447,7 +447,7 @@ settings:
         break by newest memory, then by id.'
       autonomousLog: 'Autonomous log'
       autonomousLogDesc: 'Every autonomous action is recorded in the Event Ledger with
-        autonomous: true. Undo is not offered automatically — review what AIRI
+        autonomous: true. Undo is not offered automatically — review what Anima
         did and carry on from there.'
       noAutonomousEvents: 'No autonomous actions yet'
       undoLast: 'Review last decision'

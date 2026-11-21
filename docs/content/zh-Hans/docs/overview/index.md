@@ -1,9 +1,9 @@
 ---
 title: 项目概览
-description: Project AIRI 概览 — 私有、持久的数字角色运行时
+description: Project Anima 概览 — 私有、持久的数字角色运行时
 ---
 
-# Project AIRI
+# Project Anima
 
 **不被拘禁的存在。（Presence without custody）**
 
@@ -15,7 +15,7 @@ description: Project AIRI 概览 — 私有、持久的数字角色运行时
 
 ## 是一个完整生命，而非功能的随意堆叠
 
-AIRI 是一个**角色运行时（Character Runtime）**。
+Anima 是一个**角色运行时（Character Runtime）**。
 
 角色拥有可随身携带的“身份”、可自由切换的“感官”、可按需更换的“声音”、可随意更替的“躯体”、不断沉淀深化的“记忆”，以及无限扩展其能力的“工具”。这些能力可以独立演进，但串联它们的核心角色存在始终保持连续。
 
@@ -25,9 +25,9 @@ AIRI 是一个**角色运行时（Character Runtime）**。
 
 ## 角色全栈架构（The Character Stack）
 
-| 领域 | AIRI 提供的能力 |
+| 领域 | Anima 提供的能力 |
 |---|---|
-| **Identity（身份认同）** | 便携式 AIRI 角色卡、角色档案、表演导演指令（ACT 标记）、角色独立专属配置 |
+| **Identity（身份认同）** | 便携式 Anima 角色卡、角色档案、表演导演指令（ACT 标记）、角色独立专属配置 |
 | **Continuity（记忆连续）** | 8 层记忆架构：短期认知（STMM）、长期文本日志、生涯归档与回声芯片（Echo Chips） |
 | **Perception（多模感知）** | 听觉感知、屏幕视觉感知、图像理解、桌面系统感知与注意力过滤门控 |
 | **Mind（认知大脑）** | 可热插拔的云端/本地大语言模型大脑、提示词自动编排与认知流式管道 |
@@ -41,7 +41,7 @@ AIRI 是一个**角色运行时（Character Runtime）**。
 
 ## 开始使用
 
-AIRI 同时支持网页版与桌面端。
+Anima 同时支持网页版与桌面端。
 
 <div flex gap-2 w-full justify-center text-xl>
   <div w-full flex flex-col items-center gap-2 border="2 solid gray-500/10" rounded-lg px-2 pt-6 pb-4>
@@ -98,4 +98,4 @@ AIRI 同时支持网页版与桌面端。
 
 有关如何为本项目做出贡献的指南，请参阅 [贡献指南](../overview/contributing/) 页面。
 
-有关如何设计和改进 Project AIRI 用户界面的参考资料，请参阅 [设计指南](../overview/contributing/design-guidelines/resources) 页面。
+有关如何设计和改进 Project Anima 用户界面的参考资料，请参阅 [设计指南](../overview/contributing/design-guidelines/resources) 页面。

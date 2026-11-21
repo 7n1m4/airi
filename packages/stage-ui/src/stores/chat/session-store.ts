@@ -1,7 +1,7 @@
 import type { ChatHistoryItem, ChatStreamEvent } from '../../types/chat'
 import type { ChatSessionMeta, ChatSessionRecord, ChatSessionsExport, ChatSessionsIndex } from '../../types/chat-session'
 
-import { debug, isStageTamagotchi } from '@proj-airi/stage-shared'
+import { debug, isStageTamagotchi } from '@proj-anima/stage-shared'
 import { useBroadcastChannel, watchDebounced } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { defineStore, storeToRefs } from 'pinia'

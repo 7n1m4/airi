@@ -1,6 +1,6 @@
-import type { TraceEvent } from '@proj-airi/stage-shared'
+import type { TraceEvent } from '@proj-anima/stage-shared'
 
-import { defaultPerfTracer, exportCsv as exportCsvFile } from '@proj-airi/stage-shared'
+import { defaultPerfTracer, exportCsv as exportCsvFile } from '@proj-anima/stage-shared'
 import { defineStore } from 'pinia'
 import { reactive, ref, watch } from 'vue'
 

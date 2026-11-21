@@ -11,7 +11,7 @@ shell:
   previous: 이전
   next: 계속
   skip: 나중에 설정
-  brand: AIRI 컴패니언 설정
+  brand: Anima 컴패니언 설정
   stageReady: 스테이지 준비 완료
   closeSetup: 설정 닫기 (나중에 재개)
   placeholderNotice: 이 모듈은 현재 구성 중입니다. 다음 단계로 진행할 수 있습니다.
@@ -19,7 +19,7 @@ steps:
   welcome:
     label: 시작
     subtitle: 프라이빗 컴패니언 스튜디오
-    heroTitle: AIRI에 오신 것을 환영합니다
+    heroTitle: Anima에 오신 것을 환영합니다
     heroSubtitle: 나만의 디지털 컴패니언 무대 —— 단 몇 분 만에 설정하고 100% 로컬 머신에서 안전하게 실행하세요.
     companionQuote: 안녕하세요! 저는 당신의 자율형 디지털 컴패니언입니다. 음성 대화, 풍부한 무대 퍼포먼스, 혹은 조용한 데스크톱
       곁지기까지, 언제든 당신의 일상에 맞추어 함께할 준비가 되어 있어요.
@@ -33,13 +33,13 @@ steps:
       setupLater: 나중에 설정
     dialog:
       savedTitle: 설정이 저장되었습니다
-      savedDescription: 'macOS 메뉴 막대 또는 시스템 트레이의 AIRI 아이콘을 클릭하여 언제든지 컴패니언 설정을 다시 열 수 있습니다:'
+      savedDescription: 'macOS 메뉴 막대 또는 시스템 트레이의 Anima 아이콘을 클릭하여 언제든지 컴패니언 설정을 다시 열 수 있습니다:'
       trayItem: 컴패니언 설정 및 로그인 (V3)
       continue: 설정 계속하기
       closeToTray: 트레이로 최소화
       close: Close
       comebackLead: If you want to come back to this later, just
-      desktopInstruction: right-click the AIRI system tray icon and click Companion Wizard.
+      desktopInstruction: right-click the Anima system tray icon and click Companion Wizard.
       webInstruction: tap the cog icon in the top-right to open Settings, then go
         Guided Tours → Companion Wizard.
       webSettingsPath: Settings → Guided Tours → Companion Wizard
@@ -57,7 +57,7 @@ steps:
       badge: 오프라인 우선
       action: 로컬에서 계속하기
     stepBadge: 아키텍처 선별 · 단계 {current} / {total}
-    companionGreeting: AIRI에 오신 것을 환영합니다! 스테이지 설정 방식을 선택하세요. 100% 로컬 오프라인으로 실행하거나
+    companionGreeting: Anima에 오신 것을 환영합니다! 스테이지 설정 방식을 선택하세요. 100% 로컬 오프라인으로 실행하거나
       계정에 로그인하여 기기 간 동기화를 활성화할 수 있습니다.
     local:
       badge: 오프라인 우선
@@ -76,7 +76,7 @@ steps:
     description: 인터페이스 언어, 비주얼 테마, 시그니처 강조 색상을 맞춤 설정하세요.
     languageSection:
       title: 표시 언어
-      description: AIRI의 기본 인터페이스 언어를 선택하세요. 언제든지 변경할 수 있습니다.
+      description: Anima의 기본 인터페이스 언어를 선택하세요. 언제든지 변경할 수 있습니다.
     themeSection:
       title: 테마 모드
       description: 선호하는 외관 색상 모드를 선택하세요.
@@ -141,7 +141,7 @@ steps:
       earth: 대지와 식물
       ocean: 바다와 하늘
       royal: 로열과 꽃
-    resetToSignatureAiriCyan: AIRI 시그니처 시안으로 재설정
+    resetToSignatureAiriCyan: Anima 시그니처 시안으로 재설정
     preventsRemoteCloudSyncFromOverwritingThisMachineSLanguageAndTheme: 원격 클라우드 동기화가 이 기기의 언어와 테마를 덮어쓰는 것을 방지
     nextHint: 체험 아키타입으로 계속
   experience:
@@ -416,7 +416,7 @@ steps:
     title: 캐릭터 영혼 및 페르소나
     description: 컴패니언의 기본 정체성, 말투, 배경 스토리를 선택하거나 직접 설정하세요.
     presetCards:
-      airi: AIRI (기본 자율형 컴패니언)
+      airi: Anima (기본 자율형 컴패니언)
       custom: 사용자 정의 캐릭터 카드
       import: 캐릭터 카드 가져오기 (PNG / JSON)
     characterName: 컴패니언 이름
@@ -905,7 +905,7 @@ steps:
       optional: 건너뜀 / 선택 사항
       actionRequired: 설정 필요
     greetingCard: 첫 무대 대사 미리보기 (Turn 0)
-    launchButton: AIRI 스테이지 시작
+    launchButton: Anima 스테이지 시작
     launching: 스테이지를 시작하는 중...
 quickStart:
   title: 60초 빠른 시작

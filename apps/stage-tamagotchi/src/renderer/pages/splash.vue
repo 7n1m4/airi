@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { StartupMilestoneId, StartupSnapshot } from '../../shared/eventa'
 
-import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { useBuildInfo } from '@proj-airi/stage-ui/composables'
-import { Button, Progress } from '@proj-airi/ui'
+import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { useBuildInfo } from '@proj-anima/stage-ui/composables'
+import { Button, Progress } from '@proj-anima/ui'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -90,7 +90,7 @@ async function fetchSnapshot() {
     }
   }
   catch (err) {
-    console.error('[@proj-airi/stage-tamagotchi] [Splash] Failed to query initial snapshot:', err)
+    console.error('[@proj-anima/stage-tamagotchi] [Splash] Failed to query initial snapshot:', err)
   }
 }
 

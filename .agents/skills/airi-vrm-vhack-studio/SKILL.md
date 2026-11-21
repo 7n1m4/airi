@@ -53,7 +53,7 @@ GLB chunk-header math (offset = `20 + jsonBytes.length`, then 8-byte header + da
 
 ## 6. Verification
 
-- `pnpm -F @proj-airi/stage-ui typecheck`.
+- `pnpm -F @proj-anima/stage-ui typecheck`.
 - Runtime smoke: Settings → Models → V-HACK → toggle node visibility, then export and reload the `.vrm` to confirm the surgery round-trips.
 
 ### Authoritative Docs & Cross-Citations

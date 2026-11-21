@@ -1,7 +1,7 @@
 import type { ChatHistoryItem, ChatSlices } from '../../../../../../types/chat'
 import type { OnboardingV3DraftState } from '../stores/useOnboardingV3Draft'
 
-import { SPOTLIGHT_MODELS } from '@proj-airi/stage-ui/constants'
+import { SPOTLIGHT_MODELS } from '@proj-anima/stage-ui/constants'
 import { nanoid } from 'nanoid'
 import { unref } from 'vue'
 

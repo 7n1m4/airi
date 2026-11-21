@@ -1,7 +1,7 @@
-import type { ElectronExecuteShellCommandResult } from '@proj-airi/stage-shared'
+import type { ElectronExecuteShellCommandResult } from '@proj-anima/stage-shared'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { electronExecuteShellCommand } from '@proj-airi/stage-shared'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { electronExecuteShellCommand } from '@proj-anima/stage-shared'
 import { useLocalStorage } from '@vueuse/core'
 import { computed, ref } from 'vue'
 import { toast } from 'vue-sonner'

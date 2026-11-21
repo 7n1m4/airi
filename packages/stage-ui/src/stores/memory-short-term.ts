@@ -5,7 +5,7 @@ import type { ChatSessionsIndex } from '../types/chat-session'
 import type { ShortTermMemoryBlock } from '../types/short-term-memory'
 import type { AiriCard } from './modules/airi-card'
 
-import { estimateTokens } from '@proj-airi/stage-shared'
+import { estimateTokens } from '@proj-anima/stage-shared'
 import { useBroadcastChannel } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { defineStore, storeToRefs } from 'pinia'

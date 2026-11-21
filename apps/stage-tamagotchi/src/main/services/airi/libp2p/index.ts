@@ -53,7 +53,7 @@ import {
   libp2pServiceStatusChanged,
   libp2pServiceStop,
   libp2pServiceUpdatePairedDeviceAlias,
-} from '@proj-airi/stage-shared/libp2p'
+} from '@proj-anima/stage-shared/libp2p'
 import { createLibp2p } from 'libp2p'
 import { array, boolean, maxLength, object, optional, picklist, pipe, safeParse, string } from 'valibot'
 

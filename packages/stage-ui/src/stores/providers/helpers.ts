@@ -1,7 +1,7 @@
 import type { ProviderValidationResult } from './types'
 
-import { isUrl } from '@proj-airi/stage-shared'
-import { isWebGPUSupported } from '@proj-airi/stage-shared/webgpu'
+import { isUrl } from '@proj-anima/stage-shared'
+import { isWebGPUSupported } from '@proj-anima/stage-shared/webgpu'
 
 export function logWarn(...args: unknown[]) {
   try {

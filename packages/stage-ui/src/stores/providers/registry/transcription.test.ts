@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { transcriptionMetadata } from './transcription'
 
-vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@proj-airi/stage-shared')>()
+vi.mock('@proj-anima/stage-shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@proj-anima/stage-shared')>()
   return { ...actual, isStageTamagotchi: () => (globalThis as any).__TAMAGOTCHI__ === true }
 })
 

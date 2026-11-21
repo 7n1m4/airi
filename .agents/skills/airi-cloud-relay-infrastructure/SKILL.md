@@ -55,7 +55,7 @@ export interface Env {
 
 Worker behavior (`src/index.ts`):
 - **OPTIONS**: CORS preflight, `Access-Control-Allow-Origin: *`.
-- **`/health`**: `{ status: 'ok', worker: '@proj-airi/stage-edge' }`.
+- **`/health`**: `{ status: 'ok', worker: '@proj-anima/stage-edge' }`.
 - **`/cors-proxy` / `/proxy`**: `?url=` or `x-target-url` header; strips `host`/`referer`/`origin`; `x-target-authorization` remaps to `Authorization`. Used for provider APIs on the Edge without leaking keys to the client.
 - **`/discord`**: verify Ed25519 (401 on failure). Type 1 → `{type:1}` PONG. Type 2 → load `system/prompt` from KV if present (overrides `SYSTEM_PROMPT`), read `context/rolling`, run `generateLlmReply`, then **defer** with `ctx.waitUntil` + reply `{type:5}` (Discord DEFERRED). The deferred job:
   - pushes user+assistant turns into `context/rolling` (capped at 50), PATCHes `messages/@original` at `https://discord.com/api/v10/webhooks/{appId}/{token}/messages/@original`;

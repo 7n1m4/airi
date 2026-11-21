@@ -56,7 +56,7 @@ To rule out sandboxing restrictions blocking GPU/compositor nodes:
 ELECTRON_DISABLE_SANDBOX=1 pnpm dev:tamagotchi
 
 # Or run the custom script pre-configured for Linux:
-pnpm -rF @proj-airi/stage-tamagotchi run dev:linux
+pnpm -rF @proj-anima/stage-tamagotchi run dev:linux
 ```
 *Result:* Verified sandbox state did not fix the CPU spikes alone, confirming the core issue is rendering load from long chat logs under Wayland composition.
 

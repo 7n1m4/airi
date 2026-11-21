@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { BracketAction, CodeBlockAction, NotationAction, VoiceProfile } from '../../../../stores/providers/types'
 
-import { createAudioBlob } from '@proj-airi/stage-shared'
+import { createAudioBlob } from '@proj-anima/stage-shared'
 import {
   FieldCheckbox,
   FieldInput,
   FieldRange,
   Textarea,
-} from '@proj-airi/ui'
+} from '@proj-anima/ui'
 import { generateSpeech } from '@xsai/generate-speech'
 import { storeToRefs } from 'pinia'
 import {

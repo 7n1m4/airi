@@ -1,6 +1,6 @@
 ---
 title: Contributing
-description: Contributing to Project AIRI
+description: Contributing to Project Anima
 ---
 
 Hello! Thank you for your interest in contributing to this project. This guide will help you get started.
@@ -153,7 +153,7 @@ You don't need to care about the package manager, `ni` will help you choose the 
 
 ## Startup Options
 
-After installation, you can launch AIRI using one of the following methods:
+After installation, you can launch Anima using one of the following methods:
 
 - **`start_airi.bat`**: Normal experience (launches the desktop app with all standard assets).
 - **`start_airi_hiperf.bat`**: Force a specific port to recover settings or models if needed.

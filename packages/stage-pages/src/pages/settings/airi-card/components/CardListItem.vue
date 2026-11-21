@@ -2,7 +2,7 @@
 </script>
 
 <script setup lang="ts">
-import { CharacterAvatar, CursorFloating } from '@proj-airi/stage-ui/components'
+import { CharacterAvatar, CursorFloating } from '@proj-anima/stage-ui/components'
 import { useBroadcastChannel } from '@vueuse/core'
 import { ref } from 'vue'
 import { toast } from 'vue-sonner'

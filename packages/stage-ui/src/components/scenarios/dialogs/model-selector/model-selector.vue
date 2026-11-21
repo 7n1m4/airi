@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import type { Live2DValidationReport } from '@proj-airi/stage-ui-live2d'
+import type { Live2DValidationReport } from '@proj-anima/stage-ui-live2d'
 
 import type { DisplayModel } from '../../../../stores/display-models'
 
-import { validateLive2DZip } from '@proj-airi/stage-ui-live2d'
-import { useMmd } from '@proj-airi/stage-ui-mmd/stores/mmd'
-import { extractMmdFromZip } from '@proj-airi/stage-ui-mmd/utils/mmd-zip-extractor'
-import { useCustomVrmAnimationsStore } from '@proj-airi/stage-ui-three'
-import { Button } from '@proj-airi/ui'
+import { validateLive2DZip } from '@proj-anima/stage-ui-live2d'
+import { useMmd } from '@proj-anima/stage-ui-mmd/stores/mmd'
+import { extractMmdFromZip } from '@proj-anima/stage-ui-mmd/utils/mmd-zip-extractor'
+import { useCustomVrmAnimationsStore } from '@proj-anima/stage-ui-three'
+import { Button } from '@proj-anima/ui'
 import { refDebounced, useFileDialog, useIntersectionObserver, useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger, PopoverAnchor, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'

@@ -3,11 +3,11 @@ import type {
   ArcadeProvisioningConfig,
   CalibrationTelemetryTrace,
   CatalogGame,
-} from '@proj-airi/stage-ui/types'
+} from '@proj-anima/stage-ui/types'
 
-import { ArcadeViewport } from '@proj-airi/stage-ui/components'
-import { useArcadeCollector } from '@proj-airi/stage-ui/composables/arcade'
-import { useCharacterStore } from '@proj-airi/stage-ui/stores/character'
+import { ArcadeViewport } from '@proj-anima/stage-ui/components'
+import { useArcadeCollector } from '@proj-anima/stage-ui/composables/arcade'
+import { useCharacterStore } from '@proj-anima/stage-ui/stores/character'
 import { computed, onMounted, ref } from 'vue'
 
 const props = withDefaults(defineProps<{

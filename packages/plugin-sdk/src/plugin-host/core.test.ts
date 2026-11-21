@@ -1,7 +1,7 @@
 import { join } from 'node:path'
 
 import { createContext, defineEventa, defineInvoke, defineInvokeHandler } from '@moeru/eventa'
-import { moduleCompatibilityResult, moduleStatus, registryModulesSync } from '@proj-airi/plugin-protocol/types'
+import { moduleCompatibilityResult, moduleStatus, registryModulesSync } from '@proj-anima/plugin-protocol/types'
 import { describe, expect, it, vi } from 'vitest'
 
 import { FileSystemLoader, PluginHost } from '.'

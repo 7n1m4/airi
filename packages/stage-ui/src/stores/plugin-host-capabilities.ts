@@ -1,4 +1,4 @@
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
 
 import { listProviders } from '../libs/providers/providers'
 

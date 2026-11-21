@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { isWithinSchedule } from '@proj-airi/stage-shared'
-import { useVisionSources } from '@proj-airi/stage-ui/composables'
-import { downloadLayaModel, formatBytes, getLayaCacheSize, isLayaDownloaded, isModelCached } from '@proj-airi/stage-ui/libs/inference'
-import { useProactivityStore, useScreenWatcherStore } from '@proj-airi/stage-ui/stores'
-import { useVisionStore } from '@proj-airi/stage-ui/stores/modules/vision'
-import { useVisionOrchestratorStore } from '@proj-airi/stage-ui/stores/modules/vision/orchestrator'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Progress } from '@proj-airi/ui'
+import { isWithinSchedule } from '@proj-anima/stage-shared'
+import { useVisionSources } from '@proj-anima/stage-ui/composables'
+import { downloadLayaModel, formatBytes, getLayaCacheSize, isLayaDownloaded, isModelCached } from '@proj-anima/stage-ui/libs/inference'
+import { useProactivityStore, useScreenWatcherStore } from '@proj-anima/stage-ui/stores'
+import { useVisionStore } from '@proj-anima/stage-ui/stores/modules/vision'
+import { useVisionOrchestratorStore } from '@proj-anima/stage-ui/stores/modules/vision/orchestrator'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Progress } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import {
   TooltipArrow,

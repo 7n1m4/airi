@@ -1,14 +1,14 @@
-import type { Pose } from '@proj-airi/model-driver-magic-live2d'
-import type { MagicModel } from '@proj-airi/motion-driver-magic'
+import type { Pose } from '@proj-anima/model-driver-magic-live2d'
+import type { MagicModel } from '@proj-anima/motion-driver-magic'
 import type { MaybeRefOrGetter } from 'vue'
 
-import { createDriver } from '@proj-airi/model-driver-magic-live2d'
-import { fit } from '@proj-airi/motion-driver-magic'
+import { createDriver } from '@proj-anima/model-driver-magic-live2d'
+import { fit } from '@proj-anima/motion-driver-magic'
 import {
   defaultLive2DBreathControlOptions,
   defaultLive2DMotionControlDynamics,
   useLive2DMotionControl,
-} from '@proj-airi/stage-ui-live2d/stores'
+} from '@proj-anima/stage-ui-live2d/stores'
 import { computed, onScopeDispose, ref, toValue, watch } from 'vue'
 
 import { useSpeakingStore } from '../../../stores/audio'

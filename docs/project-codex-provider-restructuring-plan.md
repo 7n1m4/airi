@@ -738,7 +738,7 @@ Verify:
 
 After each migration phase:
 
-- `pnpm -F @proj-airi/stage-ui typecheck`
+- `pnpm -F @proj-anima/stage-ui typecheck`
 - `pnpm lint:fix`
 
 For focused test work:

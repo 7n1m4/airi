@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Live2dCapabilities } from '@proj-airi/stage-ui-live2d'
-import type { DiscoveredMeshNode } from '@proj-airi/stage-ui-three'
+import type { Live2dCapabilities } from '@proj-anima/stage-ui-live2d'
+import type { DiscoveredMeshNode } from '@proj-anima/stage-ui-three'
 
 import type { ExpressionCategory } from '../../../../libs/character/expression-noise-gate'
 import type { ModelCapabilityItem } from '../../../../stores/display-models'
@@ -11,11 +11,11 @@ import {
   useDslIntimacyStore,
   useLive2d,
   useLive2dTranslator,
-} from '@proj-airi/stage-ui-live2d'
-import { useMmd } from '@proj-airi/stage-ui-mmd'
-import { useSpine } from '@proj-airi/stage-ui-spine'
-import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
-import { Input } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui-live2d'
+import { useMmd } from '@proj-anima/stage-ui-mmd'
+import { useSpine } from '@proj-anima/stage-ui-spine'
+import { useCustomVrmAnimationsStore, useModelStore } from '@proj-anima/stage-ui-three'
+import { Input } from '@proj-anima/ui'
 import { nanoid } from 'nanoid'
 import { storeToRefs } from 'pinia'
 import {

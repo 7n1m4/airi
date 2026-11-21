@@ -1,4 +1,4 @@
-import type { Card } from '@proj-airi/ccc'
+import type { Card } from '@proj-anima/ccc'
 import type { MaybeRefOrGetter } from 'vue'
 
 import type { ModelCapabilityItem } from '../libs/character/model-capabilities'

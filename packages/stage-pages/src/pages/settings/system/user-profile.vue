@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import VoiceCreatorModal from '@proj-airi/stage-ui/components/scenarios/dialogs/VoiceCreatorModal.vue'
+import VoiceCreatorModal from '@proj-anima/stage-ui/components/scenarios/dialogs/VoiceCreatorModal.vue'
 
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { useSettingsUserProfile } from '@proj-airi/stage-ui/stores/settings/user-profile'
-import { Button, Select } from '@proj-airi/ui'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { useSettingsUserProfile } from '@proj-anima/stage-ui/stores/settings/user-profile'
+import { Button, Select } from '@proj-anima/ui'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 

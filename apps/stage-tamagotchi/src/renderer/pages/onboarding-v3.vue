@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { OnboardingV3 } from '@proj-airi/stage-ui/components'
-import { useOnboardingStore } from '@proj-airi/stage-ui/stores/onboarding'
-import { useTheme } from '@proj-airi/ui'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { OnboardingV3 } from '@proj-anima/stage-ui/components'
+import { useOnboardingStore } from '@proj-anima/stage-ui/stores/onboarding'
+import { useTheme } from '@proj-anima/ui'
 import { computed, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 

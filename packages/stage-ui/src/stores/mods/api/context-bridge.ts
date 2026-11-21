@@ -4,7 +4,7 @@ import type { UserMessage } from '@xsai/shared-chat'
 import type { ChatStreamEvent, ContextMessage, StreamDeltaContext } from '../../../types/chat'
 
 import { errorMessageFrom } from '@moeru/std'
-import { debug, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
+import { debug, isStageTamagotchi, isStageWeb } from '@proj-anima/stage-shared'
 import { useBroadcastChannel } from '@vueuse/core'
 import { Mutex } from 'es-toolkit'
 import { nanoid } from 'nanoid'

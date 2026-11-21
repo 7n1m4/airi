@@ -215,7 +215,7 @@ fork. Discord ships in-process instead:
 2. Open Settings > Modules > Discord (route `/settings/modules/messaging-discord`, component `packages/stage-ui/src/components/modules/MessagingDiscord.vue`) and paste your bot token, stored as `settings/discord/token`.
 3. Enable the service; the renderer calls `discordServiceStart` and the Electron main process gateway in `apps/stage-tamagotchi/src/main/services/airi/discord/index.ts` connects (state in `packages/stage-ui/src/stores/modules/discord.ts`).
 
-No database, Docker, or `@proj-airi/discord-bot` package is involved anymore.
+No database, Docker, or `@proj-anima/discord-bot` package is involved anymore.
 
 ## Commit
 

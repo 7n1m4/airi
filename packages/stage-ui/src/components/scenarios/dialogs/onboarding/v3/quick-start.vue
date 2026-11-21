@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { isApplePlatform } from '@proj-airi/stage-shared'
+import { isApplePlatform } from '@proj-anima/stage-shared'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'

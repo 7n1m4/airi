@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { CompanionAlignmentConfig, VaultInspectionReport } from '@proj-airi/stage-ui/utils/data-vault'
+import type { CompanionAlignmentConfig, VaultInspectionReport } from '@proj-anima/stage-ui/utils/data-vault'
 
-import { useDataMaintenance } from '@proj-airi/stage-ui/composables/use-data-maintenance'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { Button } from '@proj-airi/ui'
+import { useDataMaintenance } from '@proj-anima/stage-ui/composables/use-data-maintenance'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { Button } from '@proj-anima/ui'
 import {
   DialogContent,
   DialogOverlay,

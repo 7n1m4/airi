@@ -1,7 +1,7 @@
 import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 
 import type { createContext } from '@moeru/eventa/adapters/electron/main'
-import type { AgenticOsConfig, PresenceSnapshot } from '@proj-airi/stage-shared/agentic'
+import type { AgenticOsConfig, PresenceSnapshot } from '@proj-anima/stage-shared/agentic'
 import type { Lifecycle } from 'injeca'
 
 import { Buffer } from 'node:buffer'
@@ -19,7 +19,7 @@ import {
   agenticServiceReportPresence,
   agenticServiceRotateHttpToken,
   agenticServiceTriggerCycle,
-} from '@proj-airi/stage-shared/agentic'
+} from '@proj-anima/stage-shared/agentic'
 import { boolean, number, object, optional, picklist, pipe, safeParse, string } from 'valibot'
 
 import { createConfig } from '../../../libs/electron/persistence'

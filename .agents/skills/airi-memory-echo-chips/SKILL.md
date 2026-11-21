@@ -32,7 +32,7 @@ Lightweight semantic fragments (3–5 per character) surfaced as at-a-glance rec
 
 ## Verification
 
-`pnpm -F @proj-airi/stage-ui typecheck`; runtime: trigger chip synthesis from Settings → Memory (echo lane) and confirm 3–5 chips land in `local:memory/echo-chips/{userId}` and the right-context panel.
+`pnpm -F @proj-anima/stage-ui typecheck`; runtime: trigger chip synthesis from Settings → Memory (echo lane) and confirm 3–5 chips land in `local:memory/echo-chips/{userId}` and the right-context panel.
 
 ## Sources
 

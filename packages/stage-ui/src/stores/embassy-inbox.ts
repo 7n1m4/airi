@@ -1,8 +1,8 @@
-import type { ExternalFriend, FriendRequest, Peer } from '@proj-airi/stage-shared'
+import type { ExternalFriend, FriendRequest, Peer } from '@proj-anima/stage-shared'
 
 import type { EmbassySocketRequest } from '../libs/transport/embassy-socket'
 
-import { extractHandleAlias } from '@proj-airi/stage-shared'
+import { extractHandleAlias } from '@proj-anima/stage-shared'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { toast } from 'vue-sonner'

@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/server-runtime",
+  "name": "@proj-anima/server-runtime",
   "type": "module",
   "version": "0.9.0-alpha.15",
   "description": "Server runtime implementation for AIRI running in different environments",
@@ -41,7 +41,7 @@
   "dependencies": {
     "@guiiai/logg": "catalog:",
     "@moeru/std": "catalog:",
-    "@proj-airi/server-shared": "workspace:^",
+    "@proj-anima/server-shared": "workspace:^",
     "crossws": "catalog:",
     "h3": "^2.0.1-rc.14",
     "nanoid": "catalog:",

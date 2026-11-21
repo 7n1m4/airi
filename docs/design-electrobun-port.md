@@ -72,7 +72,7 @@ The RPC contract is the port's critical path, so its size is recorded rather tha
 | Distinct `eventa:invoke\|event:electron:*` channels | **227** (191 invoke + 36 event) | `apps/stage-tamagotchi/src/shared/eventa.ts` ∪ `packages/electron-eventa/src` ∪ `packages/stage-shared/src` |
 | Channels declared in `shared/eventa.ts` itself | 101 | same file |
 | Domains | 29 (`windows` 43, `libp2p` 24, `discord` 22, `agentic` 21, `acp` 13, `window` 12, `screen`/`auto-updater` 9, `sensors` 8, `plugins`/`mcp`/`beat-sync` 7, `vision`/`dock-mode` 6, …) | grouped by tag prefix |
-| Renderer files touching the bridge | **77** across `apps/stage-tamagotchi/src/renderer`, `packages/stage-ui`, `packages/stage-pages` | grep for `window.electron` / `getIpcRenderer` / `@proj-airi/electron-vueuse` |
+| Renderer files touching the bridge | **77** across `apps/stage-tamagotchi/src/renderer`, `packages/stage-ui`, `packages/stage-pages` | grep for `window.electron` / `getIpcRenderer` / `@proj-anima/electron-vueuse` |
 | `isStageTamagotchi()` call sites that gate desktop behaviour | **56** | grep |
 
 Consequence: the bridge must be replaced by a **drop-in adapter** (`packages/electrobun-eventa`) that keeps
@@ -253,7 +253,7 @@ main↔view RPC work").** The "last wave-1 gap" once recorded here was the rende
 `Error: Electron IPC not available`. That gap is now fixed in code — both renderer entry
 points import a self-installing bridge (`src/renderer/install-bridge.ts`) that installs the
 §2.3 shim (`window.electron = { ipcRenderer: <eventa-over-RPC shim> }` plus `window.platform`)
-via `@proj-airi/electrobun-eventa`'s view adapter, so the ~77 Electron-shaped call sites from
+via `@proj-anima/electrobun-eventa`'s view adapter, so the ~77 Electron-shaped call sites from
 §1.3 keep working without being rewritten. The 15 IPC errors in the smoke table above are
 from **before** that commit; this document has not re-run that smoke since. Closing this gap
 closes wave 1, not the port: the shim is a compatibility bridge, and retiring it is tracked
@@ -274,8 +274,8 @@ as `airi-nz6.3` under the `airi-nz6` epic.
 
 ## 4. Verification
 
-- `pnpm -F @proj-airi/stage-tamagotchi typecheck` — Bun main + shared contract.
-- `pnpm -F @proj-airi/stage-tamagotchi build` — CEF bundle produced under `artifacts/`.
+- `pnpm -F @proj-anima/stage-tamagotchi typecheck` — Bun main + shared contract.
+- `pnpm -F @proj-anima/stage-tamagotchi build` — CEF bundle produced under `artifacts/`.
 - `hutch run dev` — manual: each window opens, drag, dock, collapse/notch hover, click-through at the notch edge.
-- `pnpm -F @proj-airi/electrobun-eventa test` — adapter contract (bidirectional events, invoke, error propagation, dispose, view scoping).
+- `pnpm -F @proj-anima/electrobun-eventa test` — adapter contract (bidirectional events, invoke, error propagation, dispose, view scoping).
 - Root `pnpm typecheck` must stay green: the renderer is shared, not copied, so package types keep flowing from the existing packages.

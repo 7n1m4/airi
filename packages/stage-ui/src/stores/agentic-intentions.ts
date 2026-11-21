@@ -4,7 +4,7 @@ import type {
   IntentionRankingPolicy,
   IntentionScoreBreakdown,
   ScoredIntention,
-} from '@proj-airi/stage-shared/agentic'
+} from '@proj-anima/stage-shared/agentic'
 
 /**
  * The autonomous ranking policy.

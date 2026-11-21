@@ -106,7 +106,7 @@ For Option 1 (Unified Multi-Costume Card):
 1. **Phase 2 (Current Focus)**: Finish Host Intimacy (`Bonus`), Motion Enable/Disable (`MotionEnable`/`MotionDisable`), and DSL VM reactivity for single-MOC models without touching the production zip uploader.
 2. **Phase 3 (Multi-MOC Architecture)**:
    - Implement `MultiMocRegistry` in `packages/stage-ui-live2d/src/utils/live2d-zip-loader.ts`.
-   - Add MOC3 ArrayBuffer pre-loading & WebGL hot-swap bridge in `@proj-airi/stage-ui-live2d`.
+   - Add MOC3 ArrayBuffer pre-loading & WebGL hot-swap bridge in `@proj-anima/stage-ui-live2d`.
    - Add Multi-Costume Import Modal to `ModelImporter.vue`.
 
 ## Relevant Skills

@@ -1,6 +1,6 @@
 import type { DisplayModel } from '../display-models'
 
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { refManualReset, useEventListener } from '@vueuse/core'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'

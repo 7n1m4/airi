@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import VoiceCreatorModal from '@proj-airi/stage-ui/components/scenarios/dialogs/VoiceCreatorModal.vue'
+import VoiceCreatorModal from '@proj-anima/stage-ui/components/scenarios/dialogs/VoiceCreatorModal.vue'
 
-import { StageBackgroundDialogPicker } from '@proj-airi/stage-ui/components/scenarios/dialogs/stage-background-picker'
-import { useIdleAnimations } from '@proj-airi/stage-ui/composables'
-import { useBackgroundStore } from '@proj-airi/stage-ui/stores/background'
-import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { useSettingsUserProfile } from '@proj-airi/stage-ui/stores/settings/user-profile'
-import { Button, FieldInput, Select } from '@proj-airi/ui'
+import { StageBackgroundDialogPicker } from '@proj-anima/stage-ui/components/scenarios/dialogs/stage-background-picker'
+import { useIdleAnimations } from '@proj-anima/stage-ui/composables'
+import { useBackgroundStore } from '@proj-anima/stage-ui/stores/background'
+import { useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useArtistryStore } from '@proj-anima/stage-ui/stores/modules/artistry'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { useSettingsUserProfile } from '@proj-anima/stage-ui/stores/settings/user-profile'
+import { Button, FieldInput, Select } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,

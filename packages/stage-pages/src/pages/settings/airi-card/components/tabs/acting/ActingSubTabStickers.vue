@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { CardCustomSticker } from '@proj-airi/stage-ui/types/card.schema'
+import type { CardCustomSticker } from '@proj-anima/stage-ui/types/card.schema'
 
-import { chatStickers } from '@proj-airi/stage-ui/assets/stickers'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useStickersStore } from '@proj-airi/stage-ui/stores/stickers'
-import { Button } from '@proj-airi/ui'
+import { chatStickers } from '@proj-anima/stage-ui/assets/stickers'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useStickersStore } from '@proj-anima/stage-ui/stores/stickers'
+import { Button } from '@proj-anima/ui'
 import { computed, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 

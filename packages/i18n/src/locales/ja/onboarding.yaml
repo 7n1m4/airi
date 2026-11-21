@@ -11,7 +11,7 @@ shell:
   previous: 戻る
   next: 続ける
   skip: あとで設定
-  brand: AIRI コンパニオンセットアップ
+  brand: Anima コンパニオンセットアップ
   stageReady: ステージ準備完了
   closeSetup: セットアップを閉じる (後で再開)
   placeholderNotice: このモジュールは現在構成中です。次のステップに進むことができます。
@@ -19,7 +19,7 @@ steps:
   welcome:
     label: ようこそ
     subtitle: プライベートコンパニオンスタジオ
-    heroTitle: AIRI へようこそ
+    heroTitle: Anima へようこそ
     heroSubtitle: あなただけのパートナーの舞台 —— 数分でセットアップ、100% お手元のマシンで安全に動作。
     companionQuote: こんにちは！私はあなたの自律型デジタルパートナーです。声での対話、表現豊かなステージパフォーマンス、そして静かなデスクトップでの寄り添いまで、あなたの日常に合わせていつでも寄り添います。
     pills:
@@ -32,13 +32,13 @@ steps:
       setupLater: あとで設定
     dialog:
       savedTitle: 設定は保存されました
-      savedDescription: macOS メニューバーまたはシステムトレイの AIRI アイコンをクリックすれば、いつでもセットアップを再開できます：
+      savedDescription: macOS メニューバーまたはシステムトレイの Anima アイコンをクリックすれば、いつでもセットアップを再開できます：
       trayItem: パートナー設定とサインイン (V3)
       continue: 設定を続ける
       closeToTray: トレイに格納
       close: Close
       comebackLead: If you want to come back to this later, just
-      desktopInstruction: right-click the AIRI system tray icon and click Companion Wizard.
+      desktopInstruction: right-click the Anima system tray icon and click Companion Wizard.
       webInstruction: tap the cog icon in the top-right to open Settings, then go
         Guided Tours → Companion Wizard.
       webSettingsPath: Settings → Guided Tours → Companion Wizard
@@ -56,7 +56,7 @@ steps:
       badge: オフライン優先
       action: ローカルで続ける
     stepBadge: アーキテクチャトリアージ · ステップ {current} / {total}
-    companionGreeting: AIRI
+    companionGreeting: Anima
       へようこそ！ステージのセットアップ方法を選択してください。完全ローカル・オフラインで動作させることも、アカウントにサインインして複数デバイス間で同期することも可能です。
     local:
       badge: オフライン優先
@@ -75,7 +75,7 @@ steps:
     description: インターフェース言語、ビジュアルテーマ、シグネチャーアクセントカラーを設定します。
     languageSection:
       title: 表示言語
-      description: AIRI のメイン言語を選択します。いつでも変更可能です。
+      description: Anima のメイン言語を選択します。いつでも変更可能です。
     themeSection:
       title: テーマモード
       description: お好みの外観カラーモードを選択してください。
@@ -140,7 +140,7 @@ steps:
       earth: 大地と植物
       ocean: 海と空
       royal: ロイヤルと花
-    resetToSignatureAiriCyan: AIRIシグネチャーシアンにリセット
+    resetToSignatureAiriCyan: Animaシグネチャーシアンにリセット
     preventsRemoteCloudSyncFromOverwritingThisMachineSLanguageAndTheme: リモートクラウド同期がこのマシンの言語とテーマを上書きすることを防止
     nextHint: 体験アーキタイプへ進む
   experience:
@@ -411,7 +411,7 @@ steps:
     title: キャラクターの魂とペルソナ
     description: パートナーの基本的なアイデンティティ、口調、バックストーリーを選択またはカスタマイズします。
     presetCards:
-      airi: AIRI (デフォルトの自律型パートナー)
+      airi: Anima (デフォルトの自律型パートナー)
       custom: カスタムキャラクターカード
       import: キャラクターカードのインポート (PNG / JSON)
     characterName: パートナーの名前
@@ -900,7 +900,7 @@ steps:
       optional: スキップ / 任意
       actionRequired: 設定が必要です
     greetingCard: 最初のセリフのプレビュー (Turn 0)
-    launchButton: AIRI ステージを起動
+    launchButton: Anima ステージを起動
     launching: ステージを起動中...
 quickStart:
   title: 60秒クイックスタート

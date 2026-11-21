@@ -1,4 +1,4 @@
-import { parseCycleMotions } from '@proj-airi/stage-ui-live2d'
+import { parseCycleMotions } from '@proj-anima/stage-ui-live2d'
 import { describe, expect, it } from 'vitest'
 
 describe('live2d parseCycleMotions', () => {

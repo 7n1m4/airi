@@ -10,7 +10,7 @@ animations:
     title: Dùng hiệu ứng chuyển cảnh riêng cho từng trang
 dialogs:
   onboarding:
-    title: Chào mừng đến với AIRI!
+    title: Chào mừng đến với Anima!
     description: Hãy thiết lập nhà cung cấp AI đầu tiên để bắt đầu.
     selectProvider: Chọn nhà cung cấp AI
     configureProvider: Cấu hình {provider}
@@ -78,7 +78,7 @@ dialogs:
       relu: ReLU
       relu_desc: Một kết nối tâm hồn phát triển song hành cùng dữ liệu và trái tim bạn.
       aria: Tiến sĩ Aria (Dr. Aria)
-      aria_desc: Người hướng dẫn tài ba, sắc sảo quản lý lớp nghiên cứu AIRI.
+      aria_desc: Người hướng dẫn tài ba, sắc sảo quản lý lớp nghiên cứu Anima.
       lupin: Lupin
       lupin_desc: Cô gái sói trung thành với bản năng sắc bén và trái tim luôn bảo vệ bạn.
       import: Tùy chỉnh
@@ -87,7 +87,7 @@ dialogs:
 language:
   title: Ngôn ngữ
   description: >
-    Thay đổi ngôn ngữ giao diện AIRI. Điều này sẽ không ảnh hưởng đến ngôn ngữ
+    Thay đổi ngôn ngữ giao diện Anima. Điều này sẽ không ảnh hưởng đến ngôn ngữ
     phản hồi của nhân vật.
 controls-island:
   icon-size:
@@ -156,7 +156,7 @@ pages:
     delete: Xóa
     delete_card: Xóa thẻ
     delete_confirmation: Bạn có chắc muốn xóa thẻ này?
-    description: Dùng preset thẻ nhân vật AIRI
+    description: Dùng preset thẻ nhân vật Anima
     description_label: Mô tả
     drop_here: Kéo vào đây để tải lên
     create_card: Tạo thẻ mới
@@ -204,7 +204,7 @@ pages:
         identity_prompting: Các trường này đều giúp định hình nhân vật, nhưng hiện tại
           chúng không phải là các lớp thời gian chạy riêng biệt. Lời nhắc hệ
           thống được sử dụng trực tiếp trong quá trình lắp ráp lời nhắc hoạt
-          động của AIRI. Hướng dẫn sau lịch sử hiện được giữ lại chủ yếu để
+          động của Anima. Hướng dẫn sau lịch sử hiện được giữ lại chủ yếu để
           tương thích thẻ và quy trình lời nhắc trong tương lai, vì vậy bạn có
           thể điền ngay bây giờ mà chưa cần mong đợi sự khác biệt về hành vi
           trực tiếp riêng biệt.
@@ -235,7 +235,7 @@ pages:
       model: Giọng nói / Mô hình
       voice: Giọng nói / Giọng
     systemprompt: Lời nhắc hệ thống
-    title: Thẻ AIRI
+    title: Thẻ Anima
     try_different_search: Hãy thử từ khóa khác
     upload: Tải lên
     upload_desc: Bấm hoặc kéo thả tệp để tải lên
@@ -244,7 +244,7 @@ pages:
     title: Bộ nhớ
   data:
     title: Dữ liệu
-    description: Quản lý dữ liệu AIRI đã lưu, xuất và đặt lại
+    description: Quản lý dữ liệu Anima đã lưu, xuất và đặt lại
     sections:
       chats:
         title: Phiên trò chuyện
@@ -274,7 +274,7 @@ pages:
         delete: Xóa sạch dữ liệu
       desktop:
         title: Đặt lại thiết lập máy tính
-        description: Xóa các cài đặt và trạng thái thực thi của AIRI trên máy tính.
+        description: Xóa các cài đặt và trạng thái thực thi của Anima trên máy tính.
         reset: Đặt lại dữ liệu desktop
       characters:
         title: Nhân vật
@@ -419,7 +419,7 @@ pages:
       description: Chơi Factorio!
       title: Factorio
       enable: Bật tích hợp Factorio
-      enable-description: Cho phép AIRI tương tác với trò chơi Factorio
+      enable-description: Cho phép Anima tương tác với trò chơi Factorio
       server-address: Địa chỉ máy chủ
       server-address-description: Địa chỉ IP hoặc tên máy chủ của máy chủ Factorio
       server-address-placeholder: Nhập địa chỉ máy chủ (ví dụ localhost hoặc 192.168.1.100)
@@ -439,7 +439,7 @@ pages:
           hotkey:
             title: Phím tắt chuyển đổi micrô
             description: Bật/tắt micrô bằng phím khóa bàn phím (Scroll, Caps hoặc Num Lock).
-              Đèn LED của bàn phím sẽ đồng bộ với trạng thái mic của AIRI.
+              Đèn LED của bàn phím sẽ đồng bộ với trạng thái mic của Anima.
             options:
               scroll: Scroll Lock
               caps: Caps Lock
@@ -454,7 +454,7 @@ pages:
       description: Trò chuyện & gọi thoại qua Discord
       title: Discord
       enable: Bật tích hợp Discord
-      enable-description: Cho phép AIRI tương tác qua Discord
+      enable-description: Cho phép Anima tương tác qua Discord
       token: Mã token của bot
       token-description: Mã token bot Discord của bạn
       token-placeholder: Nhập mã token bot Discord của bạn
@@ -493,7 +493,7 @@ pages:
       controls:
         title: Điều khiển & phương thức
         vision: Bật tiếp nhận hình ảnh VLM (Thị giác)
-        vision-description: Cho phép AIRI đọc và xử lý các tệp hình ảnh đính kèm từ Discord
+        vision-description: Cho phép Anima đọc và xử lý các tệp hình ảnh đính kèm từ Discord
     speech:
       description: Tổng hợp giọng nói
       sections:
@@ -549,7 +549,7 @@ pages:
       description: Sử Dụng Twitter
       title: X / Twitter
       enable: Bật tích hợp X / Twitter
-      enable-description: Cho phép AIRI tương tác với X / Twitter
+      enable-description: Cho phép Anima tương tác với X / Twitter
       api-key: Khóa API
       api-key-description: Khóa API X / Twitter của bạn
       api-key-placeholder: Nhập khóa API X / Twitter của bạn
@@ -625,8 +625,8 @@ pages:
     helpinfo:
       title: Lần đầu tới đây?
       description: >
-        {chat} AIRI cần ít nhất một nhà cung cấp để suy nghĩ và hoạt động đúng
-        cách. Có thể coi nó như bộ não của nhân vật AIRI trong hệ thống.
+        {chat} Anima cần ít nhất một nhà cung cấp để suy nghĩ và hoạt động đúng
+        cách. Có thể coi nó như bộ não của nhân vật Anima trong hệ thống.
     catalog:
       edit:
         config-id-not-found: Không tìm thấy cấu hình nhà cung cấp.
@@ -1062,7 +1062,7 @@ pages:
       airi-audio-server:
         description: Máy chủ âm thanh nơ-ron hiệu năng cao - Suy luận C++ cục bộ với sao
           chép giọng nói zero-shot và thẻ biểu cảm cận ngôn ngữ
-        title: AIRI Audio Server
+        title: Anima Audio Server
       alibaba-cloud:
         description: Model Studio - Nền tảng dịch vụ mô hình quy mô lớn của Alibaba Cloud
         title: Alibaba Cloud
@@ -1344,7 +1344,7 @@ pages:
         (pocket) ở chế độ phát triển. Điều này sẽ tự động tạo một chứng chỉ tự
         ký.
     server-hostname:
-      label: AIRI Gateway Hostname
+      label: Anima Gateway Hostname
       description: Set zero (0.0.0.0) to bind to all available IP addresses on your
         WiFi network. Otherwise, bind this to 127.0.0.1 for maximum local
         security.
@@ -1408,7 +1408,7 @@ pages:
                 vivid: Sống động (Neon)
                 monochrome: Đơn sắc
               reset:
-                title: Đặt lại về màu lục lam AIRI
+                title: Đặt lại về màu lục lam Anima
           title: Bảng màu
         developer:
           title: Nhà phát triển
@@ -1465,8 +1465,8 @@ pages:
           presets:
             default:
               colors:
-                color-1: Xanh AIRI
-              description: Màu xanh lá mặc định do AIRI mang đến cho bạn!
+                color-1: Xanh Anima
+              description: Màu xanh lá mặc định do Anima mang đến cho bạn!
               title: Màu mặc định
             morandi:
               colors:
@@ -1594,7 +1594,7 @@ pages:
         double-enter: Nhấp đúp Enter
   docs:
     title: Tài liệu
-    description: Tìm hiểu cách sử dụng AIRI và các tính năng phong phú của nó
+    description: Tìm hiểu cách sử dụng Anima và các tính năng phong phú của nó
     sections:
       overview: Tổng quan
       manual: Hướng dẫn sử dụng
@@ -1615,7 +1615,7 @@ sections:
 theme:
   title: Chủ Đề
   description: |
-    Chuyển đổi chủ đề cơ bản của AIRI, Chế độ Sáng hoặc Chế độ Tối.
+    Chuyển đổi chủ đề cơ bản của Anima, Chế độ Sáng hoặc Chế độ Tối.
 title: Cài Đặt
 voices: Giọng Nói
 vrm:
@@ -1731,7 +1731,7 @@ providers:
 privacy:
   remote-sync:
     title: Bật đồng bộ đám mây
-    description: Mặc định tắt. Khi tắt, AIRI chỉ hoạt động cục bộ và sẽ không tìm
+    description: Mặc định tắt. Khi tắt, Anima chỉ hoạt động cục bộ và sẽ không tìm
       nạp phiên từ xa hoặc đồng bộ lịch sử trò chuyện với airi-api.moeru.ai.
 groups:
   character:

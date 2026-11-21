@@ -859,8 +859,8 @@ Run integration checks across typed chat, STT, proactivity, direct-answer provid
 For source changes, run affected unit suites plus:
 
 ```bash
-pnpm -F @proj-airi/stage-ui typecheck
-pnpm -F @proj-airi/stage-pages typecheck
+pnpm -F @proj-anima/stage-ui typecheck
+pnpm -F @proj-anima/stage-pages typecheck
 ```
 
 Validate the audio package when changing its owner/scheduler. Build Electron when host wiring or packaging changes. A documentation-only revision does not constitute these checks. Listening checks cover sentence boundaries, repetition, interruption, audible clicks, caption alignment, and a 60–120 second reasoning turn.

@@ -14,8 +14,8 @@ import Yaml from 'unplugin-yaml/vite'
 import Layouts from 'vite-plugin-vue-layouts'
 import VueMacros from 'vue-macros/vite'
 
-import { Download } from '@proj-airi/unplugin-fetch'
-import { DownloadLive2DSDK } from '@proj-airi/unplugin-live2d-sdk'
+import { Download } from '@proj-anima/unplugin-fetch'
+import { DownloadLive2DSDK } from '@proj-anima/unplugin-live2d-sdk'
 import { defineConfig } from 'vite'
 
 /**
@@ -103,11 +103,11 @@ export default defineConfig({
     ],
     exclude: [
       // Internal Packages
-      '@proj-airi/stage-ui',
-      '@proj-airi/stage-ui/*',
-      '@proj-airi/stage-ui-three',
-      '@proj-airi/stage-ui-three/*',
-      '@proj-airi/electron-screen-capture',
+      '@proj-anima/stage-ui',
+      '@proj-anima/stage-ui/*',
+      '@proj-anima/stage-ui-three',
+      '@proj-anima/stage-ui-three/*',
+      '@proj-anima/electron-screen-capture',
 
       // wasm-bindgen package: esbuild's dep pre-bundle mangles the wasm glue
       // (Firefox: NS_ERROR_CORRUPTED_CONTENT on the optimized module), which
@@ -139,18 +139,18 @@ export default defineConfig({
   resolve: {
     conditions: ['browser', 'import', 'default'],
     alias: [
-      { find: '@proj-airi/server-sdk', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'server-sdk', 'src')) },
+      { find: '@proj-anima/server-sdk', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'server-sdk', 'src')) },
       // Headless DSL runtime ships TS source only (no build step); alias to source for dev HMR.
-      { find: '@proj-airi/live2d-runtime', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'live2d-runtime', 'src')) },
-      { find: '@proj-airi/i18n', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'i18n', 'src')) },
-      { find: '@proj-airi/stage-ui', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-ui', 'src')) },
-      { find: '@proj-airi/stage-ui-three', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-ui-three', 'src')) },
-      { find: '@proj-airi/stage-pages', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-pages', 'src')) },
-      { find: '@proj-airi/stage-shared', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-shared', 'src')) },
-      { find: '@proj-airi/electron-vueuse', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'electron-vueuse', 'src')) },
-      { find: '@proj-airi/stage-layouts', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-layouts', 'src')) },
-      { find: '@proj-airi/model-driver-magic-live2d', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'model-driver-magic-live2d', 'src')) },
-      { find: '@proj-airi/motion-driver-magic', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'motion-driver-magic', 'src')) },
+      { find: '@proj-anima/live2d-runtime', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'live2d-runtime', 'src')) },
+      { find: '@proj-anima/i18n', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'i18n', 'src')) },
+      { find: '@proj-anima/stage-ui', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-ui', 'src')) },
+      { find: '@proj-anima/stage-ui-three', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-ui-three', 'src')) },
+      { find: '@proj-anima/stage-pages', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-pages', 'src')) },
+      { find: '@proj-anima/stage-shared', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-shared', 'src')) },
+      { find: '@proj-anima/electron-vueuse', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'electron-vueuse', 'src')) },
+      { find: '@proj-anima/stage-layouts', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-layouts', 'src')) },
+      { find: '@proj-anima/model-driver-magic-live2d', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'model-driver-magic-live2d', 'src')) },
+      { find: '@proj-anima/motion-driver-magic', replacement: resolve(join(import.meta.dirname, '..', '..', 'packages', 'motion-driver-magic', 'src')) },
       { find: 'node:crypto', replacement: resolve(join(import.meta.dirname, 'src', 'renderer', 'shims', 'node-crypto.ts')) },
       { find: 'crypto', replacement: resolve(join(import.meta.dirname, 'src', 'renderer', 'shims', 'node-crypto.ts')) },
       { find: 'tslib', replacement: require.resolve('tslib/tslib.es6.js') },

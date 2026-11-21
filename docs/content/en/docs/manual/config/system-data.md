@@ -5,17 +5,17 @@ description: Managing local persistence, IndexedDB storage, cloud backup sync (B
 
 # System & Data Management
 
-AIRI gives you complete ownership of your data. This section explains how your settings, character cards, memories, and 3D models are stored locally, how to configure automated cloud backups, and how to safely export or wipe application state.
+Anima gives you complete ownership of your data. This section explains how your settings, character cards, memories, and 3D models are stored locally, how to configure automated cloud backups, and how to safely export or wipe application state.
 
 ---
 
 ## 1. Where Your Data Lives
 
-AIRI utilizes a dual-engine local storage architecture directly inside your browser / Electron client:
+Anima utilizes a dual-engine local storage architecture directly inside your browser / Electron client:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                    AIRI Local Storage                       │
+│                    Anima Local Storage                       │
 ├──────────────────────────────┬──────────────────────────────┤
 │    IndexedDB (unstorage)     │    localforage (Blob Store)  │
 │  - Chat Sessions & Messages  │  - Uploaded VRM / Live2D     │
@@ -27,13 +27,13 @@ AIRI utilizes a dual-engine local storage architecture directly inside your brow
 
 - **IndexedDB (`local:*`)**: High-speed, structured storage for all configuration, character cards, prompt templates, and conversational memory records.
 - **localforage (Binary Asset Store)**: Specialized storage for large binary models, textures, animations, and generated background images.
-- **Zero Cloud Dependence**: AIRI runs 100% locally out of the box. No personal telemetry or chat logs are sent to central servers.
+- **Zero Cloud Dependence**: Anima runs 100% locally out of the box. No personal telemetry or chat logs are sent to central servers.
 
 ---
 
 ## 2. Cloud Backup & Sync (BYOS)
 
-If you switch between a desktop and laptop or want an automated off-site backup of your companion's memory, AIRI provides **Bring Your Own Storage (BYOS)**:
+If you switch between a desktop and laptop or want an automated off-site backup of your companion's memory, Anima provides **Bring Your Own Storage (BYOS)**:
 
 ### Supported Storage Adapters
 - **Amazon S3 / Cloudflare R2 / MinIO**: Compatible with any standard S3-compatible bucket.
@@ -46,7 +46,7 @@ If you switch between a desktop and laptop or want an automated off-site backup 
 4. Click **Test & Sync Now**.
 
 > [!TIP]
-> **Outbox Queue & Conflict Resolution**: AIRI uses an offline-first outbox sync queue. If you make changes while offline, AIRI automatically synchronizes memory and settings the next time an internet connection is established.
+> **Outbox Queue & Conflict Resolution**: Anima uses an offline-first outbox sync queue. If you make changes while offline, Anima automatically synchronizes memory and settings the next time an internet connection is established.
 
 ---
 
@@ -66,4 +66,4 @@ When you want a fresh start or need to troubleshoot a corrupted setting:
 
 - **Reset Module Settings**: Restores TTS, STT, and LLM provider defaults without deleting chat history.
 - **Delete All Conversations**: Wipes the active chat session database while preserving character cards and settings.
-- **Factory Reset (Wipe Everything)**: Completely purges all IndexedDB databases, localforage blobs, and local preferences, restoring AIRI to initial first-run onboarding state.
+- **Factory Reset (Wipe Everything)**: Completely purges all IndexedDB databases, localforage blobs, and local preferences, restoring Anima to initial first-run onboarding state.

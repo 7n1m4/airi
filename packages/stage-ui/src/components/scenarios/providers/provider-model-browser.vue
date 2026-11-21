@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FieldSelect } from '@proj-airi/ui'
+import { FieldSelect } from '@proj-anima/ui'
 import { useLocalStorage } from '@vueuse/core'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'

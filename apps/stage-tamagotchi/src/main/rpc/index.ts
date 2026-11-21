@@ -12,7 +12,7 @@
  */
 
 import type { EventContext } from '@moeru/eventa'
-import type { ElectrobunRpcPort } from '@proj-airi/electrobun-eventa/main'
+import type { ElectrobunRpcPort } from '@proj-anima/electrobun-eventa/main'
 import type { BrowserView } from 'electrobun/main'
 
 import type { StartupMilestoneId, StartupMilestoneStatus, StartupResourceState, StartupSnapshot } from '../../shared/eventa'
@@ -22,7 +22,7 @@ import type { StartupMilestoneId, StartupMilestoneStatus, StartupResourceState, 
 // from the app bundle at runtime and failed — every per-view eventa context then fell back to
 // the inert proxy and the first window creation aborted DI. The package now exists and
 // typechecks, so it is a normal dependency.
-import { createMainContext as createElectrobunMainContext } from '@proj-airi/electrobun-eventa'
+import { createMainContext as createElectrobunMainContext } from '@proj-anima/electrobun-eventa'
 import { BrowserWindow, BrowserView as ElectrobunBrowserView } from 'electrobun/main'
 
 import { electronSplashStateChanged } from '../../shared/eventa'

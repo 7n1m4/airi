@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { DisplayModel } from '../../../../stores/display-models'
 
-import { useMmd } from '@proj-airi/stage-ui-mmd/stores'
-import { useSpine } from '@proj-airi/stage-ui-spine/stores'
-import { Button, Callout } from '@proj-airi/ui'
+import { useMmd } from '@proj-anima/stage-ui-mmd/stores'
+import { useSpine } from '@proj-anima/stage-ui-spine/stores'
+import { Button, Callout } from '@proj-anima/ui'
 import { useLocalStorage, useMouse } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
@@ -27,10 +27,10 @@ const props = defineProps<{
 defineEmits<{
   (e: 'extractColorsFromModel'): void
 }>()
-const Live2DScene = defineAsyncComponent(() => import('@proj-airi/stage-ui-live2d').then(m => m.Live2DScene))
-const ThreeScene = defineAsyncComponent(() => import('@proj-airi/stage-ui-three').then(m => m.ThreeScene))
-const SpineScene = defineAsyncComponent(() => import('@proj-airi/stage-ui-spine').then(m => m.SpineScene))
-const MMDScene = defineAsyncComponent(() => import('@proj-airi/stage-ui-mmd').then(m => m.MMDScene))
+const Live2DScene = defineAsyncComponent(() => import('@proj-anima/stage-ui-live2d').then(m => m.Live2DScene))
+const ThreeScene = defineAsyncComponent(() => import('@proj-anima/stage-ui-three').then(m => m.ThreeScene))
+const SpineScene = defineAsyncComponent(() => import('@proj-anima/stage-ui-spine').then(m => m.SpineScene))
+const MMDScene = defineAsyncComponent(() => import('@proj-anima/stage-ui-mmd').then(m => m.MMDScene))
 
 const Live2D = defineAsyncComponent(() => import('./live2d.vue'))
 const VRM = defineAsyncComponent(() => import('./vrm.vue'))

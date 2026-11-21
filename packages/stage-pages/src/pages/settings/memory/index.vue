@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { estimateTokens } from '@proj-airi/stage-shared'
+import { estimateTokens } from '@proj-anima/stage-shared'
 import {
   useAiriCardStore,
   useShortTermMemoryStore,
   useTextJournalStore,
-} from '@proj-airi/stage-ui/stores'
-import { useMemoryLifetimeStore } from '@proj-airi/stage-ui/stores/memory-lifetime'
+} from '@proj-anima/stage-ui/stores'
+import { useMemoryLifetimeStore } from '@proj-anima/stage-ui/stores/memory-lifetime'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 

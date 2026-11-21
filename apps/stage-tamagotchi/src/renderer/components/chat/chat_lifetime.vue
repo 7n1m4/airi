@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import LifetimeMemoryView from '@proj-airi/stage-pages/pages/settings/modules/components/LifetimeMemoryView.vue'
+import LifetimeMemoryView from '@proj-anima/stage-pages/pages/settings/modules/components/LifetimeMemoryView.vue'
 </script>
 
 <template>

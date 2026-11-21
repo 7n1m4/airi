@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { CharacterCueAllowlist } from '@proj-airi/stage-ui/types/card.schema'
+import type { CharacterCueAllowlist } from '@proj-anima/stage-ui/types/card.schema'
 
-import { extractTokensFromPrompt } from '@proj-airi/stage-ui/composables'
+import { extractTokensFromPrompt } from '@proj-anima/stage-ui/composables'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'

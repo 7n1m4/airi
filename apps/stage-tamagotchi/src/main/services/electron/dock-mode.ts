@@ -1,9 +1,9 @@
 import type { createContext } from '@moeru/eventa/adapters/electron/main'
-import type { DockModeConfig, DockModeStatus, DockPosition, TargetWindowBounds } from '@proj-airi/electron-eventa'
+import type { DockModeConfig, DockModeStatus, DockPosition, TargetWindowBounds } from '@proj-anima/electron-eventa'
 import type { BrowserWindow } from 'electron'
 
 import { defineInvokeHandler } from '@moeru/eventa'
-import { dockModeStatusChanged, dockModeTargetBounds, electron } from '@proj-airi/electron-eventa'
+import { dockModeStatusChanged, dockModeTargetBounds, electron } from '@proj-anima/electron-eventa'
 
 import { onAppBeforeQuit, onAppWindowAllClosed } from '../../libs/bootkit/lifecycle'
 import { notImplemented } from '../../rpc'

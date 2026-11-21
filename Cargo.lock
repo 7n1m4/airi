@@ -173,289 +173,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "airi-a11y"
-version = "0.1.0"
-dependencies = [
- "dbus",
-]
-
-[[package]]
-name = "airi-acp"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tracing",
-]
-
-[[package]]
-name = "airi-channel"
-version = "0.1.0"
-dependencies = [
- "dirs 5.0.1",
- "local-ip-address",
- "rcgen",
- "rustls",
- "rustls-pemfile",
- "serde",
- "serde_json",
- "specta",
- "specta-serde",
- "specta-typescript",
- "tempfile",
- "thiserror 1.0.69",
- "time",
- "tracing",
-]
-
-[[package]]
-name = "airi-core"
-version = "0.1.0"
-dependencies = [
- "airi-llm",
- "airi-local-llm",
- "airi-store",
- "anyhow",
- "async-trait",
- "base64 0.22.1",
- "dirs 5.0.1",
- "futures-util",
- "mockito",
- "png 0.17.16",
- "reqwest",
- "rusqlite",
- "semver",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "airi-daemon"
-version = "0.1.0"
-dependencies = [
- "airi-a11y",
- "airi-channel",
- "airi-core",
- "airi-slint",
- "airi-store",
- "dbus",
- "dirs 5.0.1",
- "serde",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "airi-discord"
-version = "0.1.0"
-dependencies = [
- "mockito",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tracing",
- "tungstenite 0.24.0",
-]
-
-[[package]]
-name = "airi-i18n"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "phf 0.11.3",
- "serde",
- "serde_yaml",
- "walkdir",
-]
-
-[[package]]
-name = "airi-llm"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-stream",
- "async-trait",
- "bytes",
- "futures-util",
- "mockito",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "airi-local-llm"
-version = "0.1.0"
-dependencies = [
- "airi-llm",
- "anyhow",
- "async-stream",
- "async-trait",
- "futures-util",
- "llama-cpp-2",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "airi-mcp"
-version = "0.1.0"
-dependencies = [
- "mockito",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tracing",
-]
-
-[[package]]
-name = "airi-mmd"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tracing",
- "zip",
-]
-
-[[package]]
-name = "airi-render"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cc",
- "dirs 5.0.1",
- "gltf",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "zip",
-]
-
-[[package]]
-name = "airi-slint"
-version = "0.1.0"
-dependencies = [
- "airi-acp",
- "airi-channel",
- "airi-core",
- "airi-discord",
- "airi-i18n",
- "airi-llm",
- "airi-mcp",
- "airi-mmd",
- "airi-render",
- "airi-speech",
- "airi-store",
- "airi-sync",
- "anyhow",
- "auto-launch",
- "chrono",
- "dbus",
- "dirs 5.0.1",
- "futures-util",
- "global-hotkey",
- "image",
- "notify-rust",
- "rusqlite",
- "serde",
- "serde_json",
- "slint",
- "slint-build",
- "tempfile",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "tray-item",
-]
-
-[[package]]
-name = "airi-speech"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "base64 0.22.1",
- "bytes",
- "dirs 5.0.1",
- "futures-util",
- "hmac 0.12.1",
- "mockito",
- "ort",
- "reqwest",
- "rodio",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "airi-store"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "dirs 5.0.1",
- "rusqlite",
- "serde",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "airi-stt"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "bytes",
- "cpal 0.18.2",
- "dirs 5.0.1",
- "futures-util",
- "mockito",
- "ort",
- "reqwest",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 1.0.69",
- "tokio",
- "tokio-tungstenite",
- "tracing",
- "whisper-rs",
-]
-
-[[package]]
-name = "airi-sync"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 1.0.69",
- "tracing",
-]
-
-[[package]]
 name = "aligned"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -548,6 +265,289 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae221649c9976a6f6c56ae1facf410f3ddb33cc661c4b7b61020a912d4237fbc"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "anima-a11y"
+version = "0.1.0"
+dependencies = [
+ "dbus",
+]
+
+[[package]]
+name = "anima-acp"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
+name = "anima-channel"
+version = "0.1.0"
+dependencies = [
+ "dirs 5.0.1",
+ "local-ip-address",
+ "rcgen",
+ "rustls",
+ "rustls-pemfile",
+ "serde",
+ "serde_json",
+ "specta",
+ "specta-serde",
+ "specta-typescript",
+ "tempfile",
+ "thiserror 1.0.69",
+ "time",
+ "tracing",
+]
+
+[[package]]
+name = "anima-core"
+version = "0.1.0"
+dependencies = [
+ "anima-llm",
+ "anima-local-llm",
+ "anima-store",
+ "anyhow",
+ "async-trait",
+ "base64 0.22.1",
+ "dirs 5.0.1",
+ "futures-util",
+ "mockito",
+ "png 0.17.16",
+ "reqwest",
+ "rusqlite",
+ "semver",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "anima-daemon"
+version = "0.1.0"
+dependencies = [
+ "anima-a11y",
+ "anima-channel",
+ "anima-core",
+ "anima-slint",
+ "anima-store",
+ "dbus",
+ "dirs 5.0.1",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "anima-discord"
+version = "0.1.0"
+dependencies = [
+ "mockito",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+ "tungstenite 0.24.0",
+]
+
+[[package]]
+name = "anima-i18n"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "phf 0.11.3",
+ "serde",
+ "serde_yaml",
+ "walkdir",
+]
+
+[[package]]
+name = "anima-llm"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "async-trait",
+ "bytes",
+ "futures-util",
+ "mockito",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "anima-local-llm"
+version = "0.1.0"
+dependencies = [
+ "anima-llm",
+ "anyhow",
+ "async-stream",
+ "async-trait",
+ "futures-util",
+ "llama-cpp-2",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "anima-mcp"
+version = "0.1.0"
+dependencies = [
+ "mockito",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
+name = "anima-mmd"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+ "zip",
+]
+
+[[package]]
+name = "anima-render"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cc",
+ "dirs 5.0.1",
+ "gltf",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "zip",
+]
+
+[[package]]
+name = "anima-slint"
+version = "0.1.0"
+dependencies = [
+ "anima-acp",
+ "anima-channel",
+ "anima-core",
+ "anima-discord",
+ "anima-i18n",
+ "anima-llm",
+ "anima-mcp",
+ "anima-mmd",
+ "anima-render",
+ "anima-speech",
+ "anima-store",
+ "anima-sync",
+ "anyhow",
+ "auto-launch",
+ "chrono",
+ "dbus",
+ "dirs 5.0.1",
+ "futures-util",
+ "global-hotkey",
+ "image",
+ "notify-rust",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "slint",
+ "slint-build",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "tray-item",
+]
+
+[[package]]
+name = "anima-speech"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "bytes",
+ "dirs 5.0.1",
+ "futures-util",
+ "hmac 0.12.1",
+ "mockito",
+ "ort",
+ "reqwest",
+ "rodio",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "anima-store"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dirs 5.0.1",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "anima-stt"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bytes",
+ "cpal 0.18.2",
+ "dirs 5.0.1",
+ "futures-util",
+ "mockito",
+ "ort",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-tungstenite",
+ "tracing",
+ "whisper-rs",
+]
+
+[[package]]
+name = "anima-sync"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tracing",
 ]
 
 [[package]]

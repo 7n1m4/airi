@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resolveWebSocketUrl, useModsServerChannelStore } from './channel-server'
 
 // Fake Client that never authenticates — drives the 5s auth-timeout safety path.
-vi.mock('@proj-airi/server-sdk', () => {
+vi.mock('@proj-anima/server-sdk', () => {
   class FakeClient {
     constructor(public options: any) {}
     close() {}

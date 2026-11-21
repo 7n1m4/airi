@@ -1,7 +1,7 @@
 import type { HackerAdapter } from './adapters/types'
 import type { useHackerStudio } from './composables/use-hacker-studio'
 
-import { useSpineHackerRuntime } from '@proj-airi/stage-ui-spine'
+import { useSpineHackerRuntime } from '@proj-anima/stage-ui-spine'
 import { effectScope, watch } from 'vue'
 
 import { useSpineHackerAdapter } from './adapters/spine/use-spine-hacker-adapter'

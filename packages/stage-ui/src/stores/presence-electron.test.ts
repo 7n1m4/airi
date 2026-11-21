@@ -1,15 +1,15 @@
-import type * as StageShared from '@proj-airi/stage-shared'
+import type * as StageShared from '@proj-anima/stage-shared'
 
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { resolveAfkThresholdMinutes, usePresenceStore } from './presence'
 
-vi.mock('@proj-airi/electron-vueuse', () => ({
+vi.mock('@proj-anima/electron-vueuse', () => ({
   useElectronEventaInvoke: vi.fn(() => async () => 1000),
 }))
 
-vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
+vi.mock('@proj-anima/stage-shared', async (importOriginal) => {
   const actual = await importOriginal<typeof StageShared>()
   return {
     ...actual,
@@ -141,7 +141,7 @@ describe('presence electron path', () => {
   })
 
   it('os-idle-time returns undefined for non-finite reading', async () => {
-    const ev = await import('@proj-airi/electron-vueuse')
+    const ev = await import('@proj-anima/electron-vueuse')
     vi.mocked(ev.useElectronEventaInvoke).mockReturnValue(() => async () => Number.NaN)
     const presence = usePresenceStore()
     await presence.refreshIdleTimeOnce()

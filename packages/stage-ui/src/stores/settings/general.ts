@@ -1,6 +1,6 @@
-import messages from '@proj-airi/i18n/locales'
+import messages from '@proj-anima/i18n/locales'
 
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { onMounted } from 'vue'
 

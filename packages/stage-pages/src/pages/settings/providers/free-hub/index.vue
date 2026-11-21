@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { FreeAICatalogModel } from '@proj-airi/stage-ui/stores/providers/free-ai-catalog'
+import type { FreeAICatalogModel } from '@proj-anima/stage-ui/stores/providers/free-ai-catalog'
 
-import { useFreeAICatalogStore } from '@proj-airi/stage-ui/stores'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useHearingStore } from '@proj-airi/stage-ui/stores/modules/hearing'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
+import { useFreeAICatalogStore } from '@proj-anima/stage-ui/stores'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useConsciousnessStore } from '@proj-anima/stage-ui/stores/modules/consciousness'
+import { useHearingStore } from '@proj-anima/stage-ui/stores/modules/hearing'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
 import { useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'

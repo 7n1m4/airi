@@ -1,4 +1,4 @@
-import type { SameAccountDevice } from '@proj-airi/stage-shared'
+import type { SameAccountDevice } from '@proj-anima/stage-shared'
 
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'

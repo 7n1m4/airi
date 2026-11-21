@@ -6,7 +6,7 @@ date: 2025-03-06
 
 ## 似曾相识
 
-前一天在开发直播中，我展示了为 AIRI 制作基础动画和过渡效果的进展情况。
+前一天在开发直播中，我展示了为 Anima 制作基础动画和过渡效果的进展情况。
 
 主要目标是将 [@yui540](https://yui540.com/) 的优秀作品移植并适配为可重用的 Vue 组件，
 让任何 Vue 项目都能方便地使用这些精美的动画效果。
@@ -36,7 +36,7 @@ date: 2025-03-06
 
 我尝试了一下，大约有十个提交都在跟 CI/CD 流水线较劲（是的，又一次较劲），但最终还是没能让它正常工作。
 
-今天晚些时候，我研究了一些技术和 DeepSeek 团队一周前发布的[开源仓库](https://github.com/deepseek-ai/open-infra-index)，以及所谓的字节跳动发布的 [LLM 网关 AIBrix](https://github.com/vllm-project/aibrix)。我还在研究新发布和宣布的 Phi-4-mini 是否能够移植供 AIRI 使用，好消息是，[Phi-4-mini](https://techcommunity.microsoft.com/blog/educatordeveloperblog/welcome-to-the-new-phi-4-models---microsoft-phi-4-mini--phi-4-multimodal/4386037) 包含了函数调用能力，这意味着我们终于可以构建具有预训练支持的代理了。
+今天晚些时候，我研究了一些技术和 DeepSeek 团队一周前发布的[开源仓库](https://github.com/deepseek-ai/open-infra-index)，以及所谓的字节跳动发布的 [LLM 网关 AIBrix](https://github.com/vllm-project/aibrix)。我还在研究新发布和宣布的 Phi-4-mini 是否能够移植供 Anima 使用，好消息是，[Phi-4-mini](https://techcommunity.microsoft.com/blog/educatordeveloperblog/welcome-to-the-new-phi-4-models---microsoft-phi-4-mini--phi-4-multimodal/4386037) 包含了函数调用能力，这意味着我们终于可以构建具有预训练支持的代理了。
 
 ## 开发直播
 
@@ -48,7 +48,7 @@ date: 2025-03-06
 
 ![](./assets/live-stream-layout-update.avif)
 
-在今天的开发直播中，我尝试将舞台过渡动画组件集成到 AIRI 网站的主舞台中，过程并不那么顺利，我在之前的动画组件设计中发现了几个问题，不过好消息是我已经修复了这些问题，新的动画过渡效果现在已经在我们的官方部署 [https://airi.moeru.ai](https://airi.moeru.ai) 上可用了。
+在今天的开发直播中，我尝试将舞台过渡动画组件集成到 Anima 网站的主舞台中，过程并不那么顺利，我在之前的动画组件设计中发现了几个问题，不过好消息是我已经修复了这些问题，新的动画过渡效果现在已经在我们的官方部署 [https://airi.moeru.ai](https://airi.moeru.ai) 上可用了。
 
 我最终做出了决定，这源于一些关于模块配置界面和设置页面的随机想法。它们都已实现并上线，现在调整设置时应该会提供更好的感觉，希望你们喜欢。
 

@@ -5,9 +5,9 @@ import type {
   PrimaryController,
   RecommendedSystem,
   ScreenMotionArchitecture,
-} from '@proj-airi/stage-ui/types'
+} from '@proj-anima/stage-ui/types'
 
-import { useArcadeKnowledgeStore } from '@proj-airi/stage-ui/stores'
+import { useArcadeKnowledgeStore } from '@proj-anima/stage-ui/stores'
 import { computed, onMounted, ref, watch } from 'vue'
 
 const props = defineProps<{

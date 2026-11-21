@@ -3,8 +3,8 @@ import type { Display } from 'electrobun/main'
 import type { BrowserWindow, Point } from 'electron'
 
 import { defineInvokeHandler } from '@moeru/eventa'
-import { cursorScreenPoint, startLoopGetCursorScreenPoint } from '@proj-airi/electron-eventa'
-import { createRendererLoop } from '@proj-airi/electron-vueuse/main'
+import { cursorScreenPoint, startLoopGetCursorScreenPoint } from '@proj-anima/electron-eventa'
+import { createRendererLoop } from '@proj-anima/electron-vueuse/main'
 import { Screen } from 'electrobun/main'
 
 import { electron } from '../../../shared/eventa'

@@ -6,9 +6,9 @@ import {
   executeSearchTextJournalEntries,
   executeTextJournalAction,
   textJournalParams,
-} from '@proj-airi/stage-ui/stores'
+} from '@proj-anima/stage-ui/stores'
 
-export type { TextJournalEvidenceItem } from '@proj-airi/stage-ui/stores'
+export type { TextJournalEvidenceItem } from '@proj-anima/stage-ui/stores'
 export {
   createTextJournalTool,
   executeCreateTextJournalEntry,

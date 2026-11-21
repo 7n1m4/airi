@@ -1,4 +1,4 @@
-import { neutralPose } from '@proj-airi/model-driver-magic-live2d'
+import { neutralPose } from '@proj-anima/model-driver-magic-live2d'
 import { describe, expect, it } from 'vitest'
 
 import { applyLive2DMotionViewTarget, defaultLive2DMotionViewTargetState } from './view-target'

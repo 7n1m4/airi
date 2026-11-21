@@ -12,7 +12,7 @@ import type {
   Nan0ReasoningRequest,
   Nan0StateStore,
   Nan0SystemOneProvider,
-} from '@proj-airi/nan0-runtime'
+} from '@proj-anima/nan0-runtime'
 
 import type { CoreMood, MoodState } from '../../types/mood'
 
@@ -24,8 +24,8 @@ import {
   Nan0Kernel,
   Nan0SubconsciousShadowEngine,
   SystemNan0Clock,
-} from '@proj-airi/nan0-runtime'
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
+} from '@proj-anima/nan0-runtime'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
 import { useBroadcastChannel } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, toRaw, watch } from 'vue'

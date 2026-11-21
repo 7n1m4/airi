@@ -79,7 +79,7 @@ the user is appropriate before any TTS/LLM output is produced.
 
 ## Verification
 
-- `pnpm -F @proj-airi/stage-ui typecheck` for any store change.
+- `pnpm -F @proj-anima/stage-ui typecheck` for any store change.
 - Watch `[Proactivity] Sensor tick -> Idle: Ns` debug output to confirm the 10s poll loop.
 - Confirm the loop pauses when `isProactivityLoopNeeded` is false and resumes when true.
 - Drive a heartbeat and assert silence logs `AI decided to remain silent via NO_REPLY

@@ -40,7 +40,7 @@ In-memory turn history + durable session metadata/index. The session store is bo
 
 ## Verification
 
-`pnpm -F @proj-airi/stage-ui typecheck`; runtime: create/fork/switch sessions in Settings → Parallel Timelines and confirm `local:chat/*` writes in DevTools.
+`pnpm -F @proj-anima/stage-ui typecheck`; runtime: create/fork/switch sessions in Settings → Parallel Timelines and confirm `local:chat/*` writes in DevTools.
 
 ## Sources
 

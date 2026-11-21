@@ -6,10 +6,10 @@ import {
   ProviderBasicSettings,
   ProviderSettingsContainer,
   ProviderSettingsLayout,
-} from '@proj-airi/stage-ui/components'
-import { DEFAULT_LOCAL_VISION_MODEL, LOCAL_VISION_MODELS } from '@proj-airi/stage-ui/libs/inference/constants'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Button, FieldSelect } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/components'
+import { DEFAULT_LOCAL_VISION_MODEL, LOCAL_VISION_MODELS } from '@proj-anima/stage-ui/libs/inference/constants'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Button, FieldSelect } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

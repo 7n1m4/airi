@@ -97,7 +97,7 @@ async function main() {
   // Step 3: Run the build:mac script
   console.info(`\n🔨 Compiling macOS target bundle...`)
   try {
-    execute('pnpm -F @proj-airi/stage-tamagotchi run build:mac')
+    execute('pnpm -F @proj-anima/stage-tamagotchi run build:mac')
   }
   catch {
     console.error('❌ Build execution failed.')

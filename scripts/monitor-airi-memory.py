@@ -431,7 +431,7 @@ def run_monitor(interval: float, deep: bool, once: bool, as_json: bool, log_file
                 if once:
                     if not as_json:
                         print(f"{C_YELLOW}⚪ AIRI is not currently running.{C_RESET}")
-                        print(f"{C_GRAY}Launch AIRI with 'pnpm -F @proj-airi/stage-tamagotchi dev' or open AIRI.app,{C_RESET}")
+                        print(f"{C_GRAY}Launch AIRI with 'pnpm -F @proj-anima/stage-tamagotchi dev' or open AIRI.app,{C_RESET}")
                         print(f"{C_GRAY}then run without '--once' to start continuous monitoring.{C_RESET}\n")
                     else:
                         print(json.dumps({"running": False, "process_count": 0, "processes": []}, indent=2))

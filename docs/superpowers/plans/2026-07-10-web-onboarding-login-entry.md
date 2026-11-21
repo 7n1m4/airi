@@ -194,7 +194,7 @@ import { createApp, nextTick } from 'vue'
 
 import StepWelcome from './step-welcome.vue'
 
-vi.mock('@proj-airi/ui', async () => {
+vi.mock('@proj-anima/ui', async () => {
   const { defineComponent, h } = await import('vue')
 
   return {
@@ -256,7 +256,7 @@ describe('onboarding welcome step', () => {
 From `D:\Tools\airi`, run:
 
 ```powershell
-& $Node $Pnpm -F '@proj-airi/stage-ui' test:run -- 'src/components/scenarios/dialogs/onboarding/step-welcome.test.ts'
+& $Node $Pnpm -F '@proj-anima/stage-ui' test:run -- 'src/components/scenarios/dialogs/onboarding/step-welcome.test.ts'
 ```
 
 Expected: the custom-action test FAILS because the current component calls `onNext` and has no `onStart` prop.
@@ -337,8 +337,8 @@ Apply the same `:on-welcome-start` binding to the mobile drawer branch.
 - [ ] **Step 6: Run tests and typecheck Stage UI**
 
 ```powershell
-& $Node $Pnpm -F '@proj-airi/stage-ui' test:run -- 'src/components/scenarios/dialogs/onboarding/step-welcome.test.ts'
-& $Node $Pnpm -F '@proj-airi/stage-ui' typecheck
+& $Node $Pnpm -F '@proj-anima/stage-ui' test:run -- 'src/components/scenarios/dialogs/onboarding/step-welcome.test.ts'
+& $Node $Pnpm -F '@proj-anima/stage-ui' typecheck
 ```
 
 Expected: 2 focused tests PASS; Stage UI typecheck exits 0.
@@ -454,7 +454,7 @@ export async function finalizeOnboardingLogin(
 In `apps/stage-web/src/App.vue`:
 
 ```ts
-import { useAuthStore } from '@proj-airi/stage-ui/stores/auth'
+import { useAuthStore } from '@proj-anima/stage-ui/stores/auth'
 ```
 
 ```ts
@@ -495,7 +495,7 @@ Pass it to the dialog:
 In `apps/stage-web/src/pages/auth/callback.vue`, import the onboarding store and helper:
 
 ```ts
-import { useOnboardingStore } from '@proj-airi/stage-ui/stores/onboarding'
+import { useOnboardingStore } from '@proj-anima/stage-ui/stores/onboarding'
 
 import { finalizeOnboardingLogin } from '../../modules/onboarding-login'
 ```
@@ -525,7 +525,7 @@ Error callbacks and failed token exchange continue to return before this functio
 Set-Location 'D:\Tools\airi\apps\stage-web'
 & $Node $Pnpm exec vitest run 'src/modules/onboarding-login.test.ts' --config 'vite.config.ts'
 Set-Location 'D:\Tools\airi'
-& $Node $Pnpm -F '@proj-airi/stage-web' typecheck
+& $Node $Pnpm -F '@proj-anima/stage-web' typecheck
 ```
 
 Expected: all onboarding-login tests PASS; Stage Web typecheck exits 0.
@@ -558,8 +558,8 @@ Expected: both suites PASS with no test failures.
 
 ```powershell
 Set-Location 'D:\Tools\airi'
-& $Node $Pnpm -F '@proj-airi/stage-ui' typecheck
-& $Node $Pnpm -F '@proj-airi/stage-web' typecheck
+& $Node $Pnpm -F '@proj-anima/stage-ui' typecheck
+& $Node $Pnpm -F '@proj-anima/stage-web' typecheck
 ```
 
 Expected: both commands exit 0.
@@ -568,7 +568,7 @@ Expected: both commands exit 0.
 
 ```powershell
 $env:NODE_OPTIONS = '--max-old-space-size=4096'
-& $Node $Pnpm -F '@proj-airi/stage-web' build
+& $Node $Pnpm -F '@proj-anima/stage-web' build
 rg -n 'api\.airi\.build' 'apps/stage-web/dist'
 ```
 
@@ -579,7 +579,7 @@ Expected: Vite production build exits 0; `rg` exits 1 because generated output c
 Start the Stage Web dev server on an unused port and keep it running:
 
 ```powershell
-& $Node $Pnpm -F '@proj-airi/stage-web' dev --host 127.0.0.1 --port 4173
+& $Node $Pnpm -F '@proj-anima/stage-web' dev --host 127.0.0.1 --port 4173
 ```
 
 In a fresh desktop browser context:

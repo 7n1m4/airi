@@ -11,7 +11,7 @@ shell:
   previous: Quay lại
   next: Tiếp tục
   skip: Thiết lập sau
-  brand: Thiết lập Bạn đồng hành AIRI
+  brand: Thiết lập Bạn đồng hành Anima
   stageReady: Sân khấu đã sẵn sàng
   closeSetup: Đóng thiết lập (Lưu lại sau)
   placeholderNotice: Mô-đun này đang được cấu hình. Bạn có thể chuyển sang bước tiếp theo.
@@ -19,7 +19,7 @@ steps:
   welcome:
     label: Chào mừng
     subtitle: Studio người bạn đồng hành riêng tư
-    heroTitle: Chào mừng đến với AIRI
+    heroTitle: Chào mừng đến với Anima
     heroSubtitle: Sân khấu dành riêng cho bạn đồng hành của bạn — hoàn tất trong vài
       phút, 100% riêng tư trên máy của bạn.
     companionQuote: Xin chào! Mình là người bạn đồng hành số tự quản của bạn. Cho dù
@@ -37,13 +37,13 @@ steps:
     dialog:
       savedTitle: Đã lưu thiết lập
       savedDescription: 'Bạn có thể mở lại thiết lập bạn đồng hành bất kỳ lúc nào qua
-        biểu tượng AIRI trên thanh menu macOS hoặc khay hệ thống:'
+        biểu tượng Anima trên thanh menu macOS hoặc khay hệ thống:'
       trayItem: Thiết lập & Đăng nhập bạn đồng hành (V3)
       continue: Tiếp tục thiết lập
       closeToTray: Thu nhỏ vào khay
       close: Close
       comebackLead: If you want to come back to this later, just
-      desktopInstruction: right-click the AIRI system tray icon and click Companion Wizard.
+      desktopInstruction: right-click the Anima system tray icon and click Companion Wizard.
       webInstruction: tap the cog icon in the top-right to open Settings, then go
         Guided Tours → Companion Wizard.
       webSettingsPath: Settings → Guided Tours → Companion Wizard
@@ -62,7 +62,7 @@ steps:
       badge: Ưu tiên nội bộ
       action: Tiếp tục trên máy
     stepBadge: Phân loại kiến trúc · Bước {current} / {total}
-    companionGreeting: Chào mừng bạn đến với AIRI! Hãy chọn cách bạn muốn thiết lập
+    companionGreeting: Chào mừng bạn đến với Anima! Hãy chọn cách bạn muốn thiết lập
       sân khấu của mình. Bạn có thể chạy hoàn toàn cục bộ ngoại tuyến hoặc đăng
       nhập để đồng bộ hóa trên nhiều thiết bị.
     local:
@@ -84,7 +84,7 @@ steps:
       điểm nhấn đặc trưng của bạn.
     languageSection:
       title: Ngôn ngữ hiển thị
-      description: Chọn ngôn ngữ chính cho AIRI. Bạn có thể thay đổi bất cứ lúc nào.
+      description: Chọn ngôn ngữ chính cho Anima. Bạn có thể thay đổi bất cứ lúc nào.
     themeSection:
       title: Chế độ chủ đề
       description: Chọn chế độ hiển thị bạn yêu thích.
@@ -152,7 +152,7 @@ steps:
       earth: Đất & Cây cối
       ocean: Đại dương & Bầu trời
       royal: Hoàng gia & Hoa
-    resetToSignatureAiriCyan: Đặt lại thành cyan đặc trưng của AIRI
+    resetToSignatureAiriCyan: Đặt lại thành cyan đặc trưng của Anima
     preventsRemoteCloudSyncFromOverwritingThisMachineSLanguageAndTheme: Ngăn chặn đồng bộ đám mây từ xa ghi đè ngôn ngữ và chủ đề của máy này
     nextHint: Tiếp tục đến Kiểu trải nghiệm
   experience:
@@ -446,7 +446,7 @@ steps:
     description: Lựa chọn hoặc tùy chỉnh danh tính nền tảng, thói quen ăn nói và câu
       chuyện của bạn đồng hành.
     presetCards:
-      airi: AIRI (Linh hồn tự quản mặc định)
+      airi: Anima (Linh hồn tự quản mặc định)
       custom: Thẻ nhân vật tùy chỉnh
       import: Nhập thẻ nhân vật (PNG / JSON)
     characterName: Tên bạn đồng hành
@@ -963,7 +963,7 @@ steps:
       optional: Tùy chọn / Đã bỏ qua
       actionRequired: Cần thiết lập
     greetingCard: Xem trước lời chào mở màn (Lượt 0)
-    launchButton: Khởi chạy Sân khấu AIRI
+    launchButton: Khởi chạy Sân khấu Anima
     launching: Đang khởi động sân khấu...
 quickStart:
   title: Bắt đầu nhanh trong 60 giây

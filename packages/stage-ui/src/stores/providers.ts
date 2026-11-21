@@ -9,7 +9,7 @@ import type {
   VoiceProfile,
 } from './providers/types'
 
-import { detectWebGPU } from '@proj-airi/stage-shared/webgpu'
+import { detectWebGPU } from '@proj-anima/stage-shared/webgpu'
 import { useLocalStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'

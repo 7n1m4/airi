@@ -19,7 +19,7 @@ import { nextTick } from 'vue'
  * `lastError`, and the deep watcher over the four config refs does not turn an
  * IPC echo back into another round trip.
  *
- * `@proj-airi/electron-vueuse` is the only boundary mocked: it is the seam that
+ * `@proj-anima/electron-vueuse` is the only boundary mocked: it is the seam that
  * turns an eventa descriptor into a callable, and a real Electron window cannot
  * exist in this runner. Everything above it — the store, its guards, its
  * watchers and its pending bookkeeping — runs for real, and `window` is set up
@@ -32,7 +32,7 @@ const h = vi.hoisted(() => ({
   payloads: [] as Array<{ id: string, payload: Record<string, unknown> }>,
 }))
 
-vi.mock('@proj-airi/electron-vueuse', () => ({
+vi.mock('@proj-anima/electron-vueuse', () => ({
   useElectronEventaContext: () => ({ value: undefined }),
   useElectronEventaInvoke: (invoke: { receiveEvent?: { id?: string } }) => {
     const id = invoke?.receiveEvent?.id ?? 'unknown'

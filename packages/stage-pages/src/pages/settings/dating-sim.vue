@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Section } from '@proj-airi/stage-ui/components'
-import { useDatingSimStore } from '@proj-airi/stage-ui/stores/dating-sim'
-import { useLLM } from '@proj-airi/stage-ui/stores/llm'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Button } from '@proj-airi/ui'
+import { Section } from '@proj-anima/stage-ui/components'
+import { useDatingSimStore } from '@proj-anima/stage-ui/stores/dating-sim'
+import { useLLM } from '@proj-anima/stage-ui/stores/llm'
+import { useConsciousnessStore } from '@proj-anima/stage-ui/stores/modules/consciousness'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Button } from '@proj-anima/ui'
 import { ref } from 'vue'
 
 const datingSimStore = useDatingSimStore()

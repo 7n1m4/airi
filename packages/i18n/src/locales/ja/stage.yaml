@@ -1,7 +1,7 @@
 chat:
   message:
     character-name:
-      airi: AIRI
+      airi: Anima
       core-system: コアシステム
       you: あなた
     reasoning_only: モデルは推論応答（思考プロセスのメッセージ）のみを生成しました。表示される応答を生成するのに十分なスペースがLLMにあるか、最大トークン数を確認してください。

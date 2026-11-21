@@ -9,7 +9,7 @@
 import type { GpuExecutor } from './gpu-executor'
 import type { GPUResourceCoordinator } from './gpu-resource-coordinator'
 
-import { getCachedWebGPUCapabilities } from '@proj-airi/stage-shared/webgpu'
+import { getCachedWebGPUCapabilities } from '@proj-anima/stage-shared/webgpu'
 
 import { MODEL_NAMES } from './constants'
 import { createGpuExecutor } from './gpu-executor'

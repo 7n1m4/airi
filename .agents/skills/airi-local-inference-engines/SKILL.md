@@ -93,9 +93,9 @@ In Electron or multi-tab web, each BrowserWindow or tab possesses an isolated V8
 
 ## 5. Verification Workflows
 
-- **Inference Suite Tests**: `pnpm -F @proj-airi/stage-ui test run src/libs/inference/`
-- **Search Worker Tests** (mocked worker, dim-agnostic): `pnpm -F @proj-airi/stage-ui test run src/libs/search/`
-- **Typecheck**: `pnpm -F @proj-airi/stage-ui typecheck`
+- **Inference Suite Tests**: `pnpm -F @proj-anima/stage-ui test run src/libs/inference/`
+- **Search Worker Tests** (mocked worker, dim-agnostic): `pnpm -F @proj-anima/stage-ui test run src/libs/search/`
+- **Typecheck**: `pnpm -F @proj-anima/stage-ui typecheck`
 - **Hardware Check**: Test WebGPU availability in DevTools console via `navigator.gpu.requestAdapter()`.
 
 ### Authoritative Design & Architecture Documents

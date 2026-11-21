@@ -62,7 +62,7 @@ v0.7 のリリースとこの DevLog の公開に伴い、
 
 ### デスクトップ版
 
-Tamagotchi は AIRI デスクトップ版の名前です。
+Tamagotchi は Anima デスクトップ版の名前です。
 独立した、常に実行されているコンパニオンとしてデスクトップ上で実行でき、
 作業を妨げることなく他のアプリケーションと一緒に動作します。
 
@@ -97,7 +97,7 @@ OBS (Open Broadcaster Software) を使用してストリーミングする場合
 モデルウィンドウは常に透明な背景を持つ最小化されたウィンドウになり、
 OBS や他のストリーミングキャプチャドライバーが**バックグラウンドで**キャプチャします。
 
-VTuber ストリーミングに AIRI を使用する場合、ホバーフェード機能を使用しなくても問題ありませんが、
+VTuber ストリーミングに Anima を使用する場合、ホバーフェード機能を使用しなくても問題ありませんが、
 仮想コンパニオンとしてデスクトップに常駐させたい場合は、次のことに気付き始めるでしょう：
 
 - モデルウィンドウを常に手前に表示するように設計すると、その下のアプリケーションへのマウスイベントがブロックされます。
@@ -105,12 +105,12 @@ VTuber ストリーミングに AIRI を使用する場合、ホバーフェー�
 - モデルウィンドウの可視性を手動で切り替える必要がある場合、多くの不便が生じます。
   特に作業に集中しているときはそうです。
 
-これが私たちがこのアイデアを思いついた理由です：AIRI のどのキャラクターも、
+これが私たちがこのアイデアを思いついた理由です：Anima のどのキャラクターも、
 マウスがウィンドウの上に止まったときにフェードアウトし、マウスクリックイベントをその下のアプリケーションに渡す機能を作成することです。
 
 私は個人的にこの機能が大好きです。今では、ウィンドウの順序を無効にしたり整理したりすることを心配することなく、
-AIRI のキャラクターと一緒にあらゆるアプリケーションを使用できるからです。
-毎日 AIRI を開発するとき、Web 版でもデスクトップ版でも、
+Anima のキャラクターと一緒にあらゆるアプリケーションを使用できるからです。
+毎日 Anima を開発するとき、Web 版でもデスクトップ版でも、
 常にデスクトップで彼女を開き、ターミナルや VSCode/Cursor と一緒に私に付き添ってもらっています。
 
 **ホバーフェード™**はデスクトップ版で更新した唯一の機能ではありません。
@@ -189,14 +189,14 @@ Windows と Linux 向けに candle ランタイム（CUDA ありとなし）を�
 
 #### オンボーディング
 
-現在、AIRI の設定はかなり複雑であることを私たちは知っています（それでも、他の多くの純粋な Python ベースのものと比較すれば簡単ですが、
+現在、Anima の設定はかなり複雑であることを私たちは知っています（それでも、他の多くの純粋な Python ベースのものと比較すれば簡単ですが、
 それらは構成するためにコード構造を理解する必要があります）。
 
 [Me1td0wn76 (melty kiss)](https://github.com/Me1td0wn76) の貢献のおかげで、
-Web 版にオンボーディングサポートが追加されました。これで、初めて AIRI を使用するときに
+Web 版にオンボーディングサポートが追加されました。これで、初めて Anima を使用するときに
 より良い体験を得ることができます。
 
-彼らは Pull Request がマージされた後、Project AIRI に貢献した経験を共有するためにブログ記事を書きました：[AIRIプロジェクトに参加した話 - YAMA-blog](https://yama-pro.blog/posts/airi/)
+彼らは Pull Request がマージされた後、Project Anima に貢献した経験を共有するためにブログ記事を書きました：[Animaプロジェクトに参加した話 - YAMA-blog](https://yama-pro.blog/posts/airi/)
 
 <img class="light" src="/en/blog/DevLog-2025.08.05/assets/airi-demo-onboarding-light.avif" alt="オンボーディング ライトモード" />
 <img class="dark" src="/en/blog/DevLog-2025.08.05/assets/airi-demo-onboarding-dark.avif" alt="オンボーディング ダークモード" />
@@ -476,12 +476,12 @@ TL;DR：
 現在、`postinstall` スクリプトはまだ必要ですが、
 依存関係認識を通じてビルド結果をキャッシュする方法を見つけることができれば、多くの冗長なビルドを回避できます。
 ここで `turborepo` がより高速なビルドを実現するのに役立ちます。
-`turborepo` を使用すると、AIRI のビルドに必要な時間が**平均4分から25秒に短縮**されました。
+`turborepo` を使用すると、Anima のビルドに必要な時間が**平均4分から25秒に短縮**されました。
 
 ### Nix をサポート
 
 [@Weathercold (Weathercold)](https://github.com/Weathercold) のおかげで、
-AIRI をビルドするための Nix flake ができました。これはクロスプラットフォーム互換性への素晴らしい追加です。
+Anima をビルドするための Nix flake ができました。これはクロスプラットフォーム互換性への素晴らしい追加です。
 macOS でも動作します。
 
 最終的な Pull Request が nix-pkgs にマージされるのを待っていますが、
@@ -518,11 +518,11 @@ NVIDIA CUDA に依存していたため、ビルドは本当に混乱してお�
 
 > [@sumimakito](https://github.com/sumimakito) に大声で感謝を叫びます。彼女は数え切れないほど多くの素晴らしいことをしてくれました...
 
-- [`@proj-airi/chromatic`](https://github.com/proj-airi/chromatic)（[@sumimakito](https://github.com/sumimakito) 作）
-- [`@proj-airi/unocss-preset-chromatic`](https://github.com/proj-airi/chromatic)（[@sumimakito](https://github.com/sumimakito) 作）
+- [`@proj-anima/chromatic`](https://github.com/proj-airi/chromatic)（[@sumimakito](https://github.com/sumimakito) 作）
+- [`@proj-anima/unocss-preset-chromatic`](https://github.com/proj-airi/chromatic)（[@sumimakito](https://github.com/sumimakito) 作）
 - [`@moeru-ai/jem`](https://github.com/moeru-ai/inventory/tree/main/packages/jem-validator)（[@LemonNekoGH](https://github.com/LemonNekoGH) 作）、統一モデルディレクトリ
 - [`clustr`](https://github.com/sumimakito/clustr)（[@sumimakito](https://github.com/sumimakito) 作）
-- [`@proj-airi/drizzle-orm-browser`](https://github.com/proj-airi/drizzle-orm-browser)（私作）
+- [`@proj-anima/drizzle-orm-browser`](https://github.com/proj-airi/drizzle-orm-browser)（私作）
 
 このバージョンの間に誕生したサイドプロジェクト：
 

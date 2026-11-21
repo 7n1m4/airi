@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSystemOneStore } from '@proj-airi/stage-ui/stores/modules/system-one'
-import { Select } from '@proj-airi/ui/components/form'
+import { useSystemOneStore } from '@proj-anima/stage-ui/stores/modules/system-one'
+import { Select } from '@proj-anima/ui/components/form'
 import { computed } from 'vue'
 
 const props = defineProps<{

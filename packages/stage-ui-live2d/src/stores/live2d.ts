@@ -2,8 +2,8 @@ import type { Live2DModel } from 'pixi-live2d-display/cubism4'
 
 import type { PixiLive2DInternalModel } from '../composables/live2d'
 
-import { debug } from '@proj-airi/stage-shared'
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+import { debug } from '@proj-anima/stage-shared'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { useBroadcastChannel } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, watch } from 'vue'

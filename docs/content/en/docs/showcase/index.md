@@ -4,7 +4,7 @@ import { withBase } from 'vitepress'
 
 # Feature Showcase
 
-A visual walkthrough of everything this fork adds to Project AIRI. Click any feature card to explore comprehensive screenshots, technical architectures, and live interaction surfaces.
+A visual walkthrough of everything this fork adds to Project Anima. Click any feature card to explore comprehensive screenshots, technical architectures, and live interaction surfaces.
 
 ---
 

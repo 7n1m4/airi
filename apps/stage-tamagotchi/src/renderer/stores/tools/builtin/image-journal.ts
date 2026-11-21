@@ -1,10 +1,10 @@
-import type { ResolvedArtistryConfig } from '@proj-airi/stage-ui/stores'
+import type { ResolvedArtistryConfig } from '@proj-anima/stage-ui/stores'
 import type { Tool } from '@xsai/shared-chat'
 
 import z from 'zod'
 
 import { defineInvoke } from '@moeru/eventa'
-import { getElectronEventaContext } from '@proj-airi/electron-vueuse'
+import { getElectronEventaContext } from '@proj-anima/electron-vueuse'
 import {
   resolveArtistryConfigFromStore,
   stageArtistryIntrusion,
@@ -12,7 +12,7 @@ import {
   useArtistryStore,
   useBackgroundStore,
   useChatSessionStore,
-} from '@proj-airi/stage-ui/stores'
+} from '@proj-anima/stage-ui/stores'
 import { tool } from '@xsai/tool'
 
 import { artistryGenerateHeadless, widgetsAdd } from '../../../../shared/eventa'

@@ -1,6 +1,6 @@
-import type { ExternalFriend, Peer, SameAccountDevice, VaultDeviceMap } from '@proj-airi/stage-shared'
+import type { ExternalFriend, Peer, SameAccountDevice, VaultDeviceMap } from '@proj-anima/stage-shared'
 
-import { extractHandleAlias, mergeSameAccountDevices, toVaultDeviceMap } from '@proj-airi/stage-shared'
+import { extractHandleAlias, mergeSameAccountDevices, toVaultDeviceMap } from '@proj-anima/stage-shared'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 

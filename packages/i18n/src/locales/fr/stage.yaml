@@ -1,7 +1,7 @@
 chat:
   message:
     character-name:
-      airi: AIRI
+      airi: Anima
       core-system: Système central
       you: Vous
     reasoning_only: Le modèle n'a généré qu'une réponse de raisonnement (message de chaîne de

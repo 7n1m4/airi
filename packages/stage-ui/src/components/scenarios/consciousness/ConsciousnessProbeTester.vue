@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ConsciousnessConfig } from './useConsciousnessConfig'
 
-import { Button } from '@proj-airi/ui'
+import { Button } from '@proj-anima/ui'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{

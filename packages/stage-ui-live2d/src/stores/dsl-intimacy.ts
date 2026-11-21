@@ -6,7 +6,7 @@
  * UI reads it when it needs the normalized (0-100) projection via `dslIntimacyDisplay`.
  */
 
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { defineStore } from 'pinia'
 import { computed } from 'vue'
 

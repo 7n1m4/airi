@@ -10,7 +10,7 @@ The Control Island is a floating UI component designed for the AIRI desktop envi
 ## Layout & Interaction
 - Located at the **bottom-right** of the screen.
 - Collapsed by default, showing only the expand/collapse trigger and a drag handle.
-- Uses `@proj-airi/electron-vueuse` for window interaction (dragging, mouse transparency, always-on-top).
+- Uses `@proj-anima/electron-vueuse` for window interaction (dragging, mouse transparency, always-on-top).
 - Supports "Fade on Hover" to prevent obscuring the model when handled by the user.
 
 ## Button Set Catalog

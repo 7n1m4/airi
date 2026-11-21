@@ -15,7 +15,7 @@ Deployment surface map for shipping AIRI. Desktop releases are manual + script-a
 | Windows | `stage-tamagotchi` | `AIRI-<ver>.exe` + `.zip` (portable) | Local: `pnpm run release:win` (fork `dasilva333/airi`) |
 | macOS | `stage-tamagotchi` | `AIRI-<ver>.dmg` (arm64 + x64) | Local: `pnpm run release:mac` (notarized) |
 | Linux | `stage-tamagotchi` | `.deb`, `.rpm`, `.flatpak` (x64 + arm64) | CI only (`release-linux-desktop.yml`, incl. Flatpak via flathub SDK) |
-| Mobile (planned) | unified Rust native app (`crates/airi-slint`) | TBD | Purged 2026-11-13; see `docs/proposal-unified-rust-native-app.md` |
+| Mobile (planned) | unified Rust native app (`crates/anima-slint`) | TBD | Purged 2026-11-13; see `docs/proposal-unified-rust-native-app.md` |
 | Web & Docs | `stage-web` / `docs` | static sites | `deploy-frontends.yml` → GitHub Pages (`/airi/` & `/airi/web-stage/`) |
 | Edge relay | `apps/stage-edge` | Cloudflare Worker (per-user) | Built into users' accounts via OAuth PKCE during onboarding; see `airi-cloud-relay-infrastructure` skill |
 
@@ -39,7 +39,7 @@ Canonical references: **`docs/content/en/docs/contributing/windows-release-guide
    - `publish-mac.js` automatically dispatches the `Release: Linux Desktop` workflow (`release-linux-desktop.yml`) on GitHub Actions right after uploading macOS assets, enabling concurrent cloud compilation of Linux x64/arm64 packages while the user transitions to Windows.
    - `publish-win.js` automatically runs release asset verification (`node scripts/github/ci-status.mjs --release`) after uploading Windows binaries to confirm all 14 cross-platform assets are attached.
    - Both scripts: `git -c http.sslVerify=false pull && fetch --tags --force`, warn if version date-stamp ≠ today (multi-machine drift: someone forgot to push), physical `node_modules` override cleanup (discord.js/undici/ws etc. copied packages removed before Vite bundling), `NODE_OPTIONS=--max-old-space-size=12288`, `GH_SSL_NO_VERIFY=true`, `GITHUB_TOKEN` deleted so `gh` falls back to keyring auth, artifact discovery (`AIRI-<ver>*.exe|zip` / `.dmg`), release creation/upload to `--repo dasilva333/airi --clobber` using `release-notes.md` if present.
-5. **Manual fallback:** `pnpm -F @proj-airi/stage-tamagotchi run build:win|build:mac`, then `GITHUB_TOKEN="" GH_SSL_NO_VERIFY="true" gh release upload [tag] <artifact> --repo dasilva333/airi --clobber`.
+5. **Manual fallback:** `pnpm -F @proj-anima/stage-tamagotchi run build:win|build:mac`, then `GITHUB_TOKEN="" GH_SSL_NO_VERIFY="true" gh release upload [tag] <artifact> --repo dasilva333/airi --clobber`.
 
 ### Windows-specific
 - Always ship the portable `.zip` alongside the `.exe` (WDAC/AppLocker/SmartScreen blocks unsigned installers). CLI error "An Application Control policy has blocked this file" → advise Properties→Unblock, `Unblock-File`, admin run, or the zip.
@@ -98,7 +98,7 @@ The Capacitor app `apps/stage-pocket` was **purged** (web tech on mobile rejecte
  ## Verification
 
  - Desktop local release: the publish scripts re-verify tag/artifact existence themselves; a successful run ends with the GitHub release URL printed and the artifacts visible there.
- - Build-only validation without release: `pnpm run release:win --build-only` (smoke test window), or `pnpm -F @proj-airi/stage-tamagotchi run build:win|build:mac` for compile-level confidence. Typecheck/build per the `airi-codebase-verification` skill before any push.
+ - Build-only validation without release: `pnpm run release:win --build-only` (smoke test window), or `pnpm -F @proj-anima/stage-tamagotchi run build:win|build:mac` for compile-level confidence. Typecheck/build per the `airi-codebase-verification` skill before any push.
  - Mobile: no channel exists — state this explicitly when asked to cut a mobile release.
  - After any file modification: `git status` and report open/unstaged files verbatim.
 

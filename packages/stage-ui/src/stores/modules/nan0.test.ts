@@ -1,6 +1,6 @@
-import type { Nan0Observation, Nan0ReasoningClient } from '@proj-airi/nan0-runtime'
+import type { Nan0Observation, Nan0ReasoningClient } from '@proj-anima/nan0-runtime'
 
-import { InMemoryStateStore, Nan0Kernel, SystemNan0Clock } from '@proj-airi/nan0-runtime'
+import { InMemoryStateStore, Nan0Kernel, SystemNan0Clock } from '@proj-anima/nan0-runtime'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
@@ -11,8 +11,8 @@ let mockIsTamagotchi = false
 const mockBroadcastPost = vi.fn()
 let mockBroadcastShouldThrow: Error | null = null
 
-vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
-  const mod = await importOriginal<typeof import('@proj-airi/stage-shared')>()
+vi.mock('@proj-anima/stage-shared', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@proj-anima/stage-shared')>()
   return {
     ...mod,
     isStageTamagotchi: () => mockIsTamagotchi,

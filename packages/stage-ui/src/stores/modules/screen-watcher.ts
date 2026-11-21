@@ -1,6 +1,6 @@
 import type { ScreenWatchingConfig } from './airi-card'
 
-import { isWithinSchedule } from '@proj-airi/stage-shared'
+import { isWithinSchedule } from '@proj-anima/stage-shared'
 import { nanoid } from 'nanoid'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, onUnmounted, ref, toRaw, watch } from 'vue'

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ExperienceArchetypeId, ModuleBundleConfig } from '../stores/useOnboardingV3Draft'
 
-import { Button } from '@proj-airi/ui'
+import { Button } from '@proj-anima/ui'
 import {
   TooltipContent,
   TooltipPortal,

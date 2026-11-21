@@ -141,7 +141,7 @@ describe('Simplified Chinese web localization', () => {
 Run:
 
 ```powershell
-& $corepack pnpm --filter @proj-airi/stage-layouts exec vitest run src/localization/web-localization.test.ts
+& $corepack pnpm --filter @proj-anima/stage-layouts exec vitest run src/localization/web-localization.test.ts
 ```
 
 Expected: FAIL；第一项测试列出 84 个中文缺失键，主要位于 `settings.pages.modules`、`settings.dialogs.onboarding`、`settings.pages.data`、`settings.chat` 和 `settings.pages.chat`。
@@ -189,7 +189,7 @@ chat:
 Run:
 
 ```powershell
-& $corepack pnpm --filter @proj-airi/stage-layouts exec vitest run src/localization/web-localization.test.ts
+& $corepack pnpm --filter @proj-anima/stage-layouts exec vitest run src/localization/web-localization.test.ts
 git diff --check
 git add packages/stage-layouts/package.json packages/stage-layouts/src/localization/web-localization.test.ts packages/i18n/src/locales/zh-Hans/settings.yaml packages/i18n/src/locales/zh-Hans/stage.yaml
 git commit -m "test(i18n): require Chinese web message coverage"
@@ -243,7 +243,7 @@ it('does not leave referenced user-facing sentences identical to English', () =>
 Run:
 
 ```powershell
-& $corepack pnpm --filter @proj-airi/stage-layouts exec vitest run src/localization/web-localization.test.ts
+& $corepack pnpm --filter @proj-anima/stage-layouts exec vitest run src/localization/web-localization.test.ts
 ```
 
 Expected: FAIL；列出 Provider 分类说明、连接说明、模型设置、账户危险操作等仍为英文的可见键。
@@ -272,7 +272,7 @@ Provider 名称、模型名、OpenAI、OpenRouter、AWS、WebSocket、API、URL�
 Run:
 
 ```powershell
-& $corepack pnpm --filter @proj-airi/stage-layouts exec vitest run src/localization/web-localization.test.ts
+& $corepack pnpm --filter @proj-anima/stage-layouts exec vitest run src/localization/web-localization.test.ts
 git diff --check
 git add packages/stage-layouts/src/localization/web-localization.test.ts packages/i18n/src/locales/zh-Hans/settings.yaml packages/i18n/src/locales/zh-Hans/stage.yaml
 git commit -m "fix(i18n): translate referenced Chinese web messages"
@@ -369,7 +369,7 @@ it('does not reintroduce audited English literals in production settings', () =>
 Run:
 
 ```powershell
-& $corepack pnpm --filter @proj-airi/stage-layouts exec vitest run src/localization/web-localization.test.ts
+& $corepack pnpm --filter @proj-anima/stage-layouts exec vitest run src/localization/web-localization.test.ts
 ```
 
 Expected: FAIL；报告上述文件和英文短语。
@@ -404,8 +404,8 @@ const { t } = useI18n()
 Run:
 
 ```powershell
-& $corepack pnpm --filter @proj-airi/stage-layouts exec vitest run src/localization/web-localization.test.ts
-& $corepack pnpm --filter @proj-airi/stage-pages typecheck
+& $corepack pnpm --filter @proj-anima/stage-layouts exec vitest run src/localization/web-localization.test.ts
+& $corepack pnpm --filter @proj-anima/stage-pages typecheck
 git diff --check
 git add packages/i18n/src/locales/en/settings.yaml packages/i18n/src/locales/zh-Hans/settings.yaml packages/stage-layouts/src/localization/web-localization.test.ts packages/stage-pages/src/pages/settings packages/stage-pages/src/pages/v2/settings/providers.vue
 git commit -m "fix(settings): localize core web settings"
@@ -501,9 +501,9 @@ function formatPan(value: number) {
 Run:
 
 ```powershell
-& $corepack pnpm --filter @proj-airi/stage-layouts exec vitest run src/localization/web-localization.test.ts
-& $corepack pnpm --filter @proj-airi/stage-pages typecheck
-& $corepack pnpm --filter @proj-airi/stage-ui typecheck
+& $corepack pnpm --filter @proj-anima/stage-layouts exec vitest run src/localization/web-localization.test.ts
+& $corepack pnpm --filter @proj-anima/stage-pages typecheck
+& $corepack pnpm --filter @proj-anima/stage-ui typecheck
 git diff --check
 git add packages/i18n/src/locales/en/settings.yaml packages/i18n/src/locales/zh-Hans/settings.yaml packages/stage-layouts/src/localization/web-localization.test.ts packages/stage-pages/src/pages/settings/airi-card packages/stage-ui/src/components/scenarios/settings/model-settings
 git commit -m "fix(settings): localize card and model editors"
@@ -641,11 +641,11 @@ memory-and-context-for: '{name} 的记忆与上下文'
 Run:
 
 ```powershell
-& $corepack pnpm --filter @proj-airi/stage-layouts exec vitest run src/localization/web-localization.test.ts
-& $corepack pnpm --filter @proj-airi/i18n typecheck
-& $corepack pnpm --filter @proj-airi/stage-layouts typecheck
-& $corepack pnpm --filter @proj-airi/stage-ui typecheck
-& $corepack pnpm --filter @proj-airi/stage-web typecheck
+& $corepack pnpm --filter @proj-anima/stage-layouts exec vitest run src/localization/web-localization.test.ts
+& $corepack pnpm --filter @proj-anima/i18n typecheck
+& $corepack pnpm --filter @proj-anima/stage-layouts typecheck
+& $corepack pnpm --filter @proj-anima/stage-ui typecheck
+& $corepack pnpm --filter @proj-anima/stage-web typecheck
 git diff --check
 git add packages/i18n/src/locales packages/stage-layouts/src packages/stage-ui/src/components/scenarios/chat packages/stage-ui/src/components/scenarios/dialogs/onboarding apps/stage-web/src/pages/auth/login.vue apps/stage-web/src/pages/settings/characters
 git commit -m "fix(web): localize shared user interface"
@@ -690,13 +690,13 @@ Expected: 输出 `YAML OK`，没有 BOM 或 CRLF 异常。
 Run:
 
 ```powershell
-& $corepack pnpm --filter @proj-airi/stage-layouts exec vitest run src/localization/web-localization.test.ts
-& $corepack pnpm --filter @proj-airi/i18n typecheck
-& $corepack pnpm --filter @proj-airi/stage-pages typecheck
-& $corepack pnpm --filter @proj-airi/stage-layouts typecheck
-& $corepack pnpm --filter @proj-airi/stage-ui typecheck
-& $corepack pnpm --filter @proj-airi/stage-web typecheck
-& $corepack pnpm --filter @proj-airi/stage-web build
+& $corepack pnpm --filter @proj-anima/stage-layouts exec vitest run src/localization/web-localization.test.ts
+& $corepack pnpm --filter @proj-anima/i18n typecheck
+& $corepack pnpm --filter @proj-anima/stage-pages typecheck
+& $corepack pnpm --filter @proj-anima/stage-layouts typecheck
+& $corepack pnpm --filter @proj-anima/stage-ui typecheck
+& $corepack pnpm --filter @proj-anima/stage-web typecheck
+& $corepack pnpm --filter @proj-anima/stage-web build
 ```
 
 Expected: 所有命令退出码为 0，Stage Web 生产构建成功。
@@ -706,7 +706,7 @@ Expected: 所有命令退出码为 0，Stage Web 生产构建成功。
 在后台启动本地 Stage Web，在简体中文下检查：
 
 ```powershell
-$web = Start-Process -FilePath $corepack -ArgumentList @('pnpm', '--filter', '@proj-airi/stage-web', 'dev', '--host', '127.0.0.1') -WindowStyle Hidden -PassThru
+$web = Start-Process -FilePath $corepack -ArgumentList @('pnpm', '--filter', '@proj-anima/stage-web', 'dev', '--host', '127.0.0.1') -WindowStyle Hidden -PassThru
 # 浏览器抽查完成后：
 Stop-Process -Id $web.Id
 ```

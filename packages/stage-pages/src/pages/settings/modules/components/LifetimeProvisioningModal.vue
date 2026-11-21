@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LifetimeProvisioningModal } from '@proj-airi/stage-ui/components'
+import { LifetimeProvisioningModal } from '@proj-anima/stage-ui/components'
 
 const props = withDefaults(defineProps<{
   characterId: string

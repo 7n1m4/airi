@@ -1,4 +1,4 @@
-# @proj-airi/ui
+# @proj-anima/ui
 
 A stylized UI component library built with [Reka UI](https://reka-ui.com/) and [UnoCSS](https://unocss.dev/).
 
@@ -9,10 +9,10 @@ To preview the components, refer to the [`stage-ui`](../stage-ui) package for in
 Install the library:
 
 ```shell
-ni @proj-airi/ui -D # from @antfu/ni, can be installed via `npm i -g @antfu/ni`
-pnpm i @proj-airi/ui -D
-yarn i @proj-airi/ui -D
-npm i @proj-airi/ui -D
+ni @proj-anima/ui -D # from @antfu/ni, can be installed via `npm i -g @antfu/ni`
+pnpm i @proj-anima/ui -D
+yarn i @proj-anima/ui -D
+npm i @proj-anima/ui -D
 ```
 
 This library requires `unocss` with Attributify Mode and a style reset.
@@ -44,7 +44,7 @@ import '@unocss/reset/tailwind.css'
 
 ```vue
 <script setup lang="ts">
-import { Button } from '@proj-airi/ui'
+import { Button } from '@proj-anima/ui'
 </script>
 
 <template>

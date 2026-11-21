@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useTheme } from '@proj-airi/ui'
+import { useTheme } from '@proj-anima/ui'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
 withDefaults(defineProps<{

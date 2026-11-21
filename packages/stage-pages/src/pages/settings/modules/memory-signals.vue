@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { FieldInput } from '@proj-airi/ui'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { FieldInput } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSettingsGeneral, useSettingsTheme } from '@proj-airi/stage-ui/stores/settings'
-import { Button, useTheme } from '@proj-airi/ui'
+import { useSettingsGeneral, useSettingsTheme } from '@proj-anima/stage-ui/stores/settings'
+import { Button, useTheme } from '@proj-anima/ui'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 

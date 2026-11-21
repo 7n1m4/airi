@@ -105,7 +105,7 @@ To prevent the unacceptable operational burden of a Python sidecar (pip dependen
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Native N-API Binding**: Wrapped as a pre-compiled Node native addon (`.node`) distributed via `@proj-airi/edge0-binding` per platform architecture (`win32-x64`, `darwin-arm64`, `linux-x64`).
+1. **Native N-API Binding**: Wrapped as a pre-compiled Node native addon (`.node`) distributed via `@proj-anima/edge0-binding` per platform architecture (`win32-x64`, `darwin-arm64`, `linux-x64`).
 2. **Unified Memory on Apple Silicon**: On macOS, utilizes native Metal unified buffer mapping, achieving near-zero transfer overhead between disk cache and GPU.
 3. **Graceful Fallback**: If running on Web (`apps/stage-web`), Edge0 is masked from the UI, and the runtime cleanly defaults to Tier 1 (MiniCPM-5 2B WebGPU).
 

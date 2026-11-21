@@ -198,7 +198,7 @@ Repository status remained clean after the review. No files were changed and no 
 * The document still does not specify active `AbortController` abortion or queued-promise rejection. Epoch checks stop stale mutations but do not settle callers or necessarily cancel the underlying stream.
 * Late async resource acquisition must recheck the epoch and immediately close the resource if disposal occurred while awaiting.
 * Section 5 still says “Phase 0C Hard Invalidation”; it is now 0D. The baseline also says split before 0B; lifecycle acceptance is now 0C.
-* From the repository root, `pnpm dev` starts `stage-web`, not Electron. Use `pnpm -F @proj-airi/stage-tamagotchi dev`.
+* From the repository root, `pnpm dev` starts `stage-web`, not Electron. Use `pnpm -F @proj-anima/stage-tamagotchi dev`.
 * Replace the 35 developer-machine `file:///Users/...` links with repository-relative links, and refresh Rosetta Stone §16 with the single-dispose rule, async epoch, and 0A–0D taxonomy.
 
 Once those gates are addressed, I would sign off on 0B–0D. The repository was not modified; the worktree is clean, with local `main` two commits behind the fetched `origin/main`.
@@ -277,7 +277,7 @@ Once those gates are addressed, I would sign off on 0B–0D. The repository was 
 * The document still does not specify active `AbortController` abortion or queued-promise rejection. Epoch checks stop stale mutations but do not settle callers or necessarily cancel the underlying stream.
 * Late async resource acquisition must recheck the epoch and immediately close the resource if disposal occurred while awaiting.
 * Section 5 still says “Phase 0C Hard Invalidation”; it is now 0D. The baseline also says split before 0B; lifecycle acceptance is now 0C.
-* From the repository root, `pnpm dev` starts `stage-web`, not Electron. Use `pnpm -F @proj-airi/stage-tamagotchi dev`.
+* From the repository root, `pnpm dev` starts `stage-web`, not Electron. Use `pnpm -F @proj-anima/stage-tamagotchi dev`.
 * Replace the 35 developer-machine `file:///Users/...` links with repository-relative links, and refresh Rosetta Stone §16 with the single-dispose rule, async epoch, and 0A–0D taxonomy.
 
 Once those gates are addressed, I would sign off on 0B–0D. The repository was not modified; the worktree is clean, with local `main` two commits behind the fetched `origin/main`.

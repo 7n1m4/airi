@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { Button } from '@proj-airi/ui'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { Button } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

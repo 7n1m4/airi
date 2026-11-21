@@ -3,7 +3,7 @@
 > **Status**: Draft
 > **Author**: Richard Pinedo
 > **Date**: 2026-06-24
-> **Inspired by**: `airi-plugin-bilibili-laplace`, `airi-plugin-web-extension`
+> **Inspired by**: `airi-plugin-bilibili-laplace`, `anima-plugin-web-extension`
 
 ---
 
@@ -23,8 +23,8 @@ The core infrastructure for this already exists. The plugin protocol, `server-sd
 |---|---|---|
 | `airi-plugin-bilibili-laplace` | Bilibili live stream chat ingest | WIP (stub) |
 | `airi-plugin-homeassistant` | Home Assistant event ingest | WIP (stub) |
-| `airi-plugin-web-extension` | Browser page/video/subtitle context | ✅ Fully implemented |
-| `airi-plugin-claude-code` | Claude Code hook integration | ✅ Functional |
+| `anima-plugin-web-extension` | Browser page/video/subtitle context | ✅ Fully implemented |
+| `anima-plugin-claude-code` | Claude Code hook integration | ✅ Functional |
 
 The Bilibili plugin (`airi-plugin-bilibili-laplace`) was the proof-of-concept for this pattern, establishing that the framework can support live streaming chat as an ambient context source. This proposal formalizes the same design for Twitch.
 
@@ -329,7 +329,7 @@ plugins/
 
 | File | What to study |
 |---|---|
-| [`airi-plugin-web-extension/src/background/client.ts`](../plugins/airi-plugin-web-extension/src/background/client.ts) | Full working example of `Client` usage, `context:update`, `spark:notify` |
+| [`anima-plugin-web-extension/src/background/client.ts`](../plugins/anima-plugin-web-extension/src/background/client.ts) | Full working example of `Client` usage, `context:update`, `spark:notify` |
 | [`packages/server-sdk/src/client.ts`](../packages/server-sdk/src/client.ts) | The `Client` class internals — auth handshake, reconnect, `send()` |
 | [`packages/plugin-protocol/src/types/events.ts`](../packages/plugin-protocol/src/types/events.ts) | All typed events, `ContextUpdate`, `SparkNotifyEvent`, `ModuleConfigSchema` |
 | [`packages/plugin-sdk/src/plugin/define.ts`](../packages/plugin-sdk/src/plugin/define.ts) | `definePlugin()` — the entry point pattern |

@@ -1,11 +1,11 @@
-import type { MathJson } from '@proj-airi/mathjson'
+import type { MathJson } from '@proj-anima/mathjson'
 
-import { chemistry } from '@proj-airi/speech-transformer-chem'
-import { MathSpeech } from '@proj-airi/speech-transformer-math'
+import { chemistry } from '@proj-anima/speech-transformer-chem'
+import { MathSpeech } from '@proj-anima/speech-transformer-math'
 
 /**
  * The formula and chemical speech reader for AIRI.
- * Extends `@proj-airi/speech-transformer-math` with the `chemistry()` extension from `@proj-airi/speech-transformer-chem`.
+ * Extends `@proj-anima/speech-transformer-math` with the `chemistry()` extension from `@proj-anima/speech-transformer-chem`.
  */
 export const mathSpeech = new MathSpeech({ extensions: [chemistry()] })
 

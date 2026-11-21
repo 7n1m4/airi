@@ -1,4 +1,4 @@
-import type { Pose } from '@proj-airi/model-driver-magic-live2d'
+import type { Pose } from '@proj-anima/model-driver-magic-live2d'
 
 import idleCalmProject from './assets/idle-calm.json'
 import speakingExcitedProject from './assets/speaking-excited.json'

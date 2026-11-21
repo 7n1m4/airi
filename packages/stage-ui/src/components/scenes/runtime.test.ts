@@ -14,7 +14,7 @@ describe('shouldRunLive2dLipSyncLoop', () => {
   it('keeps stage mount independent from the experimental DuckDB runtime', () => {
     const source = readFileSync(new URL('./ControlStripHost.vue', import.meta.url), 'utf8')
 
-    expect(source).not.toContain('@proj-airi/drizzle-duckdb-wasm')
+    expect(source).not.toContain('@proj-anima/drizzle-duckdb-wasm')
     expect(source).not.toContain('getImportUrlBundles')
     expect(source).not.toContain('memory_test')
     expect(source).toMatch(/if\s*\(isElectron\.value\)\s*state\.value\s*=\s*['"]mounted['"]/)

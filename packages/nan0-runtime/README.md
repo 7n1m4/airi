@@ -16,14 +16,14 @@ For architectural decisions, deep-dive specifications, and the heuristic-elimina
 
 ```bash
 # Typecheck
-pnpm --filter @proj-airi/nan0-runtime typecheck
+pnpm --filter @proj-anima/nan0-runtime typecheck
 
 # Unit Tests (Hermetic, deterministic, offline via mock System 1 fixtures)
-pnpm --filter @proj-airi/nan0-runtime test
+pnpm --filter @proj-anima/nan0-runtime test
 
 # Headless CLI Test Harness (Interactive REPL or scripted scenarios)
-pnpm --filter @proj-airi/nan0-runtime run harness
-pnpm --filter @proj-airi/nan0-runtime run harness --scenario scripts/fixtures/example-scenario.json
+pnpm --filter @proj-anima/nan0-runtime run harness
+pnpm --filter @proj-anima/nan0-runtime run harness --scenario scripts/fixtures/example-scenario.json
 ```
 
 ## Observability & Diagnostics

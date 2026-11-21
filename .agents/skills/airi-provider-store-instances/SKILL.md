@@ -51,10 +51,10 @@ The multi-instance architecture resolves the "Single-Slot Constraint", allowing 
 
 ## 5. Verification Workflows
 
-- Run the multi-instance test suite: `pnpm -F @proj-airi/stage-ui test src/stores/providers/runtime/instance-store.phase5.test.ts --run`.
+- Run the multi-instance test suite: `pnpm -F @proj-anima/stage-ui test src/stores/providers/runtime/instance-store.phase5.test.ts --run`.
 - Validate `configs` reactivity updates dynamically when creating, editing, or deleting provider instances in the UI.
 - Verify `isValidating`, `isValid`, and `validationMessage` accurately reflect the state in `useProviderValidation`.
-- Run `pnpm -F @proj-airi/stage-ui typecheck` after modifying any provider stores to guarantee interface integrity.
+- Run `pnpm -F @proj-anima/stage-ui typecheck` after modifying any provider stores to guarantee interface integrity.
 
 ### Authoritative Design & Architecture Documents
 

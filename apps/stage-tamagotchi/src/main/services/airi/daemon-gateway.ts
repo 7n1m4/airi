@@ -1,5 +1,5 @@
 /**
- * D-Bus control plane for the Rust gateway daemon (`airi-daemon`,
+ * D-Bus control plane for the Rust gateway daemon (`anima-daemon`,
  * `org.moeru.airi.Daemon1`). Pure Node — no electron imports — so it stays
  * unit-testable and usable from any main-process context.
  *

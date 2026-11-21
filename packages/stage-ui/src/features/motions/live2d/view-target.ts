@@ -1,4 +1,4 @@
-import type { Pose } from '@proj-airi/model-driver-magic-live2d'
+import type { Pose } from '@proj-anima/model-driver-magic-live2d'
 
 /** A fixed view-space target that controls eye direction after motion generation. */
 export interface Live2DMotionViewTargetState {

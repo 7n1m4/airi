@@ -25,15 +25,15 @@ Notes:
 - `spine-cpp-unit-tests`, CMake files and per-runtime READMEs are NOT
   vendored — only `spine-cpp/{include,src}` + licenses.
 
-## C++ API compatibility (airi-render shell)
+## C++ API compatibility (anima-render shell)
 
-The `airi-render` C++ shell (`crates/airi-render/cpp/spine_shell.{h,cpp}`)
+The `anima-render` C++ shell (`crates/anima-render/cpp/spine_shell.{h,cpp}`)
 targets the spine-cpp API as used across 4.1 and 4.2
 (`Atlas`, `SkeletonJson`, `SkeletonBinary`, `SkeletonData`, `Skeleton`,
 `AnimationStateData`, `AnimationState`, `AnimationStateData::defaultMix`,
 `updateWorldTransform`). Skeletons exported by the 4.0 editor use the same
 class surface but with minor signature drift; 4.0 is vendored for reference
-and future enablement, only one runtime line is compiled into `airi-render`
+and future enablement, only one runtime line is compiled into `anima-render`
 at a time (cargo feature `spine-runtime-4-1` | `spine-runtime-4-2`, default
 `4.2`). See `docs/phase-notes/p4-spine.md` for the deviation from the
 JS runtime lazy-loading model and the rationale.

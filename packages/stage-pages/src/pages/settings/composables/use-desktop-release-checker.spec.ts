@@ -9,12 +9,12 @@ import {
 } from './use-desktop-release-checker'
 
 // Mock stage-shared to simulate desktop Electron environment
-vi.mock('@proj-airi/stage-shared', () => ({
+vi.mock('@proj-anima/stage-shared', () => ({
   isStageTamagotchi: () => true,
 }))
 
 // Mock stage-ui composables
-vi.mock('@proj-airi/stage-ui/composables', () => ({
+vi.mock('@proj-anima/stage-ui/composables', () => ({
   useBuildInfo: () => ({
     version: '0.9.32-stable.20260915',
   }),

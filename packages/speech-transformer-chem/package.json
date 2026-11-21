@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/speech-transformer-chem",
+  "name": "@proj-anima/speech-transformer-chem",
   "type": "module",
   "version": "0.12.0-beta.5",
   "private": true,
@@ -33,13 +33,13 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@proj-airi/speech-transformer-math": "workspace:^"
+    "@proj-anima/speech-transformer-math": "workspace:^"
   },
   "dependencies": {
-    "@proj-airi/mathjson": "workspace:^",
+    "@proj-anima/mathjson": "workspace:^",
     "mhchemparser": "catalog:"
   },
   "devDependencies": {
-    "@proj-airi/speech-transformer-math": "workspace:^"
+    "@proj-anima/speech-transformer-math": "workspace:^"
   }
 }

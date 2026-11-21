@@ -25,7 +25,7 @@ const PROFILES = {
   'telegram-modern': {
     name: 'Modern Telegram Integration',
     description: 'In-app Telegram bot engine or Eventa SDK ingestion (excluding legacy sidecar)',
-    signatures: ['grammy', 'telegraf', '@proj-airi/plugin-telegram', 'telegram-bot-api', 'TelegramBot', 'TelegramClient'],
+    signatures: ['grammy', 'telegraf', '@proj-anima/plugin-telegram', 'telegram-bot-api', 'TelegramBot', 'TelegramClient'],
     excludePaths: ['services/telegram/'],
   },
   'browser-ml': {

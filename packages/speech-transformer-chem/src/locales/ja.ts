@@ -1,6 +1,6 @@
 import type { ChemLocale } from '../locale'
 
-import { spellNumber } from '@proj-airi/speech-transformer-math'
+import { spellNumber } from '@proj-anima/speech-transformer-math'
 
 import { compoundNames } from './names-ja'
 

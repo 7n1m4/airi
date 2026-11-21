@@ -2,10 +2,10 @@ import type { Tool } from '@xsai/shared-chat'
 
 import z from 'zod'
 
-import { useCustomVrmAnimationsStore } from '@proj-airi/stage-ui-three'
-import { DisplayModelFormat, useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useTextToMotionStore } from '@proj-airi/stage-ui/stores/modules/text-to-motion'
+import { useCustomVrmAnimationsStore } from '@proj-anima/stage-ui-three'
+import { DisplayModelFormat, useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useTextToMotionStore } from '@proj-anima/stage-ui/stores/modules/text-to-motion'
 import { tool } from '@xsai/tool'
 
 const generateMotionParams = z.object({

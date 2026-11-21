@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { ARTISTRY_PRESET_GROUPS, artistryGenerateHeadless, REPLICATE_IMAGEEDIT_PRESETS } from '@proj-airi/stage-shared'
-import { useModelStore } from '@proj-airi/stage-ui-three'
-import { Button } from '@proj-airi/ui'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { ARTISTRY_PRESET_GROUPS, artistryGenerateHeadless, REPLICATE_IMAGEEDIT_PRESETS } from '@proj-anima/stage-shared'
+import { useModelStore } from '@proj-anima/stage-ui-three'
+import { Button } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 

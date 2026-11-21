@@ -6,8 +6,8 @@ import type {
   SandboxVfsTelemetryProjection,
 } from './types'
 
-import { deriveMood } from '@proj-airi/nan0-runtime'
-import { useDslSnapshotStore, useLive2d } from '@proj-airi/stage-ui-live2d/stores'
+import { deriveMood } from '@proj-anima/nan0-runtime'
+import { useDslSnapshotStore, useLive2d } from '@proj-anima/stage-ui-live2d/stores'
 
 import { useChatSessionStore } from '../../stores/chat/session-store'
 import { useAiriCardStore } from '../../stores/modules/airi-card'

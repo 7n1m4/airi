@@ -178,9 +178,9 @@ Additionally, the chat window's own `sending` ref and `streamingMessage` are per
 ## 7. Verification Plan
 
 **Static:**
-- Store/composable/bar changes: `pnpm -F @proj-airi/stage-ui typecheck`
-- Desktop host: `pnpm -F @proj-airi/stage-tamagotchi typecheck`
-- Layout surfaces (landscape `ChatArea.vue`): `pnpm -F @proj-airi/stage-layouts typecheck`
+- Store/composable/bar changes: `pnpm -F @proj-anima/stage-ui typecheck`
+- Desktop host: `pnpm -F @proj-anima/stage-tamagotchi typecheck`
+- Layout surfaces (landscape `ChatArea.vue`): `pnpm -F @proj-anima/stage-layouts typecheck`
 
 **Runtime matrix (per §9 of the interaction-pipelines skill):**
 1. Type → reply streams → **stop mid-text-stream** → partial text persists, `sending` clears, next message works.
@@ -245,8 +245,8 @@ intermediates (stop that discards partial text, or stops text but lets speech ke
 - `Widgets/ChatArea.vue` (landscape): send button morphs into a red stop button while `sending`.
 - Event ledger: `user-stopped-generation` chat event with a partial-text preview.
 
-**Validation:** `pnpm -F @proj-airi/stage-ui typecheck`, `pnpm -F @proj-airi/stage-layouts typecheck`,
-`pnpm -F @proj-airi/stage-tamagotchi typecheck` — all clean. Runtime matrix (§7) still pending.
+**Validation:** `pnpm -F @proj-anima/stage-ui typecheck`, `pnpm -F @proj-anima/stage-layouts typecheck`,
+`pnpm -F @proj-anima/stage-tamagotchi typecheck` — all clean. Runtime matrix (§7) still pending.
 
 **Known accepted limitations:**
 - Stop clicked within the microsecond window between natural loop-exit and the normal-path finalize hooks

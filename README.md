@@ -9,10 +9,10 @@
     srcset="./docs/content/public/banner-light-1280x640.avif"
     media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
   />
-  <img width="250" src="./docs/content/public/banner-light-1280x640.avif" alt="Project AIRI" />
+  <img width="250" src="./docs/content/public/banner-light-1280x640.avif" alt="Project Anima" />
 </picture>
 
-<h1 align="center">Project AIRI</h1>
+<h1 align="center">Project Anima</h1>
 
 <div align="center">
 <h2>🚧 UNDER CONSTRUCTION 🚧</h2>
@@ -23,7 +23,7 @@
 > [!WARNING]
 > **Status — mid-pivot, not a daily driver.**
 >
-> Project AIRI is pivoting from a desktop-pet app to the agent-runtime core of a personal agentic OS. A long-lived Rust daemon (`airi-daemon`) owns state and hosts the WS/wss gateway (`airi-channel`); every UI (the Electrobun desktop app, the Slint native app, the web stage) is a thin client of it — WS/wss for the data plane, D-Bus for the control plane on Linux.
+> Project Anima is pivoting from a desktop-pet app to the agent-runtime core of a personal agentic OS. A long-lived Rust daemon (`anima-daemon`) owns state and hosts the WS/wss gateway (`anima-channel`); every UI (the Electrobun desktop app, the Slint native app, the web stage) is a thin client of it — WS/wss for the data plane, D-Bus for the control plane on Linux.
 >
 > Docs and code drift. For the current topology, invariants, and threat model read [`docs/design-daemon-gateway.md`](./docs/design-daemon-gateway.md); for where concepts live in the tree read [`docs/rosetta-stone.md`](./docs/rosetta-stone.md). File issues against the fork you actually intend to run.
 
@@ -48,7 +48,7 @@
 
 ## A character, not a collection of features
 
-AIRI is a character runtime.
+Anima is a character runtime.
 
 The character has an identity that can be carried, senses that can be changed, a voice that can be replaced, bodies that can be exchanged, memories that can deepen, and tools that can extend what they are able to do. Those faculties may evolve independently. The character connecting them should remain continuous.
 
@@ -56,7 +56,7 @@ That is the promise of this fork: **one enduring presence across conversations, 
 
 ## The character stack
 
-| Faculty | What AIRI provides |
+| Faculty | What Anima provides |
 |---|---|
 | **Identity** | Portable AIRI Cards, character profiles, generation behavior, acting direction, and per-character configuration |
 | **Continuity** | Short-term memory, long-term journals, lifetime archives, echo chips, timelines, and isolated story universes |
@@ -132,7 +132,7 @@ The complete implementation catalog lives in the [feature report](https://dasilv
 
 ### Character before interface
 
-AIRI should present as somebody, not as a dashboard of AI capabilities. Every surface should strengthen identity, continuity, perception, expression, or agency.
+Anima should present as somebody, not as a dashboard of AI capabilities. Every surface should strengthen identity, continuity, perception, expression, or agency.
 
 ### Continuity before novelty
 
@@ -148,7 +148,7 @@ Characters, conversations, memories, settings, and assets live on the user's mac
 
 ### Daily-driver quality
 
-This fork favors finished, testable paths over indiscriminate accumulation. Upstream changes are reviewed selectively, and work is shaped around an AIRI that can remain present every day.
+This fork favors finished, testable paths over indiscriminate accumulation. Upstream changes are reviewed selectively, and work is shaped around an Anima that can remain present every day.
 
 ---
 
@@ -156,14 +156,14 @@ This fork favors finished, testable paths over indiscriminate accumulation. Upst
 
 > **Your companion belongs to you.**
 
-An AI companion interacts with your most personal thoughts, daily habits, emotional states, and desktop activities. In Project AIRI, **local-first runtime and user custody are non-negotiable architectural requirements**, not marketing afterthoughts.
+An AI companion interacts with your most personal thoughts, daily habits, emotional states, and desktop activities. In Project Anima, **local-first runtime and user custody are non-negotiable architectural requirements**, not marketing afterthoughts.
 
 ### Privacy & Trust Matrix
 
 | Dimension | Architectural Policy & Reality |
 | :--- | :--- |
 | **Telemetry & Analytics** | **0 telemetry.** No analytics scripts, no tracking pixels (no PostHog, Plausible, or Google Analytics), and no error/crash reporting pings. |
-| **Backend & Operators** | **No server operator exists.** There is no Project AIRI database or central relay. The web stage is hosted as static assets via GitHub Pages. |
+| **Backend & Operators** | **No server operator exists.** There is no Project Anima database or central relay. The web stage is hosted as static assets via GitHub Pages. |
 | **Local Storage** | **Local-first.** All cards, chat sessions, journals, memories, assets, and settings live in browser/Electron IndexedDB on your machine. |
 | **Cloud Synchronization** | **Optional & User-Authorized.** Syncs directly to your own Cloudflare infrastructure (Workers, R2, KV) via Cloudflare Access (PKCE). |
 | **Data Custody** | **Cloudflare and you.** The developer holds no keys, tokens, or infrastructure access. Your R2 bucket acts as your private raw backup. |
@@ -190,7 +190,7 @@ An AI companion interacts with your most personal thoughts, daily habits, emotio
         srcset="./docs/content/public/assets/download-buttons/download-buttons.windows.light.en-US.avif"
         media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
       />
-      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.windows.light.en-US.avif" alt="Download AIRI for Windows" />
+      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.windows.light.en-US.avif" alt="Download Anima for Windows" />
     </picture>
   </a>
   <a href="https://github.com/dasilva333/airi/releases/download/v0.9.37-stable.20261008/airi-dasilva333-0.9.37-stable.20261008-darwin-arm64.dmg">
@@ -205,7 +205,7 @@ An AI companion interacts with your most personal thoughts, daily habits, emotio
         srcset="./docs/content/public/assets/download-buttons/download-buttons.macos.light.en-US.avif"
         media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
       />
-      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.macos.light.en-US.avif" alt="Download AIRI for macOS" />
+      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.macos.light.en-US.avif" alt="Download Anima for macOS" />
     </picture>
   </a>
   <a href="https://github.com/dasilva333/airi/releases/latest">
@@ -220,7 +220,7 @@ An AI companion interacts with your most personal thoughts, daily habits, emotio
         srcset="./docs/content/public/assets/download-buttons/download-buttons.linux.light.en-US.avif"
         media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
       />
-      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.linux.light.en-US.avif" alt="Download AIRI for Linux" />
+      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.linux.light.en-US.avif" alt="Download Anima for Linux" />
     </picture>
   </a>
 </p>
@@ -238,7 +238,7 @@ An AI companion interacts with your most personal thoughts, daily habits, emotio
         srcset="./docs/content/public/assets/download-buttons/download-buttons.mobile.light.en-US.avif"
         media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
       />
-      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.mobile.light.en-US.avif" alt="Download AIRI for Android" />
+      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.mobile.light.en-US.avif" alt="Download Anima for Android" />
     </picture>
   </a>
   <a href="https://github.com/dasilva333/airi/releases/download/v0.9.37-stable.20261008/AIRI-0.9.37-stable.20261008-ios.ipa">
@@ -253,7 +253,7 @@ An AI companion interacts with your most personal thoughts, daily habits, emotio
         srcset="./docs/content/public/assets/download-buttons/download-buttons.mobile.light.en-US.avif"
         media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
       />
-      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.mobile.light.en-US.avif" alt="Download AIRI for iOS" />
+      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.mobile.light.en-US.avif" alt="Download Anima for iOS" />
     </picture>
   </a>
   <a href="https://github.com/dasilva333/airi/releases/latest">
@@ -288,7 +288,7 @@ Create or import a character, then choose the faculties that fit them:
 - meet the same character through the desktop stage, chat workspace, the web stage, Discord, or another connected surface
 - export the character and their portable assets instead of leaving them trapped inside one installation
 
-AIRI can be a quiet desktop companion, a voiced character on stage, a creative collaborator, a roleplay partner, or an autonomous presence. The architecture does not force every character into the same shape.
+Anima can be a quiet desktop companion, a voiced character on stage, a creative collaborator, a roleplay partner, or an autonomous presence. The architecture does not force every character into the same shape.
 
 ## Privacy and ownership
 
@@ -301,7 +301,7 @@ This fork is built around a zero-trust relationship with its developer:
 - optional BYOS synchronization through user-selected S3, Cloudflare R2, or Google AppData infrastructure
 - portable AIRI Card import and export
 
-Using a hosted model, speech service, or other external provider still sends the information required for that request to the provider you configure. AIRI makes that dependency selectable; it cannot replace the provider's own privacy terms. Local inference paths are available for users who want to keep more of the stack on-device.
+Using a hosted model, speech service, or other external provider still sends the information required for that request to the provider you configure. Anima makes that dependency selectable; it cannot replace the provider's own privacy terms. Local inference paths are available for users who want to keep more of the stack on-device.
 
 For the storage and synchronization boundaries, see the [Rosetta Stone](./docs/rosetta-stone.md) and [BYOS cloud-sync design](./docs/project-byos-cloud-sync.md).
 
@@ -343,7 +343,7 @@ One-click helper scripts are also included:
 
 | Script | Platform | Purpose |
 |---|---|---|
-| <code>start_airi.bat</code> | Windows | Build packages and launch AIRI; prompts for the development port |
+| <code>start_airi.bat</code> | Windows | Build packages and launch Anima; prompts for the development port |
 | <code>start_airi.sh</code> | macOS/Linux | Unix equivalent with output written to <code>airi.log</code> |
 | <code>start_airi_hiperf.bat</code> | Windows | Use the high-performance GPU and an 8 GB Node heap |
 | <code>start_airi_skipdl.bat</code> | Windows | Launch without downloading assets that are already cached |
@@ -385,7 +385,7 @@ pnpm dev:docs
 
 ## Models, voices, and providers
 
-AIRI supports interchangeable hosted and local services across chat, vision, speech, transcription, image generation, and real-time audio.
+Anima supports interchangeable hosted and local services across chat, vision, speech, transcription, image generation, and real-time audio.
 
 That includes OpenAI-compatible endpoints, OpenRouter, Anthropic, Gemini, DeepSeek, Qwen, xAI, Ollama, vLLM, SGLang, Cloudflare Workers AI, Bedrock, Deepgram, Chatterbox, AWS Polly, Gemini Live, local Whisper and Kokoro, MOSS-TTS-Nano, and WebGPU RWKV-7.
 

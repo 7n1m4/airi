@@ -19,13 +19,13 @@ Rather than acting as a simple file wrapper, the auditor acts as a diagnostic to
 
 ## 🏗️ Architecture & Native Execution
 
-The tool runs in headless Electron mode, setting the app's `userData` directory to `@proj-airi/stage-tamagotchi` so it accesses the exact IndexedDBLevelDB container used by the desktop app:
+The tool runs in headless Electron mode, setting the app's `userData` directory to `@proj-anima/stage-tamagotchi` so it accesses the exact IndexedDBLevelDB container used by the desktop app:
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        Electron Audit Container                        │
 │                                                                        │
-│  app.setPath('userData', '~/.../@proj-airi/stage-tamagotchi')          │
+│  app.setPath('userData', '~/.../@proj-anima/stage-tamagotchi')          │
 │  ensureLocalOriginServer(5173) ──► Serves 127.0.0.1:5173              │
 │  BrowserWindow.loadURL('http://localhost:5173')                        │
 └───────────────────────────────────┬────────────────────────────────────┘

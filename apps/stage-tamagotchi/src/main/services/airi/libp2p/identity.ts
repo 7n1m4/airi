@@ -1,4 +1,4 @@
-import type { MeshIdentityInfo } from '@proj-airi/stage-shared/libp2p'
+import type { MeshIdentityInfo } from '@proj-anima/stage-shared/libp2p'
 
 import type { ConfigDiagnostics } from '../../../libs/electron/persistence'
 

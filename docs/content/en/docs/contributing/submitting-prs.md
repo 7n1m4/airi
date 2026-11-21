@@ -1,4 +1,4 @@
-# Submitting Pull Requests (AIRI)
+# Submitting Pull Requests (Anima)
 
 This guide outlines the standardized process for creating feature branches and submitting Pull Requests (PRs) to the `moeru-ai/airi` repository using the GitHub CLI (`gh`).
 

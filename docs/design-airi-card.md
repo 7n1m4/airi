@@ -13,7 +13,7 @@ In AIRI, a **Character Card** (`AiriCard`) serves as the primary portable defini
 3. **Display & Manifestation**: 2D/3D display model links (VRM, Live2D, Spine, MMD), expressions, parameter mappings, and active outfits.
 4. **Behavioral Systems**: Acting prompts, proactivity/heartbeats, dream state/journaling, short-term memory budgets, and concept-based visual assets.
 
-AIRI cards extend the community standard **Character Card Spec V2 / V3** (from `@proj-airi/ccc`), storing custom AIRI-specific features inside `extensions.airi` (`AiriExtension`).
+AIRI cards extend the community standard **Character Card Spec V2 / V3** (from `@proj-anima/ccc`), storing custom AIRI-specific features inside `extensions.airi` (`AiriExtension`).
 
 ### Key File Locations
 
@@ -194,9 +194,9 @@ card-package.zip/
 }
 ```
 
-### 4.2 CCv3 `card.json` Structure & Codec (`@proj-airi/ccc`)
+### 4.2 CCv3 `card.json` Structure & Codec (`@proj-anima/ccc`)
 
-Upstream exports `card.json` adhering strictly to **Character Card Spec V3 (CCv3)** using the `@proj-airi/ccc` codec.
+Upstream exports `card.json` adhering strictly to **Character Card Spec V3 (CCv3)** using the `@proj-anima/ccc` codec.
 
 > CORRECTION (2026-09-28 audit): the codec file is **not** `characterCardV3.ts`. Local entry points are `packages/ccc/src/export/json.ts` (`exportToJSON(card): CharacterCardV3`), types in `packages/ccc/src/export/types/character_card_v3.ts`, re-exported via `packages/ccc/src/export/index.ts` (`export type * as ccv3`). ZIP `card.json` MUST be built with `exportToJSON()`, not hand-rolled (current `use-card-export.ts` only has `buildCharaCardV2` for PNG/CCv2).
 

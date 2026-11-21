@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
-import { resolveWebSocketUrl } from '@proj-airi/stage-ui/stores/mods/api/channel-server'
-import { FieldInput } from '@proj-airi/ui'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
+import { resolveWebSocketUrl } from '@proj-anima/stage-ui/stores/mods/api/channel-server'
+import { FieldInput } from '@proj-anima/ui'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 

@@ -394,7 +394,7 @@ Telegram Mini Apps (`Telegram.WebApp`) run full HTML5/Vue 3 web applications ins
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ 📱 Telegram Mobile App (`Telegram.WebApp` iframe)                            │
 │    ├── Phase 1 (Fast-Path): Web-Stage Responsive View                      │
-│    │   • Loads existing `@proj-airi/stage-pages` responsive canvas.        │
+│    │   • Loads existing `@proj-anima/stage-pages` responsive canvas.        │
 │    │   • Session detection identifies Telegram client via `initDataUnsafe`. │
 │    └── Phase 2 (Dedicated Mobile Stage & Remote Control Island):            │
 │        • Custom 60fps Live2D/3D Mobile Stage view optimized for portrait. │
@@ -409,12 +409,12 @@ Telegram Mini Apps (`Telegram.WebApp`) run full HTML5/Vue 3 web applications ins
 ### 9.1 Phased Rollout Plan:
 
 #### Phase 1: Web-Stage Responsive Embed (Quick Win)
-- **Host Route**: Serves `@proj-airi/stage-pages` at `#/telegram-miniapp` via local host process.
+- **Host Route**: Serves `@proj-anima/stage-pages` at `#/telegram-miniapp` via local host process.
 - **Session Detection**: Uses `window.Telegram.WebApp.initDataUnsafe` to authenticate the user and adjust UI parameters.
 - **Responsive Layout**: Adjusts stage canvas aspect ratio automatically to fit portrait mobile viewports.
 
 #### Phase 2: Dedicated Mobile Telegram Avatar Stage & Remote Control Island
-- **Dedicated Mobile Canvas**: A lightweight, mobile-optimized Vue 3 component rendering AIRI's Live2D avatar (`@proj-airi/stage-ui-live2d`) with low-bandwidth texture scaling and touch gesture support (head pats, drags).
+- **Dedicated Mobile Canvas**: A lightweight, mobile-optimized Vue 3 component rendering AIRI's Live2D avatar (`@proj-anima/stage-ui-live2d`) with low-bandwidth texture scaling and touch gesture support (head pats, drags).
 - **Remote Director's Control Panel**:
   - Expression & Motion Triggers (`blush`, `happy`, `flustered`, `surprised`).
   - Stage Controls (Lighting, background scene swaps, camera angles).

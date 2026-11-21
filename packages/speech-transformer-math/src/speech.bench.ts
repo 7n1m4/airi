@@ -5,7 +5,7 @@ import { lowerMath } from './lower'
 import { parseMath } from './parse'
 import { renderMath } from './render'
 
-// Formulas of the formula speech eval, one of each stratum, with units. Chemistry is in @proj-airi/speech-transformer-chem.
+// Formulas of the formula speech eval, one of each stratum, with units. Chemistry is in @proj-anima/speech-transformer-chem.
 const formulas = [
   String.raw`\lim_{n \to \infty}\sum_{i=1}^{n}\frac{1}{i^2}=\frac{\pi^2}{6}`,
   String.raw`\lim_{x \to 0^{+}}\ln x=-\infty`,

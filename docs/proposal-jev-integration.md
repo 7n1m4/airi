@@ -384,7 +384,7 @@ When the user confirms their cast selection, the Step 1 $\rightarrow$ Step 2 tra
 
 ```typescript
 // packages/stage-pages/src/pages/settings/airi-card/guided.vue
-import { useAnimaDexWizardStore, useSpeechStore, useSystemOneStore } from '@proj-airi/stage-ui/stores'
+import { useAnimaDexWizardStore, useSpeechStore, useSystemOneStore } from '@proj-anima/stage-ui/stores'
 
 export async function autoMatchCharacterVoiceWithJev(character: CharacterItem) {
   const wizardStore = useAnimaDexWizardStore()
@@ -721,7 +721,7 @@ When wiring any future subsystem or composable to TypeSafe Jev in AIRI, develope
 
 #### Step 1: Import the Store
 ```typescript
-import { useSystemOneStore } from '@proj-airi/stage-ui/stores'
+import { useSystemOneStore } from '@proj-anima/stage-ui/stores'
 
 // Or within stage-ui internal modules:
 import { useSystemOneStore } from '../system-one' // or relative path

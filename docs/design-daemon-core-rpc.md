@@ -5,14 +5,14 @@
 
 ## Context
 
-Slice A added a transport-only Rust gateway client in `crates/airi-channel`.
+Slice A added a transport-only Rust gateway client in `crates/anima-channel`.
 It proves that a client can authenticate, call `runtime.ping`/`runtime.status`,
 and close cleanly. It does **not** move service ownership into the daemon.
 
-`airi-core` still runs in-process inside `airi-slint`, where it opens the
+`anima-core` still runs in-process inside `anima-slint`, where it opens the
 application SQLite store (`<profile>/airi.sqlite`, default
-`~/.local/share/airi-slint/airi.sqlite`, or an explicit `--profile`). The daemon
-does not link `airi-core`, does not open the store, and exposes no `core.*`
+`~/.local/share/anima-slint/airi.sqlite`, or an explicit `--profile`). The daemon
+does not link `anima-core`, does not open the store, and exposes no `core.*`
 RPC.
 
 AIRI's target topology has one owner per store file in daemon mode. Two writers
@@ -22,10 +22,10 @@ any daemon core code is linked.
 
 ## Decision
 
-1. **Daemon mode has one writer: `airi-daemon`.**
+1. **Daemon mode has one writer: `anima-daemon`.**
    In daemon mode, the daemon opens the application SQLite store and owns all
    `AppCore` state: sessions, messages, provider table state, settings mutation,
-   memory, journals, and card writes when those slices land. `airi-slint` must
+   memory, journals, and card writes when those slices land. `anima-slint` must
    not open, create, or mutate that store while it is operating in daemon mode.
 
 2. **Fallback mode is explicit and local.**
@@ -48,7 +48,7 @@ any daemon core code is linked.
    The default remains the current local behavior until daemon mode exists.
 
 4. **Daemon store startup failure fails closed for core state.**
-   If `airi-daemon` cannot open the application store, it must not register
+   If `anima-daemon` cannot open the application store, it must not register
    core handlers that mutate or claim availability. The gateway may continue to
    answer non-core RPCs (`runtime.*`, `gateway.*`) and should report core as
    unavailable through `core.status` with a sanitized `rpc_*` error. It must
@@ -65,7 +65,7 @@ any daemon core code is linked.
 6. **Profile/store identity is explicit.**
    The daemon owns stores selected by the same rules Slint uses today: an
    explicit profile path wins; otherwise the platform data directory plus
-   `airi-slint/airi.sqlite` is used. A missing schema is created only by the
+   `anima-slint/airi.sqlite` is used. A missing schema is created only by the
    normal store migration path. The daemon must not invent a new core database,
    adopt a staging copy, or silently migrate user data as part of Slice B;
    schema/adoption changes require their own issue and review.
@@ -104,7 +104,7 @@ any daemon core code is linked.
 
 Slice B is complete only when:
 
-- the daemon links `airi-core` behind an explicit service object;
+- the daemon links `anima-core` behind an explicit service object;
 - `core.status` has a typed DTO, specta/TS export, and drift check;
 - a daemon handler returns a sanitized core/store status;
 - the Rust client exposes a typed `core.status` helper or documented request;

@@ -1,8 +1,8 @@
-import type { SystemMemoryInfo } from '@proj-airi/stage-shared'
+import type { SystemMemoryInfo } from '@proj-anima/stage-shared'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { sensorsGetSystemMemory } from '@proj-airi/stage-shared'
-import { detectWebGPU } from '@proj-airi/stage-shared/webgpu'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { sensorsGetSystemMemory } from '@proj-anima/stage-shared'
+import { detectWebGPU } from '@proj-anima/stage-shared/webgpu'
 import { readonly, ref } from 'vue'
 
 export type HardwareSource

@@ -1,7 +1,7 @@
 # Project Plan: Standalone Live2D Engine & DSL Runtime
 
 **Status:** Phases 1–3 substantially landed; Phase 2 multi-gen `.moc` routing deferred. See §4.2 Progress Log.
-**Target Package:** `@proj-airi/live2d-runtime` (headless, framework-agnostic) + `packages/stage-ui-live2d/src/runtime/` host adapter
+**Target Package:** `@proj-anima/live2d-runtime` (headless, framework-agnostic) + `packages/stage-ui-live2d/src/runtime/` host adapter
 **References:**
 - DSL Interpreter Spec: [design-live2d-dsl-interpreter-spec.md](./design-live2d-dsl-interpreter-spec.md)
 - Special Sauce Manifests: [research-live2d-special-sauce.md](./research-live2d-special-sauce.md)
@@ -16,7 +16,7 @@
 
 A recon pass against the current codebase produced three binding decisions. These **supersede** the literal "extract render core into the new package" wording this plan originally carried.
 
-1. **Headless runtime.** `@proj-airi/live2d-runtime` is a **pure, framework-agnostic, headless TypeScript package**: **no PIXI, no Vue, no DOM, no WebGL imports**. It implements the Live2D DSL Virtual Machine, the `VarFloats` reactive state heap, and the command/macro parser, and it drives the outside world exclusively through **output ports** (`ports.ts`). This lets the entire DSL + state engine run offline under Vitest with zero browser/canvas. *APPROVED.*
+1. **Headless runtime.** `@proj-anima/live2d-runtime` is a **pure, framework-agnostic, headless TypeScript package**: **no PIXI, no Vue, no DOM, no WebGL imports**. It implements the Live2D DSL Virtual Machine, the `VarFloats` reactive state heap, and the command/macro parser, and it drives the outside world exclusively through **output ports** (`ports.ts`). This lets the entire DSL + state engine run offline under Vitest with zero browser/canvas. *APPROVED.*
 2. **Vendored Cubism 2.0.** The repository's patched `pixi-live2d-display@0.4.0` **already ships a Cubism 2 build** (`dist/cubism2.es.js` / `cubism2.js`); the fork's patch only adjusts its `createSettings`/`_ZipLoader` settings-file detection. So Cubism 2.0 support is **not** a from-scratch render port — it is a *routing/branch to the vendored `cubism2` entry* plus ms↔s timing normalization, done inside `stage-ui-live2d` (the existing render host), not inside the new runtime package. *APPROVED & VERIFIED* — cubism2/cubism4 share the same `InternalModel`/`MotionManager` base (`Cubism2MotionManager extends MotionManager<Live2DMotion, Cubism2Spec.Motion>`), and `pixi-live2d-display/cubism2` is a first-class typed export, so one adapter serves both generations; no bespoke loader needed.
 3. **Environment note.** The paths printed in the handoff documents (`/Users/richardpinedo/...`) are from the authoring machine; the local equivalents resolve under `docs/` in this repository (`docs/live2d-*.md`).
 
@@ -24,7 +24,7 @@ A recon pass against the current codebase produced three binding decisions. Thes
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│   @proj-airi/live2d-runtime  (HEADLESS / pure TS package)   │
+│   @proj-anima/live2d-runtime  (HEADLESS / pure TS package)   │
 │   NO PIXI · NO Vue · NO DOM · NO WebGL                      │
 ├─────────────────────────────────────────────────────────────┤
 │ 1. Live2D DSL Virtual Machine (State Engine)               │
@@ -64,7 +64,7 @@ A recon pass against the current codebase produced three binding decisions. Thes
 
 Currently, AIRI's Live2D runtime relies on Cubism 4 SDK loaders (`pixi-live2d-display@0.4.0`) and does not route to the bundled Cubism 2 build, leaving older Cubism 2.0 models (`.moc`, e.g. the *BanG Dream!* series) unloaded. Advanced third-party Live2D models also contain rich interactive scripting (`VarFloats`, `Intimacy` bounds, `Choices` menus, `Command` chains) that is currently pruned to prevent WebGL runtime crashes.
 
-This project delivers a **cleanroom, headless TypeScript DSL + state engine** (`@proj-airi/live2d-runtime`) that interprets that scripting independent of the renderer, then bridges it into the existing `stage-ui-live2d` host and the dating-sim/choice UI surfaces — **without** ripping out the fork's heavily customized Cubism 4 render layer.
+This project delivers a **cleanroom, headless TypeScript DSL + state engine** (`@proj-anima/live2d-runtime`) that interprets that scripting independent of the renderer, then bridges it into the existing `stage-ui-live2d` host and the dating-sim/choice UI surfaces — **without** ripping out the fork's heavily customized Cubism 4 render layer.
 
 ---
 
@@ -139,7 +139,7 @@ Parses `;`-delimited command chains from `Command`/`PostCommand` fields. **Lane/
 ## 4. Phase-by-Phase Implementation Plan
 
 ### Phase 1: Headless DSL VM + Vitest Suite (DONE — see §4.2)
-1. Scaffold `packages/live2d-runtime` (`@proj-airi/live2d-runtime`) as pure TS; add to `pnpm-workspace`/Vitest `projects`. Wire `typecheck`.
+1. Scaffold `packages/live2d-runtime` (`@proj-anima/live2d-runtime`) as pure TS; add to `pnpm-workspace`/Vitest `projects`. Wire `typecheck`.
 2. Implement `dsl/` (types, var-store, command-parser, selector, template, interpreter) and `ports.ts` interfaces.
 3. Isolated Vitest suite built directly from [`design-live2d-dsl-test-cases.md`](./design-live2d-dsl-test-cases.md) and `research-live2d-special-sauce.md` fixtures: operator superset, atomic guard→mutate toggles, `assign rand(20,25)`, OpenChat toggle, Flandre `Tapbody` intimacy ladder, weighted `Update7#98` Intimacy→IntimacyVI mapping, `change_cos` heap-preservation.
 
@@ -158,7 +158,7 @@ Parses `;`-delimited command chains from `Command`/`PostCommand` fields. **Lane/
    - Picking or importing Live2D models via `ModelSelectorDialog` into a clean WebGL canvas runner.
    - Inspecting the `VarFloats` state heap in real-time.
    - Exercising interactive choice menus and intimacy triggers in isolation without loading full AIRI app overhead or clobbering live user settings.
-3. **Vite Monorepo Import Resolution**: Add `@proj-airi/live2d-runtime` workspace path aliases to Vite configuration files (`apps/stage-tamagotchi/electron.vite.config.ts`, `apps/stage-web/vite.config.ts`) so Vite resolves `@proj-airi/live2d-runtime` directly to TypeScript source (`packages/live2d-runtime/src/index.ts`) in dev mode.
+3. **Vite Monorepo Import Resolution**: Add `@proj-anima/live2d-runtime` workspace path aliases to Vite configuration files (`apps/stage-tamagotchi/electron.vite.config.ts`, `apps/stage-web/vite.config.ts`) so Vite resolves `@proj-anima/live2d-runtime` directly to TypeScript source (`packages/live2d-runtime/src/index.ts`) in dev mode.
 
 ---
 
@@ -170,7 +170,7 @@ Parses `;`-delimited command chains from `Command`/`PostCommand` fields. **Lane/
 | **2** Multi-gen adapter & Motion Gating | ✅ Landed (`52/52 harness passed`) | `Live2DRuntimeAdapter` + `dsl-capture` + `motionGroupEnabled` gating in `Model.vue` & `live2d-runtime-adapter.ts`. Intimacy `Bonus` store persistence proof in harness Scenario 6 |
 | **3** App integration (choices+intimacy) | ✅ Landed (`7727a13a6`, `c11bb292d`) | `live2d-dsl-bridge` choice round-trip + `dsl-intimacy` raw store (0–100k→0–100 display projection). Integration preserved via git commits |
 | **3.x** change_cos hot-swap | ⏸️ Deferred | Awaits unified multi-`.moc3` ingestion (see challenge doc) |
-| **4** Standalone Web Playground | ✅ Landed | `/devtools/live2d` route in `stage-web` and `stage-tamagotchi`. Integrates `ModelSelectorDialog` to select or import Live2D models from user collection; `Model.vue` exposes `getDslState`/`dispatchDsl`/`selectDslChoice`; DSL intimacy sandboxed under `__playground__/<id>` so live settings are untouched. `@proj-airi/live2d-runtime` source aliases added to `stage-web` + `stage-tamagotchi` (renderer) Vite configs.
+| **4** Standalone Web Playground | ✅ Landed | `/devtools/live2d` route in `stage-web` and `stage-tamagotchi`. Integrates `ModelSelectorDialog` to select or import Live2D models from user collection; `Model.vue` exposes `getDslState`/`dispatchDsl`/`selectDslChoice`; DSL intimacy sandboxed under `__playground__/<id>` so live settings are untouched. `@proj-anima/live2d-runtime` source aliases added to `stage-web` + `stage-tamagotchi` (renderer) Vite configs.
 
 _Notable implementation fixes during build: lane-hint dispatch shadowing (caught by test); useBroadcastChannel has no `onMessage` (use `watch` on `data`); `resolveMotionGroupAndIndex` isn't exported on `useLive2d` — adapter resolves on `motionManager` directly to avoid double-broadcast._
 
@@ -178,8 +178,8 @@ _Notable implementation fixes during build: lane-hint dispatch shadowing (caught
 
 ## 5. Verification & Testing Strategy
 
-- **Automated Unit Tests:** `pnpm -F @proj-airi/live2d-runtime test` must pass 100% of VarFloats, command-parser, selection, and tick tests (headless, no browser).
-- **Typecheck:** `pnpm -F @proj-airi/live2d-runtime typecheck`.
+- **Automated Unit Tests:** `pnpm -F @proj-anima/live2d-runtime test` must pass 100% of VarFloats, command-parser, selection, and tick tests (headless, no browser).
+- **Typecheck:** `pnpm -F @proj-anima/live2d-runtime typecheck`.
 - **Manual Verification (Phase 2–3):**
   - Load legacy Cubism 2.0 `.moc` model (e.g. *BanG Dream!*).
   - Load an advanced third-party model with `VarFloats`/`Choices` metadata.

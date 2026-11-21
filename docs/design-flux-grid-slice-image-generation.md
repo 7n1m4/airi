@@ -60,7 +60,7 @@ Update the `image_journal` tool in `apps/stage-tamagotchi/src/renderer/stores/to
 - **`image-journal.ts`**: Handling batch ingestion into the Background Store.
 
 ## Next Steps (Post-Pivoting)
-- [ ] Add `sharp` dependency to `@proj-airi/stage-tamagotchi`.
+- [ ] Add `sharp` dependency to `@proj-anima/stage-tamagotchi`.
 - [ ] Implement `GridSliceProvider` core.
 - [ ] Update `ReplicateProvider` for native batching.
 - [ ] Implement the UI settings in the Artistry tab.

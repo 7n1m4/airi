@@ -1,6 +1,6 @@
-import type { Card, ccv3 } from '@proj-airi/ccc'
+import type { Card, ccv3 } from '@proj-anima/ccc'
 
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { defineStore } from 'pinia'
 import { computed } from 'vue'
 

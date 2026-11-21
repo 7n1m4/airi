@@ -165,7 +165,7 @@ See [`project-selective-upstream-sync-phase-a-buy-in.md`](./project-selective-up
 1. Check out file paths from **Phase A** on `moeru-ai/airi` `main` (new package—mostly safe to `import`).
 2. For **Phase B**, open fork + upstream side-by-side on `stores/chat*` and `context-bridge`; port **ideas** (orchestrator hook-up), not files wholesale.
 3. For **Phase C**, decide if any chat-sync is needed without cloud; if yes, port `wire-message` / `pending-tracker` first, skip `cloud-mapper` + `apps/server` + `server-runtime`.
-4. Run `pnpm -F @proj-airi/stage-ui typecheck` and tamagotchi smoke after each phase.
+4. Run `pnpm -F @proj-anima/stage-ui typecheck` and tamagotchi smoke after each phase.
 
 ---
 

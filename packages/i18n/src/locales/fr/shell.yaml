@@ -1,7 +1,7 @@
 # Chaîne du shell de bureau Slint (Slint) : splash, bande de contrôle, fenêtres et
 # pages d'espace réservé.
 app:
-  name: AIRI
+  name: Anima
   tagline: Votre compagnon IA, sur votre bureau.
   version-label: Version
 splash:
@@ -12,27 +12,27 @@ splash:
     stage_ready: Préparation de la scène…
 strip:
   tooltips:
-    avatar: AIRI
+    avatar: Anima
     mic: Activer/couper le micro
     chat: Discussion
     stage: Scène
     settings: Paramètres
-    about: À propos d'AIRI
+    about: À propos d'Anima
     collapse: Réduire
     expand: Étendre
     theme: Basculer le mode sombre / clair
     language: Changer de langue
-    quit: Quitter AIRI
+    quit: Quitter Anima
     caption: Sous-titres
 chat:
-  title: AIRI — Chat
+  title: Anima — Chat
   recent: Récents
   new: Nouveau chat
   search-placeholder: Rechercher des chats…
   delete-session: Supprimer le chat
   empty-title: Commencez une conversation
   empty-subtitle: Vos messages sont stockés localement sur cet appareil.
-  input-placeholder: Message à AIRI…
+  input-placeholder: Message à Anima…
   send: Envoyer
   stop: Arrêter
   streaming: Diffusion en cours…
@@ -46,7 +46,7 @@ chat:
     import: Importer une carte…
     import-error: "Impossible d'importer cette carte — ce n'est pas une carte CCv2/CCv3 valide (png ou json)."
 settings:
-  title: AIRI — Paramètres
+  title: Anima — Paramètres
   description: Configurez votre assistant IA.
   nav:
     providers: Fournisseurs
@@ -77,7 +77,7 @@ settings:
     modules: 'Modules'
   theme-page:
     title: Thème
-    description: Personnalisez les couleurs et l'apparence d'AIRI.
+    description: Personnalisez les couleurs et l'apparence d'Anima.
     hue: Teinte d'accent
     chroma: Multiplicateur de chroma
     dark: Mode sombre
@@ -152,16 +152,16 @@ providers:
     aws_secret_access_key: Clé d'accès secrète AWS
     account_id: ID de compte Cloudflare
 about:
-  title: AIRI — À propos
-  app-name: AIRI
+  title: Anima — À propos
+  app-name: Anima
   tagline: Votre compagnon IA, sur votre bureau.
-  body: AIRI est un compagnon IA de bureau — un être numérique qui parle, voit et réagit. Construit avec Rust et Slint.
+  body: Anima est un compagnon IA de bureau — un être numérique qui parle, voit et réagit. Construit avec Rust et Slint.
   license: Sous licence GPL-3.0-or-later. Slint est utilisé sous ses termes GPL.
   source-label: Code source
   source-url: https://github.com/moeru-ai/airi
-  credit: Créé par Neko Ayaka et les contributeurs d'AIRI.
+  credit: Créé par Neko Ayaka et les contributeurs d'Anima.
   check-update: Rechercher des mises à jour
-  update-up-to-date: AIRI est à jour.
+  update-up-to-date: Anima est à jour.
   update-available: 'Mise à jour disponible :'
 stage:
   description: Affiche et positionne la fenêtre flottante de la scène avec votre compagne IA.
@@ -190,7 +190,7 @@ stage:
     head: Tête
     none: Aucun
     preview: Aperçu
-    previewSample: Voici à quoi ressembleront les sous-titres quand AIRI parle.
+    previewSample: Voici à quoi ressembleront les sous-titres quand Anima parle.
   stripSection:
     title: Bandeau de contrôle
     hint: Choisissez quels contrôles de scène apparaissent sur le bandeau de contrôle.
@@ -238,7 +238,7 @@ audio:
   save: Enregistrer
   saveError: Échec de l'enregistrement. Réessayez.
 profile:
-  description: Qui vous êtes pour AIRI.
+  description: Qui vous êtes pour Anima.
   identitySection: Identité
   name: Nom affiché
   namePlaceholder: Votre nom
@@ -252,7 +252,7 @@ profile:
   save: Enregistrer
   saveError: Échec de l'enregistrement. Réessayez.
 notify:
-  replyReady: AIRI a répondu
+  replyReady: Anima a répondu
 common:
   close: Fermer
 
@@ -325,7 +325,7 @@ models:
     paid: Payant / Commissions
     visit: Visiter
     knowRepository: Vous connaissez un autre excellent dépôt de modèles ?
-    knowRepositoryHint: Aidez la communauté AIRI en recommandant plus de dépôts, outils ou archives gratuits.
+    knowRepositoryHint: Aidez la communauté Anima en recommandant plus de dépôts, outils ou archives gratuits.
     submitOnGithub: Proposer sur GitHub
     formats:
       all: Tous les formats
@@ -338,9 +338,9 @@ onboarding:
   deferredNotice: "La complétion du premier lancement n'est pas encore câblée dans cette build Slint — ces écrans sont présentationnels. Les boutons qui finalisent ou ignorent l'assistant seront débloqués quand le store d'onboarding arrivera."
   deferredTip: "Pas encore câblé — le store d'onboarding du premier lancement activera cette action."
   v3:
-    brand: 'Configuration du compagnon AIRI'
+    brand: 'Configuration du compagnon Anima'
     stageReady: 'Scène prête'
-    heroTitle: 'Bienvenue sur AIRI'
+    heroTitle: 'Bienvenue sur Anima'
     heroSubtitle: 'La scène de votre compagnon — configurée en quelques minutes, 100 % sur votre machine.'
     companionQuote: "Bonjour ! Je suis votre compagnon numérique autonome. Que vous vouliez une conversation vocale, des représentations créatives sur scène ou une présence de bureau discrète, je suis prêt à m'adapter à votre monde."
     pillWebgpu: 'Moteur WebGPU local'
@@ -355,7 +355,7 @@ notice:
   deferredTip: "Nécessite le pont d'actions des fenêtres de notification (windowAction / pageMounted / pageUnmounted), qui n'existe pas encore dans la build Slint."
   index:
     title: 'Notifications'
-    subtitle: "Le processus principal d'AIRI affiche des fenêtres de notification transitoires pour les invites ponctuelles. Cette page liste les notifications livrées avec l'app de bureau."
+    subtitle: "Le processus principal d'Anima affiche des fenêtres de notification transitoires pour les invites ponctuelles. Cette page liste les notifications livrées avec l'app de bureau."
     surfaces: 'Surfaces de notification'
     fadeOnHoverTitle: 'Tutoriel Fade on Hover'
     fadeOnHoverSubtitle: 'Explique le comportement de masquage automatique qui estompe le personnage quand le curseur s’approche.'
@@ -391,13 +391,13 @@ modules:
   entries:
     memory:
       blurb: 'Mémoire à court et long terme, journaux et retrieval pour votre compagnon.'
-      reason: 'Prêt dans Slint — routes gérées par la navigation des réglages ; backend livré dans airi-core memory (journal, retrieval, embeddings) ; la surface de réglages arrive dans cette wave.'
+      reason: 'Prêt dans Slint — routes gérées par la navigation des réglages ; backend livré dans anima-core memory (journal, retrieval, embeddings) ; la surface de réglages arrive dans cette wave.'
     speech:
       blurb: 'Sortie vocale texte-parole pour votre compagnon.'
-      reason: 'Prêt dans Slint — backend livré dans airi-speech (26 définitions TTS + Kokoro) ; la surface de réglages TTS/STT Slint arrive dans cette wave.'
+      reason: 'Prêt dans Slint — backend livré dans anima-speech (26 définitions TTS + Kokoro) ; la surface de réglages TTS/STT Slint arrive dans cette wave.'
     hearing:
       blurb: 'Entrée micro, détection d’activité vocale et transcription.'
-      reason: 'Prêt dans Slint — backend livré dans airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local) ; la surface de réglages audition Slint arrive dans cette wave.'
+      reason: 'Prêt dans Slint — backend livré dans anima-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local) ; la surface de réglages audition Slint arrive dans cette wave.'
     vision:
       blurb: 'Perception visuelle écran et caméra.'
       reason: 'Différé — pas de pile vision en Slint (moondream/blip/apple-core-ai absents du registre Rust) ; vit dans l’app Electron aujourd’hui.'
@@ -423,7 +423,7 @@ modules:
       blurb: 'Sauvegarde des snapshots vers votre propre stockage (BYOS).'
       reason: 'Câblé — cible dossier local, vérification/restauration de snapshots ; S3/mesh/selectif pas encore câblés.'
     pluginHost:
-      blurb: 'Hôte pour les paquets de plugins AIRI.'
+      blurb: 'Hôte pour les paquets de plugins Anima.'
       reason: 'Scaffold uniquement — pas de découverte/activation/bus de capacités ; dispensé pour Slint v1 ; le processus principal Electron héberge les plugins.'
     vrm:
       blurb: 'Rendu de modèles VRM et scène du stage.'
@@ -453,7 +453,7 @@ memory:
   shortTerm:
     title: 'Court terme & retrieval'
     badge: 'Câblé'
-    note: 'topK borne le nombre de mémoires récupérées injectées par prompt (1–20). Le classement retrieval combine similarité sémantique (poids 0.75) et chevauchement lexical (poids 0.25) dans airi-core ; le pipeline de chat le consomme tant que la mémoire est activée.'
+    note: 'topK borne le nombre de mémoires récupérées injectées par prompt (1–20). Le classement retrieval combine similarité sémantique (poids 0.75) et chevauchement lexical (poids 0.25) dans anima-core ; le pipeline de chat le consomme tant que la mémoire est activée.'
   topK:
     label: 'Retrieval top-k'
     description: 'Combien de mémoires le retrieval peut injecter par prompt (1–20).'
@@ -466,7 +466,7 @@ memory:
     refresh: 'Actualiser'
     emptyTitle: 'Aucune entrée de journal pour l’instant'
     emptySubtitle: 'Aucune entrée de journal pour l’instant — la mémoire du chat les remplit à mesure que vous utilisez l’app.'
-  footer: 'La préférence et le journal vivent dans le coffre SQLite d’airi-store (airi.sqlite) pour ce profil. La mémoire augmente le contexte du chat — rien ne quitte la machine sauf vers le fournisseur LLM configuré.'
+  footer: 'La préférence et le journal vivent dans le coffre SQLite d’anima-store (airi.sqlite) pour ce profil. La mémoire augmente le contexte du chat — rien ne quitte la machine sauf vers le fournisseur LLM configuré.'
   saveError: 'Échec de l’enregistrement — voir la ligne de statut pour les détails.'
   time:
     justNow: 'à l’instant'
@@ -478,7 +478,7 @@ hearing:
   description: 'Entrée micro et préférences d’écoute pour votre compagnon.'
   enable:
     title: 'Activer l’audition'
-    description: 'Enregistre que vous voulez qu’AIRI vous entende. Prend effet quand le pipeline de capture arrivera — persister ceci n’ouvre pas votre micro.'
+    description: 'Enregistre que vous voulez qu’Anima vous entende. Prend effet quand le pipeline de capture arrivera — persister ceci n’ouvre pas votre micro.'
   mode:
     title: 'Mode d’écoute'
     caption: 'Auto écoute en continu (nécessite le pipeline de capture) ; PTT n’écoute que tant que la touche est maintenue.'
@@ -490,7 +490,7 @@ hearing:
     caption: 'L’enregistrement du raccourci global n’est pas câblé dans ce build — la valeur est enregistrée mais aucun raccourci n’est actif pour l’instant.'
   device:
     title: 'Périphérique d’entrée'
-    caption: 'Choisissez le micro qu’AIRI utilisera quand le pipeline de capture arrivera.'
+    caption: 'Choisissez le micro qu’Anima utilisera quand le pipeline de capture arrivera.'
     emptyTitle: 'Aucun périphérique d’entrée énuméré'
     emptySubtitle: 'Le build Slint ne peut pas encore lister les micros — la capture audio n’est pas câblée.'
     useDefault: 'Défaut système'
@@ -499,7 +499,7 @@ hearing:
   nav: 'Audition'
 speech:
   title: 'Parole'
-  description: 'Text-to-speech pour AIRI. Choisissez un fournisseur du catalogue, réglez voix et vitesse, et écrivez un fichier d’échantillon pour vérifier. Le statut de port provient textuellement du registre speech Rust.'
+  description: 'Text-to-speech pour Anima. Choisissez un fournisseur du catalogue, réglez voix et vitesse, et écrivez un fichier d’échantillon pour vérifier. Le statut de port provient textuellement du registre speech Rust.'
   providers:
     caption: 'Fournisseur text-to-speech'
     empty: 'Le catalogue des fournisseurs n’a pas chargé — voir la console.'
@@ -520,19 +520,19 @@ speech:
     caption: 'Synthèse d’échantillon'
     description: 'Synthétise un court échantillon avec le fournisseur sélectionné et l’écrit dans un nouveau fichier sous votre répertoire de profil. Utilise l’endpoint par défaut du fournisseur ; rien n’est joué.'
     label: 'Texte d’échantillon'
-    placeholder: 'Bonjour, je suis AIRI.'
+    placeholder: 'Bonjour, je suis Anima.'
     button: 'Synthétiser l’échantillon'
     written: 'Échantillon écrit :'
     notPlayable: 'Les fichiers d’échantillon sont écrits sur le disque et ne sont pas jouables in-app pour l’instant — ouvrez-les avec votre lecteur système.'
   stt:
     caption: 'Speech-to-text'
     title: 'La speech-to-text vit ailleurs (non câblée ici)'
-    body: 'airi-stt porte les clients STT : Whisper (en processus, whisper-rs), un client OpenAI-compatible /audio/transcriptions, un client Deepgram streaming et Aliyun NLS (streaming, token pré-émis requis). La surface audition Slint qui les piloterait n’existe pas encore — cette page configure uniquement text-to-speech.'
+    body: 'anima-stt porte les clients STT : Whisper (en processus, whisper-rs), un client OpenAI-compatible /audio/transcriptions, un client Deepgram streaming et Aliyun NLS (streaming, token pré-émis requis). La surface audition Slint qui les piloterait n’existe pas encore — cette page configure uniquement text-to-speech.'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
   caption: 'État, commutateurs par source, kill switch et journal d’audit local pour le daemon awareness opt-in. Rien ici n’agit de son propre chef.'
-  daemonDownTitle: 'airi-daemon n’est pas en cours d’exécution'
+  daemonDownTitle: 'anima-daemon n’est pas en cours d’exécution'
   daemonDownSubtitle: 'Le daemon awareness est un service de session utilisateur opt-in. Instructions de dev-run : packaging/README.md.'
   retry: 'Réessayer'
   killSwitch:
@@ -626,7 +626,7 @@ widgets:
 
 data:
   title: 'Données'
-  description: "Tout ce qu'AIRI stocke localement sur cet appareil — exportez-le, importez-le ou purgez l'historique lourd."
+  description: "Tout ce qu'Anima stocke localement sur cet appareil — exportez-le, importez-le ou purgez l'historique lourd."
   status:
     notWired: "L'export n'est pas encore câblé à un backend Rust — voir la note de phase"
     actionNotWired: "Cette action n'est pas encore câblée à un backend Rust — voir la note de phase"
@@ -758,9 +758,9 @@ data:
 
 mcp:
   title: 'Serveurs & outils MCP'
-  description: 'Connectez et gérez les serveurs Model Context Protocol (MCP) pour donner à AIRI des capacités d’outils extensibles.'
-  deferredTip: 'Pas encore câblé — le client MCP arrive sur un autre chantier (airi-mcp). Cet aperçu montre seulement la mise en page ; rien ici ne lit ou n’écrit votre configuration.'
-  deferredNotice: 'Le pont MCP n’est pas encore câblé. Les serveurs affichés sont les valeurs par défaut documentées d’Electron, pas votre configuration — chaque contrôle ci-dessous est inerte jusqu’à l’arrivée du chantier airi-mcp.'
+  description: 'Connectez et gérez les serveurs Model Context Protocol (MCP) pour donner à Anima des capacités d’outils extensibles.'
+  deferredTip: 'Pas encore câblé — le client MCP arrive sur un autre chantier (anima-mcp). Cet aperçu montre seulement la mise en page ; rien ici ne lit ou n’écrit votre configuration.'
+  deferredNotice: 'Le pont MCP n’est pas encore câblé. Les serveurs affichés sont les valeurs par défaut documentées d’Electron, pas votre configuration — chaque contrôle ci-dessous est inerte jusqu’à l’arrivée du chantier anima-mcp.'
   notWiredBadge: 'Pas encore câblé'
   tabs:
     manage: 'Gérer'
@@ -772,7 +772,7 @@ mcp:
     configPathHint: "La valeur par défaut d’Electron est app.getPath('appData') + '/airi/mcp.json' ; le pont Slint suivrait la même convention. Le chemin affiché est illustratif, il n’est pas lu depuis le disque."
     configuredServers: 'Serveurs configurés'
     documentedExample: 'Exemple de documentation'
-    exampleNote: 'Affiché comme documentation — c’est la configuration par défaut intégrée à AIRI Desktop (Electron main), pas un serveur auquel AIRI s’est connecté.'
+    exampleNote: 'Affiché comme documentation — c’est la configuration par défaut intégrée à Anima Desktop (Electron main), pas un serveur auquel Anima s’est connecté.'
     serverStateUnknown: 'Inconnu'
     transportStdio: 'Stdio local'
     toolsNone: '0 outil'
@@ -833,7 +833,7 @@ mcp:
 
 discord:
   title: 'Discord'
-  description: 'Pont de messagerie entre votre compagnon AIRI et les serveurs et messages directs Discord.'
+  description: 'Pont de messagerie entre votre compagnon Anima et les serveurs et messages directs Discord.'
   deferredNotice: 'Le module Discord n’est pas encore câblé à une passerelle en Rust. Connexion du bot, comportement de relais et routage d’accès sont présentés en aperçu structurel — chaque action est désactivée jusqu’à l’arrivée du pont de passerelle.'
   deferredTip: 'Nécessite le pont de passerelle Discord (cycle de vie websocket, magasin de jetons, service Rust) dans la build Slint.'
   tabs:
@@ -847,7 +847,7 @@ discord:
     tokenDescription: 'Votre jeton de bot Discord depuis le Developer Portal.'
     tokenPlaceholder: 'Collez votre jeton de bot…'
     ownerLabel: 'Propriétaire du bot / Nom d’utilisateur principal'
-    ownerDescription: 'Votre identifiant Discord (ex. dasilva333). AIRI résout automatiquement l’ID de votre compte pour les privilèges de propriétaire et la synchronisation de la mémoire.'
+    ownerDescription: 'Votre identifiant Discord (ex. dasilva333). Anima résout automatiquement l’ID de votre compte pour les privilèges de propriétaire et la synchronisation de la mémoire.'
     ownerPlaceholder: 'ex. dasilva333'
     ownerIdPending: 'ID du propriétaire résolu : non résolu — pont de passerelle requis.'
     connect: 'Connecter'
@@ -956,7 +956,7 @@ cloudSync:
     endpointPlaceholder: 'https://s3.amazonaws.com'
     bucketLabel: 'Nom du bucket'
     bucketDescription: 'Le nom de votre bucket cloud.'
-    bucketPlaceholder: 'my-airi-sync'
+    bucketPlaceholder: 'my-anima-sync'
     regionLabel: 'Région'
     regionDescription: 'La région de votre bucket (us-east-1 par défaut si laissé vide).'
     regionPlaceholder: 'us-east-1'
@@ -971,7 +971,7 @@ cloudSync:
     localCaption: 'Paramètres du partage local'
     localPathLabel: 'Chemin du répertoire de sauvegarde'
     localPathDescription: 'Le chemin absolu vers votre dossier de synchro local ou votre lecteur réseau monté (NAS / partage Samba).'
-    localPathPlaceholder: '/Volumes/AIRI-Backup-Share'
+    localPathPlaceholder: '/Volumes/Anima-Backup-Share'
     testConnection: 'Tester la connexion'
   sync:
     title: 'Synchronisation'
@@ -1000,11 +1000,11 @@ cloudSync:
   mesh:
     title: 'Synchro maillage local'
     enableLabel: 'Activer la synchro maillage libp2p'
-    enableDescription: 'Synchronisez mémoire, identifiants du coffre et cartes compagnons directement avec d’autres instances AIRI sur votre réseau local.'
+    enableDescription: 'Synchronisez mémoire, identifiants du coffre et cartes compagnons directement avec d’autres instances Anima sur votre réseau local.'
     memoryLabel: 'Mémoire (STMM / LTMM / Event Ledger)'
     vaultLabel: 'Coffre (identifiants BYOS)'
     companionsLabel: 'Compagnons (cartes de personnage)'
-    targetDescription: 'Synchronisé avec les instances AIRI appairées via libp2p.'
+    targetDescription: 'Synchronisé avec les instances Anima appairées via libp2p.'
   actions:
     title: 'Actions manuelles'
     manualTitle: 'Synchronisation manuelle'
@@ -1061,7 +1061,7 @@ cloudSync:
     cancel: 'Annuler'
 pluginHost:
   title: 'Plugin Host'
-  description: 'Inspectez et gérez les plugins AIRI : manifestes découverts, activation, sessions chargées et capacités annoncées.'
+  description: 'Inspectez et gérez les plugins Anima : manifestes découverts, activation, sessions chargées et capacités annoncées.'
   notWiredBadge: 'Pas encore câblé'
   deferredTip: 'Pas encore câblé — aucun hôte de plugins n’existe dans la build Slint. Cet aperçu montre seulement la mise en page ; rien ici ne découvre, charge ou persiste de plugins.'
   deferredNotice: 'L’hôte de plugins n’est pas câblé dans cette build. Aucun manifeste n’est découvert depuis le disque, aucun plugin n’est chargé, et chaque contrôle ci-dessous est inerte jusqu’à l’arrivée d’un hôte de plugins Slint (ou d’un pont style Electron).'
@@ -1080,7 +1080,7 @@ pluginHost:
     configLabel: 'Magasin d’activation'
     portLabel: 'Port'
     portValue: 'Aucun — hôte dans le processus'
-    portHint: 'L’hôte de plugins d’Electron s’exécute dans le processus principal et n’a pas de port TCP. Le port 6121 appartient au serveur de canal AIRI (SERVER_CHANNEL_PORT) et n’a rien à voir avec l’hôte de plugins.'
+    portHint: 'L’hôte de plugins d’Electron s’exécute dans le processus principal et n’a pas de port TCP. Le port 6121 appartient au serveur de canal Anima (SERVER_CHANNEL_PORT) et n’a rien à voir avec l’hôte de plugins.'
   installed:
     section: 'Plugins installés'
     emptyTitle: 'Aucun plugin installé dans cette build'
@@ -1112,7 +1112,7 @@ pluginHost:
     portLabel: 'Port'
     portDescription: 'Le port hypothétique de l’hôte. L’hôte réel est dans le processus et n’en a pas.'
     portPlaceholder: 'Non câblé'
-    portHint: 'Le port 6121 est le serveur de canal AIRI (SERVER_CHANNEL_PORT), pas l’hôte de plugins. Toute valeur ici serait fictive.'
+    portHint: 'Le port 6121 est le serveur de canal Anima (SERVER_CHANNEL_PORT), pas l’hôte de plugins. Toute valeur ici serait fictive.'
     logLevelLabel: 'Niveau de log'
     pluginDirLabel: 'Répertoire des plugins'
     pluginDirPlaceholder: '<userData>/plugins/v1'

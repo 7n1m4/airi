@@ -12,7 +12,7 @@ shell:
   previous: Back
   next: Continue
   skip: Setup Later
-  brand: AIRI Companion Setup
+  brand: Anima Companion Setup
   stageReady: Stage Ready
   closeSetup: Close Setup (Save for Later)
   placeholderNotice: This module configuration is being provisioned. You can proceed to the next
@@ -22,7 +22,7 @@ steps:
   welcome:
     label: Welcome
     subtitle: Private Companion Studio
-    heroTitle: Welcome to AIRI
+    heroTitle: Welcome to Anima
     heroSubtitle: Your companion's stage — set up in minutes, 100% on your machine.
     companionQuote: Hello! I'm your autonomous digital companion. Whether you want
       voice conversation, creative stage performances, or a quiet desktop
@@ -38,13 +38,13 @@ steps:
     dialog:
       savedTitle: Setup Saved for Later
       savedDescription: 'You can reopen your companion setup anytime by clicking the
-        AIRI icon in your macOS menu bar / system tray:'
+        Anima icon in your macOS menu bar / system tray:'
       trayItem: Companion Setup & Sign-In (V3)
       continue: Continue Setup
       closeToTray: Close to Tray
       close: Close
       comebackLead: If you want to come back to this later, just
-      desktopInstruction: right-click the AIRI system tray icon and click Companion Wizard.
+      desktopInstruction: right-click the Anima system tray icon and click Companion Wizard.
       webInstruction: tap the cog icon in the top-right to open Settings, then go Guided Tours → Companion Wizard.
       webSettingsPath: Settings → Guided Tours → Companion Wizard
       desktopAlternative: Or open Settings → Guided Tours → Companion Wizard.
@@ -64,7 +64,7 @@ steps:
       badge: Offline First
       action: Continue Locally
     stepBadge: Architecture Triage · Step {current} of {total}
-    companionGreeting: Welcome to AIRI! Choose how you'd like to set up your stage. You can run
+    companionGreeting: Welcome to Anima! Choose how you'd like to set up your stage. You can run
       100% locally and offline, or sign in to sync across devices.
     local:
       badge: Offline First
@@ -86,7 +86,7 @@ steps:
     description: Set your interface language, visual theme, and signature accent color.
     languageSection:
       title: Display Language
-      description: Select your primary language for AIRI. You can change this anytime.
+      description: Select your primary language for Anima. You can change this anytime.
     themeSection:
       title: Theme Mode
       description: Choose your preferred appearance mode.
@@ -152,7 +152,7 @@ steps:
       earth: Earth & Flora
       ocean: Ocean & Sky
       royal: Royal & Bloom
-    resetToSignatureAiriCyan: Reset to signature AIRI cyan
+    resetToSignatureAiriCyan: Reset to signature Anima cyan
     preventsRemoteCloudSyncFromOverwritingThisMachineSLanguageAndTheme: Prevents remote cloud sync from overwriting this machine's language and theme
     nextHint: Continue to Experience Archetype
 
@@ -444,7 +444,7 @@ steps:
     description: Select or customize the foundational identity, speech quirks, and
       backstory of your companion.
     presetCards:
-      airi: AIRI (Default Autonomous Spirit)
+      airi: Anima (Default Autonomous Spirit)
       custom: Custom Character Card
       import: Import Character Card (PNG / JSON)
     characterName: Companion Name
@@ -949,7 +949,7 @@ steps:
       optional: Optional / Skipped
       actionRequired: Action Required
     greetingCard: Opening Dialogue Preview (Turn 0)
-    launchButton: Launch AIRI Stage
+    launchButton: Launch Anima Stage
     launching: Launching Stage...
 
 quickStart:

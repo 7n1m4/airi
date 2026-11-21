@@ -43,7 +43,7 @@ flowchart TD
     end
 
     subgraph Client Storage & Cache [Local-First Cache Layer]
-        BUNDLED["@proj-airi/stage-ui/assets/catalog-baseline.json\n(Authoritative Bundled Baseline)"]
+        BUNDLED["@proj-anima/stage-ui/assets/catalog-baseline.json\n(Authoritative Bundled Baseline)"]
         CATSTORE["useFreeAICatalogStore\n(IndexedDB: local:free-ai-catalog)"]
         QUIRKSTORE["useCatalogQuirksStore\n(settings/llm/catalog-quirks-v1)"]
     end
@@ -156,7 +156,7 @@ export interface NormalizedCatalogModel extends RemoteCatalogModel {
 
 ### 3.2 Offline-First & Cryptographic Verification
 1. **Authoritative Bundled Baseline:**
-   AIRI bundles a verified snapshot at `@proj-airi/stage-ui/assets/catalog-baseline.json`. The app is 100% functional offline from the moment of install without waiting for a network fetch.
+   AIRI bundles a verified snapshot at `@proj-anima/stage-ui/assets/catalog-baseline.json`. The app is 100% functional offline from the moment of install without waiting for a network fetch.
 2. **Opportunistic Remote Update:**
    When connected, AIRI periodically polls `https://api.freellmapi.co/v1/latest`.
 3. **WebCrypto Ed25519 Verification:**
@@ -303,7 +303,7 @@ Request Started
 5. **Background Task Exemption:** Non-streaming background jobs (memory consolidation, STMM daily summaries, Echo Chips, proactivity reflection) have no real-time audio/UI commitments and can safely fail over across their entire lifecycle.
 
 ### 5.3 Fallback Pool Definition: `ProviderDefinition: fallback-pool`
-A virtual provider definition registered in `@proj-airi/stage-ui`:
+A virtual provider definition registered in `@proj-anima/stage-ui`:
 
 ```typescript
 export interface FallbackPoolChainItem {
@@ -397,7 +397,7 @@ Remote catalog entries may activate known transforms by slug; they can never inj
 | **Opportunistic Feed Sync** | Yes | Yes | Yes | Standard `fetch()` with CORS support |
 | **Ed25519 Signature Check** | Yes | Yes | Yes | Web Crypto API (`crypto.subtle.verify`) |
 | **Catalog Cache** | Yes | Yes | Yes | IndexedDB (`unstorage` / `localforage`) |
-| **Quick Presets** | Yes | Yes | Yes | Native Vue 3 components in `@proj-airi/stage-ui` |
+| **Quick Presets** | Yes | Yes | Yes | Native Vue 3 components in `@proj-anima/stage-ui` |
 | **Pre-Commit Fallback** | Yes | Yes | Yes | In-memory event buffer in `useLLM` store |
 | **Tri-State Quirk Guards** | Yes | Yes | Yes | Pure TypeScript interceptors in `llm.ts` |
 | **External Daemons** | **None Required** | **None Required** | **None Required** | 100% Client-Side Decoupled |
@@ -414,7 +414,7 @@ To deliver immediate user value without blocking on external sync infrastructure
 - Connect presets directly to 1-click instantiation and provider key signup links.
 
 ### Phase 2: Pre-Commit Safe Fallback Pool in `useLLM`
-- Define the `fallback-pool` virtual provider in `@proj-airi/stage-ui`.
+- Define the `fallback-pool` virtual provider in `@proj-anima/stage-ui`.
 - Implement the **Safe Commit Horizon** and pre-commit event buffer in `packages/stage-ui/src/stores/llm.ts`.
 - Implement the structured cooldown registry (`BURST_COOLDOWN`, `EXHAUSTED`, `POLICY_BLOCKED`).
 - Enable automatic failover for background jobs (summaries, echo chips, proactivity) and pre-commit chat turns.
@@ -438,7 +438,7 @@ To deliver immediate user value without blocking on external sync infrastructure
 
 ## 10. Verification & Quality Gates
 
-1. **Static Typing:** Run `pnpm -F @proj-airi/stage-ui typecheck` and `pnpm -F @proj-airi/stage-pages typecheck`.
+1. **Static Typing:** Run `pnpm -F @proj-anima/stage-ui typecheck` and `pnpm -F @proj-anima/stage-pages typecheck`.
 2. **Pre-Commit Horizon Test:** Verify in `llm.test.ts` that an error thrown before the first token commits fails over cleanly, while an error thrown after token commit emits `stream-interrupted` without replaying text.
 3. **Tool Idempotency Gate Test:** Verify that a turn with an active non-idempotent tool call refuses automatic replay on drop.
 4. **WebCrypto Verification Test:** Unit test validating the Ed25519 verification against the pinned public key across Node and browser test runners.

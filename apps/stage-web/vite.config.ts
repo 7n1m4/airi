@@ -10,9 +10,9 @@ import Yaml from 'unplugin-yaml/vite'
 import Layouts from 'vite-plugin-vue-layouts'
 import VueMacros from 'vue-macros/vite'
 
-import { Download } from '@proj-airi/unplugin-fetch/vite'
-import { DownloadLive2DSDK } from '@proj-airi/unplugin-live2d-sdk/vite'
-import { createS3Provider, WarpDrivePlugin } from '@proj-airi/vite-plugin-warpdrive'
+import { Download } from '@proj-anima/unplugin-fetch/vite'
+import { DownloadLive2DSDK } from '@proj-anima/unplugin-live2d-sdk/vite'
+import { createS3Provider, WarpDrivePlugin } from '@proj-anima/vite-plugin-warpdrive'
 import { LFS, SpaceCard } from 'hfup/vite'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -70,7 +70,7 @@ export default defineConfig({
     ],
     exclude: [
       // Internal Packages
-      '@proj-airi/stage-ui/*',
+      '@proj-anima/stage-ui/*',
 
       // wasm-bindgen package: esbuild's dep pre-bundle mangles the wasm glue
       // (Firefox: NS_ERROR_CORRUPTED_CONTENT on the optimized module), which
@@ -100,15 +100,15 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@proj-airi/server-sdk': resolve(join(import.meta.dirname, '..', '..', 'packages', 'server-sdk', 'src')),
+      '@proj-anima/server-sdk': resolve(join(import.meta.dirname, '..', '..', 'packages', 'server-sdk', 'src')),
       // Headless DSL runtime ships TS source only (no build step); alias to source for dev HMR.
-      '@proj-airi/live2d-runtime': resolve(join(import.meta.dirname, '..', '..', 'packages', 'live2d-runtime', 'src')),
-      '@proj-airi/i18n': resolve(join(import.meta.dirname, '..', '..', 'packages', 'i18n', 'src')),
-      '@proj-airi/stage-ui': resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-ui', 'src')),
-      '@proj-airi/stage-pages': resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-pages', 'src')),
-      '@proj-airi/stage-shared': resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-shared', 'src')),
-      '@proj-airi/stage-layouts': resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-layouts', 'src')),
-      '@proj-airi/electron-vueuse': resolve(join(import.meta.dirname, '..', '..', 'packages', 'electron-vueuse', 'src')),
+      '@proj-anima/live2d-runtime': resolve(join(import.meta.dirname, '..', '..', 'packages', 'live2d-runtime', 'src')),
+      '@proj-anima/i18n': resolve(join(import.meta.dirname, '..', '..', 'packages', 'i18n', 'src')),
+      '@proj-anima/stage-ui': resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-ui', 'src')),
+      '@proj-anima/stage-pages': resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-pages', 'src')),
+      '@proj-anima/stage-shared': resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-shared', 'src')),
+      '@proj-anima/stage-layouts': resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-layouts', 'src')),
+      '@proj-anima/electron-vueuse': resolve(join(import.meta.dirname, '..', '..', 'packages', 'electron-vueuse', 'src')),
     },
   },
   server: {

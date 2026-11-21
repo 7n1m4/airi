@@ -265,7 +265,7 @@ In `packages/stage-pages/src/pages/settings/index.vue`:
 - **Drawer Details**:
   - Animated with smooth Vue `<Transition name="expand">` or CSS grid height transition.
   - Inner scrollable container: `max-h-64 overflow-y-auto rounded-xl bg-neutral-900/40 p-4 border border-neutral-800/60 scrollbar-thin`.
-  - Renders release body using `@proj-airi/stage-ui/components` `<MarkdownRenderer :content="releaseNotes" />`.
+  - Renders release body using `@proj-anima/stage-ui/components` `<MarkdownRenderer :content="releaseNotes" />`.
 
 ---
 
@@ -302,7 +302,7 @@ In `packages/stage-pages/src/pages/settings/index.vue`:
      - `'dev'` vs any $\rightarrow$ `false`
    - Verify 24-hour cache expiry and snooze clearing when a newer version arrives.
 2. **Typecheck & Lint**:
-   - `pnpm -F @proj-airi/stage-pages typecheck`
-   - `pnpm -F @proj-airi/stage-tamagotchi typecheck`
+   - `pnpm -F @proj-anima/stage-pages typecheck`
+   - `pnpm -F @proj-anima/stage-tamagotchi typecheck`
 3. **Git Status & Working Tree Safety**:
    - Run `git status` to verify clean staging and zero unrelated file mutations.

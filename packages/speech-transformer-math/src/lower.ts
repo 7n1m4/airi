@@ -1,8 +1,8 @@
-import type { MathJson } from '@proj-airi/mathjson'
+import type { MathJson } from '@proj-anima/mathjson'
 
 import type { TexNode } from './tex'
 
-import { argsOf, headOf, isFunction, isNumber, nothing, text } from '@proj-airi/mathjson'
+import { argsOf, headOf, isFunction, isNumber, nothing, text } from '@proj-anima/mathjson'
 
 import { operatorHeads, rawHead, relationHeads } from './heads'
 import { canonicalSymbol, greekNames } from './locale'

@@ -6,7 +6,7 @@
  * builds a comic-style speech bubble plank, and applies a fake-perspective
  * transform every frame so the bubble appears to tilt with the head.
  *
- * The math is consumed from `@proj-airi/stage-shared/utils/caption-perspective`
+ * The math is consumed from `@proj-anima/stage-shared/utils/caption-perspective`
  * so future Spine/VRM/MMD adapters share the same single-sourced function.
  */
 
@@ -17,7 +17,7 @@ import type {
   BubbleBodyStyle,
   BubbleTailStyle,
   CaptionEffectCue,
-} from '@proj-airi/stage-shared/utils/caption-sentiment'
+} from '@proj-anima/stage-shared/utils/caption-sentiment'
 
 import { BatchRenderer } from '@pixi/core'
 import { Container as PixiContainer } from '@pixi/display'
@@ -25,10 +25,10 @@ import { Graphics } from '@pixi/graphics'
 import { Text } from '@pixi/text'
 import {
   poseToCaptionTransform,
-} from '@proj-airi/stage-shared/utils/caption-perspective'
+} from '@proj-anima/stage-shared/utils/caption-perspective'
 import {
   analyzeCaptionSentence,
-} from '@proj-airi/stage-shared/utils/caption-sentiment'
+} from '@proj-anima/stage-shared/utils/caption-sentiment'
 
 export type {
   AnalyzedSentenceEffects,

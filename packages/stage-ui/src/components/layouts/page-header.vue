@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
 import { useMotion } from '@vueuse/motion'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'

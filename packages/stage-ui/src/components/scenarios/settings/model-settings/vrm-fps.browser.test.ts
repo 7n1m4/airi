@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// The store under test is reached through the `@proj-airi/stage-ui-three` barrel,
+// The store under test is reached through the `@proj-anima/stage-ui-three` barrel,
 // whose evaluation pulls in Three.js / TresJS / wlipsync. Running it in a DOM
 // environment keeps the browser-shaped globals (`window.devicePixelRatio`,
 // `localStorage`) on the real jsdom implementations instead of the node shims in
@@ -11,7 +11,7 @@ import { nextTick } from 'vue'
 it('persists VRM frame limits without changing the model view', async () => {
   const key = 'settings/stage-ui-three/max-fps'
   localStorage.removeItem(key)
-  const { useModelStore } = await import('@proj-airi/stage-ui-three')
+  const { useModelStore } = await import('@proj-anima/stage-ui-three')
   const pinia = createPinia()
   setActivePinia(pinia)
 

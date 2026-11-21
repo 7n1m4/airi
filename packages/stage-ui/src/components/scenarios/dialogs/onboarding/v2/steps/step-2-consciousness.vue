@@ -3,9 +3,9 @@ import type { WebLlmLoadTarget } from '../../../../../../libs/inference/adapters
 import type { ProgressPayload } from '../../../../../../libs/inference/protocol'
 import type { ProviderMetadata } from '../../../../../../stores/providers'
 
-import { isApplePlatform, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
-import { detectWebGPU } from '@proj-airi/stage-shared/webgpu'
-import { Button } from '@proj-airi/ui'
+import { isApplePlatform, isStageTamagotchi, isStageWeb } from '@proj-anima/stage-shared'
+import { detectWebGPU } from '@proj-anima/stage-shared/webgpu'
+import { Button } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'

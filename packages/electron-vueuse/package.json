@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/electron-vueuse",
+  "name": "@proj-anima/electron-vueuse",
   "type": "module",
   "version": "0.9.0-alpha.15",
   "private": true,
@@ -43,6 +43,6 @@
     "std-env": "catalog:"
   },
   "devDependencies": {
-    "@proj-airi/electron-eventa": "workspace:^"
+    "@proj-anima/electron-eventa": "workspace:^"
   }
 }

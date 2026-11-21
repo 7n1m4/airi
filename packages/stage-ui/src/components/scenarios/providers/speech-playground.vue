@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { VoiceInfo } from '../../../stores/providers'
 
-import { createAudioBlob } from '@proj-airi/stage-shared'
-import { FieldCheckbox, FieldSelect } from '@proj-airi/ui'
+import { createAudioBlob } from '@proj-anima/stage-shared'
+import { FieldCheckbox, FieldSelect } from '@proj-anima/ui'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 

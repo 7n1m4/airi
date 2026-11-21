@@ -3,7 +3,7 @@
 **Status:** Active Implementation Phase (`apps/stage-edge` & Unified Discord Control Plane)
 
 **Related Docs:**
-- [`design-discord-control-plane.md`](./design-discord-control-plane.md) — Unified 3-tab Discord Control Plane & `@proj-airi/stage-edge` package architecture.
+- [`design-discord-control-plane.md`](./design-discord-control-plane.md) — Unified 3-tab Discord Control Plane & `@proj-anima/stage-edge` package architecture.
 - [`design-discord-context-routing.md`](./design-discord-context-routing.md) — Discord channel context routing (`channel-{id}`, `dm-{userId}`), DM privacy isolation, and Access Control List (ACL) permission matrix.
 - [`project-byos-cloud-sync.md`](./project-byos-cloud-sync.md) — The existing BYOS sync engine whose Cloudflare R2 credential integration and `StorageClient` interface this feature builds on.
 - [`proposal-proactivity-vision.md`](./proposal-proactivity-vision.md) — The broader proactivity roadmap; Cloud Relay is a natural deployment target for proactive behaviors.
@@ -31,7 +31,7 @@ AIRI's role shifts from **local runtime only** to **control plane + authoring st
 | Layer | What it does | Implementation |
 |---|---|---|
 | **AIRI (local)** | Author cards, configure relay, manage sync, review memories | User's machine (`stage-tamagotchi` / `stage-ui`) |
-| **Cloud Relay Worker** | Serves the character: handles interactions, calls LLM, reads/writes KV memory | Cloudflare Edge (`@proj-airi/stage-edge`) |
+| **Cloud Relay Worker** | Serves the character: handles interactions, calls LLM, reads/writes KV memory | Cloudflare Edge (`@proj-anima/stage-edge`) |
 | **Discord / Frontends** | User-facing chat surface; hits the Worker's callback URL | Discord infra / Webhooks |
 
 The model is analogous to **Vercel for character instances**: author locally, deploy to the edge, manage from the dashboard, the cloud runs independently.

@@ -1,4 +1,4 @@
-# @proj-airi/speech-transformer-math
+# @proj-anima/speech-transformer-math
 
 Reads TeX formulas as words for a listener, in Chinese, English, Japanese, and Korean. It is a rule system. It has no
 speech pipeline, no model, and no network, so any project can use it.
@@ -12,14 +12,14 @@ speech pipeline, no model, and no network, so any project can use it.
 
 ## Do not use it for
 
-- Finding formulas in markdown or prose. `@proj-airi/core-agent` does that before it calls this package.
+- Finding formulas in markdown or prose. `@proj-anima/core-agent` does that before it calls this package.
 - Evaluating or simplifying formulas.
-- mhchem chemistry alone. Add `@proj-airi/speech-transformer-chem` as an extension.
+- mhchem chemistry alone. Add `@proj-anima/speech-transformer-chem` as an extension.
 
 ## Usage
 
 ```ts
-import { MathSpeech } from '@proj-airi/speech-transformer-math'
+import { MathSpeech } from '@proj-anima/speech-transformer-math'
 
 const speech = new MathSpeech()
 speech.speak('x^2', 'en') // => 'x squared'
@@ -60,6 +60,6 @@ the layer, for example `src/lower.test.ts`.
 ## Checks
 
 ```sh
-pnpm -F @proj-airi/speech-transformer-math typecheck
-pnpm -F @proj-airi/speech-transformer-math exec vitest run
+pnpm -F @proj-anima/speech-transformer-math typecheck
+pnpm -F @proj-anima/speech-transformer-math exec vitest run
 ```

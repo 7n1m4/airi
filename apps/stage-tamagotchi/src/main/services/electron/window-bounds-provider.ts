@@ -1,6 +1,6 @@
 import type { ExecFileException } from 'node:child_process'
 
-import type { TargetWindowBounds } from '@proj-airi/electron-eventa'
+import type { TargetWindowBounds } from '@proj-anima/electron-eventa'
 
 import { execFile } from 'node:child_process'
 

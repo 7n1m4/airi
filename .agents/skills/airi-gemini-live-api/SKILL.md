@@ -63,7 +63,7 @@ Real-time, sub-second bidirectional multimodal streaming over a Bidi WebSocket u
 
 ## Verification
 
-- `pnpm -F @proj-airi/stage-ui typecheck` for any live-session change.
+- `pnpm -F @proj-anima/stage-ui typecheck` for any live-session change.
 - Confirm `responseModalities: ['AUDIO']` survives a real Bidi connect without 1007/1011.
 - Use the `scripts/gemini-live-pocs/` scripts as ground truth for any wire-format change.
 - Toggle `isGroundingEnabled` and confirm `google_search: {}` appears only when enabled and

@@ -389,7 +389,7 @@ Verify:
 
 If you want additional confidence without broad repo churn, prefer targeted checks over root-wide commands:
 
-- `pnpm -F @proj-airi/stage-ui typecheck`
+- `pnpm -F @proj-anima/stage-ui typecheck`
 
 Only run broader validation if the change expands beyond the provider store area.
 

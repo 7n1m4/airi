@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import type { Card, ccv3 } from '@proj-airi/ccc'
-import type { AiriCard } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import type { Card, ccv3 } from '@proj-anima/ccc'
+import type { AiriCard } from '@proj-anima/stage-ui/stores/modules/airi-card'
 
-import { normalizeSearchText } from '@proj-airi/stage-shared'
-import { Alert } from '@proj-airi/stage-ui/components'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { useOnboardingStore } from '@proj-airi/stage-ui/stores/onboarding'
-import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
-import { AiriCardSchema } from '@proj-airi/stage-ui/types'
-import { Button, InputFile } from '@proj-airi/ui'
-import { Select } from '@proj-airi/ui/components/form'
+import { normalizeSearchText } from '@proj-anima/stage-shared'
+import { Alert } from '@proj-anima/stage-ui/components'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useArtistryStore } from '@proj-anima/stage-ui/stores/modules/artistry'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { useOnboardingStore } from '@proj-anima/stage-ui/stores/onboarding'
+import { useSyncEngineStore } from '@proj-anima/stage-ui/stores/sync-engine'
+import { AiriCardSchema } from '@proj-anima/stage-ui/types'
+import { Button, InputFile } from '@proj-anima/ui'
+import { Select } from '@proj-anima/ui/components/form'
 import { storeToRefs } from 'pinia'
 import { safeParse } from 'valibot'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -469,7 +469,7 @@ watch(inputFiles, async (newFiles) => {
   try {
     if (file.name.toLowerCase().endsWith('.zip')) {
       try {
-        const { useDataMaintenance } = await import('@proj-airi/stage-ui/composables/use-data-maintenance')
+        const { useDataMaintenance } = await import('@proj-anima/stage-ui/composables/use-data-maintenance')
         const { importCardZipPackage } = useDataMaintenance()
         const result = await importCardZipPackage(file)
         selectedCardId.value = result.cardId

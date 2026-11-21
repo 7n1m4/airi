@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Alert } from '@proj-airi/ui'
+import { Alert } from '@proj-anima/ui'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{

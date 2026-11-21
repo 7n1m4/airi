@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { isStageCapacitor } from '@proj-airi/stage-shared'
-import { useTheme } from '@proj-airi/ui'
+import { isStageCapacitor } from '@proj-anima/stage-shared'
+import { useTheme } from '@proj-anima/ui'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
 import { computed } from 'vue'
 

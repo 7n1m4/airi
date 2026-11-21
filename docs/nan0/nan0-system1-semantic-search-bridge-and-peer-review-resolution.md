@@ -121,11 +121,11 @@ Grievance #grievance-2: "Unannounced schedule cancellation" (severity: 0.6)
 
 | Package | Check | Command | Status |
 |---|---|---|---|
-| `@proj-airi/nan0-runtime` | TypeScript Typecheck | `pnpm -F @proj-airi/nan0-runtime typecheck` | Passed (0 errors) |
-| `@proj-airi/nan0-runtime` | Unit & Invariant Tests | `pnpm -F @proj-airi/nan0-runtime test` | Passed (347/347 tests across 26 test files) |
-| `@proj-airi/nan0-runtime` | Build / Dist Types | `pnpm -F @proj-airi/nan0-runtime build` | Passed (`dist/index.mjs` & `dist/index.d.mts`) |
-| `@proj-airi/stage-ui` | TypeScript / Vue-TSC | `pnpm -F @proj-airi/stage-ui typecheck` | Passed (0 errors) |
-| `@proj-airi/stage-ui` | System 1 Store Tests | `pnpm -F @proj-airi/stage-ui exec vitest run src/stores/modules/system-one.test.ts` | Passed (11/11 tests) |
+| `@proj-anima/nan0-runtime` | TypeScript Typecheck | `pnpm -F @proj-anima/nan0-runtime typecheck` | Passed (0 errors) |
+| `@proj-anima/nan0-runtime` | Unit & Invariant Tests | `pnpm -F @proj-anima/nan0-runtime test` | Passed (347/347 tests across 26 test files) |
+| `@proj-anima/nan0-runtime` | Build / Dist Types | `pnpm -F @proj-anima/nan0-runtime build` | Passed (`dist/index.mjs` & `dist/index.d.mts`) |
+| `@proj-anima/stage-ui` | TypeScript / Vue-TSC | `pnpm -F @proj-anima/stage-ui typecheck` | Passed (0 errors) |
+| `@proj-anima/stage-ui` | System 1 Store Tests | `pnpm -F @proj-anima/stage-ui exec vitest run src/stores/modules/system-one.test.ts` | Passed (11/11 tests) |
 
 ---
 

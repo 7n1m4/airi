@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { Libp2pTransportKind } from '@proj-airi/stage-shared/libp2p'
+import type { Libp2pTransportKind } from '@proj-anima/stage-shared/libp2p'
 
-import { useLibp2pStore } from '@proj-airi/stage-ui/stores/modules/libp2p'
-import { Button, DoubleCheckButton, FieldCheckbox, FieldInput, FieldSelect, FieldTextArea, QRCode } from '@proj-airi/ui'
+import { useLibp2pStore } from '@proj-anima/stage-ui/stores/modules/libp2p'
+import { Button, DoubleCheckButton, FieldCheckbox, FieldInput, FieldSelect, FieldTextArea, QRCode } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,

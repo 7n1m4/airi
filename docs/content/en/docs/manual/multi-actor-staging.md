@@ -5,7 +5,7 @@ description: How to orchestrate multi-character conversations in Studio, manage 
 
 # Multi-Actor Staging & Wardrobes
 
-AIRI is not limited to a single character. With **Multi-Actor Staging** and the **Modular Outfits System**, you can host multi-character talk shows, interactive team brainstorms, and manage wardrobe changes mid-conversation.
+Anima is not limited to a single character. With **Multi-Actor Staging** and the **Modular Outfits System**, you can host multi-character talk shows, interactive team brainstorms, and manage wardrobe changes mid-conversation.
 
 ---
 
@@ -19,7 +19,7 @@ In a multi-actor card (created in the AnimaDex Wizard or Card Editor), multiple 
 <|ACTOR:Bob|> Almost! Just running the typecheck suite now.
 ```
 
-- **Automatic Voice Routing**: AIRI automatically routes `<|ACTOR:Alice|>` speech through Alice's assigned TTS voice and `<|ACTOR:Bob|>` through Bob's voice.
+- **Automatic Voice Routing**: Anima automatically routes `<|ACTOR:Alice|>` speech through Alice's assigned TTS voice and `<|ACTOR:Bob|>` through Bob's voice.
 - **Stage Focus**: When an actor speaks, their 3D/2D model animates while inactive actors shift to subtle listening or idle gestures.
 
 ---
@@ -45,4 +45,4 @@ Characters can have multiple costume variants (e.g., *Casual*, *School Uniform*,
 
 ## 4. Deep Concept Stacks & Studio Integration
 
-Multi-Actor staging and modular outfits build upon AIRI's underlying Studio Concept Stack. For deep technical configuration of Base vs. Layer concepts, image generation prompt overrides, and autonomous Director grading loops, see the [Studio Configuration Guide](./config/studio.md).
+Multi-Actor staging and modular outfits build upon Anima's underlying Studio Concept Stack. For deep technical configuration of Base vs. Layer concepts, image generation prompt overrides, and autonomous Director grading loops, see the [Studio Configuration Guide](./config/studio.md).

@@ -1,4 +1,4 @@
-import type { MetadataEventSource } from '@proj-airi/server-sdk'
+import type { MetadataEventSource } from '@proj-anima/server-sdk'
 
 interface EventSourcePayload {
   source?: string

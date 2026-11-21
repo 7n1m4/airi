@@ -11,7 +11,7 @@ shell:
   previous: Назад
   next: Продолжить
   skip: Настроить позже
-  brand: Настройка компаньона AIRI
+  brand: Настройка компаньона Anima
   stageReady: Сцена готова
   closeSetup: Закрыть настройку (Сохранить на потом)
   placeholderNotice: Этот модуль настраивается. Вы можете перейти к следующему шагу.
@@ -19,7 +19,7 @@ steps:
   welcome:
     label: Приветствие
     subtitle: Персональная студия компаньона
-    heroTitle: Добро пожаловать в AIRI
+    heroTitle: Добро пожаловать в Anima
     heroSubtitle: Сцена для вашего виртуального компаньона — готова за считанные
       минуты, 100% локально на вашем компьютере.
     companionQuote: Привет! Я твой автономный цифровой компаньон. Будь то живой
@@ -36,13 +36,13 @@ steps:
     dialog:
       savedTitle: Настройка сохранена на потом
       savedDescription: 'Вы всегда можете вернуться к настройке компаньона через
-        значок AIRI в строке меню macOS или системном трее:'
+        значок Anima в строке меню macOS или системном трее:'
       trayItem: Настройка и вход компаньона (V3)
       continue: Продолжить настройку
       closeToTray: Свернуть в трей
       close: Close
       comebackLead: If you want to come back to this later, just
-      desktopInstruction: right-click the AIRI system tray icon and click Companion Wizard.
+      desktopInstruction: right-click the Anima system tray icon and click Companion Wizard.
       webInstruction: tap the cog icon in the top-right to open Settings, then go
         Guided Tours → Companion Wizard.
       webSettingsPath: Settings → Guided Tours → Companion Wizard
@@ -63,7 +63,7 @@ steps:
       badge: Локальный приоритет
       action: Продолжить локально
     stepBadge: Выбор архитектуры · Шаг {current} из {total}
-    companionGreeting: 'Добро пожаловать в AIRI! Выберите способ настройки сцены:
+    companionGreeting: 'Добро пожаловать в Anima! Выберите способ настройки сцены:
       полностью локально и офлайн или с подключением аккаунта для синхронизации
       между устройствами.'
     local:
@@ -84,7 +84,7 @@ steps:
     description: Настройте язык интерфейса, визуальную тему и фирменный акцентный оттенок.
     languageSection:
       title: Язык интерфейса
-      description: Выберите основной язык для AIRI. Его можно изменить в любой момент.
+      description: Выберите основной язык для Anima. Его можно изменить в любой момент.
     themeSection:
       title: Цветовая тема
       description: Выберите предпочитаемый режим оформления.
@@ -152,7 +152,7 @@ steps:
       earth: Земля и Флора
       ocean: Океан и Небо
       royal: Королевский и Цветы
-    resetToSignatureAiriCyan: Сбросить к фирменному голубому AIRI
+    resetToSignatureAiriCyan: Сбросить к фирменному голубому Anima
     preventsRemoteCloudSyncFromOverwritingThisMachineSLanguageAndTheme:
       Предотвращает перезапись языка и темы этой машины удаленной облачной
       синхронизацией
@@ -450,7 +450,7 @@ steps:
     description: Выберите или настройте базовую личность, манеру речи и предысторию
       компаньона.
     presetCards:
-      airi: AIRI (Стандартный автономный дух)
+      airi: Anima (Стандартный автономный дух)
       custom: Своя карточка персонажа
       import: Импорт карточки (PNG / JSON)
     characterName: Имя компаньона
@@ -961,7 +961,7 @@ steps:
       optional: Пропущено / Опционально
       actionRequired: Требуется настройка
     greetingCard: Пример первых слов на сцене (Ход 0)
-    launchButton: Запустить сцену AIRI
+    launchButton: Запустить сцену Anima
     launching: Запуск сцены...
 quickStart:
   title: Быстрый старт за 60 секунд

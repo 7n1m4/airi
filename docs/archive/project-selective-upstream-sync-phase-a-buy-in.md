@@ -44,7 +44,7 @@ So Phase A is **extract + dependency-inject**, not a capability you lack.
 
 ## What you are actually buying into
 
-### 1. New package: `@proj-airi/core-agent`
+### 1. New package: `@proj-anima/core-agent`
 
 Framework-agnostic (no Vue) modules:
 

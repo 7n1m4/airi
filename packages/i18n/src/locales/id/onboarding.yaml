@@ -11,7 +11,7 @@ shell:
   previous: Back
   next: Continue
   skip: Setup Later
-  brand: AIRI Companion Setup
+  brand: Anima Companion Setup
   stageReady: Stage Ready
   closeSetup: Close Setup (Save for Later)
   placeholderNotice: This module configuration is being provisioned. You can
@@ -20,7 +20,7 @@ steps:
   welcome:
     label: Selamat Datang
     subtitle: Studio Pendamping Pribadi
-    heroTitle: Selamat Datang di AIRI
+    heroTitle: Selamat Datang di Anima
     heroSubtitle: Panggung pendamping Anda — disiapkan dalam hitungan menit, 100% di
       komputer Anda.
     companionQuote: Halo! Saya pendamping digital otonom Anda. Baik Anda
@@ -37,13 +37,13 @@ steps:
     dialog:
       savedTitle: Penyiapan Disimpan untuk Nanti
       savedDescription: 'Anda dapat membuka kembali penyiapan pendamping kapan saja
-        dengan mengeklik ikon AIRI di bilah menu / baki sistem:'
+        dengan mengeklik ikon Anima di bilah menu / baki sistem:'
       trayItem: Penyiapan & Masuk Pendamping (V3)
       continue: Lanjutkan Penyiapan
       closeToTray: Tutup ke Baki Sistem
       close: Close
       comebackLead: If you want to come back to this later, just
-      desktopInstruction: right-click the AIRI system tray icon and click Companion Wizard.
+      desktopInstruction: right-click the Anima system tray icon and click Companion Wizard.
       webInstruction: tap the cog icon in the top-right to open Settings, then go
         Guided Tours → Companion Wizard.
       webSettingsPath: Settings → Guided Tours → Companion Wizard
@@ -63,7 +63,7 @@ steps:
       badge: Offline Pertama
       action: Lanjutkan Secara Lokal
     stepBadge: Architecture Triage · Step {current} of {total}
-    companionGreeting: Welcome to AIRI! Choose how you'd like to set up your stage.
+    companionGreeting: Welcome to Anima! Choose how you'd like to set up your stage.
       You can run 100% locally and offline, or sign in to sync across devices.
     local:
       badge: Offline First
@@ -84,7 +84,7 @@ steps:
     description: Atur bahasa antarmuka, tema visual, dan warna aksen khas Anda.
     languageSection:
       title: Bahasa Tampilan
-      description: Pilih bahasa utama Anda untuk AIRI. Anda dapat mengubahnya kapan saja.
+      description: Pilih bahasa utama Anda untuk Anima. Anda dapat mengubahnya kapan saja.
     themeSection:
       title: Mode Tema
       description: Pilih mode tampilan yang Anda sukai.
@@ -152,7 +152,7 @@ steps:
       earth: Bumi & Flora
       ocean: Samudra & Langit
       royal: Kerajaan & Bunga
-    resetToSignatureAiriCyan: Setel ulang ke cyan khas AIRI
+    resetToSignatureAiriCyan: Setel ulang ke cyan khas Anima
     preventsRemoteCloudSyncFromOverwritingThisMachineSLanguageAndTheme: Mencegah sinkronisasi cloud jarak jauh menimpa bahasa dan tema mesin ini
     nextHint: Lanjutkan ke Arketipe Pengalaman
   experience:
@@ -445,7 +445,7 @@ steps:
     description: Select or customize the foundational identity, speech quirks, and
       backstory of your companion.
     presetCards:
-      airi: AIRI (Default Autonomous Spirit)
+      airi: Anima (Default Autonomous Spirit)
       custom: Custom Character Card
       import: Import Character Card (PNG / JSON)
     characterName: Companion Name
@@ -954,7 +954,7 @@ steps:
       optional: Optional / Skipped
       actionRequired: Action Required
     greetingCard: Opening Dialogue Preview (Turn 0)
-    launchButton: Launch AIRI Stage
+    launchButton: Launch Anima Stage
     launching: Launching Stage...
 quickStart:
   title: 60-Second Quick Start

@@ -1,7 +1,7 @@
 chat:
   message:
     character-name:
-      airi: AIRI
+      airi: Anima
       core-system: Hệ thống lõi
       you: Bạn
     reasoning_only: Mô hình chỉ tạo phản hồi suy luận (chuỗi suy nghĩ). Vui lòng kiểm tra giới

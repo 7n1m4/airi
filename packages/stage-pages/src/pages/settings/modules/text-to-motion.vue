@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useTextToMotionStore } from '@proj-airi/stage-ui/stores/modules/text-to-motion'
+import { useTextToMotionStore } from '@proj-anima/stage-ui/stores/modules/text-to-motion'
 import { RouterLink } from 'vue-router'
 
 const textToMotionStore = useTextToMotionStore()

@@ -1,8 +1,8 @@
-import type { SerializableDesktopCapturerSource } from '@proj-airi/electron-screen-capture'
+import type { SerializableDesktopCapturerSource } from '@proj-anima/electron-screen-capture'
 import type { SourcesOptions } from 'electron'
 
 import { defineInvokeEventa } from '@moeru/eventa'
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
 import { computed, onBeforeUnmount, ref } from 'vue'
 
 export const screenCaptureGetSources = defineInvokeEventa<SerializableDesktopCapturerSource[], SourcesOptions>('eventa:invoke:electron:screen-capture:get-sources')

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FieldInput, FieldValues } from '@proj-airi/ui'
+import { FieldInput, FieldValues } from '@proj-anima/ui'
 import { useI18n } from 'vue-i18n'
 
 const emit = defineEmits<{

@@ -133,7 +133,7 @@ Two styles coexist in AIRI. Dating-sim uses the raw `new BroadcastChannel('datin
 ## Verification
 
 ```bash
-pnpm -F @proj-airi/stage-ui typecheck
+pnpm -F @proj-anima/stage-ui typecheck
 ```
 
 ## Related Skills & References

@@ -16,13 +16,13 @@ The **Quick Start Cockpit** provides a unified four-corner dashboard where users
 - **Bottom Left (Soul & Persona)**: Character persona selection, SillyTavern card drag-and-drop, and nickname customization.
 - **Bottom Right (Voice & Timbre)**: Voice synthesis engine selection (Kokoro local WebGPU, PocketTTS, ElevenLabs, Fish Audio, Edge TTS) with one-click preview auditioning.
 
-A prominent **Launch AIRI Stage** action performs atomic pre-flight validation and initializes the stage session in real time.
+A prominent **Launch Anima Stage** action performs atomic pre-flight validation and initializes the stage session in real time.
 
 ---
 
 ## Guided Setup Wizard Walkthrough
 
-For creators desiring deep configuration, the multi-step wizard guides the user through each foundational layer of AIRI embodiment:
+For creators desiring deep configuration, the multi-step wizard guides the user through each foundational layer of Anima embodiment:
 
 ### 1. Hardware & Environment Verification
 
@@ -37,7 +37,7 @@ The Welcome step automatically probes the host system:
 
 ![Experience Archetypes](/showcase/onboarding-v3-experience-archetypes.avif)
 
-Sets the high-level operational posture of AIRI through tailored archetypes:
+Sets the high-level operational posture of Anima through tailored archetypes:
 - **Casual Companion**: Warm conversational banter, spontaneous spoken pacing, and gentle desktop reactions.
 - **Productivity & Workspace Partner**: Focused task execution, proactive reminders, code assistance, and active-window awareness.
 - **Gaming & Stream Backseat**: Reactive banter, screen-watching commentary, and game state empathy.

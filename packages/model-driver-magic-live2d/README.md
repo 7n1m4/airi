@@ -1,4 +1,4 @@
-# `@proj-airi/model-driver-magic-live2d`
+# `@proj-anima/model-driver-magic-live2d`
 
 This package applies MAGIC motion generators to normalized Live2D poses.
 It owns pose conversion, fixed-rate scheduling, output filtering, and target release.
@@ -6,7 +6,7 @@ It owns pose conversion, fixed-rate scheduling, output filtering, and target rel
 ## Use the package
 
 ```ts
-import { createDriver } from '@proj-airi/model-driver-magic-live2d'
+import { createDriver } from '@proj-anima/model-driver-magic-live2d'
 
 const driver = createDriver({
   target: {

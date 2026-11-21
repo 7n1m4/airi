@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSettingsUserProfile } from '@proj-airi/stage-ui/stores/settings/user-profile'
+import { useSettingsUserProfile } from '@proj-anima/stage-ui/stores/settings/user-profile'
 import { computed } from 'vue'
 
 const props = defineProps<{

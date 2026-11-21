@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { useBackgroundStore } from '@proj-airi/stage-ui/stores'
-import { useAnimaDexWizardStore } from '@proj-airi/stage-ui/stores/animadex-wizard'
-import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { useBackgroundStore } from '@proj-anima/stage-ui/stores'
+import { useAnimaDexWizardStore } from '@proj-anima/stage-ui/stores/animadex-wizard'
+import { useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 

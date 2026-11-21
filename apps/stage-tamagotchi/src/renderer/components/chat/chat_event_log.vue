@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { EventCategoryFilter } from '@proj-airi/stage-ui/stores/event-log'
+import type { EventCategoryFilter } from '@proj-anima/stage-ui/stores/event-log'
 
-import { useEventLogStore } from '@proj-airi/stage-ui/stores/event-log'
+import { useEventLogStore } from '@proj-anima/stage-ui/stores/event-log'
 import { onMounted, ref } from 'vue'
 
 const eventLogStore = useEventLogStore()

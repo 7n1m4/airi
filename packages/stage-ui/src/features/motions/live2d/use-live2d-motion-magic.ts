@@ -2,8 +2,8 @@ import type {
   OutputFilterFrame,
   OutputFilterOptions,
   Pose,
-} from '@proj-airi/model-driver-magic-live2d'
-import type { FitOptions, MagicModel } from '@proj-airi/motion-driver-magic'
+} from '@proj-anima/model-driver-magic-live2d'
+import type { FitOptions, MagicModel } from '@proj-anima/motion-driver-magic'
 import type { MaybeRefOrGetter } from 'vue'
 
 import type { Live2DMotionMagicDataset } from './profiles'
@@ -15,8 +15,8 @@ import {
   defaultOutputFilterOptions,
   neutralPose,
   poseAxes,
-} from '@proj-airi/model-driver-magic-live2d'
-import { fit } from '@proj-airi/motion-driver-magic'
+} from '@proj-anima/model-driver-magic-live2d'
+import { fit } from '@proj-anima/motion-driver-magic'
 import { computed, onScopeDispose, reactive, readonly, shallowRef, toValue, watch } from 'vue'
 
 import { defaultLive2DMotionMagicDataset } from './profiles'

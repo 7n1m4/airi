@@ -114,11 +114,11 @@ AIRI separates power management into two distinct architectural tiers (see [`doc
 
 1. **Unit Tests**:
    ```bash
-   pnpm -F @proj-airi/stage-tamagotchi exec vitest run src/renderer/stores/stage-window-lifecycle.test.ts
+   pnpm -F @proj-anima/stage-tamagotchi exec vitest run src/renderer/stores/stage-window-lifecycle.test.ts
    ```
 2. **Typecheck**:
    ```bash
-   pnpm -F @proj-airi/stage-tamagotchi typecheck
+   pnpm -F @proj-anima/stage-tamagotchi typecheck
    ```
 3. **Manual Verification**:
    - Lock screen (`Ctrl+Cmd+Q` on macOS or `Win+L` on Windows).

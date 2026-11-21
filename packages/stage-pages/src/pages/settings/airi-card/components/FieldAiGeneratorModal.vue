@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
-import { useLLM } from '@proj-airi/stage-ui/stores/llm'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Button } from '@proj-airi/ui'
+import { useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
+import { useLLM } from '@proj-anima/stage-ui/stores/llm'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useConsciousnessStore } from '@proj-anima/stage-ui/stores/modules/consciousness'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Button } from '@proj-anima/ui'
 import {
   DialogContent,
   DialogOverlay,

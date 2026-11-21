@@ -125,11 +125,11 @@ export function setupMicToggleShortcut(mainWindow: BrowserWindow, hotkey: MicTog
         const currentState = getMacCapsLockState()
 
         if (lastLockKeyState !== null && currentState !== lastLockKeyState) {
-          console.info(`[@proj-airi/stage-tamagotchi] [MicToggle] Caps Lock state changed: ${lastLockKeyState} -> ${currentState}`)
+          console.info(`[@proj-anima/stage-tamagotchi] [MicToggle] Caps Lock state changed: ${lastLockKeyState} -> ${currentState}`)
 
           if (currentWindow && !currentWindow.isDestroyed()) {
             const timestamp = Date.now()
-            console.info(`[@proj-airi/stage-tamagotchi] [MicToggle] Emitting toggle-mic-from-shortcut at ${timestamp}`)
+            console.info(`[@proj-anima/stage-tamagotchi] [MicToggle] Emitting toggle-mic-from-shortcut at ${timestamp}`)
             currentWindow.webContents.send('toggle-mic-from-shortcut', { timestamp })
           }
           else {
@@ -160,11 +160,11 @@ export function setupMicToggleShortcut(mainWindow: BrowserWindow, hotkey: MicTog
         const currentState = getWinLockKeyState(vk)
 
         if (lastLockKeyState !== null && currentState !== lastLockKeyState) {
-          console.info(`[@proj-airi/stage-tamagotchi] [MicToggle] Windows ${currentHotkey} state changed: ${lastLockKeyState} -> ${currentState}`)
+          console.info(`[@proj-anima/stage-tamagotchi] [MicToggle] Windows ${currentHotkey} state changed: ${lastLockKeyState} -> ${currentState}`)
 
           if (currentWindow && !currentWindow.isDestroyed()) {
             const timestamp = Date.now()
-            console.info(`[@proj-airi/stage-tamagotchi] [MicToggle] Emitting toggle-mic-from-shortcut at ${timestamp}`)
+            console.info(`[@proj-anima/stage-tamagotchi] [MicToggle] Emitting toggle-mic-from-shortcut at ${timestamp}`)
             currentWindow.webContents.send('toggle-mic-from-shortcut', { timestamp })
           }
           else {

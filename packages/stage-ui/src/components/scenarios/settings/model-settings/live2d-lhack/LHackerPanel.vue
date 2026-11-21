@@ -2,10 +2,10 @@
 import JSZip from 'jszip'
 
 import { Texture } from '@pixi/core'
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { artistryGenerateHeadless, REPLICATE_IMAGEEDIT_PRESETS } from '@proj-airi/stage-shared'
-import { useLive2d } from '@proj-airi/stage-ui-live2d'
-import { Button } from '@proj-airi/ui'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { artistryGenerateHeadless, REPLICATE_IMAGEEDIT_PRESETS } from '@proj-anima/stage-shared'
+import { useLive2d } from '@proj-anima/stage-ui-live2d'
+import { Button } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, ref, watch } from 'vue'
 

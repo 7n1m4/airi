@@ -1,7 +1,7 @@
 /**
  * Phase 1 headless verification for the Live2D DSL interpreter virtual machine.
  *
- * Drives the canonical, render-agnostic engine in `@proj-airi/live2d-runtime`
+ * Drives the canonical, render-agnostic engine in `@proj-anima/live2d-runtime`
  * directly (no PIXI/Vue/DOM) against the extracted model fixtures under
  * `apps/stage-edge/.models/`, asserting:
  *

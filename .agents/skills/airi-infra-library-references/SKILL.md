@@ -24,7 +24,7 @@ Router over generic library docs. Load only the reference the task needs; domain
 ## Fork vetoes (non-negotiable)
 
 - **No UnoCSS attributify mode**, no long inline class strings. Grouped `:class="[...]"` arrays per `airi-ui-design-conventions`.
-- **Build on `@proj-airi/ui`** (reka-ui) + Iconify (`carbon:*`, `solar:*`, `ph:*`); no bespoke raw controls or inline SVGs.
+- **Build on `@proj-anima/ui`** (reka-ui) + Iconify (`carbon:*`, `solar:*`, `ph:*`); no bespoke raw controls or inline SVGs.
 - **`useDark({ disableTransition: false })`** when calling VueUse directly; never strip focus outlines without a `focus-visible:ring` replacement.
 - **`useLocalStorage` vs ManualReset**: Control Strip `buttons` layout uses ManualReset semantics — do not "simplify" to plain `useLocalStorage` (wipes user layouts on catalog gating).
 - **Chromatic over hexes**: `primary` derives from `--chromatic-hue`; `neutral` surfaces stay static. Never hardcode brand hexes.

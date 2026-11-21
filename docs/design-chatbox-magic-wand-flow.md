@@ -33,7 +33,7 @@ Now I have the complete chain. Here is the full trace.
     @submit="handleSend"
   />
   ```
-  Uses `BasicTextarea` from `@proj-airi/ui` (line 32 import). The `v-model` binds to `messageInput` ref (line 41).
+  Uses `BasicTextarea` from `@proj-anima/ui` (line 32 import). The `v-model` binds to `messageInput` ref (line 41).
 
 - **Magic Wand Button** — lines **1092-1099**:
   ```html
@@ -188,7 +188,7 @@ Key points:
 - `generateObject<T>()` — lines 568-582:
   ```ts
   async function generateObject<T>(model, chatProvider, options) {
-    const { generateObject: sharedGenerateObject } = await import('@proj-airi/stage-shared')
+    const { generateObject: sharedGenerateObject } = await import('@proj-anima/stage-shared')
     const chatConfig = getChatConfig(model, chatProvider)
     return await sharedGenerateObject({
       ...options,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { VAR_HUE } from '@proj-airi/unocss-preset-chromatic'
+import { VAR_HUE } from '@proj-anima/unocss-preset-chromatic'
 import { onMounted, ref, watch } from 'vue'
 
 const DEFAULT_THEME_COLORS_HUE = 220.44

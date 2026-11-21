@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { defaultModelParameters, useLive2d } from '@proj-airi/stage-ui-live2d'
-import { OPFSCacheV2 } from '@proj-airi/stage-ui-live2d/utils/opfs-loader'
-import { Button, Checkbox, FieldRange, SelectTab } from '@proj-airi/ui'
+import { defaultModelParameters, useLive2d } from '@proj-anima/stage-ui-live2d'
+import { OPFSCacheV2 } from '@proj-anima/stage-ui-live2d/utils/opfs-loader'
+import { Button, Checkbox, FieldRange, SelectTab } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, toRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'

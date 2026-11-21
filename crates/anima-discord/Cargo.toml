@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "anima-discord"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "Anima Discord bot (blocking REST + Gateway WebSocket slice) for the Slint build (wave ⑧ lane)"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }
+tungstenite = { workspace = true }
+
+[dev-dependencies]
+mockito = { workspace = true }

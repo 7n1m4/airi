@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/stage-shared",
+  "name": "@proj-anima/stage-shared",
   "type": "module",
   "private": true,
   "description": "Shared",
@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@moeru/eventa": "catalog:",
-    "@proj-airi/electrobun-eventa": "workspace:^",
+    "@proj-anima/electrobun-eventa": "workspace:^",
     "@vueuse/core": "catalog:",
     "@xsai/generate-text": "catalog:",
     "@xsai/shared": "catalog:",
@@ -46,7 +46,7 @@
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@nekopaw/tempora": "catalog:",
-    "@proj-airi/electron-screen-capture": "workspace:^",
+    "@proj-anima/electron-screen-capture": "workspace:^",
     "@types/audioworklet": "catalog:"
   }
 }

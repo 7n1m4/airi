@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { IconItem, RippleGrid } from '@proj-airi/stage-ui/components'
-import { useRippleGridState } from '@proj-airi/stage-ui/composables/use-ripple-grid-state'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { IconItem, RippleGrid } from '@proj-anima/stage-ui/components'
+import { useRippleGridState } from '@proj-anima/stage-ui/composables/use-ripple-grid-state'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 

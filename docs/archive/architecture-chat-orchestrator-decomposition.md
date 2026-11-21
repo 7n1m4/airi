@@ -2,7 +2,7 @@
 
 **Status:** Complete · All Phases 0–5 Verified
 **Repository:** `dasilva333/airi`
-**Domain:** `@proj-airi/stage-ui`, ordinary turn-based chat orchestration
+**Domain:** `@proj-anima/stage-ui`, ordinary turn-based chat orchestration
 **Reviewed source baseline:** `326aeb054524b5c7979bae5cc6e838c9fbe63da1`
 **Specification date:** 2026-09-08
 **Intended repository location:** `docs/architecture-chat-orchestrator-decomposition.md`
@@ -412,7 +412,7 @@ Test ordinary and `triggerOnly` request insertion separately, including minimal 
   - [`prompt-contracts.test.ts`](../packages/stage-ui/src/stores/chat/prompt-contracts.test.ts) (5 tests): P1–P4, Intrusions VLM forward timing, image stripping on failure, exact 8-part grounding order, and intrusion staging consumption.
   - [`tool-bridge-runtime.test.ts`](../packages/stage-ui/src/stores/chat/tool-bridge-runtime.test.ts) (4 tests): Maximum 5-round outer bridged loop bound, early round-1 exit, multi-turn tool result association, and marker syntax dialects.
 - Verified runtime tests exercise real production paths in `performSend`.
-- **Exit gate:** PASS (21/21 tests passing across 5 suites, `@proj-airi/stage-ui` typecheck 0 errors).
+- **Exit gate:** PASS (21/21 tests passing across 5 suites, `@proj-anima/stage-ui` typecheck 0 errors).
 
 ### Phase 1 — Extract error presentation `[COMPLETED - 2026-09-08]`
 
@@ -420,7 +420,7 @@ Test ordinary and `triggerOnly` request insertion separately, including minimal 
 - Wired into the existing catch block in `packages/stage-ui/src/stores/chat.ts` (lines 1886–1932).
 - Preserved intentional Stop detection before formatting, UI message building, session persistence, hook emissions, and error rethrow.
 - Cataloged suite in [`docs/project-testing-parity.md`](./project-testing-parity.md).
-- **Exit gate:** PASS (27/27 chat orchestrator tests passing across 6 suites, `@proj-airi/stage-ui` typecheck 0 errors).
+- **Exit gate:** PASS (27/27 chat orchestrator tests passing across 6 suites, `@proj-anima/stage-ui` typecheck 0 errors).
 
 ### Phase 2 — Extract tool syntax `[COMPLETED - 2026-09-08]`
 
@@ -429,7 +429,7 @@ Test ordinary and `triggerOnly` request insertion separately, including minimal 
 - Wired helpers into `packages/stage-ui/src/stores/chat.ts` (lines 903–1058 and line 975), replacing ~120 lines of inline parsing.
 - Kept tool resolution, availability check, ID generation, queue insertion, execution, and outer 5-round bounds in `chat.ts`.
 - Cataloged suite in [`docs/project-testing-parity.md`](./project-testing-parity.md).
-- **Exit gate:** PASS (46/46 chat orchestrator tests passing across 7 suites, `@proj-airi/stage-ui` typecheck 0 errors).
+- **Exit gate:** PASS (46/46 chat orchestrator tests passing across 7 suites, `@proj-anima/stage-ui` typecheck 0 errors).
 
 ### Phase 3 — Extract intrusion computation `[COMPLETED - 2026-09-08]`
 
@@ -438,7 +438,7 @@ Test ordinary and `triggerOnly` request insertion separately, including minimal 
 - Wired helpers into `packages/stage-ui/src/stores/chat.ts` (lines 1180–1252), replacing inline template interpolations and Dating Sim calculations.
 - Kept asynchronous store imports, two-hop cognition pipeline, staging reads, staging consumption, and card clear mutations strictly in `chat.ts`.
 - Cataloged suite in [`docs/project-testing-parity.md`](./project-testing-parity.md).
-- **Exit gate:** PASS (67/67 chat orchestrator tests passing across 9 suites, `@proj-airi/stage-ui` typecheck 0 errors).
+- **Exit gate:** PASS (67/67 chat orchestrator tests passing across 9 suites, `@proj-anima/stage-ui` typecheck 0 errors).
 
 ### Phase 4 — Extract grounding formatting `[COMPLETED - 2026-09-08]`
 
@@ -447,12 +447,12 @@ Test ordinary and `triggerOnly` request insertion separately, including minimal 
 - Wired helpers into `packages/stage-ui/src/stores/chat.ts` (lines 683–795), replacing inline object creations with calls to pure formatters.
 - Kept all async fetching (`updateSensors`, `searchEntries`, `getNotes`, `probeTurn`), toggle evaluation, try-catch error boundaries, and message splicing in `chat.ts`.
 - Cataloged suite in [`docs/project-testing-parity.md`](./project-testing-parity.md).
-- **Exit gate:** PASS (81/81 chat orchestrator tests passing across 10 suites, `@proj-airi/stage-ui` typecheck 0 errors).
+- **Exit gate:** PASS (81/81 chat orchestrator tests passing across 10 suites, `@proj-anima/stage-ui` typecheck 0 errors).
 
 ### Phase 5 — Integrated verification and documentation `[COMPLETED - 2026-09-08]`
 
 - Ran full configured monorepo tests (`pnpm run test:run`): 91 test suites passed, 828 tests passed (0 failures, 4 suites / 8 tests conditionally skipped).
-- Validated affected workspace typecheck (`pnpm -F @proj-airi/stage-ui typecheck`): passed with 0 errors (`vue-tsc --noEmit`).
+- Validated affected workspace typecheck (`pnpm -F @proj-anima/stage-ui typecheck`): passed with 0 errors (`vue-tsc --noEmit`).
 - Recorded desktop smoke check scenarios (Section 9 items 1–7) as headless-verified and pending manual desktop runtime confirmation.
 - Updated canonical test catalog [`docs/project-testing-parity.md`](./project-testing-parity.md) to reflect all new unit and invariant suites (91 suites / 828 tests).
 - Updated canonical Rosetta Stone [`docs/rosetta-stone.md`](./rosetta-stone.md) key directory map with pure decomposed chat modules.
@@ -466,8 +466,8 @@ Each phase is a reviewable checkpoint. Commit, push, and PR operations follow th
 From the repository root, use the current lockfile and documented setup. Record any required package build preparation; do not change dependencies merely to make a local run convenient.
 
 ```bash
-pnpm -F @proj-airi/stage-ui typecheck
-pnpm -F @proj-airi/stage-ui test:run
+pnpm -F @proj-anima/stage-ui typecheck
+pnpm -F @proj-anima/stage-ui test:run
 pnpm run test:run
 ```
 
@@ -509,7 +509,7 @@ Maintain one concise record per checkpoint:
 | **Source** | Baseline `961f1c308`, working tree on `main` |
 | **Scope** | Extracted `formatChatError` pure helper (`stores/chat/error-formatter.ts`); wired into `stores/chat.ts` lines 1886–1932. |
 | **Evidence** | Q1–Q4, S1–S3, C1–C5, P1–P4, Intrusions, Lifecycle hook determinism, bridged tool loop limits. 27 passing tests across 6 suites in `stores/chat/`. |
-| **Runner facts** | `@proj-airi/stage-ui`: 60 test suites, 501 passing tests (0 failures, 1 model-gated skip). Typecheck: `vue-tsc --noEmit` passed with 0 errors. |
+| **Runner facts** | `@proj-anima/stage-ui`: 60 test suites, 501 passing tests (0 failures, 1 model-gated skip). Typecheck: `vue-tsc --noEmit` passed with 0 errors. |
 | **Request parity** | Error card Markdown structure, extracted JSON technical details, and auth error advice match baseline byte-for-byte. |
 | **Runtime limits** | Headless orchestrator and pure unit tests; UI message building, persistence, hooks, and rethrow remain in `chat.ts`. |
 | **Deviations** | None. Zero changes to queue, persistence format, provider loop, or hook payloads. |
@@ -522,7 +522,7 @@ Maintain one concise record per checkpoint:
 | **Source** | Baseline `933612156`, working tree on `main` |
 | **Scope** | Extracted `tool-bridge.ts` (`recognizeToolMarker`, `parseBridgeArguments`, `tryParseLenientJson`); wired into `stores/chat.ts` lines 903–1058 and line 975. |
 | **Evidence** | Marker syntax recognition (5 dialects), lenient JSON parsing recovery, argument key-value decoding, truncation tolerance, 5-round loop bounds, early round-1 exit, multi-turn tool association. 23 tests across `tool-bridge.test.ts` and `tool-bridge-runtime.test.ts`. 46 tests across all 7 chat suites. |
-| **Runner facts** | `@proj-airi/stage-ui`: 61 test suites, 520 passing tests (0 failures, 1 model-gated skip). Typecheck: `vue-tsc --noEmit` passed with 0 errors. |
+| **Runner facts** | `@proj-anima/stage-ui`: 61 test suites, 520 passing tests (0 failures, 1 model-gated skip). Typecheck: `vue-tsc --noEmit` passed with 0 errors. |
 | **Request parity** | Marker matching regex precedence, unclosed quote tolerance, delimiter balancing, and tool call payload structure match baseline. |
 | **Runtime limits** | Asynchronous tool resolution, executability checks, ID allocation, execution queue, and outer loop bounds remain in `chat.ts`. |
 | **Deviations** | None. Zero changes to queue, provider loop, or execution timing. |
@@ -535,7 +535,7 @@ Maintain one concise record per checkpoint:
 | **Source** | Baseline `eccd20561`, working tree on `main` |
 | **Scope** | Extracted `intrusions.ts` (`formatClimaxPrompt`, `formatDreamPrompt`, `formatJournalPrompt`, `formatArtistryPrompt`); wired into `stores/chat.ts` lines 1180–1252. |
 | **Evidence** | Climax score comparison and threshold resolution, template interpolation (`{timeToDream}`, `{insertEchoChips}`, `{timeSinceJournal}`, `{journalEntryText}`, `{imagePrompt}`), elapsed minute rounding, missing/disabled staging bypass. 16 tests in `intrusions.test.ts`. 67 tests across all 9 chat orchestrator test suites. |
-| **Runner facts** | `@proj-airi/stage-ui`: 62 test suites, 536 passing tests (0 failures, 1 model-gated skip). Typecheck: `vue-tsc --noEmit` passed with 0 errors. |
+| **Runner facts** | `@proj-anima/stage-ui`: 62 test suites, 536 passing tests (0 failures, 1 model-gated skip). Typecheck: `vue-tsc --noEmit` passed with 0 errors. |
 | **Request parity** | Exact prompt string interpolations and Dating Sim climax calculations match baseline byte-for-byte. |
 | **Runtime limits** | Asynchronous store imports, two-hop cognition pipeline, staging reads, staging consumption, and card clear mutations remain in `chat.ts`. |
 | **Deviations** | Minimal effort isolation for Dating Sim climax calculation per alignment discussion. Zero prompt text or staging semantics altered. |
@@ -548,7 +548,7 @@ Maintain one concise record per checkpoint:
 | **Source** | Baseline `84522e2eb`, working tree on `main` |
 | **Scope** | Extracted `grounding-assembler.ts` (pure formatters for all 8 grounding sources, `formatGroundingBlock`, `buildGroundingMessages`); wired into `stores/chat.ts` lines 683–795. |
 | **Evidence** | Block formatting across VLM, environmental sensors, STMM/lifetime context pass-through, semantic memory formatting, recent topics with `.toFixed(2)` weights, director scratchpad visual state, and salience telemetry with L9–L11 deltas and hot/elevated verdicts. Order preservation and null exclusion. 14 tests in `grounding-assembler.test.ts`. 81 tests across all 10 chat orchestrator test suites. |
-| **Runner facts** | `@proj-airi/stage-ui`: 63 test suites, 550 passing tests (0 failures, 1 model-gated skip). Typecheck: `vue-tsc --noEmit` passed with 0 errors. |
+| **Runner facts** | `@proj-anima/stage-ui`: 63 test suites, 550 passing tests (0 failures, 1 model-gated skip). Typecheck: `vue-tsc --noEmit` passed with 0 errors. |
 | **Request parity** | Exact headers (`[IMAGE ANALYSIS]`, `[ENVIRONMENTAL AWARENESS]`, `[GROUNDED LONG-TERM MEMORIES]`, `[RECENT TOPICS]`, `[VISUAL STATE BOARD]`, `[SALIENCE TELEMETRY]`), separators, and payload formats match baseline byte-for-byte. |
 | **Runtime limits** | Asynchronous sensor syncing, journal semantic searching, dynamic repository imports, salience probing, independent try-catches, and message list splicing remain in `chat.ts`. |
 | **Deviations** | None. Recent Topics formatting preserved as pure least-effort extraction per alignment discussion. |
@@ -561,7 +561,7 @@ Maintain one concise record per checkpoint:
 | **Source** | Baseline `3e699d832`, working tree on `main` |
 | **Scope** | Integrated verification across full monorepo; updated testing catalog, Rosetta Stone, and architecture decomposition specification. |
 | **Evidence** | Full automated monorepo execution (`pnpm run test:run`) passing with zero failures. Desktop smoke check scenarios (Section 9 items 1–7) recorded as headless-verified and pending live runtime check. |
-| **Runner facts** | Monorepo total: 91 test suites passed, 828 tests passed (0 failures, 4 suites / 8 tests conditionally skipped). `@proj-airi/stage-ui` typecheck: `vue-tsc --noEmit` passed with 0 errors. |
+| **Runner facts** | Monorepo total: 91 test suites passed, 828 tests passed (0 failures, 4 suites / 8 tests conditionally skipped). `@proj-anima/stage-ui` typecheck: `vue-tsc --noEmit` passed with 0 errors. |
 | **Request parity** | Fully verified byte-for-byte prompt formatting, error presentation, tool recognition, and grounding assembly across all test suites. |
 | **Runtime limits** | Headless automated verification complete. Real Electron rendering and audible TTS playback pending interactive desktop smoke checks. |
 | **Deviations** | None. All 5 execution phases completed with zero behavioral regressions. |
@@ -574,7 +574,7 @@ Maintain one concise record per checkpoint:
 | **Source** | HEAD `a1db4ad3a`, working tree on `main` |
 | **Scope** | Peer-review rectification across 4 findings: malformed tool marker consumption parity, empty-string intrusion staging cleanup, test catalog auditor fail-fast integrity, and comprehensive 8-source grounding / pre-stream staging assertion hardening. |
 | **Evidence** | 85 passing tests across 10 suites in `packages/stage-ui/src/stores/chat/`. Full 8-part grounding order strictly asserted (0 < 1 < 1.5 < 1.6 < 2 < 3 < 4 < 5). In-stream staging clearance asserted before LLM streaming starts. Strict tool call ID equality asserted. Malformed marker non-consumption verified. `scripts/audit-test-catalog.mjs` exits with 0 errors and 0 uncataloged test suites (95 suites total). |
-| **Runner facts** | `@proj-airi/stage-ui`: 10 chat store test suites passed, 85 passed (0 failures). Typecheck: `vue-tsc --noEmit` passed with 0 errors. Test catalog auditor: 95/95 test suites matching catalog inventory (100% parity). |
+| **Runner facts** | `@proj-anima/stage-ui`: 10 chat store test suites passed, 85 passed (0 failures). Typecheck: `vue-tsc --noEmit` passed with 0 errors. Test catalog auditor: 95/95 test suites matching catalog inventory (100% parity). |
 | **Request parity** | Exact parity restored for malformed marker bypass (`matchedText: ''` returned when `candidate.kind !== 'candidate'`) and empty-string intrusion template formatting/staging clearing (`hasEntry` flag / defined check). Explicit `nowMs` passed to intrusion formatters. Restored `datingSim.enabled && datingSim.settings?.gameMode === 'goal_driven'` caller gate. |
 | **Runtime limits** | Headless automated verification complete. Real Electron rendering and audible TTS playback pending interactive desktop smoke checks. |
 | **Deviations** | Corrected 2 behavioral edge cases discovered in peer review (malformed marker consumption and empty-string intrusion staging clearance). Hardened auditor script to fail-fast on discovery errors. |

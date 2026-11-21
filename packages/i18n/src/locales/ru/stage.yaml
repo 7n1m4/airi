@@ -1,7 +1,7 @@
 chat:
   message:
     character-name:
-      airi: AIRI
+      airi: Anima
       core-system: Core система
       you: Ты
     reasoning_only: Модель сгенерировала только ответ-рассуждение (цепочку мыслей). Проверьте

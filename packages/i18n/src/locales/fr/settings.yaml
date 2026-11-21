@@ -10,7 +10,7 @@ animations:
     title: Utiliser les transitions spécifiques à chaque page
 dialogs:
   onboarding:
-    title: Bienvenue dans AIRI!
+    title: Bienvenue dans Anima!
     description: Configurez votre premier fournisseur d’IA pour commencer.
     selectProvider: Choisissez un fournisseur d'IA.
     configureProvider: Configurer {provider}
@@ -81,7 +81,7 @@ dialogs:
       relu_desc: Une connexion avec une âme qui évolue aux côtés de vos données et de
         votre cœur.
       aria: Dr. Aria
-      aria_desc: Un guide brillant et spirituel gérant la couche de recherche AIRI.
+      aria_desc: Un guide brillant et spirituel gérant la couche de recherche Anima.
       lupin: Lupin
       lupin_desc: Une fille-louve loyale aux instincts aiguisés et au cœur protecteur.
       import: Personnalisé
@@ -91,7 +91,7 @@ dialogs:
 language:
   title: Langage
   description: >
-    Modifier le langage de l'inteface d'AIRI. Cela n'affectera pas le langage
+    Modifier le langage de l'inteface d'Anima. Cela n'affectera pas le langage
     des réponses du personnage.
 controls-island:
   icon-size:
@@ -160,7 +160,7 @@ pages:
     delete: Supprimer
     delete_card: Supprimer la carte
     delete_confirmation: Êtes-vous sûr de vouloir supprimer cette carte ?
-    description: Utiliser les préréglages des cartes d'AIRI
+    description: Utiliser les préréglages des cartes d'Anima
     description_label: Description
     drop_here: Déposer pour téléverser
     create_card: Créer une nouvelle carte
@@ -212,7 +212,7 @@ pages:
           personnage.
         identity_prompting: Tous ces champs aident à définir le personnage, mais ne
           constituent pas aujourd'hui des couches d'exécution distinctes. Le
-          prompt système est utilisé dans l'assemblage du prompt actif d'AIRI.
+          prompt système est utilisé dans l'assemblage du prompt actif d'Anima.
           Les instructions post-historique sont principalement conservées pour
           la compatibilité des fiches et les futurs travaux de pipeline de
           prompts, vous pouvez donc les remplir sans attendre de comportement
@@ -245,7 +245,7 @@ pages:
       model: Parole / Modèle
       voice: Parole / Voix
     systemprompt: Prompt système
-    title: Carte AIRI
+    title: Carte Anima
     try_different_search: Essayez un autre terme de recherche
     upload: Téléverser
     upload_desc: Cliquez ou glissez un fichier pour téléverser
@@ -254,7 +254,7 @@ pages:
     title: Mémoire
   data:
     title: Données
-    description: Gérer les données AIRI enregistrées, les exports et les réinitialisations
+    description: Gérer les données Anima enregistrées, les exports et les réinitialisations
     sections:
       chats:
         title: Sessions de chat
@@ -285,7 +285,7 @@ pages:
         delete: Supprimer toutes les données
       desktop:
         title: Réinitialiser les paramètres et états du bureau
-        description: Effacer les paramètres du bureau AIRI et l'état d'exécution.
+        description: Effacer les paramètres du bureau Anima et l'état d'exécution.
         reset: Réinitialiser les données du bureau
       characters:
         title: Personnages
@@ -435,7 +435,7 @@ pages:
       description: Jouer à Factorio !
       title: Factorio
       enable: Activer l'intégration Factorio
-      enable-description: Autoriser AIRI à interagir avec le jeu Factorio
+      enable-description: Autoriser Anima à interagir avec le jeu Factorio
       server-address: Adresse du serveur
       server-address-description: L'adresse IP ou le nom d'hôte du serveur Factorio
       server-address-placeholder: Entrez l'adresse du serveur (ex. localhost ou 192.168.1.100)
@@ -456,7 +456,7 @@ pages:
             title: Raccourci de bascule du microphone
             description: Basculez le microphone à l'aide d'une touche de verrouillage (Arrêt
               défil, Verr Maj ou Verr Num). Le voyant du clavier restera
-              synchronisé avec l'état du micro d'AIRI.
+              synchronisé avec l'état du micro d'Anima.
             options:
               scroll: Arrêt défil (Scroll Lock)
               caps: Verr Maj (Caps Lock)
@@ -471,7 +471,7 @@ pages:
       description: Chat et chat vocal via Discord
       title: Discord
       enable: Activer l'intégration Discord
-      enable-description: Autoriser AIRI à interagir via Discord
+      enable-description: Autoriser Anima à interagir via Discord
       token: Jeton du bot
       token-description: Votre jeton de bot Discord
       token-placeholder: Entrez votre jeton de bot Discord
@@ -511,7 +511,7 @@ pages:
       controls:
         title: Contrôles et modalités
         vision: Activer la saisie d'images VLM (Vision)
-        vision-description: Autoriser AIRI à lire et traiter les pièces jointes d'images
+        vision-description: Autoriser Anima à lire et traiter les pièces jointes d'images
           depuis Discord
     speech:
       description: Synthèse vocale
@@ -569,7 +569,7 @@ pages:
       description: Navigation et utilisation X / Twitter
       title: X / Twitter
       enable: Activer l'intégration X / Twitter
-      enable-description: Autoriser AIRI à interagir avec X / Twitter
+      enable-description: Autoriser Anima à interagir avec X / Twitter
       api-key: Clé API
       api-key-description: Votre clé API X / Twitter
       api-key-placeholder: Entrez votre clé API X / Twitter
@@ -649,9 +649,9 @@ pages:
     helpinfo:
       title: Première fois ici ?
       description: >
-        AIRI nécessite qu’au moins un fournisseur {chat} soit configuré pour
+        Anima nécessite qu’au moins un fournisseur {chat} soit configuré pour
         penser et se comporter correctement. On peut le considérer comme le
-        cerveau des personnages vivant dans le système AIRI.
+        cerveau des personnages vivant dans le système Anima.
     catalog:
       edit:
         config-id-not-found: Configuration du fournisseur introuvable.
@@ -1102,7 +1102,7 @@ pages:
       airi-audio-server:
         description: Serveur audio neuronal haute performance - Inférence locale en C++
           avec clonage vocal zero-shot et balises d'expression paralinguistique
-        title: AIRI Audio Server
+        title: Anima Audio Server
       alibaba-cloud:
         description: Model Studio - Plateforme de services de modèles à grande échelle
           par Alibaba Cloud
@@ -1393,7 +1393,7 @@ pages:
         pour mobile (pocket) en mode développement. Cela générera
         automatiquement un certificat auto-signé.
     server-hostname:
-      label: AIRI Gateway Hostname
+      label: Anima Gateway Hostname
       description: Set zero (0.0.0.0) to bind to all available IP addresses on your
         WiFi network. Otherwise, bind this to 127.0.0.1 for maximum local
         security.
@@ -1460,7 +1460,7 @@ pages:
                 vivid: Vif (Néon)
                 monochrome: Monochrome
               reset:
-                title: Réinitialiser au cyan AIRI
+                title: Réinitialiser au cyan Anima
           title: Schéma de couleurs
         developer:
           title: Développeur
@@ -1519,8 +1519,8 @@ pages:
           presets:
             default:
               colors:
-                color-1: Vert AIRI
-              description: La couleur de thème verdâtre par défaut, offerte par AIRI !
+                color-1: Vert Anima
+              description: La couleur de thème verdâtre par défaut, offerte par Anima !
               title: Couleur par défaut
             morandi:
               colors:
@@ -1648,7 +1648,7 @@ pages:
         double-enter: Double Entrée
   docs:
     title: Documentation
-    description: Apprenez à utiliser AIRI et ses fonctionnalités
+    description: Apprenez à utiliser Anima et ses fonctionnalités
     sections:
       overview: Vue d'ensemble
       manual: Manuel
@@ -1670,7 +1670,7 @@ sections:
 theme:
   title: Thème
   description: |
-    Changez le thème de base d’AIRI, mode clair ou mode sombre.
+    Changez le thème de base d’Anima, mode clair ou mode sombre.
 title: Paramètres
 voices: Voix
 vrm:
@@ -1761,7 +1761,7 @@ providers:
 privacy:
   remote-sync:
     title: Activer la synchronisation cloud
-    description: Désactivé par défaut. Si désactivé, AIRI reste exclusivement local
+    description: Désactivé par défaut. Si désactivé, Anima reste exclusivement local
       et ne récupérera aucune session distante ni ne synchronisera l'historique
       de discussion avec airi-api.moeru.ai.
 groups:

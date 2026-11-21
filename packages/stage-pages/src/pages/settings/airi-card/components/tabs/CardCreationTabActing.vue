@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { SpeechCapabilitiesInfo } from '@proj-airi/stage-ui/stores/providers'
-import type { CharacterCueAllowlist } from '@proj-airi/stage-ui/types/card.schema'
-import type { ThinkingFillerPhrase } from '@proj-airi/stage-ui/types/pacing'
+import type { SpeechCapabilitiesInfo } from '@proj-anima/stage-ui/stores/providers'
+import type { CharacterCueAllowlist } from '@proj-anima/stage-ui/types/card.schema'
+import type { ThinkingFillerPhrase } from '@proj-anima/stage-ui/types/pacing'
 
-import { DEFAULT_PACING_FILLERS, PACING_PROFILES } from '@proj-airi/stage-ui/types/pacing'
+import { DEFAULT_PACING_FILLERS, PACING_PROFILES } from '@proj-anima/stage-ui/types/pacing'
 import { computed, ref, watch } from 'vue'
 
 import ActingSubTabCues from './acting/ActingSubTabCues.vue'

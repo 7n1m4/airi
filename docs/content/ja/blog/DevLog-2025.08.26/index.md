@@ -12,7 +12,7 @@ preview-cover:
 import NmsIou from '../../../en/blog/DevLog-2025.08.26/components/nms-iou.vue'
 </script>
 
-お久しぶりです、AIRI メンテナーの一人、[@LemonNeko](https://github.com/LemonNekoGH) です。~~ああ、LLM のようにこうやって始めるのには少し飽きてきました。~~
+お久しぶりです、Anima メンテナーの一人、[@LemonNeko](https://github.com/LemonNekoGH) です。~~ああ、LLM のようにこうやって始めるのには少し飽きてきました。~~
 
 前回の [DevLog](../DevLog-2025.07.18/index.md) で、[Factorio Learning Environment](https://arxiv.org/abs/2503.09617) の論文を軽く見て、`airi-factorio` をどのように改善する予定かについて簡単に話しました。しかし...今日皆さんと共有したいのはそれではなく、純粋な視覚方向の進捗状況についてです。
 

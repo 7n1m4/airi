@@ -1,5 +1,5 @@
-import { DSLVirtualMachine } from '@proj-airi/live2d-runtime'
-import { useDslSnapshotStore, useLive2d } from '@proj-airi/stage-ui-live2d/stores'
+import { DSLVirtualMachine } from '@proj-anima/live2d-runtime'
+import { useDslSnapshotStore, useLive2d } from '@proj-anima/stage-ui-live2d/stores'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 

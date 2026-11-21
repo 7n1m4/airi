@@ -1,5 +1,5 @@
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { useBuildInfo } from '@proj-airi/stage-ui/composables'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { useBuildInfo } from '@proj-anima/stage-ui/composables'
 import { computed, getCurrentInstance, onMounted, ref } from 'vue'
 
 export interface DesktopUpdateCache {

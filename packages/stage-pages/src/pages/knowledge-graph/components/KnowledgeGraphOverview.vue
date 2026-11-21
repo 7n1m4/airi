@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { EntityType } from '@proj-airi/stage-ui/libs/search/entity-ledger'
+import type { EntityType } from '@proj-anima/stage-ui/libs/search/entity-ledger'
 
-import { useEntityLedgerStore } from '@proj-airi/stage-ui/stores/entity-ledger'
-import { useTextJournalStore } from '@proj-airi/stage-ui/stores/memory-text-journal'
-import { Button, Progress } from '@proj-airi/ui'
+import { useEntityLedgerStore } from '@proj-anima/stage-ui/stores/entity-ledger'
+import { useTextJournalStore } from '@proj-anima/stage-ui/stores/memory-text-journal'
+import { Button, Progress } from '@proj-anima/ui'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 

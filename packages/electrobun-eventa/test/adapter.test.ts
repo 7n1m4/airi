@@ -65,7 +65,7 @@ function createTransportPair(): { main: FakeMainRpc, view: ElectrobunRpcPort } {
   return { main, view }
 }
 
-describe('@proj-airi/electrobun-eventa', () => {
+describe('@proj-anima/electrobun-eventa', () => {
   it('(a) delivers an event emitted on the view at main handlers, and vice versa', async () => {
     const { main, view } = createTransportPair()
 

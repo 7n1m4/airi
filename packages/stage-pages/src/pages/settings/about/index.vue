@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { UpdateChannel } from '@proj-airi/electron-vueuse'
+import type { UpdateChannel } from '@proj-anima/electron-vueuse'
 
-import { updateChannels, useElectronAutoUpdater } from '@proj-airi/electron-vueuse'
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { MarkdownRenderer } from '@proj-airi/stage-ui/components'
-import { useBuildInfo } from '@proj-airi/stage-ui/composables'
-import { Button, DoubleCheckButton, Progress } from '@proj-airi/ui'
+import { updateChannels, useElectronAutoUpdater } from '@proj-anima/electron-vueuse'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { MarkdownRenderer } from '@proj-anima/stage-ui/components'
+import { useBuildInfo } from '@proj-anima/stage-ui/composables'
+import { Button, DoubleCheckButton, Progress } from '@proj-anima/ui'
 import {
   DialogContent,
   DialogDescription,

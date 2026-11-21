@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { ShortTermMemoryBlock } from '@proj-airi/stage-ui/types/short-term-memory'
+import type { ShortTermMemoryBlock } from '@proj-anima/stage-ui/types/short-term-memory'
 
-import { useShortTermMemoryStore } from '@proj-airi/stage-ui/stores/memory-short-term'
+import { useShortTermMemoryStore } from '@proj-anima/stage-ui/stores/memory-short-term'
 import { computed, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps<{

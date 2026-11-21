@@ -2,7 +2,7 @@ import type { Tool } from '@xsai/shared-chat'
 
 import z from 'zod'
 
-import { useDatingSimStore } from '@proj-airi/stage-ui/stores/dating-sim'
+import { useDatingSimStore } from '@proj-anima/stage-ui/stores/dating-sim'
 import { tool } from '@xsai/tool'
 
 const updateVariablesParams = z.object({

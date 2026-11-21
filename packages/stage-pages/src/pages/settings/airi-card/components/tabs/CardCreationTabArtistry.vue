@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { POLLINATIONS_DEFAULT_MODELS, REPLICATE_IMAGEGEN_PRESETS } from '@proj-airi/stage-shared'
-import { BrainModelPicker } from '@proj-airi/stage-ui/components/scenarios/chat'
-import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { FieldInput } from '@proj-airi/ui'
-import { Select } from '@proj-airi/ui/components/form'
+import { POLLINATIONS_DEFAULT_MODELS, REPLICATE_IMAGEGEN_PRESETS } from '@proj-anima/stage-shared'
+import { BrainModelPicker } from '@proj-anima/stage-ui/components/scenarios/chat'
+import { useArtistryStore } from '@proj-anima/stage-ui/stores/modules/artistry'
+import { useConsciousnessStore } from '@proj-anima/stage-ui/stores/modules/consciousness'
+import { FieldInput } from '@proj-anima/ui'
+import { Select } from '@proj-anima/ui/components/form'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 

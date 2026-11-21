@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { MarkdownRenderer } from '@proj-airi/stage-ui/components'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { MarkdownRenderer } from '@proj-anima/stage-ui/components'
 import { computed, ref } from 'vue'
 
 import { useDesktopReleaseChecker } from '../composables/use-desktop-release-checker'

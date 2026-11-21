@@ -3,23 +3,23 @@
 [workspace]
 resolver = "2"
 members = [
-  "crates/airi-store",
-  "crates/airi-llm",
-  "crates/airi-core",
-  "crates/airi-i18n",
-  "crates/airi-render",
-  "crates/airi-slint",
-  "crates/airi-stt",
-  "crates/airi-speech",
-  "crates/airi-local-llm",
-  "crates/airi-mcp",
-  "crates/airi-mmd",
-  "crates/airi-acp",
-  "crates/airi-channel",
-  "crates/airi-sync",
-  "crates/airi-discord",
-  "crates/airi-daemon",
-  "crates/airi-a11y",
+  "crates/anima-store",
+  "crates/anima-llm",
+  "crates/anima-core",
+  "crates/anima-i18n",
+  "crates/anima-render",
+  "crates/anima-slint",
+  "crates/anima-stt",
+  "crates/anima-speech",
+  "crates/anima-local-llm",
+  "crates/anima-mcp",
+  "crates/anima-mmd",
+  "crates/anima-acp",
+  "crates/anima-channel",
+  "crates/anima-sync",
+  "crates/anima-discord",
+  "crates/anima-daemon",
+  "crates/anima-a11y",
 ]
 
 [workspace.dependencies]
@@ -92,7 +92,7 @@ png = "0.17"
 slint = { version = "1.18", features = [ "renderer-software" ] }
 slint-build = "1.18"
 
-# ONNX Runtime + HF tokenizers (airi-speech, airi-stt)
+# ONNX Runtime + HF tokenizers (anima-speech, anima-stt)
 ort = "2.0.0-rc.15"
 tokenizers = { version = "0.22", default-features = false, features = [ "onig" ] }
 

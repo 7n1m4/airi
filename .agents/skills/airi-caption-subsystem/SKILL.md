@@ -134,9 +134,9 @@ Wiring: `use-control-strip-action.ts` handles `head-tethered-caption`, `caption-
 1. **Never double-toggle the caption window from the renderer.** With `captionFollowStageVisibility` on, main owns the lockstep show/hide (see §1.1 toggle-ownership). Renderer mirrors strip state only.
 2. **Follow-stage position is main-owned too.** Any reposition logic belongs in `main/windows/caption/index.ts`, not in renderer drag handlers.
 3. **Add a new caption surface** by subscribing dumbly to `airi-caption-overlay`; never reach into chat/session stores. Filter on `isActive` for the spoken line, persist speaker/labels from `caption-speaker`.
-4. **In-scene (tether) captions must stay renderer-package-local** — the adapter lives in the model runtime's package (`stage-ui-live2d`), not in `stage-ui`, so Spine/VRM/MMD each own their adapter when built; shared math goes in `@proj-airi/stage-shared/utils/caption-perspective`.
+4. **In-scene (tether) captions must stay renderer-package-local** — the adapter lives in the model runtime's package (`stage-ui-live2d`), not in `stage-ui`, so Spine/VRM/MMD each own their adapter when built; shared math goes in `@proj-anima/stage-shared/utils/caption-perspective`.
 5. **WebPreferences**: the caption window is frameless + transparent (`backgroundColor: '#00000000'`); keep contrast with backdrop-blur + theme-aware capsule styling in `CaptionPanel`.
-6. Typecheck: `pnpm -F @proj-airi/stage-ui typecheck` for panel/plank/settings; `pnpm -F @proj-airi/stage-tamagotchi typecheck` for window manager/eventa/page changes; `pnpm -F @proj-airi/stage-ui-live2d typecheck` for the adapter.
+6. Typecheck: `pnpm -F @proj-anima/stage-ui typecheck` for panel/plank/settings; `pnpm -F @proj-anima/stage-tamagotchi typecheck` for window manager/eventa/page changes; `pnpm -F @proj-anima/stage-ui-live2d typecheck` for the adapter.
 
 ---
 

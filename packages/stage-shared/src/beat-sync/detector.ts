@@ -7,7 +7,7 @@ import analyserWorklet from '@nekopaw/tempora/worklet?url'
 
 import { defineInvoke, defineInvokeHandler } from '@moeru/eventa'
 import { startAnalyser as startTemporaAnalyser } from '@nekopaw/tempora'
-import { getViewEventaContext } from '@proj-airi/electrobun-eventa/view'
+import { getViewEventaContext } from '@proj-anima/electrobun-eventa/view'
 
 import { isStageTamagotchi, isStageWeb, StageEnvironment } from '../environment'
 import { isElectronWindow } from '../window'

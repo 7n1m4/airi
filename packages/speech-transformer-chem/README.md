@@ -1,7 +1,7 @@
-# @proj-airi/speech-transformer-chem
+# @proj-anima/speech-transformer-chem
 
 Reads mhchem `\ce{}` and `\pu{}` as chemistry for a listener, in Chinese, English, Japanese, and Korean. It is an
-extension of `@proj-airi/speech-transformer-math`.
+extension of `@proj-anima/speech-transformer-math`.
 
 ## Use it for
 
@@ -16,14 +16,14 @@ extension of `@proj-airi/speech-transformer-math`.
 ## Usage
 
 ```ts
-import { chemistry } from '@proj-airi/speech-transformer-chem'
-import { MathSpeech } from '@proj-airi/speech-transformer-math'
+import { chemistry } from '@proj-anima/speech-transformer-chem'
+import { MathSpeech } from '@proj-anima/speech-transformer-math'
 
 const speech = new MathSpeech({ extensions: [chemistry()] })
 speech.speak(String.raw`\ce{2H2 + O2 -> 2H2O}`, 'zh') // => '氢气 和 氧气 反应生成 水'
 ```
 
-Install `@proj-airi/speech-transformer-math` too. It is a peer dependency, so the reader and the extension share one
+Install `@proj-anima/speech-transformer-math` too. It is a peer dependency, so the reader and the extension share one
 `MathSpeech`.
 
 A chemistry locale matches the math locale pack by its language. A language without one is read by the fallback
@@ -42,6 +42,6 @@ The tests of each language are next to its locale, for example `src/locales/ja.t
 ## Checks
 
 ```sh
-pnpm -F @proj-airi/speech-transformer-chem typecheck
-pnpm -F @proj-airi/speech-transformer-chem exec vitest run
+pnpm -F @proj-anima/speech-transformer-chem typecheck
+pnpm -F @proj-anima/speech-transformer-chem exec vitest run
 ```

@@ -1,15 +1,15 @@
 ---
 title: Vision & Screen Perception
-description: How to send images and screenshots to AIRI, configure a dedicated Vision-Language Model (VLM), and manage vision costs.
+description: How to send images and screenshots to Anima, configure a dedicated Vision-Language Model (VLM), and manage vision costs.
 ---
 
 # Vision & Screen Perception
 
-AIRI can see and understand visual content. You can drop images into the chat, paste screenshots from your clipboard, or let AIRI analyze your screen to comment on what you are playing, drawing, or reading.
+Anima can see and understand visual content. You can drop images into the chat, paste screenshots from your clipboard, or let Anima analyze your screen to comment on what you are playing, drawing, or reading.
 
 ---
 
-## 1. Sending Images to AIRI
+## 1. Sending Images to Anima
 
 There are three ways to share visual context with your companion:
 
@@ -17,13 +17,13 @@ There are three ways to share visual context with your companion:
 2. **Clipboard Paste**: Press `Ctrl+V` (or `Cmd+V` on macOS) in the message composer to attach a copied screenshot.
 3. **Paperclip Attachment**: Click the attachment icon in the message composer toolbar to select an image file from your computer.
 
-Once attached, type your message or question and press **Send**. AIRI will examine the image and incorporate its visual details into her reply.
+Once attached, type your message or question and press **Send**. Anima will examine the image and incorporate its visual details into her reply.
 
 ---
 
 ## 2. Dedicated Vision Model (VLM) Architecture
 
-In AIRI, the "Mind" (Chat LLM) and the "Eyes" (Vision VLM) can be completely independent models:
+In Anima, the "Mind" (Chat LLM) and the "Eyes" (Vision VLM) can be completely independent models:
 
 ```text
 [ User Message + Image Attachment ]
@@ -59,10 +59,10 @@ Processing high-resolution images with cloud APIs consumes tokens based on image
 | **Local VLM (Ollama / Qwen-VL)** | **$0.00 (Free)** | Zero API cost, runs entirely on your local GPU. |
 
 > [!TIP]
-> **Automatic Downscaling**: AIRI automatically downscales oversized images before sending them to the VLM to keep inference fast and minimize unnecessary API token consumption.
+> **Automatic Downscaling**: Anima automatically downscales oversized images before sending them to the VLM to keep inference fast and minimize unnecessary API token consumption.
 
 ---
 
 ## 4. Screen Perception & Situational Awareness
 
-When enabled in **Settings &rarr; Modules &rarr; Attention Ecology**, AIRI can periodically capture small screen snippets or window thumbnails when significant events occur (such as switching games or achieving a victory screen), providing context for proactive commentary.
+When enabled in **Settings &rarr; Modules &rarr; Attention Ecology**, Anima can periodically capture small screen snippets or window thumbnails when significant events occur (such as switching games or achieving a victory screen), providing context for proactive commentary.

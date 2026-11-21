@@ -101,7 +101,7 @@ Traditional game bots rely either on brittle memory-scraping (cheat-engine hooks
 
 ## 🖥️ 4. Secondary Application: Constrained Desktop UI Navigation
 
-Beyond gaming, Show Harness provides a safe, low-friction solution to the problems that caused `@proj-airi/computer-use-mcp` to be deferred:
+Beyond gaming, Show Harness provides a safe, low-friction solution to the problems that caused `@proj-anima/computer-use-mcp` to be deferred:
 * **The Problem with Raw Computer Use**: Giving an agent unrestricted coordinate-based mouse clicks and arbitrary keystrokes requires scary OS accessibility permissions, dangerous risk of deleting files, and frequent miss-clicks.
 * **The Show Harness Approach**: The VLM identifies discrete semantic UI affordances (e.g. `ClickButton("Export ZIP")`, `SelectDropdownItem("VRM")`). The Action Interpreter binds these directly to verified DOM elements or known window coordinates, achieving zero-risk deterministic desktop navigation.
 

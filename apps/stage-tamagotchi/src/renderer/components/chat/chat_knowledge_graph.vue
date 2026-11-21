@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MindMapExplorer from '@proj-airi/stage-pages/pages/knowledge-graph/MindMapExplorer.vue'
+import MindMapExplorer from '@proj-anima/stage-pages/pages/knowledge-graph/MindMapExplorer.vue'
 
 const emit = defineEmits<{
   (e: 'ready'): void

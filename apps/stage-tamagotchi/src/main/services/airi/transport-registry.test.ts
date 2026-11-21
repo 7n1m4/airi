@@ -1,4 +1,4 @@
-import type { TransportAdapter } from '@proj-airi/stage-shared/transport-adapter'
+import type { TransportAdapter } from '@proj-anima/stage-shared/transport-adapter'
 
 import { describe, expect, it } from 'vitest'
 

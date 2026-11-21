@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { StageBackgroundPicker } from '@proj-airi/stage-ui/components'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import { StageBackgroundPicker } from '@proj-anima/stage-ui/components'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
 import { storeToRefs } from 'pinia'
 
 const airiCardStore = useAiriCardStore()

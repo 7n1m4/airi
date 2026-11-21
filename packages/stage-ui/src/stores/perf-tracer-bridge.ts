@@ -1,6 +1,6 @@
-import type { TraceEvent } from '@proj-airi/stage-shared'
+import type { TraceEvent } from '@proj-anima/stage-shared'
 
-import { defaultPerfTracer } from '@proj-airi/stage-shared'
+import { defaultPerfTracer } from '@proj-anima/stage-shared'
 import { useBroadcastChannel } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { watch } from 'vue'

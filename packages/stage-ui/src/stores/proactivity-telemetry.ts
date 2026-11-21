@@ -1,10 +1,10 @@
-import type { ActiveWindowEntry, SystemLoadAverages } from '@proj-airi/stage-shared'
+import type { ActiveWindowEntry, SystemLoadAverages } from '@proj-anima/stage-shared'
 
 import {
 
   isWithinSchedule,
 
-} from '@proj-airi/stage-shared'
+} from '@proj-anima/stage-shared'
 
 export interface HeartbeatGateInput {
   now?: number

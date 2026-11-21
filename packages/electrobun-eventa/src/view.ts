@@ -76,7 +76,7 @@ export function createContext(
  *
  * It is a singleton because every composable and renderer helper in a view must
  * share one context (and therefore one message listener / abort signal). The
- * entry point also hands it to `@proj-airi/electron-vueuse` via that package's
+ * entry point also hands it to `@proj-anima/electron-vueuse` via that package's
  * provider setter, which is how the shared call sites reach it without taking
  * a new dependency on this package.
  */

@@ -17,7 +17,7 @@ AIRI is transitioning from a **local-only desktop runtime** to a **unified chara
 
 While local desktop execution offers high-fidelity Live2D/VRM stage rendering and local inference, users who are mobile or away from their PCs lose 24/7 access to their characters.
 
-To turn AIRI into a **"Vercel for AI Characters"**, we decouple the 5,700-line Cloudflare Worker monolith into a dedicated monorepo workspace package at **`apps/stage-edge`** (`@proj-airi/stage-edge`).
+To turn AIRI into a **"Vercel for AI Characters"**, we decouple the 5,700-line Cloudflare Worker monolith into a dedicated monorepo workspace package at **`apps/stage-edge`** (`@proj-anima/stage-edge`).
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -36,7 +36,7 @@ To turn AIRI into a **"Vercel for AI Characters"**, we decouple the 5,700-line C
 
 ```text
 apps/stage-edge/
-├── package.json                    ← @proj-airi/stage-edge
+├── package.json                    ← @proj-anima/stage-edge
 ├── tsconfig.json                   ← ES2022 / Cloudflare Worker types
 ├── wrangler.json.example           ← Committed template for deployment & local dev
 ├── .gitignore                      ← Ignores wrangler.json & dist/

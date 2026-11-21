@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useSpine } from '@proj-airi/stage-ui-spine'
-import { useSettings } from '@proj-airi/stage-ui/stores/settings'
-import { usePositioningStore } from '@proj-airi/stage-ui/stores/settings/positioning'
-import { FieldRange } from '@proj-airi/ui'
+import { useSpine } from '@proj-anima/stage-ui-spine'
+import { useSettings } from '@proj-anima/stage-ui/stores/settings'
+import { usePositioningStore } from '@proj-anima/stage-ui/stores/settings/positioning'
+import { FieldRange } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

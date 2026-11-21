@@ -3,7 +3,7 @@ import type { Live2dTextureMutation } from './live2d-exporter'
 import type { BaseTextureSwap } from './live2d-texture'
 
 import { Texture } from '@pixi/core'
-import { useLive2d } from '@proj-airi/stage-ui-live2d'
+import { useLive2d } from '@proj-anima/stage-ui-live2d'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 

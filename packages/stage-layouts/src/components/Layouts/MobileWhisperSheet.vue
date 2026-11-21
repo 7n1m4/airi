@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { ChatHistoryItem } from '@proj-airi/stage-ui/types/chat'
+import type { ChatHistoryItem } from '@proj-anima/stage-ui/types/chat'
 
-import { ChatHistory, WhisperComposerBar } from '@proj-airi/stage-ui/components'
-import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
-import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
-import { useChatStreamStore } from '@proj-airi/stage-ui/stores/chat/stream-store'
+import { ChatHistory, WhisperComposerBar } from '@proj-anima/stage-ui/components'
+import { useChatOrchestratorStore } from '@proj-anima/stage-ui/stores/chat'
+import { useChatSessionStore } from '@proj-anima/stage-ui/stores/chat/session-store'
+import { useChatStreamStore } from '@proj-anima/stage-ui/stores/chat/stream-store'
 import { useLocalStorage, useScreenSafeArea } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'

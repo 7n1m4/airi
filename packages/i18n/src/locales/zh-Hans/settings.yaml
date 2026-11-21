@@ -9,7 +9,7 @@ animations:
     title: 是否使用页面特定过场动画
 dialogs:
   onboarding:
-    title: 欢迎来到 AIRI！
+    title: 欢迎来到 Anima！
     description: 让我们设置您的第一个服务来源来开始使用。
     selectProvider: 选择服务来源
     configureProvider: 配置 {provider}
@@ -74,7 +74,7 @@ dialogs:
       relu: ReLU
       relu_desc: 一段随着您的数据与心灵共同演进的心灵羁绊。
       aria: 艾莉亚博士 (Dr. Aria)
-      aria_desc: 一位才华横溢、反应机敏的向导，管理着 AIRI 研究层。
+      aria_desc: 一位才华横溢、反应机敏的向导，管理着 Anima 研究层。
       lupin: 鲁平 (Lupin)
       lupin_desc: 一位忠诚的狼耳少女，拥有敏锐的直觉和强烈的守护之心。
       import: 自定义
@@ -151,7 +151,7 @@ pages:
     delete: 删除
     delete_card: 删除角色卡
     delete_confirmation: 确定要删除这张角色卡吗？
-    description: 使用 AIRI 角色卡预设
+    description: 使用 Anima 角色卡预设
     description_label: 描述
     drop_here: 放开以上传文件
     create_card: 创建新角色卡
@@ -195,7 +195,7 @@ pages:
           卡片版本，如果您从之前的卡片做了更改，应当增加此版本号。
         consciousness_model: 为这个角色选择 AI 模型。
         speech_model: 为此角色指定语音合成模型与音色。
-        identity_prompting: 这些字段均有助于定义角色，但在当前架构中并非独立的运行时层。系统提示词直接用于 AIRI
+        identity_prompting: 这些字段均有助于定义角色，但在当前架构中并非独立的运行时层。系统提示词直接用于 Anima
           的活跃提示词组装。历史后置指令目前主要用于卡片格式兼容性和未来提示词流水线，因此您现在即可填写，无需期待即刻的独立在线行为差异。
       errors:
         name: 错误：你必须提供一个有效的名称！
@@ -224,7 +224,7 @@ pages:
       model: 声音 / 模型
       voice: 声音 / 声线
     systemprompt: 系统提示词
-    title: AIRI 角色卡
+    title: Anima 角色卡
     try_different_search: 尝试使用其他关键词搜索
     upload: 上传
     upload_desc: 点击或拖拽文件到此处上传
@@ -234,7 +234,7 @@ pages:
     title: 记忆体
   docs:
     title: 文档
-    description: 了解如何使用 AIRI 及其功能
+    description: 了解如何使用 Anima 及其功能
     sections:
       overview: 概览
       manual: 手册
@@ -243,7 +243,7 @@ pages:
       showcase: 橱窗展示
   data:
     title: Data
-    description: 管理存储 AIRI 数据、导出和重置
+    description: 管理存储 Anima 数据、导出和重置
     sections:
       chats:
         title: 聊天会话
@@ -272,7 +272,7 @@ pages:
         delete: 删除所有数据
       desktop:
         title: 重置桌面设置和状态
-        description: 清除 AIRI 桌面设置和运行状态。
+        description: 清除 Anima 桌面设置和运行状态。
         reset: 重置桌面数据
       characters:
         title: 角色卡片
@@ -432,7 +432,7 @@ pages:
       description: 一起玩 Factorio！
       title: 异星工厂 Factorio
       enable: 启用异星工厂集成
-      enable-description: 允许AIRI与异星工厂游戏互动
+      enable-description: 允许Anima与异星工厂游戏互动
       server-address: 服务器地址
       server-address-description: 异星工厂服务器的IP地址或主机名
       server-address-placeholder: 输入服务器地址（例如：localhost或192.168.1.100）
@@ -451,7 +451,7 @@ pages:
             description: 选择合适的语音转文本的服务来源
           hotkey:
             title: 麦克风开关快捷键
-            description: 使用键盘锁定键（Scroll、Caps 或 Num Lock）切换麦克风。键盘指示灯将与 AIRI 的麦克风状态保持同步。
+            description: 使用键盘锁定键（Scroll、Caps 或 Num Lock）切换麦克风。键盘指示灯将与 Anima 的麦克风状态保持同步。
             options:
               scroll: Scroll Lock
               caps: Caps Lock
@@ -466,7 +466,7 @@ pages:
       description: Discord 发消息和语音聊天
       title: Discord
       enable: 启用Discord集成
-      enable-description: 允许AIRI通过Discord进行互动
+      enable-description: 允许Anima通过Discord进行互动
       token: 机器人令牌
       token-description: 您的Discord机器人令牌
       token-placeholder: 输入您的Discord机器人令牌
@@ -505,7 +505,7 @@ pages:
       controls:
         title: 控制与模态
         vision: 启用 VLM（视觉）图像摄取
-        vision-description: 允许 AIRI 读取并处理来自 Discord 的图片附件
+        vision-description: 允许 Anima 读取并处理来自 Discord 的图片附件
     speech:
       description: 语音合成
       sections:
@@ -559,7 +559,7 @@ pages:
       description: X / Twitter 的浏览和使用
       title: X / Twitter
       enable: 启用X / Twitter集成
-      enable-description: 允许AIRI与X / Twitter互动
+      enable-description: 允许Anima与X / Twitter互动
       api-key: API密钥
       api-key-description: 您的X / Twitter API密钥
       api-key-placeholder: 输入您的X / Twitter API密钥
@@ -630,7 +630,7 @@ pages:
     helpinfo:
       title: 第一次使用？
       description: >
-        AIRI 需要配置至少一个 {chat} 服务来源，才能正常思考和运作。你可以把它看作是 AIRI 系统中角色的大脑。
+        Anima 需要配置至少一个 {chat} 服务来源，才能正常思考和运作。你可以把它看作是 Anima 系统中角色的大脑。
     catalog:
       edit:
         config-id-not-found: 未找到服务来源配置。
@@ -1059,7 +1059,7 @@ pages:
         description: 使用 Moss TTS 的本地设备端文本转语音引擎。
       airi-audio-server:
         description: 高性能神经音频服务器 - 本地 C++ 推理，支持零样本声音克隆与副语言表达标签
-        title: AIRI Audio Server
+        title: Anima Audio Server
       alibaba-cloud:
         description: 百炼大模型服务平台 - 阿里云大模型服务
         title: 阿里云 (Alibaba Cloud)
@@ -1302,7 +1302,7 @@ pages:
       description: >-
         启用 WSS（WebSocket Secure）以允许开发模式下移动端（pocket）的 HTTPS 连接。这将自动生成自签名证书。
     server-hostname:
-      label: AIRI Gateway Hostname
+      label: Anima Gateway Hostname
       description: Set zero (0.0.0.0) to bind to all available IP addresses on your
         WiFi network. Otherwise, bind this to 127.0.0.1 for maximum local
         security.
@@ -1341,7 +1341,7 @@ pages:
                 vivid: 鲜艳 (霓虹)
                 monochrome: 单色 (黑白)
               reset:
-                title: 重置为 AIRI 青色
+                title: 重置为 Anima 青色
           title: 配色
         developer:
           title: 开发者
@@ -1397,8 +1397,8 @@ pages:
           presets:
             default:
               colors:
-                color-1: AIRI Green
-              description: 默认的绿色主题，由 AIRI 为您带来！
+                color-1: Anima Green
+              description: 默认的绿色主题，由 Anima 为您带来！
               title: 默认颜色
             morandi:
               colors:
@@ -1533,7 +1533,7 @@ sections:
 theme:
   title: 主题
   description: |
-    切换 AIRI 的基础主题，亮色模式或暗色模式。
+    切换 Anima 的基础主题，亮色模式或暗色模式。
 title: 设置
 voices: 声线
 vrm:
@@ -1651,7 +1651,7 @@ providers:
 privacy:
   remote-sync:
     title: 启用云端同步
-    description: 默认关闭。禁用时，AIRI 保持完全本地运行，不会获取远程会话或向 airi-api.moeru.ai 同步聊天记录。
+    description: 默认关闭。禁用时，Anima 保持完全本地运行，不会获取远程会话或向 airi-api.moeru.ai 同步聊天记录。
 groups:
   character:
     title: 角色与场景

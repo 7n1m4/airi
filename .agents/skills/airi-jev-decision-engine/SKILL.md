@@ -73,7 +73,7 @@ export async function evaluateJevVisualAttentionGate(visualDescriptor: string) {
 ### 2. AnimaDex Fast Voice Matching & Pitch Tuning (Domain E)
 In `packages/stage-pages/src/pages/settings/airi-card/guided.vue`, match character tuples during Step 1 $\rightarrow$ Step 2 transition:
 ```typescript
-import { useAnimaDexWizardStore, useSpeechStore, useSystemOneStore } from '@proj-airi/stage-ui/stores'
+import { useAnimaDexWizardStore, useSpeechStore, useSystemOneStore } from '@proj-anima/stage-ui/stores'
 
 export async function autoMatchCharacterVoiceWithJev(character: CharacterItem) {
   const wizardStore = useAnimaDexWizardStore()
@@ -134,12 +134,12 @@ Read `docs/proposal-jev-integration.md` for architecture RFC, OpenRouter alpha e
 
 - Run the store test suite:
   ```bash
-  pnpm -F @proj-airi/stage-ui test packages/stage-ui/src/stores/modules/system-one.test.ts
+  pnpm -F @proj-anima/stage-ui test packages/stage-ui/src/stores/modules/system-one.test.ts
   ```
 - Typecheck affected surfaces:
   ```bash
-  pnpm -F @proj-airi/stage-ui typecheck
-  pnpm -F @proj-airi/stage-pages typecheck
+  pnpm -F @proj-anima/stage-ui typecheck
+  pnpm -F @proj-anima/stage-pages typecheck
   ```
 - Run cleanroom benchmarks (read-only):
   ```bash

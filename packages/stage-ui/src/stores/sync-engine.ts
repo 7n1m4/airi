@@ -2,8 +2,8 @@ import type { ModelCapabilityItem } from '../libs/character/model-capabilities'
 
 import localforage from 'localforage'
 
-import { debug } from '@proj-airi/stage-shared'
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+import { debug } from '@proj-anima/stage-shared'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { useBroadcastChannel } from '@vueuse/core'
 import { AwsClient } from 'aws4fetch'
 import { defineStore } from 'pinia'
@@ -1625,7 +1625,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
       // If we downloaded any new motions, let's refresh the store custom motions array
       if (hasDownloads) {
         try {
-          const { useMmd } = await import('@proj-airi/stage-ui-mmd/stores/mmd')
+          const { useMmd } = await import('@proj-anima/stage-ui-mmd/stores/mmd')
           const mmdStore = useMmd()
           // Read localforage and rebuild customMotions list
           const nextMotions: any[] = []
@@ -1826,7 +1826,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
       // If downloaded new custom animations, reload custom animations in the store
       if (hasDownloads) {
         try {
-          const { useCustomVrmAnimationsStore } = await import('@proj-airi/stage-ui-three')
+          const { useCustomVrmAnimationsStore } = await import('@proj-anima/stage-ui-three')
           const store = useCustomVrmAnimationsStore()
           store.customAnimationsLoaded = false
           await store.loadCustomAnimations()

@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import type { Pose } from '@proj-airi/model-driver-magic-live2d'
-import type { DisplayModel } from '@proj-airi/stage-ui/stores/display-models'
+import type { Pose } from '@proj-anima/model-driver-magic-live2d'
+import type { DisplayModel } from '@proj-anima/stage-ui/stores/display-models'
 
-import { neutralPose } from '@proj-airi/model-driver-magic-live2d'
-import { Live2dGimmickDeck } from '@proj-airi/stage-ui-live2d'
+import { neutralPose } from '@proj-anima/model-driver-magic-live2d'
+import { Live2dGimmickDeck } from '@proj-anima/stage-ui-live2d'
 import {
   defaultLive2DBreathControlOptions,
   useLive2DMotionControl,
-} from '@proj-airi/stage-ui-live2d/stores'
-import { ModelSelectorDialog } from '@proj-airi/stage-ui/components/scenarios/dialogs/model-selector'
-import { Live2DCanvas, Live2DModel } from '@proj-airi/stage-ui/components/scenes'
+} from '@proj-anima/stage-ui-live2d/stores'
+import { ModelSelectorDialog } from '@proj-anima/stage-ui/components/scenarios/dialogs/model-selector'
+import { Live2DCanvas, Live2DModel } from '@proj-anima/stage-ui/components/scenes'
 import {
   defaultLive2DMotionMagicDataset,
   live2dMotionMagicProfiles,
   useLive2DMotionMagic,
-} from '@proj-airi/stage-ui/features/motions/live2d'
-import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
+} from '@proj-anima/stage-ui/features/motions/live2d'
+import { useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
 import { useIntervalFn } from '@vueuse/core'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 

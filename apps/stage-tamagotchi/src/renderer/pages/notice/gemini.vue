@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Button, Checkbox } from '@proj-airi/ui'
+import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Button, Checkbox } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

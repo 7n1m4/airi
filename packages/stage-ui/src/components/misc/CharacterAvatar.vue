@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DisplayModelFormat, useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
+import { DisplayModelFormat, useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
 import { useIntersectionObserver } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 

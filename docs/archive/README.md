@@ -39,8 +39,8 @@ This directory contains historical handoffs, point-in-time model reviews, comple
 
 The full dated build log of the Qt Quick desktop port: architecture decisions,
 lane handoffs, audits and the MMD/Spine renderer work. The crate was renamed
-`crates/airi-qt` → `crates/airi-slint` and retargeted from Qt6/cxx-qt to Slint
+`crates/airi-qt` → `crates/anima-slint` and retargeted from Qt6/cxx-qt to Slint
 on 2026-11-13; the QML tree and the cxx-qt bridges were deleted. These notes
 describe the port as it was built, so they stay here as the record.
 
-Current state lives in `docs/port-manifest/` and `crates/airi-slint/`.
+Current state lives in `docs/port-manifest/` and `crates/anima-slint/`.

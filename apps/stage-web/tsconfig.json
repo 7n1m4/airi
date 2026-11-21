@@ -10,11 +10,11 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@proj-airi/stage-ui/*": [
+      "@proj-anima/stage-ui/*": [
         "../../packages/stage-ui/src/*",
         "../../packages/stage-ui/src/*/index.ts"
       ],
-      "@proj-airi/stage-layouts/*": [
+      "@proj-anima/stage-layouts/*": [
         "../../packages/stage-layouts/src/*",
         "../../packages/stage-layouts/src/*/index.ts"
       ]

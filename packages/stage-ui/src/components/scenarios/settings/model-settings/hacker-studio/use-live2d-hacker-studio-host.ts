@@ -1,7 +1,7 @@
 import type { HackerAdapter } from './adapters/types'
 import type { useHackerStudio } from './composables/use-hacker-studio'
 
-import { useLive2d } from '@proj-airi/stage-ui-live2d'
+import { useLive2d } from '@proj-anima/stage-ui-live2d'
 import { effectScope, watch } from 'vue'
 
 import { useLive2dHackerAdapter } from './adapters/live2d/use-live2d-hacker-adapter'

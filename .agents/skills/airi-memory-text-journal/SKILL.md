@@ -41,7 +41,7 @@ Manual and assistant-written journal entries are **append-only and high-authorit
 
 ## Verification
 
-`pnpm -F @proj-airi/stage-ui typecheck`; runtime: trigger a journal tool call, confirm the `local:memory/text-journal/{userId}` write, and that the Eternal Thread UI lists it (see `airi-memory-ui-pages`).
+`pnpm -F @proj-anima/stage-ui typecheck`; runtime: trigger a journal tool call, confirm the `local:memory/text-journal/{userId}` write, and that the Eternal Thread UI lists it (see `airi-memory-ui-pages`).
 
 ## Sources
 

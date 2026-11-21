@@ -90,7 +90,7 @@ Lab-validated mechanism (`docs/memory_lab/state-of-system.md`, "base artifact pl
 
 ## Verification
 
-`pnpm -F @proj-airi/stage-ui typecheck`; runtime: run provisioning from the Eternal Thread / Memory settings UI and watch `local:memory/provisioning-session/{characterId}` advance `aggregating → chunking → synthesizing → distill_pass_1 → distill_pass_2 → success` (see `airi-memory-provisioning`). Once maintenance lands: trigger an STMM daily generation and confirm the watermark advances and the artifact version increments (or zero-change is recorded).
+`pnpm -F @proj-anima/stage-ui typecheck`; runtime: run provisioning from the Eternal Thread / Memory settings UI and watch `local:memory/provisioning-session/{characterId}` advance `aggregating → chunking → synthesizing → distill_pass_1 → distill_pass_2 → success` (see `airi-memory-provisioning`). Once maintenance lands: trigger an STMM daily generation and confirm the watermark advances and the artifact version increments (or zero-change is recorded).
 
 ## Sources
 

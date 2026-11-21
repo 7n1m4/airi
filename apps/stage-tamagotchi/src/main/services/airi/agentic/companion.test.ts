@@ -1,4 +1,4 @@
-import { parseCompanionShare } from '@proj-airi/stage-shared/agentic'
+import { parseCompanionShare } from '@proj-anima/stage-shared/agentic'
 import { describe, expect, it } from 'vitest'
 
 import { narrowerScope, packGuestAccess } from './companion'

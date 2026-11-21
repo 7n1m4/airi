@@ -1,5 +1,5 @@
-import type { TransportAdapter } from '@proj-airi/stage-shared/transport-adapter'
-import type { TransportRegistry } from '@proj-airi/stage-shared/transport-registry'
+import type { TransportAdapter } from '@proj-anima/stage-shared/transport-adapter'
+import type { TransportRegistry } from '@proj-anima/stage-shared/transport-registry'
 
 /**
  * In-memory implementation of {@link TransportRegistry}.

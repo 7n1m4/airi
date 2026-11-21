@@ -47,6 +47,6 @@ Preserve queue/interrupt/replace semantics, owner/priority metadata, and the pla
 
 ## Verification
 
-Run `pnpm exec vitest run packages/pipelines-audio/src/speech-pipeline.test.ts` for scheduler changes; typecheck affected workspaces with `pnpm -F @proj-airi/pipelines-audio typecheck` and/or `pnpm -F @proj-airi/stage-ui typecheck`.
+Run `pnpm exec vitest run packages/pipelines-audio/src/speech-pipeline.test.ts` for scheduler changes; typecheck affected workspaces with `pnpm -F @proj-anima/pipelines-audio typecheck` and/or `pnpm -F @proj-anima/stage-ui typecheck`.
 
 Exercise multi-segment speech, consecutive chat/proactivity turns, Stop followed by a new turn, two actors, secondary-window input, host remount/HMR, and silent/Discord output. Assert audible order and no stale speech/captions after cancellation. Runtime bus behavior requires multi-window verification; pipeline unit tests alone do not establish it.

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useMemoryLifetimeStore } from '@proj-airi/stage-ui/stores/memory-lifetime'
-import { Button, DoubleCheckButton } from '@proj-airi/ui'
+import { useMemoryLifetimeStore } from '@proj-anima/stage-ui/stores/memory-lifetime'
+import { Button, DoubleCheckButton } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 

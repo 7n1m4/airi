@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { EntityType } from '@proj-airi/stage-ui/libs/search/entity-ledger'
+import type { EntityType } from '@proj-anima/stage-ui/libs/search/entity-ledger'
 import type { Simulation, SimulationLinkDatum, SimulationNodeDatum } from 'd3-force'
 import type { ZoomTransform } from 'd3-zoom'
 

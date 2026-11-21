@@ -67,6 +67,6 @@ echo "Logging to $LOG_FILE"
     fi
   done
 
-  pnpm -F @proj-airi/stage-tamagotchi run dev -- "$@"
+  pnpm -F @proj-anima/stage-tamagotchi run dev -- "$@"
 } 2>&1 | tee "$LOG_FILE"
 

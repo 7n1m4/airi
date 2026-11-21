@@ -28,7 +28,7 @@ export default defineConfig({
       'packages/motion-driver-magic',
       'packages/electron-screen-capture',
       'packages/server-shared',
-      'integrations/oh-my-pi/airi-plugin-oh-my-pi',
+      'integrations/oh-my-pi/anima-plugin-oh-my-pi',
       'packages/nan0-runtime',
       'packages/speech-transformer-chem',
       'packages/speech-transformer-math',

@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import type { HearingTranscriptionResult } from '@proj-airi/stage-ui/stores/modules/hearing'
-import type { ServerEvent, ServerEvents } from '@proj-airi/stage-ui/stores/providers/aliyun'
+import type { HearingTranscriptionResult } from '@proj-anima/stage-ui/stores/modules/hearing'
+import type { ServerEvent, ServerEvents } from '@proj-anima/stage-ui/stores/providers/aliyun'
 import type { RemovableRef } from '@vueuse/core'
 import type { TranscriptionProviderWithExtraOptions } from '@xsai-ext/providers/utils'
 
-import vadWorkletUrl from '@proj-airi/stage-ui/workers/vad/process.worklet?worker&url'
+import vadWorkletUrl from '@proj-anima/stage-ui/workers/vad/process.worklet?worker&url'
 
 import {
   Alert,
   ProviderBasicSettings,
   ProviderSettingsContainer,
   ProviderSettingsLayout,
-} from '@proj-airi/stage-ui/components'
-import { useProviderValidation } from '@proj-airi/stage-ui/composables/use-provider-validation'
-import { useHearingStore } from '@proj-airi/stage-ui/stores/modules/hearing'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Button, FieldInput, FieldSelect } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/components'
+import { useProviderValidation } from '@proj-anima/stage-ui/composables/use-provider-validation'
+import { useHearingStore } from '@proj-anima/stage-ui/stores/modules/hearing'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Button, FieldInput, FieldSelect } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, reactive, ref, shallowRef } from 'vue'
 

@@ -1,7 +1,7 @@
-import type { ContextUpdate, WebSocketBaseEvent, WebSocketEvent, WebSocketEventOptionalSource, WebSocketEvents } from '@proj-airi/server-sdk'
+import type { ContextUpdate, WebSocketBaseEvent, WebSocketEvent, WebSocketEventOptionalSource, WebSocketEvents } from '@proj-anima/server-sdk'
 
-import { Client, WebSocketEventSource } from '@proj-airi/server-sdk'
-import { isStageCapacitor, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
+import { Client, WebSocketEventSource } from '@proj-anima/server-sdk'
+import { isStageCapacitor, isStageTamagotchi, isStageWeb } from '@proj-anima/stage-shared'
 import { useLocalStorage } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { defineStore } from 'pinia'

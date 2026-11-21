@@ -3,9 +3,9 @@ import type { HackerAdapter, HackerMaterialControl, HackerPart, HackerTexture } 
 import type { useHackerStudio } from './composables/use-hacker-studio'
 import type { SupportedUploadMime } from './domain/upload-validation'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { ARTISTRY_PRESET_GROUPS, artistryGenerateHeadless, REPLICATE_IMAGEEDIT_PRESETS } from '@proj-airi/stage-shared'
-import { Button } from '@proj-airi/ui'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { ARTISTRY_PRESET_GROUPS, artistryGenerateHeadless, REPLICATE_IMAGEEDIT_PRESETS } from '@proj-anima/stage-shared'
+import { Button } from '@proj-anima/ui'
 import { computed, nextTick, ref, watch } from 'vue'
 
 import { useArtistryStore } from '../../../../../stores/modules/artistry'

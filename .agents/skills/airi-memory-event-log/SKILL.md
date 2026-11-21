@@ -34,7 +34,7 @@ A bounded, append-mostly system ledger of what AIRI has been doing — the chara
 
 ## Verification
 
-`pnpm -F @proj-airi/stage-ui typecheck`; runtime: perform actions across categories (tool call, Discord message, heartbeat) and confirm entries stream into the Event Ledger pane and `local:event-log` persists.
+`pnpm -F @proj-anima/stage-ui typecheck`; runtime: perform actions across categories (tool call, Discord message, heartbeat) and confirm entries stream into the Event Ledger pane and `local:event-log` persists.
 
 ## Sources
 

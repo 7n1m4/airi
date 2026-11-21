@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import type { PrewarmProgressEvent } from '@proj-airi/stage-ui/libs/pacing'
-import type { SpeechCapabilitiesInfo } from '@proj-airi/stage-ui/stores/providers'
-import type { PacingProfileId, ThinkingCategory, ThinkingFillerPhrase } from '@proj-airi/stage-ui/types/pacing'
+import type { PrewarmProgressEvent } from '@proj-anima/stage-ui/libs/pacing'
+import type { SpeechCapabilitiesInfo } from '@proj-anima/stage-ui/stores/providers'
+import type { PacingProfileId, ThinkingCategory, ThinkingFillerPhrase } from '@proj-anima/stage-ui/types/pacing'
 
-import { DEFAULT_THINK_ALOUD_PROMPT } from '@proj-airi/stage-ui/constants/prompts/character-defaults'
-import { isNeedleModelCached, needleClient } from '@proj-airi/stage-ui/libs/inference'
+import { DEFAULT_THINK_ALOUD_PROMPT } from '@proj-anima/stage-ui/constants/prompts/character-defaults'
+import { isNeedleModelCached, needleClient } from '@proj-anima/stage-ui/libs/inference'
 import {
   clearThinkingAudioCache,
   getThinkingAudio,
   isThinkingAudioCached,
   prewarmThinkingFillers,
-} from '@proj-airi/stage-ui/libs/pacing'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
+} from '@proj-anima/stage-ui/libs/pacing'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
 import {
   DEFAULT_PACING_FILLERS,
   detectActivePacingProfile,
   PACING_PROFILES,
-} from '@proj-airi/stage-ui/types/pacing'
-import { FieldInput } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/types/pacing'
+import { FieldInput } from '@proj-anima/ui'
 import { computed, onMounted, ref, watch } from 'vue'
 
 interface Props {

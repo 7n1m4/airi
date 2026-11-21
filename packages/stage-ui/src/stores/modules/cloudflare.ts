@@ -1,6 +1,6 @@
-import type { SameAccountDevice, VaultDeviceMap } from '@proj-airi/stage-shared'
+import type { SameAccountDevice, VaultDeviceMap } from '@proj-anima/stage-shared'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
 import {
   cloudflareServiceDeployCorsProxy,
   cloudflareServiceFetchEdgeVault,
@@ -9,8 +9,8 @@ import {
   discordServiceCloudflareOAuth,
   discordServiceGetCloudflareSubdomain,
   discordServiceSetCloudflareSubdomain,
-} from '@proj-airi/stage-shared'
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+} from '@proj-anima/stage-shared'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 

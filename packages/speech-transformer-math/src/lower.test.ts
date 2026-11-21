@@ -1,4 +1,4 @@
-import { headOf } from '@proj-airi/mathjson'
+import { headOf } from '@proj-anima/mathjson'
 import { describe, expect, it } from 'vitest'
 
 import { lowerMath } from './lower'

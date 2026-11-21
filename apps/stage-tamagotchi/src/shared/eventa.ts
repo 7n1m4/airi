@@ -156,7 +156,7 @@ export interface PluginRegistrySnapshot {
 }
 
 // TODO: Replace these manually duplicated IPC types with re-exports from
-// @proj-airi/plugin-sdk (CapabilityDescriptor) once stage-ui and the shared
+// @proj-anima/plugin-sdk (CapabilityDescriptor) once stage-ui and the shared
 // eventa layer can depend on the SDK without introducing unwanted coupling.
 export interface PluginCapabilityPayload {
   key: string
@@ -420,11 +420,11 @@ export const electronSetCorsBypassUrls = defineInvokeEventa<void, string[]>('eve
 export const electronAppIconGet = defineInvokeEventa<boolean>('eventa:invoke:electron:app-icon:get')
 export const electronAppIconSet = defineInvokeEventa<boolean, boolean>('eventa:invoke:electron:app-icon:set')
 
-export { electron } from '@proj-airi/electron-eventa'
+export { electron } from '@proj-anima/electron-eventa'
 
-export * from '@proj-airi/electron-eventa/electron-updater'
+export * from '@proj-anima/electron-eventa/electron-updater'
 
-export { artistryGenerateHeadless } from '@proj-airi/stage-shared'
+export { artistryGenerateHeadless } from '@proj-anima/stage-shared'
 export {
   discordServiceEventLog,
   discordServiceForceSync,
@@ -441,8 +441,8 @@ export {
   discordServiceStatusChanged,
   discordServiceStop,
   discordServiceSummon,
-} from '@proj-airi/stage-shared'
-export * from '@proj-airi/stage-shared/shortcuts'
+} from '@proj-anima/stage-shared'
+export * from '@proj-anima/stage-shared/shortcuts'
 
 export type ElectronAcpPermissionPolicy = 'prompt' | 'auto-read' | 'auto-all'
 

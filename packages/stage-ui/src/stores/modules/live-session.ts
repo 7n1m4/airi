@@ -3,7 +3,7 @@ import type { Tool } from '@xsai/shared-chat'
 import type { ChatAssistantMessage, ChatStreamEventContext, StreamingAssistantMessage } from '../../types/chat'
 import type { LatestTurnUsage } from './gemini-live-seams'
 
-import { debug } from '@proj-airi/stage-shared'
+import { debug } from '@proj-anima/stage-shared'
 import { useBroadcastChannel, useLocalStorage } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { defineStore } from 'pinia'

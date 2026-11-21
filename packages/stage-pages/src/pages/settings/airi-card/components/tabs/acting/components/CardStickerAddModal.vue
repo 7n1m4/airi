@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { CardCustomSticker } from '@proj-airi/stage-ui/types/card.schema'
+import type { CardCustomSticker } from '@proj-anima/stage-ui/types/card.schema'
 
-import { useStickersStore } from '@proj-airi/stage-ui/stores/stickers'
-import { Button } from '@proj-airi/ui'
+import { useStickersStore } from '@proj-anima/stage-ui/stores/stickers'
+import { Button } from '@proj-anima/ui'
 import {
   DialogContent,
   DialogOverlay,

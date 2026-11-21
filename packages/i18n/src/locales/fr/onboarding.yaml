@@ -11,7 +11,7 @@ shell:
   previous: Retour
   next: Continuer
   skip: Configurer plus tard
-  brand: Configuration du Compagnon AIRI
+  brand: Configuration du Compagnon Anima
   stageReady: Scène Prête
   closeSetup: Fermer la configuration (Enregistrer pour plus tard)
   placeholderNotice: Ce module est en cours de configuration. Vous pouvez passer à
@@ -20,7 +20,7 @@ steps:
   welcome:
     label: Bienvenue
     subtitle: Studio de compagnon privé
-    heroTitle: Bienvenue sur AIRI
+    heroTitle: Bienvenue sur Anima
     heroSubtitle: La scène de votre compagnon virtuel — configurée en quelques
       minutes, 100% sur votre machine.
     companionQuote: Bonjour ! Je suis votre compagnon numérique autonome. Que vous
@@ -45,7 +45,7 @@ steps:
       closeToTray: Réduire dans la barre d'état
       close: Close
       comebackLead: If you want to come back to this later, just
-      desktopInstruction: right-click the AIRI system tray icon and click Companion Wizard.
+      desktopInstruction: right-click the Anima system tray icon and click Companion Wizard.
       webInstruction: tap the cog icon in the top-right to open Settings, then go
         Guided Tours → Companion Wizard.
       webSettingsPath: Settings → Guided Tours → Companion Wizard
@@ -66,7 +66,7 @@ steps:
       badge: Priorité locale
       action: Continuer en local
     stepBadge: Triage de l'Architecture · Étape {current} sur {total}
-    companionGreeting: Bienvenue sur AIRI ! Choisissez la méthode de configuration
+    companionGreeting: Bienvenue sur Anima ! Choisissez la méthode de configuration
       de votre scène. Vous pouvez fonctionner à 100% en local hors ligne, ou
       vous connecter pour synchroniser vos appareils.
     local:
@@ -88,7 +88,7 @@ steps:
       couleur d'accentuation distinctive.
     languageSection:
       title: Langue d'affichage
-      description: Sélectionnez la langue principale d'AIRI. Vous pourrez la modifier
+      description: Sélectionnez la langue principale d'Anima. Vous pourrez la modifier
         à tout moment.
     themeSection:
       title: Mode de thème
@@ -157,7 +157,7 @@ steps:
       earth: Terre et Flore
       ocean: Océan et Ciel
       royal: Royauté et Fleurs
-    resetToSignatureAiriCyan: Réinitialiser au cyan signature d'AIRI
+    resetToSignatureAiriCyan: Réinitialiser au cyan signature d'Anima
     preventsRemoteCloudSyncFromOverwritingThisMachineSLanguageAndTheme:
       Empêche la synchronisation cloud distante d'écraser la langue et le thème
       de cette machine
@@ -456,7 +456,7 @@ steps:
     description: Sélectionnez ou personnalisez l'identité fondamentale, les tics de
       langage et l'histoire de votre compagnon.
     presetCards:
-      airi: AIRI (Esprit autonome par défaut)
+      airi: Anima (Esprit autonome par défaut)
       custom: Carte de personnage personnalisée
       import: Importer une carte (PNG / JSON)
     characterName: Nom du compagnon
@@ -971,7 +971,7 @@ steps:
       optional: Optionnel / Ignoré
       actionRequired: Action requise
     greetingCard: Aperçu de la réplique d'ouverture (Tour 0)
-    launchButton: Lancer la scène AIRI
+    launchButton: Lancer la scène Anima
     launching: Démarrage de la scène...
 quickStart:
   title: Démarrage express en 60 secondes

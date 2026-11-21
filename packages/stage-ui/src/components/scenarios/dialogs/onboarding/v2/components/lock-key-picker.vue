@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { MicToggleHotkey } from '@proj-airi/stage-shared/shortcuts'
+import type { MicToggleHotkey } from '@proj-anima/stage-shared/shortcuts'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { electronGetMicToggleHotkey, electronSetMicToggleHotkey } from '@proj-airi/stage-shared/shortcuts'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { electronGetMicToggleHotkey, electronSetMicToggleHotkey } from '@proj-anima/stage-shared/shortcuts'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { RadioCardSimple } from '../../../../../menu'

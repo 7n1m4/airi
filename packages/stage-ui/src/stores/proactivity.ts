@@ -1,8 +1,8 @@
-import type { ActiveWindowEntry, SystemLoadAverages } from '@proj-airi/stage-shared'
+import type { ActiveWindowEntry, SystemLoadAverages } from '@proj-anima/stage-shared'
 
 import type { ChatStreamEventContext, StreamingAssistantMessage } from '../types/chat'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
 import {
   debug,
   sensorsGetActiveWindow,
@@ -12,7 +12,7 @@ import {
   sensorsGetSystemLoad,
   sensorsGetVolumeLevel,
   sensorsSetTrackingEnabled,
-} from '@proj-airi/stage-shared'
+} from '@proj-anima/stage-shared'
 import { useIntervalFn } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { defineStore, storeToRefs } from 'pinia'

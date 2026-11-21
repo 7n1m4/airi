@@ -6,7 +6,7 @@ date: 2025-04-14
 
 ## 導入
 
-[前回](../DevLog-2025.04.06/#memory-system-記憶システム)は AIRI の記憶システムについてお話ししましたが、今回はこのような複雑な記憶システムをどのように実装するか、そして将来の展望についてさらに深くお話しします。
+[前回](../DevLog-2025.04.06/#memory-system-記憶システム)は Anima の記憶システムについてお話ししましたが、今回はこのような複雑な記憶システムをどのように実装するか、そして将来の展望についてさらに深くお話しします。
 
 ## まずは検索エンジンから
 
@@ -96,11 +96,11 @@ RAG では現在、新しいフローが流行しています。それは rerank
 
 しかし、reranking だけでは記憶層の多くの問題を解決できません。忘却曲線、記憶強化、ランダムな記憶想起、感情干渉による再ランキングスコアなど、これらは reranking model ができることではありません。
 
-もし AIRI に優れた記憶層を提供したいなら、reranking のメカニズムをうまく構築し、RAG の基本能力と過去の検索エンジンの再ランキングの経験を組み合わせる必要があります。
+もし Anima に優れた記憶層を提供したいなら、reranking のメカニズムをうまく構築し、RAG の基本能力と過去の検索エンジンの再ランキングの経験を組み合わせる必要があります。
 
 ## 記憶層実験プラットフォーム
 
-[Project AIRI Memory Driver @duckdb/duckdb-wasm Playground](https://drizzle-orm-duckdb-wasm.netlify.app/#/memory-decay)
+[Project Anima Memory Driver @duckdb/duckdb-wasm Playground](https://drizzle-orm-duckdb-wasm.netlify.app/#/memory-decay)
 
 ![](/en/blog/DevLog-2025.04.14/assets/memory-driver.avif)
 
@@ -143,9 +143,9 @@ original とは何でしょうか。それは初期化時のスコアです。
 
 最後は筋肉記憶です。筋肉記憶は記憶というよりは、条件反射が形成されたと言った方がよいでしょう。
 
-## AIRI はどのように設計すべきか？
+## Anima はどのように設計すべきか？
 
-実際、AIRI の実装原則を垣間見ることができます：
+実際、Anima の実装原則を垣間見ることができます：
 
 - ワーキングメモリは messages 配列のようなものです
 - 短期記憶は、それほど簡単には想起できず、新しいほど想起しやすい RAG 記憶エントリのようなものです

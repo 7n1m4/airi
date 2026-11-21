@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { createAudioBlob } from '@proj-airi/stage-shared'
-import { voicePresets } from '@proj-airi/stage-ui/constants/voices'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Button, Select } from '@proj-airi/ui'
+import { createAudioBlob } from '@proj-anima/stage-shared'
+import { voicePresets } from '@proj-anima/stage-ui/constants/voices'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Button, Select } from '@proj-anima/ui'
 import {
   DialogContent,
   DialogOverlay,

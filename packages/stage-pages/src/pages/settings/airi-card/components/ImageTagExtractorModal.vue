@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Button } from '@proj-airi/ui'
+import { useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Button } from '@proj-anima/ui'
 import {
   DialogContent,
   DialogOverlay,

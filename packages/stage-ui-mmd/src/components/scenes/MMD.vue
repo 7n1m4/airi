@@ -16,8 +16,8 @@ import type { GazeOffset, MMDAnimationManager, MorphController } from '../../com
 import type { ResolvedMMDModel } from '../../utils/mmd-loader'
 
 import { errorMessageFrom } from '@moeru/std'
-import { computeDirectionalLightOrbit, debug } from '@proj-airi/stage-shared'
-import { Screen } from '@proj-airi/ui'
+import { computeDirectionalLightOrbit, debug } from '@proj-anima/stage-shared'
+import { Screen } from '@proj-anima/ui'
 import { defaultWindow, useElementBounding, useEventListener } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import {

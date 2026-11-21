@@ -34,7 +34,7 @@ export default defineConfig({
     // errors to the total and zero actionable findings.
     'packages/i18n/src/dist-lite/**',
     // NOTICE: Rust-canonical wire bindings emitted by specta-typescript
-    // (`cargo run -p airi-channel --example export-wire-types`). The generator
+    // (`cargo run -p anima-channel --example export-wire-types`). The generator
     // re-emits its own formatting on every change, so any diagnostic here is
     // noise; the drift check (`pnpm run check:wire-types`) owns correctness.
     'packages/server-shared/src/types/generated/**',

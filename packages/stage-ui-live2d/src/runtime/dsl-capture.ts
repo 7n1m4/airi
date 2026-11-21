@@ -9,7 +9,7 @@
  * renderer discarded (plus the renderable entries, which can carry DSL fields too).
  */
 
-import type { DslEntry, DslMotionGroup } from '@proj-airi/live2d-runtime'
+import type { DslEntry, DslMotionGroup } from '@proj-anima/live2d-runtime'
 
 /**
  * Latest DSL groups captured straight from a manifest's raw `FileReferences.Motions`,

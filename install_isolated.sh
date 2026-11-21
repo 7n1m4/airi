@@ -13,7 +13,7 @@ export ONNXRUNTIME_NODE_INSTALL_CUDA=skip
 ISOLATED_DATA_DIR="${AIRI_ISOLATED_DATA_DIR:-$HOME/.config/ai.moeru.airi.dasilva333}"
 DEFAULT_PORT="${AIRI_ISOLATED_PORT:-5174}"
 APP_ID="ai.moeru.airi.dasilva333"
-APP_NAME="AIRI (dasilva333)"
+APP_NAME="Anima (dasilva333)"
 
 echo "========================================================"
 echo " [AIRI Fork] Isolated Installer & Menubar Registration"
@@ -76,7 +76,7 @@ echo "========================================================"
 
 # Pass any extra arguments
 {
-  pnpm -F @proj-airi/stage-tamagotchi run dev -- "$@"
+  pnpm -F @proj-anima/stage-tamagotchi run dev -- "$@"
 } 2>&1 | tee "$LOG_FILE"
 START_EOF
 

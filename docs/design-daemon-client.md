@@ -1,7 +1,7 @@
 # Daemon client (Slice A)
 
 **Status:** accepted direction; only the transport slice is implemented.
-**Scope:** `crates/airi-channel` Rust client; no daemon business logic yet.
+**Scope:** `crates/anima-channel` Rust client; no daemon business logic yet.
 
 ## Decisions
 
@@ -9,9 +9,9 @@
    not run a competing `AppCore`/store writer while talking to the daemon.
    A thin bridge may keep a local fallback only until the daemon path is
    complete; after deletion, only one side owns the store.
-2. **Client placement:** the gateway client lives in `crates/airi-channel`
+2. **Client placement:** the gateway client lives in `crates/anima-channel`
    next to the server implementation and wire types — not in a new crate and
-   not in `airi-slint`. This keeps the protocol, both sides, and the shared
+   not in `anima-slint`. This keeps the protocol, both sides, and the shared
    codec under one roof.
 3. **Protocol evolution is additive.** Existing `auth`, `module:authenticate`,
    `ping`, `transport:connection:heartbeat` and `rpc` semantics do not change.
@@ -22,7 +22,7 @@
    CA, matching the server posture.
 5. **Sequencing:** transport first (this slice), then a read-only core RPC in
    the daemon, then chat streaming, then memory/settings/cards migration. No
-   bulk move of `airi-slint/src/bridges/*` into the daemon.
+   bulk move of `anima-slint/src/bridges/*` into the daemon.
 
 ## Slice A (implemented here)
 
@@ -32,6 +32,6 @@
 - Integration tests against the real `ChannelServer`, including TLS.
 - No reconnect policy, daemon wiring, UI, or token storage.
 
-- **B (Slice B, implemented).** Daemon owns core state via `CoreService` (crates/airi-daemon/src/core.rs); `Gateway` holds it (gateway.rs); registers exactly one renderer handler `core.status`; `CoreStatusReply` (crates/airi-channel/src/wire.rs) additive/read-only/no secrets; `GatewayClient::core_status()` (client.rs); `DaemonMode`/`select_mode` (crates/airi-slint/src/daemon_mode.rs, pure, default Disabled). Mode selection NOT wired into GUI startup yet (pending). Slint-side ownership deletion NOT done (pending, Slice D).
+- **B (Slice B, implemented).** Daemon owns core state via `CoreService` (crates/anima-daemon/src/core.rs); `Gateway` holds it (gateway.rs); registers exactly one renderer handler `core.status`; `CoreStatusReply` (crates/anima-channel/src/wire.rs) additive/read-only/no secrets; `GatewayClient::core_status()` (client.rs); `DaemonMode`/`select_mode` (crates/anima-slint/src/daemon_mode.rs, pure, default Disabled). Mode selection NOT wired into GUI startup yet (pending). Slint-side ownership deletion NOT done (pending, Slice D).
 - **C (pending).** Chat over WS.
 - **D (pending).** Memory/settings/cards migrate; delete slint-side ownership.

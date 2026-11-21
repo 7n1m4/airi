@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSettingsChat } from '@proj-airi/stage-ui/stores/settings'
-import { FieldSelect } from '@proj-airi/ui'
+import { useSettingsChat } from '@proj-anima/stage-ui/stores/settings'
+import { FieldSelect } from '@proj-anima/ui'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 

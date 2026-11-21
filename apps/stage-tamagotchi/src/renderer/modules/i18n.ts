@@ -1,6 +1,6 @@
-import messages from '@proj-airi/i18n/locales'
+import messages from '@proj-anima/i18n/locales'
 
-import { createFallbackOptions } from '@proj-airi/i18n'
+import { createFallbackOptions } from '@proj-anima/i18n'
 import { createI18n } from 'vue-i18n'
 
 const languageRemap: Record<string, string> = {

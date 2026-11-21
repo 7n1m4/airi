@@ -58,7 +58,7 @@ Head-tethered captions operate across two clearly decoupled tiers: a **renderer-
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        @proj-airi/stage-shared                         │
+│                        @proj-anima/stage-shared                         │
 │  • analyzeCaptionSentence(text)  (30+ regex triggers, negation filter) │
 │  • CaptionEffectCue / AnalyzedSentenceEffects types                    │
 │  • poseToCaptionTransform(...)   (squash, skew, roll perspective math) │
@@ -150,7 +150,7 @@ Reuses the existing `useSettings` slice. Add one new setting and one new binding
 * Reads `skeleton.findBone('head')` to obtain 2D bone stage coordinates `(bone.worldX, bone.worldY)`.
 * Feeds `(worldX, worldY)` directly as the anchor to the shared Canvas2D overlay, getting the full 4-channel expressive vector bubble without building bespoke raw WebGL shader pipelines.
 
-#### Shared Upstream Modules in `@proj-airi/stage-shared`:
+#### Shared Upstream Modules in `@proj-anima/stage-shared`:
 1. `packages/stage-shared/src/utils/caption-perspective.ts`: `poseToCaptionTransform(pose, anchor, opts)` — pure transform math.
 2. `packages/stage-shared/src/utils/caption-sentiment.ts`: `analyzeCaptionSentence(text)` — pure sentiment, negation filtering, and 30+ regex trigger analyzer.
 
@@ -197,7 +197,7 @@ The original open questions are now resolved for MVP:
 | :--- | :--- | :--- |
 | Extract sentiment & trigger analyzer | `packages/stage-shared/src/utils/caption-sentiment.ts` | **NEW**: Move `analyzeCaptionSentence` and cue types from Live2D into shared. |
 | Pure pose→transform math | `packages/stage-shared/src/utils/caption-perspective.ts` | **EXISTING**: Shared single-source math. |
-| Live2D adapter (Pixi WebGL) | `packages/stage-ui-live2d/src/composables/live2d/head-tethered-caption.ts` | **MODIFY**: Consume `analyzeCaptionSentence` from `@proj-airi/stage-shared`. |
+| Live2D adapter (Pixi WebGL) | `packages/stage-ui-live2d/src/composables/live2d/head-tethered-caption.ts` | **MODIFY**: Consume `analyzeCaptionSentence` from `@proj-anima/stage-shared`. |
 | Shared Canvas2D Overlay Component | `packages/stage-ui/src/components/scenes/HeadTetheredCanvas2D.vue` | **NEW**: Canvas2D vector builder & particle engine for VRM, MMD, and Spine. |
 | VRM adapter & bone projection | `packages/stage-ui-three/src/composables/vrm/head-tether.ts` | **NEW**: Expose projected head bone anchor & Euler angles. |
 | Spine & MMD bone projection hooks | `packages/stage-ui-spine/...` & `packages/stage-ui-mmd/...` | **NEW**: Expose head bone anchor coordinates. |

@@ -1,22 +1,22 @@
 ---
 title: Discord Slash Commands
-description: Complete reference for AIRI's Discord slash commands, setup, and how they work.
+description: Complete reference for Anima's Discord slash commands, setup, and how they work.
 ---
 
 # Discord Slash Commands
 
-AIRI's Discord integration lets you interact with your AI directly from Discord using native slash commands. This page covers everything from getting started to the full command reference.
+Anima's Discord integration lets you interact with your AI directly from Discord using native slash commands. This page covers everything from getting started to the full command reference.
 
 ---
 
 ## Setup: Getting a Bot Token
 
-To use AIRI on Discord, you need a Discord Bot Token from the [Discord Developer Portal](https://discord.com/developers/applications).
+To use Anima on Discord, you need a Discord Bot Token from the [Discord Developer Portal](https://discord.com/developers/applications).
 
 ### Step-by-Step
 
 1. Go to [https://discord.com/developers/applications](https://discord.com/developers/applications).
-2. Click **New Application**, give it a name (e.g., "AIRI"), and create it.
+2. Click **New Application**, give it a name (e.g., "Anima"), and create it.
 3. Go to the **Bot** tab on the left sidebar.
 4. Under the **Token** section, click **Reset Token** (or copy the existing one if available).
 5. Copy the token — this is your `DISCORD_BOT_TOKEN`.
@@ -34,28 +34,28 @@ To use AIRI on Discord, you need a Discord Bot Token from the [Discord Developer
    - `Attach Files` (for selfies and generated images)
 10. Use the generated URL to invite the bot to your server.
 
-### Configure in AIRI
+### Configure in Anima
 
-Once you have the token, open AIRI's **Settings > Discord** (under *Messaging*), paste the token, and enable the integration. AIRI will automatically register all slash commands with Discord.
+Once you have the token, open Anima's **Settings > Discord** (under *Messaging*), paste the token, and enable the integration. Anima will automatically register all slash commands with Discord.
 
 ---
 
 ## How Slash Commands Work
 
-AIRI's slash commands are registered with Discord's API using `SlashCommandBuilder` from `discord.js`. On service startup, AIRI pushes the command schema via Discord's REST API so your server sees the native `/` autocomplete UI.
+Anima's slash commands are registered with Discord's API using `SlashCommandBuilder` from `discord.js`. On service startup, Anima pushes the command schema via Discord's REST API so your server sees the native `/` autocomplete UI.
 
 When you type a command:
 
-1. Discord sends an `INTERACTION_CREATE` event to AIRI.
-2. AIRI's interaction handler maps the `commandName` to its local registry.
-3. The corresponding `execute` function runs, showing **"AIRI is thinking..."** while processing.
+1. Discord sends an `INTERACTION_CREATE` event to Anima.
+2. Anima's interaction handler maps the `commandName` to its local registry.
+3. The corresponding `execute` function runs, showing **"Anima is thinking..."** while processing.
 4. The result is posted back to the channel as a native Discord message — often with rich embeds or file attachments.
 
 All interactions flow through the same **Episode/Memory** system as the desktop app, so Discord conversations are synced with your chat history.
 
 ## Tool Calls
 
-AIRI's built-in tools (text journal, stickers, stage widgets, MCP, dating sim) are **available from Discord** — not just from the desktop Whisperbox. When you send a message from Discord, it enters the same LLM pipeline as desktop input. The tools array is resolved via a global fallback (`toolsResolver`), so you can ask AIRI to write into her journal, spawn a widget, or call MCP tools directly from a Discord channel.
+Anima's built-in tools (text journal, stickers, stage widgets, MCP, dating sim) are **available from Discord** — not just from the desktop Whisperbox. When you send a message from Discord, it enters the same LLM pipeline as desktop input. The tools array is resolved via a global fallback (`toolsResolver`), so you can ask Anima to write into her journal, spawn a widget, or call MCP tools directly from a Discord channel.
 
 The only case where tools are disabled is when you send an image attachment — vision models often don't support tool calling, and this applies to all sources equally (Discord, desktop, voice).
 
@@ -120,9 +120,9 @@ Advanced toggles and routing capabilities.
 - **`gemini`**: Discord Opus audio → Gemini Live WebSocket → Discord Opus. Ultra-low latency, no text serialization.
 - **`classic`**: Audio → STT → LLM → TTS → Audio. Slower but uses high-fidelity desktop TTS providers and keeps a full text transcript.
 
-**`/director`** — When `on`, AIRI can autonomously decide to generate images (widgets, backgrounds) through Artistry. When `off`, all generation must be explicitly requested.
+**`/director`** — When `on`, Anima can autonomously decide to generate images (widgets, backgrounds) through Artistry. When `off`, all generation must be explicitly requested.
 
-**`/vision`** — When `on`, image attachments in Discord are intercepted, converted to base64, and fed into the VLM processor via the chat orchestrator. AIRI can "see" and respond to images.
+**`/vision`** — When `on`, image attachments in Discord are intercepted, converted to base64, and fed into the VLM processor via the chat orchestrator. Anima can "see" and respond to images.
 
 **`/imagine`** — Sends the prompt to the configured Artistry backend (e.g., ComfyUI). The result is posted as a native Discord attachment.
 
@@ -138,7 +138,7 @@ The Discord settings page at **Settings > Discord** (under *Messaging*) provides
 | :--- | :--- |
 | **Connectivity** | Gateway status badge + ping/latency readout. |
 | **Authentication** | Masked token display + reset button. |
-| **Active Presence** | Table of guilds and voice channels AIRI is currently in. |
+| **Active Presence** | Table of guilds and voice channels Anima is currently in. |
 | **Logic Routing** | Toggles for VLM processing, Global Artistry Sync, and auto-prefixing. |
 | **Developer Console** | Collapsible real-time log of Discord service events. |
 

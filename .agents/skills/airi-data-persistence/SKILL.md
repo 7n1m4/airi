@@ -60,7 +60,7 @@ AIRI's data persistence architecture is designed for local-first operations, uti
 ## Verification Steps
 
 1. Always verify that new structured endpoints are prefixed with `local:` (or they won't sync).
-2. Validate any `unstorage` modifications via standard workspace checks (`pnpm -F @proj-airi/stage-ui typecheck`).
+2. Validate any `unstorage` modifications via standard workspace checks (`pnpm -F @proj-anima/stage-ui typecheck`).
 3. For sync engine updates, verify behavior against both `S3StorageClient` and `ElectronFSClient` if modifying interface contracts.
 
 ## 1. Overview & Surface Map

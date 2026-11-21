@@ -1,4 +1,4 @@
-import { debug } from '@proj-airi/stage-shared'
+import { debug } from '@proj-anima/stage-shared'
 import { useDevicesList, usePermission, useUserMedia } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'

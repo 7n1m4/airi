@@ -169,7 +169,7 @@ export const providerMyAi = defineProvider<ProviderConfig>({
 
 ## 5. Verification Workflows
 
-1. **Typechecking**: Run `pnpm -F @proj-airi/stage-ui typecheck`.
+1. **Typechecking**: Run `pnpm -F @proj-anima/stage-ui typecheck`.
 2. **Cache Verification**: In the browser/Electron DevTools, inspect `Storage > Origin Private File System` and `Storage > Cache Storage` to confirm files are stored in the correct directory.
 3. **UI Preview**: Open `Settings > Providers` and verify the model appears in `ModelCacheManager` with accurate size telemetry.
 

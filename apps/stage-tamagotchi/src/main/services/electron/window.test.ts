@@ -12,7 +12,7 @@ import { createWindowService } from './window'
 // Electrobun port: `powerMonitor` was an explicit drop (design doc §3.1), so the
 // suspend/lock/resume lifecycle tests no longer apply — the window-level events
 // below are the only sources of lifecycle changes.
-vi.mock('@proj-airi/electron-vueuse/main', () => ({
+vi.mock('@proj-anima/electron-vueuse/main', () => ({
   createRendererLoop: () => ({
     start: vi.fn(),
     stop: vi.fn(),

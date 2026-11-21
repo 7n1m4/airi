@@ -61,10 +61,10 @@ Stacked per step in `guided.vue` via conditional `<div v-if="currentStep === N">
 
 ### 2. Adding a new field (edit-or-preview flow)
 
-The pattern is identical in edit and preview: the same `FieldInput` or `FieldValues` components from `@proj-airi/ui` bind to the same card object.
+The pattern is identical in edit and preview: the same `FieldInput` or `FieldValues` components from `@proj-anima/ui` bind to the same card object.
 
 1. Add the field to the card schema in `packages/stage-ui/src/types/card.schema.ts` under the appropriate subsection (`data.` or `extensions.airi.`).
-2. Add the UI control in the correct tab (`CardCreationTabIdentity.vue`, etc.), importing `FieldInput` / `FieldValues` from `@proj-airi/ui`.
+2. Add the UI control in the correct tab (`CardCreationTabIdentity.vue`, etc.), importing `FieldInput` / `FieldValues` from `@proj-anima/ui`.
 3. Bind `v-model` to the card ref — **do not** save the whole card on each keystroke; let the store handle persistence.
 4. If the field lives under `extensions.airi`, write only that slice; see `airi-card.ts:L488-495` for the spread pattern.
 
@@ -109,8 +109,8 @@ If you skip this, concurrent edits (e.g., another tab writing a separate `airi` 
 run after any change in this skill:
 
 ```bash
-pnpm -F @proj-airi/stage-pages typecheck
-pnpm -F @proj-airi/stage-ui typecheck
+pnpm -F @proj-anima/stage-pages typecheck
+pnpm -F @proj-anima/stage-ui typecheck
 ```
 
 ## Related Skills & References

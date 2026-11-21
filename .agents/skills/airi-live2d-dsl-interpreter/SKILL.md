@@ -44,7 +44,7 @@ The DSL VM executes scripting instructions attached to Live2D character models:
 
 ## 5. Verification Workflows
 
-- **Typecheck**: `pnpm -F @proj-airi/stage-ui-live2d typecheck`
+- **Typecheck**: `pnpm -F @proj-anima/stage-ui-live2d typecheck`
 - **Specification Check**: Verify instruction opcodes match `docs/design-live2d-dsl-interpreter-spec.md`.
 
 ### Authoritative Design & Architecture Documents

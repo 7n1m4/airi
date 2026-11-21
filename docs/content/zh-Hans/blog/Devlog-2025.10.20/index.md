@@ -3,7 +3,7 @@ title: DevLog @ 2025.10.20
 category: DevLog
 date: 2025-10-20
 excerpt: |
-  和大家分享 AIRI 项目的最新进展，从 Tauri 到 Electron 的迁移，新的 Live2D 模型，以及各种开源项目的更新。
+  和大家分享 Anima 项目的最新进展，从 Tauri 到 Electron 的迁移，新的 Live2D 模型，以及各种开源项目的更新。
 preview-cover:
 # TODO
 ---
@@ -50,7 +50,7 @@ Control Island
 
 >「你可以用 [Vue](https://velin-dev.netlify.app/#/) 写提示词！」
 
-还记得 5 月份的时候我们也分享过我们自己实现的 prompt 库吗？感谢 RainbowBird 的努力和捐献，现在 Velin 也是 Moeru AI 的一员了，AIRI 几乎全部的提示词都是 Velin 驱动的，不过不用担心跨平台能力，Velin 在 Node.js 环境也可以用！
+还记得 5 月份的时候我们也分享过我们自己实现的 prompt 库吗？感谢 RainbowBird 的努力和捐献，现在 Velin 也是 Moeru AI 的一员了，Anima 几乎全部的提示词都是 Velin 驱动的，不过不用担心跨平台能力，Velin 在 Node.js 环境也可以用！
 
 <img src="./assets/velin.png" alt="velin.png" />
 
@@ -64,7 +64,7 @@ Control Island
 
 ## 项目发展现状
 
-现在 Moeru AI 和 Project AIRI 都已经是非常庞大的组织，拥有超过 50 个原创的仓库，涵盖机器学习、数据处理、前端、后端各种领域，TypeScript/Python/Rust/Go 等多种语言
+现在 Moeru AI 和 Project Anima 都已经是非常庞大的组织，拥有超过 50 个原创的仓库，涵盖机器学习、数据处理、前端、后端各种领域，TypeScript/Python/Rust/Go 等多种语言
 
 总共加起来的 follower 已经超过 800 人，这放在 1 年前我们刚创立的时候是不敢想象的，真的非常感谢大家喜欢
 
@@ -75,7 +75,7 @@ Moeru AI
 
 <img src="./assets/project-airi.png" alt="project-airi.png" />
 <div style="text-align: center; font-size: 0.875rem; color: #666; margin-top: 0.5rem;">
-Project AIRI
+Project Anima
 </div>
 
 ## 纯 Rust TTS 实现

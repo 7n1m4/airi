@@ -4,11 +4,11 @@ import type {
   McpRuntimeStatus,
   McpServerConfig,
   McpToolDescriptor,
-} from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
+} from '@proj-anima/stage-ui/stores/mcp-tool-bridge'
 
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { tryGetMcpToolBridge } from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
-import { Button, FieldInput } from '@proj-airi/ui'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { tryGetMcpToolBridge } from '@proj-anima/stage-ui/stores/mcp-tool-bridge'
+import { Button, FieldInput } from '@proj-anima/ui'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, onMounted, ref } from 'vue'
 

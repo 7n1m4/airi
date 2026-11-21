@@ -1,6 +1,6 @@
 import z from 'zod'
 
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
 import { createOpenAI } from '@xsai-ext/providers/create'
 
 import { createOpenAICompatibleValidators } from '../../validators/openai-compatible'

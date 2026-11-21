@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
+import { useCustomVrmAnimationsStore, useModelStore } from '@proj-anima/stage-ui-three'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,

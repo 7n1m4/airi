@@ -1,6 +1,6 @@
-import type { Libp2pPeerInfo, Libp2pServiceConfig, Libp2pServiceStatus, Libp2pTransportKind, MeshIdentityInfo, PairedDevice } from '@proj-airi/stage-shared/libp2p'
+import type { Libp2pPeerInfo, Libp2pServiceConfig, Libp2pServiceStatus, Libp2pTransportKind, MeshIdentityInfo, PairedDevice } from '@proj-anima/stage-shared/libp2p'
 
-import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
+import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
 import {
   electronMeshIdentityChanged,
   electronMeshIdentityGenerate,
@@ -27,8 +27,8 @@ import {
   libp2pServiceStatusChanged,
   libp2pServiceStop,
   libp2pServiceUpdatePairedDeviceAlias,
-} from '@proj-airi/stage-shared'
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+} from '@proj-anima/stage-shared'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { defineStore } from 'pinia'
 import { computed, onMounted, onScopeDispose, onUnmounted, ref, watch } from 'vue'
 
@@ -938,7 +938,7 @@ let boundContext: unknown = null
  * Subscribe the handlers to one eventa context.
  *
  * `useElectronEventaContext()` hands back a `ref` whose value is a module-level
- * memo inside `@proj-airi/electron-vueuse`, so it is stable once resolved - but it
+ * memo inside `@proj-anima/electron-vueuse`, so it is stable once resolved - but it
  * starts `undefined` and the libp2p main service pushes through transient
  * per-window contexts. The subscription set is therefore identical whether the
  * context already resolved or arrives after mount, and a context already bound is

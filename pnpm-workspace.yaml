@@ -12,6 +12,15 @@ overrides:
   '@libp2p/crypto': 5.1.8
   '@libp2p/record': 4.0.12
   '@multiformats/dns': 1.0.12
+  # NOTICE: these packages are still published externally under the legacy
+  # scope; npm publication under @proj-anima is an external follow-up. Alias
+  # keeps local imports on the new scope while resolving published tarballs.
+  '@proj-anima/chromatic': npm:@proj-airi/chromatic@^1.0.2
+  '@proj-anima/drizzle-orm-browser-migrator': npm:@proj-airi/drizzle-orm-browser-migrator@^0.1.6
+  '@proj-anima/lobe-icons': npm:@proj-airi/lobe-icons@^1.0.18
+  '@proj-anima/unocss-preset-chromatic': npm:@proj-airi/unocss-preset-chromatic@^1.0.2
+  '@proj-anima/unplugin-drizzle-orm-migrations': npm:@proj-airi/unplugin-drizzle-orm-migrations@^0.1.4
+  '@proj-anima/unplugin-live2d-sdk': npm:@proj-airi/unplugin-live2d-sdk@^0.1.6
   array-flatten: npm:@nolyfill/array-flatten@^1.0.44
   is-core-module: npm:@nolyfill/is-core-module@^1.0.39
   isarray: npm:@nolyfill/isarray@^1.0.44
@@ -63,8 +72,11 @@ catalog:
   '@multiformats/multiaddr': 12.5.1
   '@nekopaw/tempora': 0.4.0-alpha.1
   '@pinia/testing': ^1.0.3
-  '@proj-airi/iconify-meteocons': ^0.1.4
-  '@proj-airi/unplugin-fetch': ^0.2.2
+  # NOTICE: these two packages are published externally under the legacy scope
+  # (npm publication under @proj-anima is an external follow-up). The npm: alias
+  # keeps local imports on the new scope while resolving the published tarballs.
+  '@proj-anima/iconify-meteocons': npm:@proj-airi/iconify-meteocons@^0.1.4
+  '@proj-anima/unplugin-fetch': npm:@proj-airi/unplugin-fetch@^0.2.2
   '@types/audioworklet': ^0.0.96
   '@types/d3-force': ^3.0.10
   '@types/d3-selection': ^3.0.11

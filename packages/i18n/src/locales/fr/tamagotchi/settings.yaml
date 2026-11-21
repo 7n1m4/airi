@@ -100,9 +100,9 @@ screen-capture:
         Sécurité" dans la barre latérale.
       step-2: Dans les sections "Enregistrement de l'écran et de l'audio du système"
         et "Enregistrement de l'audio du système uniquement", activez les
-        interrupteurs pour AIRI.
-      step-2-note: Si AIRI n'est pas listé, veuillez l'ajouter manuellement en
-        cliquant sur le bouton "+" et en sélectionnant AIRI dans le dossier
+        interrupteurs pour Anima.
+      step-2-note: Si Anima n'est pas listé, veuillez l'ajouter manuellement en
+        cliquant sur le bouton "+" et en sélectionnant Anima dans le dossier
         Applications.
 dock-mode:
   select-window: Sélectionner la fenêtre cible

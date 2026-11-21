@@ -126,7 +126,7 @@ The migration follows a strict "Clean Room" protocol to ensure the Target mainta
 2.  **Manual Porting**: Systematically move logic from the source (`airi-rebase-scratch`) to the clean room (`airi-clean-pr`) following the file catalog above.
 3.  **Refactoring**: Apply the **Prompt Builder Agreement** (Section 2.5) during the porting process to align with the new modular architecture.
 4.  **Verification**:
-    - Full typecheck of `@proj-airi/stage-ui` and `@proj-airi/stage-tamagotchi` within the clean room.
+    - Full typecheck of `@proj-anima/stage-ui` and `@proj-anima/stage-tamagotchi` within the clean room.
     - Validate the Image Generation → Journal → Scene Background loop in the fresh build.
 5.  **Pull Request Submission (`gh` CLI)**:
     - **Drafting**: Create a detailed PR description in a temporary file (e.g., `PR_BODY.md`). This should be a "Complete-Vision" synthesis of all ported features, architecture changes, and manual verification logs from Section 4.

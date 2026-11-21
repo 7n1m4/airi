@@ -1,7 +1,7 @@
 {
   // NOTICE: Bun's bundler (used by Electrobun's Bun main process) resolves
   // `paths` only from the nearest tsconfig.json and ignores `references`, so the
-  // `@proj-airi/i18n-bundle` / `@proj-airi/server-runtime` aliases live here
+  // `@proj-anima/i18n-bundle` / `@proj-anima/server-runtime` aliases live here
   // rather than only in tsconfig.node.json. TypeScript still honours
   // `references` for project builds; `files: []` keeps this file a pure
   // solution-style root for tsc.

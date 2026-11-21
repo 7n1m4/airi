@@ -19,7 +19,7 @@ Historical research across all remotes and branches revealed that Kyo's active w
 - **Remote `kayo-nan0`:** `https://github.com/Kayoken54/airi-Nan0.git` (fetched and verified).
 - **Latest Canonical Branches:**
   - **`kayo-nan0/erft`** (commit `84fdbc82d1cf`, Sun Jul 19 2026): Contains the complete integration matrix (`docs/nan0-full-integration-matrix.md`), validation report (`docs/nan0-full-integration-report.md`), and validation test suite (`docs/nan0-runtime-validation.md`).
-  - **`kayo-nan0/main`** (commit `57b346a53635`, Sun Jul 19 2026): Contains the complete, tested `@proj-airi/nan0-runtime` package with 23 test suites and 300 passing unit tests.
+  - **`kayo-nan0/main`** (commit `57b346a53635`, Sun Jul 19 2026): Contains the complete, tested `@proj-anima/nan0-runtime` package with 23 test suites and 300 passing unit tests.
 
 ### 1.2 The Feature Branch Under Richard's Name
 - **Branch:** `origin/kyo-nan0-integration-base` (and local `kyo-nan0-integration-base`).
@@ -210,7 +210,7 @@ We implemented an exhaustive cleanroom shootout script (`scripts/tests/rwkv-harn
 
 ## 5. Architectural Archaeology: Research vs. Runtime Package Reality
 
-An empirical codebase audit conducted on September 23, 2026 revealed the exact boundary between what was researched/proven versus what remains in the ported `@proj-airi/nan0-runtime` package:
+An empirical codebase audit conducted on September 23, 2026 revealed the exact boundary between what was researched/proven versus what remains in the ported `@proj-anima/nan0-runtime` package:
 
 ### 5.1 The Two-Layer Split
 1. **The Cognitive Research & UI Layer (Modern & Shipped)**:
@@ -255,7 +255,7 @@ To maintain 100% test parity and avoid cross-system regressions, integration pro
   2. Update `createDefaultIdentityState(ownerName?: string)` to accept an optional owner anchor name (defaulting to `'Owner'` or user profile).
   3. Ensure ownership rules map `owner` to the user's first-person statements while preserving Nan0's private self-boundary.
   4. Retain `'kyo'` as a backwards-compatible alias for existing test fixtures.
-* **Verification**: Run `pnpm -F @proj-airi/nan0-runtime test src/identity/ActorIdentity.test.ts` (all tests passing).
+* **Verification**: Run `pnpm -F @proj-anima/nan0-runtime test src/identity/ActorIdentity.test.ts` (all tests passing).
 
 ---
 
@@ -267,7 +267,7 @@ To maintain 100% test parity and avoid cross-system regressions, integration pro
   2. When configured, dispatch the turn snapshot to Jev using the 80-choice contrastive questions from `docs/nan0/nan0-jev-12-group-rich-v2.questions.json`.
   3. When offline or unconfigured, execute `Nan0StrengthenedLexicalExtractor.ts`.
   4. Retain the strict non-actuating shadow boundary (`apply_to_state: false`) until authorized.
-* **Verification**: Run `pnpm -F @proj-airi/nan0-runtime test src/shadow/Nan0SubconsciousShadowEngine.test.ts`.
+* **Verification**: Run `pnpm -F @proj-anima/nan0-runtime test src/shadow/Nan0SubconsciousShadowEngine.test.ts`.
 
 ---
 
@@ -280,7 +280,7 @@ To maintain 100% test parity and avoid cross-system regressions, integration pro
      - Breach: `(actorId, broke_commitment, task)` $\longrightarrow$ Suspicion +1.
      - Repair: `(actorId, repaired_commitment, task)` with `supersededBy: repairClaimId` $\longrightarrow$ Suspicion -1, Trust restored.
   3. Allow relationship state to optionally synchronize with or query AIRI's `EntityLedger` (`entityLedger.traverseGraph`).
-* **Verification**: Run `pnpm -F @proj-airi/nan0-runtime test src/relationship/RelationshipMemory.test.ts`.
+* **Verification**: Run `pnpm -F @proj-anima/nan0-runtime test src/relationship/RelationshipMemory.test.ts`.
 
 ---
 
@@ -291,7 +291,7 @@ To maintain 100% test parity and avoid cross-system regressions, integration pro
   1. Add optional `retrievedMemoryContext?: string` to `Nan0ThoughtContext`.
   2. Format retrieved evidence cleanly into the 1st-Hop thought prompt context upstream of narrative monologue generation.
   3. Verify that thoughts naturally reference past events, promises, and relational history without hallucinating ungrounded facts.
-* **Verification**: Run `pnpm -F @proj-airi/nan0-runtime test src/thought/Nan0ThoughtEngine.test.ts`.
+* **Verification**: Run `pnpm -F @proj-anima/nan0-runtime test src/thought/Nan0ThoughtEngine.test.ts`.
 
 ---
 
@@ -303,4 +303,4 @@ To maintain 100% test parity and avoid cross-system regressions, integration pro
   2. Feed `layeredMemory.search()` evidence directly into the 1st-Hop intake.
   3. Synchronize Nan0's 5D affect vector (`Suspicion`, `Attachment`, `Irritation`, `Pride`, `Energy`) with AIRI's avatar `MoodState` (`CoreMood`, `valence`, `arousal`).
   4. Connect Consumer 4 Dreaming emotional afterglow (`pendingDreamMood`) to Nan0's morning restoration deltas.
-* **Verification**: Run `pnpm -F @proj-airi/stage-ui test` and verify full end-to-end chat flow.
+* **Verification**: Run `pnpm -F @proj-anima/stage-ui test` and verify full end-to-end chat flow.

@@ -4,7 +4,7 @@ import type { Preset, PresetOrFactoryAwaitable } from 'unocss'
 import { setDefaultAutoSelectFamilyAttemptTimeout } from 'node:net'
 
 import { createExternalPackageIconLoader } from '@iconify/utils/lib/loader/external-pkg'
-import { presetChromatic } from '@proj-airi/unocss-preset-chromatic'
+import { presetChromatic } from '@proj-anima/unocss-preset-chromatic'
 import { colorToString } from '@unocss/preset-mini/utils'
 import { defineConfig, mergeConfigs, presetAttributify, presetIcons, presetTypography, presetWind3, transformerDirectives, transformerVariantGroup } from 'unocss'
 import { presetScrollbar } from 'unocss-preset-scrollbar'
@@ -133,8 +133,8 @@ export function sharedUnoConfig() {
       presetIcons({
         scale: 1.2,
         collections: {
-          ...createExternalPackageIconLoader('@proj-airi/lobe-icons'),
-          ...createExternalPackageIconLoader('@proj-airi/iconify-meteocons'),
+          ...createExternalPackageIconLoader('@proj-anima/lobe-icons'),
+          ...createExternalPackageIconLoader('@proj-anima/iconify-meteocons'),
           ...createExternalPackageIconLoader('@iconify-json/solar'),
           ...createExternalPackageIconLoader('@iconify-json/carbon'),
           ...createExternalPackageIconLoader('@iconify-json/lucide'),

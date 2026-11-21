@@ -169,7 +169,7 @@ Upstream's biggest usability strength is early language selection. Users should 
 ### Phase 1: Zero-Friction Welcome Language Selector (Immediate)
 - Mount a language selector dropdown directly in the top-right header of **Step 0 (Welcome Landing)**.
 - Binds to `useI18n().locale.value` and synchronizes with `settings/general.yaml` (`language` key).
-- Instantly switches the UI locale in-memory for all already-translated strings across `@proj-airi/i18n`.
+- Instantly switches the UI locale in-memory for all already-translated strings across `@proj-anima/i18n`.
 
 ### Phase 2: Systematic Onboarding String Audit (Deep Localization)
 - Audit all steps under `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v2/steps/`.

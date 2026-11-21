@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { EntityType } from '@proj-airi/stage-ui/libs/search/entity-ledger'
+import type { EntityType } from '@proj-anima/stage-ui/libs/search/entity-ledger'
 
-import { useEntityLedgerStore } from '@proj-airi/stage-ui/stores/entity-ledger'
-import { Button, DoubleCheckButton } from '@proj-airi/ui'
+import { useEntityLedgerStore } from '@proj-anima/stage-ui/stores/entity-ledger'
+import { Button, DoubleCheckButton } from '@proj-anima/ui'
 import { computed, ref } from 'vue'
 
 const props = defineProps<{

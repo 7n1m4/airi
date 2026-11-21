@@ -3,8 +3,8 @@ import type { Tool } from '@xsai/shared-chat'
 import z from 'zod'
 
 import { defineInvoke } from '@moeru/eventa'
-import { getElectronEventaContext } from '@proj-airi/electron-vueuse'
-import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
+import { getElectronEventaContext } from '@proj-anima/electron-vueuse'
+import { useArtistryStore } from '@proj-anima/stage-ui/stores/modules/artistry'
 import { tool } from '@xsai/tool'
 
 import { widgetsAdd, widgetsClear, widgetsOpenWindow, widgetsPrepareWindow, widgetsRemove, widgetsUpdate } from '../../../../shared/eventa'

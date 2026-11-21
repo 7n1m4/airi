@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { UnifiedVesselItem } from '../components/vessel-coverflow.vue'
 
-import { isStageWeb } from '@proj-airi/stage-shared'
-import { SPOTLIGHT_MODELS } from '@proj-airi/stage-ui/constants'
-import { Button } from '@proj-airi/ui'
+import { isStageWeb } from '@proj-anima/stage-shared'
+import { SPOTLIGHT_MODELS } from '@proj-anima/stage-ui/constants'
+import { Button } from '@proj-anima/ui'
 import { useFileDialog } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'

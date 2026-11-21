@@ -1,25 +1,25 @@
 <script setup lang="ts">
 import type { VRM } from '@pixiv/three-vrm'
-import type { DisplayModel } from '@proj-airi/stage-ui/stores/display-models'
+import type { DisplayModel } from '@proj-anima/stage-ui/stores/display-models'
 import type { AnimationAction } from 'three'
 
 import { VRMLoaderPlugin } from '@pixiv/three-vrm'
-import { animations } from '@proj-airi/stage-ui-three/assets/vrm'
+import { animations } from '@proj-anima/stage-ui-three/assets/vrm'
 import {
   clipFromVRMAnimation,
   loadVRMAnimation,
   reAnchorRootPositionTrack,
-} from '@proj-airi/stage-ui-three/composables/vrm'
-import { ModelSelectorDialog } from '@proj-airi/stage-ui/components/scenarios/dialogs/model-selector'
+} from '@proj-anima/stage-ui-three/composables/vrm'
+import { ModelSelectorDialog } from '@proj-anima/stage-ui/components/scenarios/dialogs/model-selector'
 import {
   AuraController,
   frame,
   VrmSocketResolver,
-} from '@proj-airi/stage-ui/libs/vfx'
+} from '@proj-anima/stage-ui/libs/vfx'
 import {
   DisplayModelFormat,
   useDisplayModelsStore,
-} from '@proj-airi/stage-ui/stores/display-models'
+} from '@proj-anima/stage-ui/stores/display-models'
 import { useRafFn } from '@vueuse/core'
 import {
   AmbientLight,

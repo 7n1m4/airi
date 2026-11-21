@@ -1,7 +1,7 @@
 import type { ExecResult } from './types'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { electronSandboxCompileTypeScript } from '@proj-airi/stage-shared'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { electronSandboxCompileTypeScript } from '@proj-anima/stage-shared'
 import { transform } from 'sucrase'
 
 /**

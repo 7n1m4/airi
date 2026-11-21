@@ -1,6 +1,6 @@
 import type { ElectronServerChannelConfig } from '../../../shared/eventa'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
 import { useAsyncState, useLocalStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'

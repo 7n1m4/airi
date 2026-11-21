@@ -84,9 +84,9 @@ description: >-
 
 ## Verification
 
-- Renderer tool / built-in store changes (`builtin/widgets.ts`, `builtin/image-journal.ts`, renderer composables): `pnpm -F @proj-airi/stage-tamagotchi typecheck` (runs `tsc --noEmit -p tsconfig.node.json` then `vue-tsc --noEmit -p tsconfig.web.json`).
-- Main-process widget-services changes (`main/services/airi/widgets/**`): same `pnpm -F @proj-airi/stage-tamagotchi typecheck`. A full desktop build (`pnpm -F @proj-airi/stage-tamagotchi build`) typechecks and rebuilds the Electron bundle when the change touches main-process service wiring.
-- Stage-UI store changes (`packages/stage-ui/src/stores/modules/artistry.ts`, `artistry-autonomous.ts`): `pnpm -F @proj-airi/stage-ui typecheck`.
+- Renderer tool / built-in store changes (`builtin/widgets.ts`, `builtin/image-journal.ts`, renderer composables): `pnpm -F @proj-anima/stage-tamagotchi typecheck` (runs `tsc --noEmit -p tsconfig.node.json` then `vue-tsc --noEmit -p tsconfig.web.json`).
+- Main-process widget-services changes (`main/services/airi/widgets/**`): same `pnpm -F @proj-anima/stage-tamagotchi typecheck`. A full desktop build (`pnpm -F @proj-anima/stage-tamagotchi build`) typechecks and rebuilds the Electron bundle when the change touches main-process service wiring.
+- Stage-UI store changes (`packages/stage-ui/src/stores/modules/artistry.ts`, `artistry-autonomous.ts`): `pnpm -F @proj-anima/stage-ui typecheck`.
 - UI-only class/copy tweaks normally need no script; run the above whenever you changed TS logic, a store, an import, an eventa contract, or a `zod` tool schema.
 
 ## Related Skills & References

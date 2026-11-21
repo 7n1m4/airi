@@ -16,7 +16,7 @@ import type { AttentionGuardAdapter } from '../../../libs/inference/adapters/att
 import type { AttentionGuardProcessResult } from '../../../libs/inference/contract'
 import type { SentinelQuestionConfig } from '../airi-card'
 
-import { ContextUpdateStrategy } from '@proj-airi/server-sdk'
+import { ContextUpdateStrategy } from '@proj-anima/server-sdk'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 

@@ -5,13 +5,13 @@ description: Configure floating subtitles, Sentence-Sync word highlighting, capt
 
 # Captions, Subtitles & Speech Bubbles
 
-Whether you are watching a stream, playing a game with background music, or prefer reading while listening, AIRI provides a versatile subtitle and captioning system that works across all render surfaces.
+Whether you are watching a stream, playing a game with background music, or prefer reading while listening, Anima provides a versatile subtitle and captioning system that works across all render surfaces.
 
 ---
 
 ## 1. Caption Display Surfaces
 
-AIRI supports several distinct caption presentation modes:
+Anima supports several distinct caption presentation modes:
 
 | Mode | Appearance | Behavior |
 | :--- | :--- | :--- |
@@ -24,7 +24,7 @@ AIRI supports several distinct caption presentation modes:
 
 ## 2. Sentence-Sync Audio Highlighting
 
-AIRI features **Sentence-Sync Audio Playback**:
+Anima features **Sentence-Sync Audio Playback**:
 - As the synthesized TTS audio plays, the active phrase or sentence is highlighted in real time.
 - Clicking any highlighted phrase replays that specific audio segment.
 - Transcribed microphone input from the user is displayed in an alternating accent color, making multi-turn dialogues easy to follow.

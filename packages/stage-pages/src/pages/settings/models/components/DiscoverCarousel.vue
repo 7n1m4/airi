@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SpotlightModel } from '@proj-airi/stage-ui/constants'
+import type { SpotlightModel } from '@proj-anima/stage-ui/constants'
 
 import { useElementSize } from '@vueuse/core'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'

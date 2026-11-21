@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SelectTab } from '@proj-airi/ui'
+import { SelectTab } from '@proj-anima/ui'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 

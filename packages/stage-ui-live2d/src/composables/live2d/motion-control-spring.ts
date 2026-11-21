@@ -2,7 +2,7 @@ import type { ShallowRef } from 'vue'
 
 import type { Live2DMotionControlPose, Live2DMotionControlState } from '../../stores/motion-control'
 
-import { poseAxes } from '@proj-airi/model-driver-magic-live2d'
+import { poseAxes } from '@proj-anima/model-driver-magic-live2d'
 import { shallowRef } from 'vue'
 
 import { neutralLive2DMotionControlPose } from '../../stores/motion-control'

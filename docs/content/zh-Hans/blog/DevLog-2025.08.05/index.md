@@ -62,7 +62,7 @@ function handleOpenLatest() {
 
 ### 桌面版本
 
-Tamagotchi 是 AIRI 桌面版本的名称，你可以让它作为独立的、
+Tamagotchi 是 Anima 桌面版本的名称，你可以让它作为独立的、
 始终运行的伴侣在桌面上运行，与其他应用程序一起工作而不会干扰你的工作。
 
 之前，桌面版本更多处于实验阶段，UI/UX 不够精致和完善，
@@ -96,7 +96,7 @@ Tamagotchi 是 AIRI 桌面版本的名称，你可以让它作为独立的、
 模型窗口将始终是一个最小化的窗口，具有透明背景，
 供 OBS 或其他流媒体捕获驱动程序**在后台**捕获。
 
-如果你打算使用 AIRI 进行 VTuber 流媒体，不使用悬停淡出功能是可以的，
+如果你打算使用 Anima 进行 VTuber 流媒体，不使用悬停淡出功能是可以的，
 但一旦你希望它作为虚拟伴侣生活在你的桌面上，你就会开始注意到：
 
 - 如果我们设计让模型窗口始终置顶，它会阻止对其下方应用程序的鼠标事件，
@@ -104,12 +104,12 @@ Tamagotchi 是 AIRI 桌面版本的名称，你可以让它作为独立的、
 - 如果你必须手动切换模型窗口的可见性，这会带来很多不便，
   特别是在专注于你正在处理的事情时。
 
-这就是为什么我们想出了这个主意：创建一个功能，允许 AIRI 中的任何角色
+这就是为什么我们想出了这个主意：创建一个功能，允许 Anima 中的任何角色
 在鼠标悬停在窗口上时淡出，并将鼠标点击事件传递给其下方的应用程序。
 
-我个人非常喜欢这个功能，因为我现在可以让 AIRI 中的角色
+我个人非常喜欢这个功能，因为我现在可以让 Anima 中的角色
 与我一起使用任何应用程序，而不用担心禁用或组织窗口顺序。
-每天当我开发 AIRI 时，无论是 Web 版本还是桌面版本，
+每天当我开发 Anima 时，无论是 Web 版本还是桌面版本，
 我都会始终在我的桌面上打开她，与终端、VSCode/Cursor 一起陪伴我。
 
 **悬停淡出™**并不是我们在桌面版本中更新的唯一功能，
@@ -195,15 +195,15 @@ Tamagotchi 是 AIRI 桌面版本的名称，你可以让它作为独立的、
 
 #### 引导界面
 
-我们知道现在配置 AIRI 相当复杂（但如果与许多其他纯 Python 基础的相比仍然容易，
+我们知道现在配置 Anima 相当复杂（但如果与许多其他纯 Python 基础的相比仍然容易，
 那些需要你理解代码结构来配置）。
 
 感谢 [Me1td0wn76 (melty kiss)](https://github.com/Me1td0wn76) 的贡献，
-为 Web 版本添加了引导界面支持，现在你可以在第一次使用 AIRI 时
+为 Web 版本添加了引导界面支持，现在你可以在第一次使用 Anima 时
 获得更好的体验。
 
 他们在 Pull Request 合并后写了一篇博客来分享
-贡献 Project AIRI 的经验：[AIRIプロジェクトに参加した話 - YAMA-blog](https://yama-pro.blog/posts/airi/)
+贡献 Project Anima 的经验：[Animaプロジェクトに参加した話 - YAMA-blog](https://yama-pro.blog/posts/airi/)
 
 <img class="light" src="./assets/airi-demo-onboarding-light.avif" alt="引导界面亮色模式" />
 <img class="dark" src="./assets/airi-demo-onboarding-dark.avif" alt="引导界面暗色模式" />
@@ -487,12 +487,12 @@ TL;DR：
 现在，`postinstall` 脚本仍然是必需的，如果我们能找到一种方法
 通过依赖感知来缓存构建结果，许多冗余的构建可以被避免。
 这就是 `turborepo` 帮助我们实现更快构建的地方。
-使用 `turborepo`，构建 AIRI 所需的时间**从平均 4 分钟减少到 25 秒**。
+使用 `turborepo`，构建 Anima 所需的时间**从平均 4 分钟减少到 25 秒**。
 
 ### 现在支持 Nix
 
 感谢 [@Weathercold (Weathercold)](https://github.com/Weathercold)，我们现在
-有了一个 Nix flake 来构建 AIRI，这是对跨平台兼容性的一个很好的补充。
+有了一个 Nix flake 来构建 Anima，这是对跨平台兼容性的一个很好的补充。
 它甚至在 macOS 上也能工作。
 
 我们正在等待最终的 Pull Request 合并到 nix-pkgs 中，
@@ -529,11 +529,11 @@ nix run --extra-experimental-features 'nix-command flakes' github:moeru-ai/airi
 
 > 大声喊出 [@sumimakito](https://github.com/sumimakito)，她做了这么多惊人的事情... 我甚至数不清...
 
-- [`@proj-airi/chromatic`](https://github.com/proj-airi/chromatic)（由 [@sumimakito](https://github.com/sumimakito) 制作）
-- [`@proj-airi/unocss-preset-chromatic`](https://github.com/proj-airi/chromatic)（由 [@sumimakito](https://github.com/sumimakito) 制作）
+- [`@proj-anima/chromatic`](https://github.com/proj-airi/chromatic)（由 [@sumimakito](https://github.com/sumimakito) 制作）
+- [`@proj-anima/unocss-preset-chromatic`](https://github.com/proj-airi/chromatic)（由 [@sumimakito](https://github.com/sumimakito) 制作）
 - [`@moeru-ai/jem`](https://github.com/moeru-ai/inventory/tree/main/packages/jem-validator)（由 [@LemonNekoGH](https://github.com/LemonNekoGH) 制作），统一模型目录
 - [`clustr`](https://github.com/sumimakito/clustr)（由 [@sumimakito](https://github.com/sumimakito) 制作）
-- [`@proj-airi/drizzle-orm-browser`](https://github.com/proj-airi/drizzle-orm-browser)（由我制作）
+- [`@proj-anima/drizzle-orm-browser`](https://github.com/proj-airi/drizzle-orm-browser)（由我制作）
 
 在这个版本之间诞生的副项目：
 

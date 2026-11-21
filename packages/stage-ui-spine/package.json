@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/stage-ui-spine",
+  "name": "@proj-anima/stage-ui-spine",
   "type": "module",
   "private": true,
   "description": "Spine 2D scene components and stores for Project AIRI",
@@ -38,8 +38,8 @@
     "@esotericsoftware/spine-webgl-4-0": "npm:@esotericsoftware/spine-webgl@~4.0.31",
     "@esotericsoftware/spine-webgl-4-1": "npm:@esotericsoftware/spine-webgl@~4.1.56",
     "@moeru/std": "catalog:",
-    "@proj-airi/stage-shared": "workspace:^",
-    "@proj-airi/ui": "workspace:^",
+    "@proj-anima/stage-shared": "workspace:^",
+    "@proj-anima/ui": "workspace:^",
     "@vueuse/core": "^14.2.1",
     "@xsai/tool": "catalog:",
     "es-toolkit": "catalog:",

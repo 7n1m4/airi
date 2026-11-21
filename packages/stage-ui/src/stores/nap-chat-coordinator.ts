@@ -1,4 +1,4 @@
-import type { Peer } from '@proj-airi/stage-shared'
+import type { Peer } from '@proj-anima/stage-shared'
 
 import type { ChatHistoryItem } from '../types/chat'
 import type { NapChatSessionRecord, NapEpisode, NapTurn } from './nap-chat'

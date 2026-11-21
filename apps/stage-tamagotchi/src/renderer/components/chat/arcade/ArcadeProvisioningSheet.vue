@@ -4,9 +4,9 @@ import type {
   CatalogGame,
   CompanionPersonaPreset,
   System1EngineChoice,
-} from '@proj-airi/stage-ui/types'
+} from '@proj-anima/stage-ui/types'
 
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
+import { useConsciousnessStore } from '@proj-anima/stage-ui/stores/modules/consciousness'
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { computed, ref, watch } from 'vue'
 

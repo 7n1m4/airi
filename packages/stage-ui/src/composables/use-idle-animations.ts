@@ -1,5 +1,5 @@
-import { useMmd } from '@proj-airi/stage-ui-mmd'
-import { useCustomVrmAnimationsStore } from '@proj-airi/stage-ui-three'
+import { useMmd } from '@proj-anima/stage-ui-mmd'
+import { useCustomVrmAnimationsStore } from '@proj-anima/stage-ui-three'
 
 import { useDisplayModelsStore } from '../stores/display-models'
 

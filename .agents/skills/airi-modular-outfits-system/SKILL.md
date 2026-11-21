@@ -52,7 +52,7 @@ Character outfits represent distinct visual costume variants (e.g. casual wear, 
 
 ## 5. Verification Workflows
 
-- **Typecheck**: `pnpm -F @proj-airi/stage-ui typecheck`
+- **Typecheck**: `pnpm -F @proj-anima/stage-ui typecheck`
 
 ### Authoritative Design & Architecture Documents
 

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { AiriCard } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import type { AiriCard } from '@proj-anima/stage-ui/stores/modules/airi-card'
 
-import { extractModelIcon, getLatestSelfie } from '@proj-airi/stage-ui/libs/character-media-resolver'
-import { useBackgroundStore } from '@proj-airi/stage-ui/stores/background'
-import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
-import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { Button } from '@proj-airi/ui'
+import { extractModelIcon, getLatestSelfie } from '@proj-anima/stage-ui/libs/character-media-resolver'
+import { useBackgroundStore } from '@proj-anima/stage-ui/stores/background'
+import { useChatSessionStore } from '@proj-anima/stage-ui/stores/chat/session-store'
+import { useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { Button } from '@proj-anima/ui'
 import {
   DialogContent,
   DialogOverlay,

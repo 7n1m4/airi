@@ -21,7 +21,7 @@ Hello again! It has been 10 days since the last post of DevLog
 
 We made a lot of improvements to our user interface, we made it possible
 to integrate more LLM providers, and speech providers, first time to post
-AIRI on Discord, bilibili, and many other social media platforms.
+Anima on Discord, bilibili, and many other social media platforms.
 
 There is so much more that we can't wait to tell you about.
 
@@ -76,7 +76,7 @@ recorded once done:
 
 The entire OKLCH color palette can spread on to the canvas all at once
 for us to take as reference. But it wasn't perfect to tryout the colors
-and have the same scheme of feelings of Project AIRI's theme, was it?
+and have the same scheme of feelings of Project Anima's theme, was it?
 
 So I first re-implemented the color slider, which feels much more suitable:
 
@@ -86,7 +86,7 @@ So I first re-implemented the color slider, which feels much more suitable:
 This does make the slider a bit more professional.
 
 The logo and the default greenish color can be replaced to align the theme
-of AIRI, that's why I designed another dedicated logo for the UI page:
+of Anima, that's why I designed another dedicated logo for the UI page:
 
 <img class="light" :src="HistoireLogo" alt="project airi logo for histoire" />
 <img class="dark" :src="HistoireLogoDark" alt="project airi logo for histoire" />

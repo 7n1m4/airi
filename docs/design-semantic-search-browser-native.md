@@ -65,7 +65,7 @@ Given AIRI's focus on character-scoped memories and privacy, a **fully local pip
 
 ## 5. Integration Notes
 
-- **Electron Advantages**: In the `@proj-airi/stage-tamagotchi` context, we can leverage even faster libraries if we moved indexing to a Node.js sidecar, but keeping it in the renderer ensures the **Web version** (`@proj-airi/stage-web`) shares the same features.
+- **Electron Advantages**: In the `@proj-anima/stage-tamagotchi` context, we can leverage even faster libraries if we moved indexing to a Node.js sidecar, but keeping it in the renderer ensures the **Web version** (`@proj-anima/stage-web`) shares the same features.
 - **Privacy**: No vectors or text are sent to a third-party server (unlike using Pinecone or OpenAI Embeddings), aligning with AIRI's "Local First" philosophy.
 
 ## Relevant Skills

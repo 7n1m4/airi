@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Checkbox } from '@proj-airi/ui'
+import { Checkbox } from '@proj-anima/ui'
 
 import Bar from './bar.vue'
 

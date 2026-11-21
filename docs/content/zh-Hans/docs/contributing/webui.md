@@ -1,6 +1,6 @@
 ---
 title: 网页端
-description: 参与并贡献 Project AIRI
+description: 参与并贡献 Project Anima
 ---
 
 ### 网页端 ([airi.moeru.ai](https://airi.moeru.ai))

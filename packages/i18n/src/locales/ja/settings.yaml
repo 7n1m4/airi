@@ -9,7 +9,7 @@ animations:
     title: ページ固有の遷移を使用する
 dialogs:
   onboarding:
-    title: AIRI へようこそ！
+    title: Anima へようこそ！
     description: まず最初のAIプロバイダーを設定しましょう。
     selectProvider: AIプロバイダーを選択
     configureProvider: 設定 {provider}
@@ -74,7 +74,7 @@ dialogs:
       relu: ReLU
       relu_desc: あなたのデータと心に寄り添い、共に進化していく魂の絆。
       aria: Dr. Aria
-      aria_desc: AIRI 研究レイヤーを統括する、聡明で機知に富んだガイド。
+      aria_desc: Anima 研究レイヤーを統括する、聡明で機知に富んだガイド。
       lupin: Lupin
       lupin_desc: 鋭い直感と強い守護の心を持つ、忠実な狼少女。
       import: カスタム
@@ -83,7 +83,7 @@ dialogs:
 language:
   title: 言語
   description: >
-    AIRIインターフェースの言語を変更します。これはキャラクターの応答言語には影響しません。
+    Animaインターフェースの言語を変更します。これはキャラクターの応答言語には影響しません。
 controls-island:
   icon-size:
     title: アイランドアイコンのサイズを制御
@@ -151,7 +151,7 @@ pages:
     delete: 削除
     delete_card: カードを削除
     delete_confirmation: このカードを削除してもよろしいですか？
-    description: AIRIキャラクターカードプリセットを使用する
+    description: Animaキャラクターカードプリセットを使用する
     description_label: 説明
     drop_here: アップロードするにはここにドラッグ
     create_card: 新しいカードを作成
@@ -195,7 +195,7 @@ pages:
         consciousness_model: このキャラクターの意識モデル(AIモデル)を選択してください。
         speech_model: このキャラクターの音声合成モデルと音声を選択してください。
         identity_prompting: これらのフィールドはキャラクターの定義に役立ちますが、現在のところ個別のランタイムレイヤーとしては分離されていません。システムプロンプトは
-          AIRI のアクティブプロンプト組み立てに使用されます。履歴後指示（Post-History
+          Anima のアクティブプロンプト組み立てに使用されます。履歴後指示（Post-History
           Instructions）は主にカードの互換性と将来のプロンプトパイプラインのために保持されているため、現時点では挙動の変化を期待せずに入力して問題ありません。
       errors:
         name: 名前は有効であるか、空でない必要があります。
@@ -224,7 +224,7 @@ pages:
       model: 発話/モデル
       voice: 発話/音声
     systemprompt: システムプロンプト
-    title: AIRIカード
+    title: Animaカード
     try_different_search: 別の検索ワードを試してください
     upload: アップロード
     upload_desc: ファイルをアップロードするにはクリックまたはドラッグ
@@ -233,7 +233,7 @@ pages:
     title: 記憶
   docs:
     title: ドキュメント
-    description: AIRIの使い方と機能を学ぶ
+    description: Animaの使い方と機能を学ぶ
     sections:
       overview: 概要
       manual: マニュアル
@@ -242,7 +242,7 @@ pages:
       showcase: ショーケース
   data:
     title: データ
-    description: AIRIデータの保存、エクスポート、およびリセットの管理
+    description: Animaデータの保存、エクスポート、およびリセットの管理
     sections:
       chats:
         title: チャット セッション
@@ -271,7 +271,7 @@ pages:
         delete: すべてのデータを削除
       desktop:
         title: デスクトップの設定と状態をリセット
-        description: AIRIデスクトップの設定と実行時の状態を消去します。
+        description: Animaデスクトップの設定と実行時の状態を消去します。
         reset: デスクトップのデータをリセット
       characters:
         title: キャラクター
@@ -409,7 +409,7 @@ pages:
       description: Factorioをプレイ！
       title: Factorio
       enable: Factorio連携を有効にする
-      enable-description: AIRIがFactorioゲームと通信できるようにする
+      enable-description: AnimaがFactorioゲームと通信できるようにする
       server-address: サーバーアドレス
       server-address-description: FactorioサーバーのIPアドレスまたはホスト名
       server-address-placeholder: サーバーアドレスを入力 (例： localhostまたは192.168.1.100)
@@ -429,7 +429,7 @@ pages:
           hotkey:
             title: マイク切り替えホットキー
             description: キーボードのロックキー (Scroll, Caps, または Num Lock)
-              でマイクを切り替えます。キーボードのLEDがAIRIのマイク状態と同期します。
+              でマイクを切り替えます。キーボードのLEDがAnimaのマイク状態と同期します。
             options:
               scroll: Scroll Lock
               caps: Caps Lock
@@ -444,7 +444,7 @@ pages:
       description: Discordでのチャットとボイスチャット
       title: Discord
       enable: Discord連携を有効にする
-      enable-description: AIRIがDiscordを介して対話できるようにする
+      enable-description: AnimaがDiscordを介して対話できるようにする
       token: ボットトークン
       token-description: あなたのDiscordボットトークン
       token-placeholder: Discordボットトークンを入力
@@ -483,7 +483,7 @@ pages:
       controls:
         title: コントロールとモダリティ
         vision: VLM (視覚) 画像入力を有効化
-        vision-description: AIRI が Discord からの添付画像を読み取って処理できるようにします
+        vision-description: Anima が Discord からの添付画像を読み取って処理できるようにします
     speech:
       description: 音声合成
       sections:
@@ -538,7 +538,7 @@ pages:
       description: X / Twitterの閲覧と使用
       title: X / Twitter
       enable: X / Twitter連携を有効にする
-      enable-description: AIRIがX / Twitterと対話できるようにする
+      enable-description: AnimaがX / Twitterと対話できるようにする
       api-key: APIキー
       api-key-description: あなたのX / Twitter APIキー
       api-key-placeholder: あなたのX / Twitter APIキーを入力
@@ -608,8 +608,8 @@ pages:
     helpinfo:
       title: ここを初めて利用しますか？
       description: >
-        AIRIが正常に思考し動作するためには、少なくとも1つの{chat}プロバイダーの設定が必要です。
-        これはAIRIシステム内に存在するキャラクターの脳と考えることができます。
+        Animaが正常に思考し動作するためには、少なくとも1つの{chat}プロバイダーの設定が必要です。
+        これはAnimaシステム内に存在するキャラクターの脳と考えることができます。
     catalog:
       edit:
         config-id-not-found: プロバイダ設定が見つかりません。
@@ -1039,7 +1039,7 @@ pages:
         description: Moss TTS を使用したローカル・オンデバイス音声合成エンジン。
       airi-audio-server:
         description: 高性能ニューラルオーディオサーバー - ゼロショット音声クローニングとパラ言語表現タグをサポートするローカル C++ 推論
-        title: AIRI Audio Server
+        title: Anima Audio Server
       alibaba-cloud:
         description: Model Studio - Alibaba Cloud の大規模モデルサービスプラットフォーム
         title: Alibaba Cloud (阿里雲)
@@ -1289,7 +1289,7 @@ pages:
         開発モードでモバイル（pocket）のHTTPS接続を許可するために、WSS（WebSocket
         Secure）を有効にします。これにより自己署名証明書が自動的に生成されます。
     server-hostname:
-      label: AIRI Gateway Hostname
+      label: Anima Gateway Hostname
       description: Set zero (0.0.0.0) to bind to all available IP addresses on your
         WiFi network. Otherwise, bind this to 127.0.0.1 for maximum local
         security.
@@ -1349,7 +1349,7 @@ pages:
                 vivid: 鮮やか (ネオン)
                 monochrome: モノクロ
               reset:
-                title: AIRI シアンにリセット
+                title: Anima シアンにリセット
           title: 配色
         developer:
           title: 開発者
@@ -1405,8 +1405,8 @@ pages:
           presets:
             default:
               colors:
-                color-1: AIRIグリーン
-              description: AIRIによって用意された、デフォルトの緑がかったテーマカラー！
+                color-1: Animaグリーン
+              description: Animaによって用意された、デフォルトの緑がかったテーマカラー！
               title: デフォルトカラー
             morandi:
               colors:
@@ -1541,7 +1541,7 @@ sections:
 theme:
   title: テーマ
   description: |
-    AIRIの基本テーマをライトモードまたはダークモードに切り替えます。
+    Animaの基本テーマをライトモードまたはダークモードに切り替えます。
 title: 設定
 voices: 音声
 vrm:
@@ -1628,7 +1628,7 @@ providers:
 privacy:
   remote-sync:
     title: クラウド同期を有効化
-    description: デフォルトで無効です。無効の場合、AIRI は完全にローカルのみで動作し、リモートセッションの取得や
+    description: デフォルトで無効です。無効の場合、Anima は完全にローカルのみで動作し、リモートセッションの取得や
       airi-api.moeru.ai へのチャット履歴の同期は行いません。
 groups:
   character:

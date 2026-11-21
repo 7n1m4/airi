@@ -64,7 +64,7 @@ Per `docs/design-timeline-flat.md`: a Universe (`universeId`) decouples chat thr
 
 ## 7. Verification
 
-- `pnpm -F @proj-airi/stage-ui typecheck` for store/repo changes (add App: `pnpm -F @proj-airi/stage-tamagotchi typecheck`).
+- `pnpm -F @proj-anima/stage-ui typecheck` for store/repo changes (add App: `pnpm -F @proj-anima/stage-tamagotchi typecheck`).
 - Spot-check each touched pillar's key in DevTools Application → IndexedDB (`airi-*` / `local:*`), and binaries under the `localforage` instance — keep Subject A's memory distinct per universe while testing.
 
 ## 8. Authoritative Sources

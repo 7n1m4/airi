@@ -6,9 +6,9 @@ import type {
   ElectronMcpToolDescriptor,
 } from '../../../../shared/eventa'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { tryGetMcpToolBridge } from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
-import { Button } from '@proj-airi/ui'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { tryGetMcpToolBridge } from '@proj-anima/stage-ui/stores/mcp-tool-bridge'
+import { Button } from '@proj-anima/ui'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, onMounted, ref, watch } from 'vue'
 

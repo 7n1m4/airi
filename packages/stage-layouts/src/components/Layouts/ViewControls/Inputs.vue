@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useModelStore } from '@proj-airi/stage-ui-three'
-import { useSettings } from '@proj-airi/stage-ui/stores/settings'
-import { usePositioningStore } from '@proj-airi/stage-ui/stores/settings/positioning'
-import { RoundRange } from '@proj-airi/ui'
+import { useModelStore } from '@proj-anima/stage-ui-three'
+import { useSettings } from '@proj-anima/stage-ui/stores/settings'
+import { usePositioningStore } from '@proj-anima/stage-ui/stores/settings/positioning'
+import { RoundRange } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 

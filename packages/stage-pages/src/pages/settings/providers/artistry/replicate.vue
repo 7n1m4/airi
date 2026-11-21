@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
-import { FieldInput, FieldRange } from '@proj-airi/ui'
+import { useArtistryStore } from '@proj-anima/stage-ui/stores/modules/artistry'
+import { FieldInput, FieldRange } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 
 const artistryStore = useArtistryStore()

@@ -1,12 +1,12 @@
 import type { createContext } from '@moeru/eventa/adapters/electron/main'
-import type { ResizeDirection } from '@proj-airi/electron-eventa'
+import type { ResizeDirection } from '@proj-anima/electron-eventa'
 import type { BrowserWindow, BrowserWindowConstructorOptions } from 'electron'
 
 import type { I18n } from '../../libs/i18n'
 import type { ServerChannel } from '../../services/airi/channel-server'
 
 import { defineInvokeHandler } from '@moeru/eventa'
-import { isRendererUnavailable } from '@proj-airi/electron-vueuse/main'
+import { isRendererUnavailable } from '@proj-anima/electron-vueuse/main'
 import { isMacOS } from 'std-env'
 
 import { electronWindowSetTitle } from '../../../shared/eventa'

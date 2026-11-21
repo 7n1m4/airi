@@ -2,7 +2,7 @@
 
 ![Production Studio & Autonomous Artistry](/showcase/hero-09-artistry-studio.avif)
 
-The **Production Studio & Autonomous Artistry** subsystem turns AIRI from a conversational agent into a full-fledged cinematic director. Powered by an autonomous **Director Loop**, ComfyUI Bring-Your-Own-Workflow (BYOW) integration, persistent visual state tracking, and a durable Scene Vault, AIRI generates story illustrations, selfies, and visual novel backdrops in real time as conversations unfold.
+The **Production Studio & Autonomous Artistry** subsystem turns Anima from a conversational agent into a full-fledged cinematic director. Powered by an autonomous **Director Loop**, ComfyUI Bring-Your-Own-Workflow (BYOW) integration, persistent visual state tracking, and a durable Scene Vault, Anima generates story illustrations, selfies, and visual novel backdrops in real time as conversations unfold.
 
 ---
 

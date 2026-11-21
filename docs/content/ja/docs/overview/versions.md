@@ -1,6 +1,6 @@
 ---
 title: バージョン一覧
-description: AIRI の異なるバージョンと入手方法
+description: Anima の異なるバージョンと入手方法
 ---
 
 <script setup>
@@ -8,7 +8,7 @@ import ReleaseDownloads from '../../../../.vitepress/components/ReleaseDownloads
 import ReleasesList from '../../../../.vitepress/components/ReleasesList.vue'
 </script>
 
-AIRI は、さまざまなニーズに合わせて複数のリリースチャンネルを提供しています。最も安定した体験を求めている場合でも、最新の機能を求めている場合でも、あなたにぴったりのものが見つかります。
+Anima は、さまざまなニーズに合わせて複数のリリースチャンネルを提供しています。最も安定した体験を求めている場合でも、最新の機能を求めている場合でも、あなたにぴったりのものが見つかります。
 
 ## 安定版とプレリリース
 

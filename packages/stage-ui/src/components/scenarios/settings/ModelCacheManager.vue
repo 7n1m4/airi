@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ModelCacheStatusMap } from '../../../libs/inference'
 
-import { Button } from '@proj-airi/ui'
+import { Button } from '@proj-anima/ui'
 import { computed, onMounted, ref } from 'vue'
 
 import {

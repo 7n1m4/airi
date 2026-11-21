@@ -1,4 +1,4 @@
-import type { TransportRegistry } from '@proj-airi/stage-shared'
+import type { TransportRegistry } from '@proj-anima/stage-shared'
 
 import { createCloudflareRelayTransportAdapter } from './transport-adapter'
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { OnboardingV3Step, OnboardingV3StepDef } from './types'
 
-import { isStageWeb } from '@proj-airi/stage-shared'
+import { isStageWeb } from '@proj-anima/stage-shared'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 

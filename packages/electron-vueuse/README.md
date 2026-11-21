@@ -1,4 +1,4 @@
-# @proj-airi/electron-vueuse
+# @proj-anima/electron-vueuse
 
 VueUse-like composables and helpers shared across AIRI Electron apps.
 
@@ -9,17 +9,17 @@ VueUse-like composables and helpers shared across AIRI Electron apps.
 - Eventa context/invoke ergonomics for renderer code
 - Main-process loop utilities (`useLoop`, `createRendererLoop`)
 
-For IPC contract definitions, use `@proj-airi/electron-eventa`.
+For IPC contract definitions, use `@proj-anima/electron-eventa`.
 
 ## Usage
 
 ```ts
-import { electron } from '@proj-airi/electron-eventa'
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
+import { electron } from '@proj-anima/electron-eventa'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
 
 const openSettings = useElectronEventaInvoke(electron.window.getBounds)
 ```
 
 ```ts
-import { createRendererLoop } from '@proj-airi/electron-vueuse/main'
+import { createRendererLoop } from '@proj-anima/electron-vueuse/main'
 ```

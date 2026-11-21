@@ -1,33 +1,33 @@
 <script setup lang="ts">
-import type { VoiceInputBinding } from '@proj-airi/stage-ui/libs/audio'
+import type { VoiceInputBinding } from '@proj-anima/stage-ui/libs/audio'
 import type { ChatProvider } from '@xsai-ext/providers/utils'
 
-import workletUrl from '@proj-airi/stage-ui/workers/vad/process.worklet?worker&url'
+import workletUrl from '@proj-anima/stage-ui/workers/vad/process.worklet?worker&url'
 
-import { electron } from '@proj-airi/electron-eventa'
+import { electron } from '@proj-anima/electron-eventa'
 import {
   useElectronEventaContext,
   useElectronEventaInvoke,
   useElectronMouseInElement,
   useElectronMouseInWindow,
   useElectronRelativeMouse,
-} from '@proj-airi/electron-vueuse'
-import { useMmd } from '@proj-airi/stage-ui-mmd'
-import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
-import { WidgetStage } from '@proj-airi/stage-ui/components/scenes'
-import { useAudioRecorder } from '@proj-airi/stage-ui/composables/audio/audio-recorder'
-import { createVoiceInputBinding } from '@proj-airi/stage-ui/libs/audio'
-import { useVAD } from '@proj-airi/stage-ui/stores/ai/models/vad'
-import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
-import { useLive2d } from '@proj-airi/stage-ui/stores/live2d'
-import { useLLM } from '@proj-airi/stage-ui/stores/llm'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useHearingSpeechInputPipeline, useHearingStore } from '@proj-airi/stage-ui/stores/modules/hearing'
-import { useLiveSessionStore } from '@proj-airi/stage-ui/stores/modules/live-session'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { useSettings, useSettingsAudioDevice, useSettingsControlStrip } from '@proj-airi/stage-ui/stores/settings'
-import { usePositioningStore } from '@proj-airi/stage-ui/stores/settings/positioning'
+} from '@proj-anima/electron-vueuse'
+import { useMmd } from '@proj-anima/stage-ui-mmd'
+import { useCustomVrmAnimationsStore, useModelStore } from '@proj-anima/stage-ui-three'
+import { WidgetStage } from '@proj-anima/stage-ui/components/scenes'
+import { useAudioRecorder } from '@proj-anima/stage-ui/composables/audio/audio-recorder'
+import { createVoiceInputBinding } from '@proj-anima/stage-ui/libs/audio'
+import { useVAD } from '@proj-anima/stage-ui/stores/ai/models/vad'
+import { useChatOrchestratorStore } from '@proj-anima/stage-ui/stores/chat'
+import { useLive2d } from '@proj-anima/stage-ui/stores/live2d'
+import { useLLM } from '@proj-anima/stage-ui/stores/llm'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useConsciousnessStore } from '@proj-anima/stage-ui/stores/modules/consciousness'
+import { useHearingSpeechInputPipeline, useHearingStore } from '@proj-anima/stage-ui/stores/modules/hearing'
+import { useLiveSessionStore } from '@proj-anima/stage-ui/stores/modules/live-session'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { useSettings, useSettingsAudioDevice, useSettingsControlStrip } from '@proj-anima/stage-ui/stores/settings'
+import { usePositioningStore } from '@proj-anima/stage-ui/stores/settings/positioning'
 import { useBroadcastChannel } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue'

@@ -9,7 +9,7 @@
  * relay-requiring adapters (see `transport-registry.ts`).
  *
  * Naming note: libp2p's own `Transport` (`@libp2p/interface`) is a different
- * concept and is never re-exported from `@proj-airi/stage-shared`.
+ * concept and is never re-exported from `@proj-anima/stage-shared`.
  */
 
 export type TransportId = 'cloudflare-edge' | 'libp2p-mesh' | 'loopback'

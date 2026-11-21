@@ -101,7 +101,7 @@ Script: lines 1-909. Template: lines 911-1929. Imports tell the dependency story
 
 ## 8. Verification
 
-- `pnpm -F @proj-airi/stage-pages typecheck` after guided.vue or component changes; `pnpm -F @proj-airi/stage-ui typecheck` for store-level edits.
+- `pnpm -F @proj-anima/stage-pages typecheck` after guided.vue or component changes; `pnpm -F @proj-anima/stage-ui typecheck` for store-level edits.
 - Runtime: Settings → AIRI Card → "Create With Wizard" (`/settings/airi-card/guided`); step 4 end-to-end requires an active consciousness model.
 
 ## Related Skills & References

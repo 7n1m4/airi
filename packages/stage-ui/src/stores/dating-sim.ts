@@ -1,5 +1,5 @@
 import { defineInvoke, defineInvokeEventa } from '@moeru/eventa'
-import { useElectronEventaContext } from '@proj-airi/electron-vueuse'
+import { useElectronEventaContext } from '@proj-anima/electron-vueuse'
 import { useLocalStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
@@ -203,10 +203,10 @@ export const useDatingSimStore = defineStore('dating-sim', () => {
     isGenerating.value = true
     customPremise.value = customPremiseVal || ''
     try {
-      const { useLLM } = await import('@proj-airi/stage-ui/stores/llm')
-      const { useProvidersStore } = await import('@proj-airi/stage-ui/stores/providers')
-      const { useConsciousnessStore } = await import('@proj-airi/stage-ui/stores/modules/consciousness')
-      const { useAiriCardStore } = await import('@proj-airi/stage-ui/stores/modules/airi-card')
+      const { useLLM } = await import('@proj-anima/stage-ui/stores/llm')
+      const { useProvidersStore } = await import('@proj-anima/stage-ui/stores/providers')
+      const { useConsciousnessStore } = await import('@proj-anima/stage-ui/stores/modules/consciousness')
+      const { useAiriCardStore } = await import('@proj-anima/stage-ui/stores/modules/airi-card')
 
       const llm = useLLM()
       const providers = useProvidersStore()
@@ -334,11 +334,11 @@ Your output MUST be EXACTLY in this JSON format and nothing else:
 
     isGenerating.value = true
     try {
-      const { useLLM } = await import('@proj-airi/stage-ui/stores/llm')
-      const { useProvidersStore } = await import('@proj-airi/stage-ui/stores/providers')
-      const { useConsciousnessStore } = await import('@proj-airi/stage-ui/stores/modules/consciousness')
-      const { useChatSessionStore } = await import('@proj-airi/stage-ui/stores/chat/session-store')
-      const { useAiriCardStore } = await import('@proj-airi/stage-ui/stores/modules/airi-card')
+      const { useLLM } = await import('@proj-anima/stage-ui/stores/llm')
+      const { useProvidersStore } = await import('@proj-anima/stage-ui/stores/providers')
+      const { useConsciousnessStore } = await import('@proj-anima/stage-ui/stores/modules/consciousness')
+      const { useChatSessionStore } = await import('@proj-anima/stage-ui/stores/chat/session-store')
+      const { useAiriCardStore } = await import('@proj-anima/stage-ui/stores/modules/airi-card')
 
       const llm = useLLM()
       const providers = useProvidersStore()
@@ -452,9 +452,9 @@ Generate 4 options for what the User could say next and the subtitle.`
     if (!enabled.value)
       return
     try {
-      const { useLLM } = await import('@proj-airi/stage-ui/stores/llm')
-      const { useProvidersStore } = await import('@proj-airi/stage-ui/stores/providers')
-      const { useConsciousnessStore } = await import('@proj-airi/stage-ui/stores/modules/consciousness')
+      const { useLLM } = await import('@proj-anima/stage-ui/stores/llm')
+      const { useProvidersStore } = await import('@proj-anima/stage-ui/stores/providers')
+      const { useConsciousnessStore } = await import('@proj-anima/stage-ui/stores/modules/consciousness')
 
       const llm = useLLM()
       const providers = useProvidersStore()
@@ -717,7 +717,7 @@ Generate 4 options for what the User could say next and the subtitle.`
   }
 
   function applyMood(newMood: string) {
-    import('@proj-airi/stage-ui-live2d/stores/live2d').then(({ useLive2d }) => {
+    import('@proj-anima/stage-ui-live2d/stores/live2d').then(({ useLive2d }) => {
       const live2dStore = useLive2d()
       if (live2dStore.model) {
         const m = newMood.toLowerCase()

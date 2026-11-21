@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import type { CachedModelInfo, DownloadProgressEvent, HardwareTelemetry } from '@proj-airi/stage-ui/libs/native-ai'
+import type { CachedModelInfo, DownloadProgressEvent, HardwareTelemetry } from '@proj-anima/stage-ui/libs/native-ai'
 
 import {
   Alert,
   ProviderSettingsContainer,
   ProviderSettingsLayout,
-} from '@proj-airi/stage-ui/components'
-import { useProviderValidation } from '@proj-airi/stage-ui/composables/use-provider-validation'
-import { formatBytes, NativeAI } from '@proj-airi/stage-ui/libs/native-ai'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
+} from '@proj-anima/stage-ui/components'
+import { useProviderValidation } from '@proj-anima/stage-ui/composables/use-provider-validation'
+import { formatBytes, NativeAI } from '@proj-anima/stage-ui/libs/native-ai'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
 import { computed, onMounted, ref } from 'vue'
 
 const providerId = 'apple-core-ai'

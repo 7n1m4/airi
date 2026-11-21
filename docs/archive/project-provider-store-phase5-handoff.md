@@ -60,10 +60,10 @@ Direct inspection of `upstream/main` (`https://github.com/moeru-ai/airi.git` at 
 
 All verification suites are 100% green:
 
-- `pnpm -F @proj-airi/stage-ui test src/stores/providers/ --run` $\rightarrow$ **7/7 test files passed, 45/45 tests green**
+- `pnpm -F @proj-anima/stage-ui test src/stores/providers/ --run` $\rightarrow$ **7/7 test files passed, 45/45 tests green**
 - `packages/stage-ui/src/stores/providers/runtime/instance-store.phase5.test.ts` $\rightarrow$ **19/19 Phase 5 unit tests passing**
-- `pnpm -F @proj-airi/stage-ui typecheck` $\rightarrow$ **PASS (0 errors in stage-ui)**
-- `pnpm -F @proj-airi/stage-pages typecheck` $\rightarrow$ **PASS (0 errors in stage-pages)**
+- `pnpm -F @proj-anima/stage-ui typecheck` $\rightarrow$ **PASS (0 errors in stage-ui)**
+- `pnpm -F @proj-anima/stage-pages typecheck` $\rightarrow$ **PASS (0 errors in stage-pages)**
 
 ---
 
@@ -115,8 +115,8 @@ In `getProviderInstance(providerId)`:
 ### Automated Tests
 1. **Store Migration Tests**:
    - Test migrating legacy `upstream/main` single-slot storage objects (with valid keys, empty keys, and custom base URLs) to version 2 storage.
-   - Run typecheck: `pnpm -F @proj-airi/stage-ui typecheck`.
-   - Run test suite: `pnpm -F @proj-airi/stage-ui test src/stores/providers/ --run`.
+   - Run typecheck: `pnpm -F @proj-anima/stage-ui typecheck`.
+   - Run test suite: `pnpm -F @proj-anima/stage-ui test src/stores/providers/ --run`.
 
 2. **Credential Validation Tests**:
    - Verify `isProviderConfigured('openrouter-ai')` returns `false` when `apiKey` is missing or empty.

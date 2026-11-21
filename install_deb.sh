@@ -9,7 +9,7 @@ echo " [AIRI (dasilva333)] Building and Installing DEB Package"
 echo "========================================================"
 
 pnpm run build:packages
-pnpm -F @proj-airi/stage-tamagotchi run build:deb
+pnpm -F @proj-anima/stage-tamagotchi run build:deb
 
 DEB_FILE=$(ls -t "$REPO_ROOT/apps/stage-tamagotchi/dist/"*linux-amd64.deb 2>/dev/null | head -n 1 || true)
 

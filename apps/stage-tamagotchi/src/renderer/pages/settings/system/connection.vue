@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import ConnectionSettings from '@proj-airi/stage-pages/pages/settings/system/ConnectionSettings.vue'
+import ConnectionSettings from '@proj-anima/stage-pages/pages/settings/system/ConnectionSettings.vue'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { FieldCheckbox, FieldInput } from '@proj-airi/ui'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { FieldCheckbox, FieldInput } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

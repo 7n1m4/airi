@@ -8,7 +8,7 @@ preview-cover:
   dark: "@assets('/en/blog/merry-christmas-2025/assets/merry-christmas-iru.avif')"
 ---
 
-AIRI チームからの **メリークリスマス** をお届けします！
+Anima チームからの **メリークリスマス** をお届けします！
 
 ![クリスマスイラスト](/en/blog/merry-christmas-2025/assets/merry-christmas-iru.avif)
 
@@ -26,7 +26,7 @@ AIRI チームからの **メリークリスマス** をお届けします！
 >
 > レベル 123 に到達し、11 万以上のサブスクと 100 万 bits 超え。
 
-Neuro-sama、お誕生日おめでとう。そしてクリエイターの Vedal、アーティストの Camila、おめでとう。ここまでたどり着いたのは驚くべきことです。あなたたち、そしてコミュニティの Swarm がいるからこそ、私が思い描くサイバー生命を届けようと、AIRI を育て続けられています。
+Neuro-sama、お誕生日おめでとう。そしてクリエイターの Vedal、アーティストの Camila、おめでとう。ここまでたどり着いたのは驚くべきことです。あなたたち、そしてコミュニティの Swarm がいるからこそ、私が思い描くサイバー生命を届けようと、Anima を育て続けられています。
 
 ![](/en/blog/merry-christmas-2025/assets/neuro-sama-happy-birthday-live.avif)
 

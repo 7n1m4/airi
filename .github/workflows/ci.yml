@@ -43,15 +43,15 @@ jobs:
           key: ${{ runner.os }}-cargo-wire-types-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-wire-types-
-      # Regenerates and diffs the checked-in bindings; fails if crates/airi-channel/src/wire.rs
-      # and packages/server-shared/src/types/generated/airi-channel.ts disagree (D2).
-      - run: cargo run -p airi-channel --example export-wire-types --locked -- --check
+      # Regenerates and diffs the checked-in bindings; fails if crates/anima-channel/src/wire.rs
+      # and packages/server-shared/src/types/generated/anima-channel.ts disagree (D2).
+      - run: cargo run -p anima-channel --example export-wire-types --locked -- --check
 
   rust-test:
     name: Rust Tests
     runs-on: ubuntu-latest
     # The unified workspace build carries both rustls CryptoProviders; TLS tests
-    # install aws-lc-rs explicitly (crates/airi-channel/src/lib.rs).
+    # install aws-lc-rs explicitly (crates/anima-channel/src/lib.rs).
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
@@ -75,16 +75,16 @@ jobs:
       matrix:
         include:
           - app_name: stage-web
-            command: pnpm -F @proj-airi/stage-web run build && pnpm -F @proj-airi/docs run build:base && mv ./docs/.vitepress/dist ./apps/stage-web/dist/docs && pnpm -F @proj-airi/stage-ui run story:build && mv ./packages/stage-ui/.histoire/dist ./apps/stage-web/dist/ui
+            command: pnpm -F @proj-anima/stage-web run build && pnpm -F @proj-anima/docs run build:base && mv ./docs/.vitepress/dist ./apps/stage-web/dist/docs && pnpm -F @proj-anima/stage-ui run story:build && mv ./packages/stage-ui/.histoire/dist ./apps/stage-web/dist/ui
 
           - app_name: stage-tamagotchi
-            command: pnpm -F @proj-airi/stage-tamagotchi run build
+            command: pnpm -F @proj-anima/stage-tamagotchi run build
 
           - app_name: ui-transitions
-            command: pnpm -F @proj-airi/ui-transitions run play:build
+            command: pnpm -F @proj-anima/ui-transitions run play:build
 
           - app_name: ui-loading-screens
-            command: pnpm -F @proj-airi/ui-loading-screens run play:build
+            command: pnpm -F @proj-anima/ui-loading-screens run play:build
 
     runs-on: ubuntu-latest
     env:
@@ -132,7 +132,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
       # NOTICE: typecheck resolves workspace subpath exports from dist/
-      # (e.g. @proj-airi/plugin-protocol/types). --ignore-scripts skips the
+      # (e.g. @proj-anima/plugin-protocol/types). --ignore-scripts skips the
       # implicit postinstall build, so build explicitly first.
       - run: pnpm run build:packages
       - run: pnpm run typecheck

@@ -36,7 +36,7 @@ v3 (above) made `modules.displayModelId` the single source of truth and gated th
 
 ### v4 verification
 
-- `pnpm -F @proj-airi/stage-ui typecheck` — no new errors in the three changed files (the only failures are pre-existing `@proj-airi/live2d-runtime` module-resolution errors in `stage-ui-live2d`, unrelated and present on the clean tree).
+- `pnpm -F @proj-anima/stage-ui typecheck` — no new errors in the three changed files (the only failures are pre-existing `@proj-anima/live2d-runtime` module-resolution errors in `stage-ui-live2d`, unrelated and present on the clean tree).
 - Manual (Setup A, autonomous artistry ON, Background Scene spawn mode): send a message producing a two-actor script; while the first actor's audio plays, wait for the Director image. Expected: background changes, **model does not move**; the model swaps only at each actor's audio start.
 
 ---

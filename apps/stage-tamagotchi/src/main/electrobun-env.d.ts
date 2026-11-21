@@ -5,7 +5,7 @@
  * `electrobun` (the npm bootstrap) is a `lib/moved.cjs` re-export shim: it carries no `.d.ts`,
  * and the real API surface lives in `.hutch/devkit/api` after `hutch electrobun prepare`. Rather
  * than depend on prepare having run, the surfaces `src/main` touches are declared here; delete
- * this file once `@proj-airi/electrobun-ui`-style typings or a typed devkit is linked.
+ * this file once `@proj-anima/electrobun-ui`-style typings or a typed devkit is linked.
  */
 
 declare module 'electrobun/main' {
@@ -244,9 +244,9 @@ declare module 'electrobun/main' {
   export default Electrobun
 }
 
-declare module '@proj-airi/electrobun-eventa/main' {
+declare module '@proj-anima/electrobun-eventa/main' {
   import type { EventContext } from '@moeru/eventa'
-  import type { ElectrobunRpcPort } from '@proj-airi/electrobun-eventa'
+  import type { ElectrobunRpcPort } from '@proj-anima/electrobun-eventa'
 
   export type { ElectrobunRpcPort }
 

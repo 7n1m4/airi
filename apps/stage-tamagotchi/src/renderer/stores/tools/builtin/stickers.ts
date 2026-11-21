@@ -1,6 +1,6 @@
 import type { Tool } from '@xsai/shared-chat'
 
-import { useStickersStore } from '@proj-airi/stage-ui/stores/stickers'
+import { useStickersStore } from '@proj-anima/stage-ui/stores/stickers'
 
 /**
  * Tools for interacting with the sticker system.

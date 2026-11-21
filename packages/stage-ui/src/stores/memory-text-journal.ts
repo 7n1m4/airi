@@ -2,7 +2,7 @@ import type { EmbedderStatus } from '../libs/workers/search/search-channel'
 import type { ChatGroundingMetadata, ChatStreamEvent } from '../types/chat'
 import type { TextJournalEntry, TextJournalEntrySource } from '../types/text-journal'
 
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
 import { useBroadcastChannel } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { defineStore, storeToRefs } from 'pinia'

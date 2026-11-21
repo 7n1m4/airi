@@ -3,13 +3,13 @@ title: DevLog @ 2026.01.01
 category: DevLog
 date: 2026-01-01
 excerpt: |
-  和大家分享 AIRI 在 iOS 平台上的进展，遇到的问题与解决方案，以及柠猫在 FlowChat 实验记忆层的一些成果和一点点实现细节。
+  和大家分享 Anima 在 iOS 平台上的进展，遇到的问题与解决方案，以及柠猫在 FlowChat 实验记忆层的一些成果和一点点实现细节。
 preview-cover:
   light: "@assets('./assets/cover-light.png')"
   dark: "@assets('./assets/cover-dark.png')"
 ---
 
-新年快乐！这里是 [@LemonNekoGH](https://github.com/LemonNekoGH)，AIRI 的维护者之一，新年的第一篇 DevLog 是我的了，（按下 B 键选择了大笑表情）啊哈哈哈哈哈哈！
+新年快乐！这里是 [@LemonNekoGH](https://github.com/LemonNekoGH)，Anima 的维护者之一，新年的第一篇 DevLog 是我的了，（按下 B 键选择了大笑表情）啊哈哈哈哈哈哈！
 
 <p style="display: flex; justify-content: center;">
     <img src="./assets/helldiver-laughing.png" alt="Helldiver Laughing Emotion" />
@@ -17,15 +17,15 @@ preview-cover:
 
 好的我们来到正题。
 
-## AIRI Pocket
+## Anima Pocket
 
-在两天前，我们引入了 [Capacitor](https://capacitorjs.com/) 来为 AIRI 构建移动端应用（[#845](https://github.com/moeru-ai/airi/pull/845)），我们称之为 AIRI Pocket。
+在两天前，我们引入了 [Capacitor](https://capacitorjs.com/) 来为 Anima 构建移动端应用（[#845](https://github.com/moeru-ai/airi/pull/845)），我们称之为 Anima Pocket。
 
 目前我们把 iOS 的部分点亮了，同时为它加入了通知能力，也就是说，如果她想，她可以主动通过通知来提醒你去陪她了。
 
 别太在意那个 Capacitor 默认图标，之后会换的。
 
-在视频中，我把 AIRI 从后台列表移除了，不久后 AIRI 就弹出了一条通知，这种后台通知在 PWA 中很难做到，在 iOS 原生应用上就轻而易举了。
+在视频中，我把 Anima 从后台列表移除了，不久后 Anima 就弹出了一条通知，这种后台通知在 PWA 中很难做到，在 iOS 原生应用上就轻而易举了。
 
 诶，这么顺利吗，没有遇到什么问题吗？
 

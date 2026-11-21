@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { StageControlEditor } from '@proj-airi/stage-ui/components'
+import { StageControlEditor } from '@proj-anima/stage-ui/components'
 </script>
 
 <template>

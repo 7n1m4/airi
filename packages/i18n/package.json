@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/i18n",
+  "name": "@proj-anima/i18n",
   "type": "module",
   "private": true,
   "description": "Internationalization (i18n) locales and utilities for Project AIRI",

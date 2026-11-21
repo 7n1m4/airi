@@ -1,9 +1,9 @@
 ---
 title: Introduction
-description: Overview of Project AIRI — The private, persistent character runtime
+description: Overview of Project Anima — The private, persistent character runtime
 ---
 
-# Project AIRI
+# Project Anima
 
 **Presence without custody.**
 
@@ -15,7 +15,7 @@ Built for AI companions, virtual characters, and anyone who wants more than a ch
 
 ## A character, not a collection of features
 
-AIRI is a **character runtime**.
+Anima is a **character runtime**.
 
 The character has an identity that can be carried, senses that can be changed, a voice that can be replaced, bodies that can be exchanged, memories that can deepen, and tools that can extend what they are able to do. Those faculties may evolve independently. The character connecting them remains continuous.
 
@@ -25,7 +25,7 @@ The character has an identity that can be carried, senses that can be changed, a
 
 ## The Character Stack
 
-| Faculty | What AIRI Provides |
+| Faculty | What Anima Provides |
 |---|---|
 | **Identity** | Portable AIRI Cards, character profiles, acting cues, and per-character configurations |
 | **Continuity** | 8-layer memory architecture: Short-Term Awareness (STMM), Text Journals, Lifetime Archives, and Echo Chips |
@@ -41,7 +41,7 @@ The character has an identity that can be carried, senses that can be changed, a
 
 ## Getting Started
 
-AIRI supports both Web and Desktop platforms.
+Anima supports both Web and Desktop platforms.
 
 <div flex gap-2 w-full justify-center text-xl>
   <div w-full flex flex-col items-center gap-2 border="2 solid gray-500/10" rounded-lg px-2 pt-6 pb-4>
@@ -98,4 +98,4 @@ AIRI supports both Web and Desktop platforms.
 
 For guides that help you understand how to contribute to this project, please refer to the [Contributing](../overview/contributing/) page.
 
-For references to help you design and improve the UI of Project AIRI, please refer to the [Design Guidelines](../overview/contributing/design-guidelines/resources) page.
+For references to help you design and improve the UI of Project Anima, please refer to the [Design Guidelines](../overview/contributing/design-guidelines/resources) page.

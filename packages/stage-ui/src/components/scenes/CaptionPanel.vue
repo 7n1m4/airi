@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSettings } from '@proj-airi/stage-ui/stores/settings'
+import { useSettings } from '@proj-anima/stage-ui/stores/settings'
 import { useBroadcastChannel } from '@vueuse/core'
 import { computed, onMounted, ref, watch } from 'vue'
 

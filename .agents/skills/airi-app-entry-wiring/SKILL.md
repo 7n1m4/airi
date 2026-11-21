@@ -112,8 +112,8 @@ Hardware switches are configured in `apps/stage-tamagotchi/src/main/index.ts` be
 
 ## 5. Verification Workflows
 
-- **Typecheck**: `pnpm -F @proj-airi/stage-tamagotchi typecheck` (verifies both Node and Web targets).
-- **Build / Packaging**: `pnpm -F @proj-airi/stage-tamagotchi build` (runs full Vite and Electron build).
+- **Typecheck**: `pnpm -F @proj-anima/stage-tamagotchi typecheck` (verifies both Node and Web targets).
+- **Build / Packaging**: `pnpm -F @proj-anima/stage-tamagotchi build` (runs full Vite and Electron build).
 - **Local Dev**: Run `pnpm run dev` and confirm that all primary windows mount without IPC timeout or `Object has been destroyed` errors.
 
 ### Authoritative Design & Architecture Documents

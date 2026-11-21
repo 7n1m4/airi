@@ -73,7 +73,7 @@ export function createServer(opts?: ServerOptions): Server {
   let options = merge<ServerOptions>({ port: 6121, hostname: '127.0.0.1' }, opts)
 
   const { appLogFormat, appLogLevel } = normalizeLoggerConfig(options)
-  const log = useLogg('@proj-airi/server-runtime/server').withLogLevelString(appLogLevel).withFormat(appLogFormat)
+  const log = useLogg('@proj-anima/server-runtime/server').withLogLevelString(appLogLevel).withFormat(appLogFormat)
   let serverInstance: ServerInstance | null = null
   let startTask: Promise<void> | null = null
 
@@ -159,10 +159,10 @@ export function createServer(opts?: ServerOptions): Server {
       if (hostname === '0.0.0.0') {
         const ips = getLocalIPs().filter(ip => ip !== '127.0.0.1' && ip !== '::1')
         const targets = ips.length > 0 ? ips.join(', ') : 'localhost'
-        log.log(`@proj-airi/server-runtime started on ${protocol}://0.0.0.0:${port} (reachable via: ${targets})`)
+        log.log(`@proj-anima/server-runtime started on ${protocol}://0.0.0.0:${port} (reachable via: ${targets})`)
       }
       else {
-        log.log(`@proj-airi/server-runtime started on ${protocol}://${hostname}:${port}`)
+        log.log(`@proj-anima/server-runtime started on ${protocol}://${hostname}:${port}`)
       }
     })().catch((error) => {
       serverInstance = null

@@ -1,4 +1,4 @@
-import type { AutonomousMode } from '@proj-airi/stage-shared/agentic'
+import type { AutonomousMode } from '@proj-anima/stage-shared/agentic'
 
 import type { AiriCard } from './modules/airi-card'
 
@@ -12,7 +12,7 @@ import { usePresenceStore } from './presence'
 // The repo's established pattern for renderer store tests: the electron bridge
 // and the i18n composable are the only two seams mocked, and the stores
 // themselves stay real Pinia instances.
-vi.mock('@proj-airi/electron-vueuse', () => ({
+vi.mock('@proj-anima/electron-vueuse', () => ({
   useElectronEventaInvoke: () => async () => undefined,
   useElectronEventaContext: () => ({ value: undefined }),
 }))

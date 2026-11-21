@@ -101,7 +101,7 @@ export interface CustomizerGroup {
 When a user clicks a customizer shortcut (e.g. caption settings icon on control strip), the renderer calls `electronCustomizerToggleVisibility`:
 
 ```typescript
-import { useElectronEventaInvoke } from '@proj-airi/stage-ui/composables/use-electron-eventa'
+import { useElectronEventaInvoke } from '@proj-anima/stage-ui/composables/use-electron-eventa'
 import { electronCustomizerToggleVisibility } from 'shared/eventa'
 
 const toggleCustomizer = useElectronEventaInvoke(electronCustomizerToggleVisibility)
@@ -140,7 +140,7 @@ window.electron.ipcRenderer.on('set-customizer-group', (_event, group: string) =
 3. **IPC Eventa Discipline**:
    Use `electronCustomizerToggleVisibility` and `electronGetCustomizerWindowState` for window management. Do not bypass eventa with raw IPC strings.
 4. **Verification**:
-   Run `pnpm -F @proj-airi/stage-ui typecheck` after modifying `control-customizer.ts` or `customizer.vue`.
+   Run `pnpm -F @proj-anima/stage-ui typecheck` after modifying `control-customizer.ts` or `customizer.vue`.
 
 ## Related Skills & References
 

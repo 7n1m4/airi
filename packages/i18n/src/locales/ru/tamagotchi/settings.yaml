@@ -100,9 +100,9 @@ screen-capture:
     instructions:
       step-1: Open "System Preferences", select "Privacy & Security" from the sidebar.
       step-2: In the "Screen & System Audio Recording" and "System Audio Recording
-        Only" sections, turn on the switches for AIRI.
-      step-2-note: If AIRI is not listed, please add it manually by clicking the "+"
-        button and selecting AIRI from the Applications folder.
+        Only" sections, turn on the switches for Anima.
+      step-2-note: If Anima is not listed, please add it manually by clicking the "+"
+        button and selecting Anima from the Applications folder.
 dock-mode:
   select-window: Выберите целевое окно
   refresh-windows: Обновить

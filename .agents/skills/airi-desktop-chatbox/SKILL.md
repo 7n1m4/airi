@@ -27,4 +27,4 @@ Paths in references are repository-relative. Verify source before applying older
 
 ## Verification
 
-Check the affected surface with streaming text, tool output, empty history, and a switched character/session. For code changes, typecheck affected workspaces: `@proj-airi/stage-tamagotchi`, `@proj-airi/stage-ui`, or `@proj-airi/stage-layouts`, using `pnpm -F <workspace> typecheck`. Shared renderer changes also need a web/pocket smoke check. Use the selected reference's behavioral checks.
+Check the affected surface with streaming text, tool output, empty history, and a switched character/session. For code changes, typecheck affected workspaces: `@proj-anima/stage-tamagotchi`, `@proj-anima/stage-ui`, or `@proj-anima/stage-layouts`, using `pnpm -F <workspace> typecheck`. Shared renderer changes also need a web/pocket smoke check. Use the selected reference's behavioral checks.

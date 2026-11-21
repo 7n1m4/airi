@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IconItem } from '@proj-airi/stage-ui/components'
+import { IconItem } from '@proj-anima/stage-ui/components'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'

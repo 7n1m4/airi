@@ -9,7 +9,7 @@ preview-cover:
   dark: "@assets('../../../en/blog/DevLog-2025.07.18/assets/structure-after.avif')"
 ---
 
-大家好，我是 [@LemonNeko](https://github.com/LemonNekoGH)，AIRI 的维护者之一。
+大家好，我是 [@LemonNeko](https://github.com/LemonNekoGH)，Anima 的维护者之一。
 
 ## 回顾
 

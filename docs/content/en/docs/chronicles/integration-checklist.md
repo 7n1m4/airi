@@ -1,9 +1,9 @@
 ---
 title: Maintainer Integration Checklist
-description: Roadmap and integration status for AIRI fork features.
+description: Roadmap and integration status for Anima fork features.
 ---
 
-# AIRI Fork: Maintainer Integration Checklist (Indexed)
+# Anima Fork: Maintainer Integration Checklist (Indexed)
 
 This document enumerates independently mergeable features and subsystems implemented in this fork.
 Each item is indexed for precise selection during review.
@@ -25,7 +25,7 @@ VII. Unified journaling preview (inline carousel feed)
 ## 2. Character System Enhancements
 
 I. Per-character LLM configuration overrides (model, temp, tokens)
-II. AIRI card JSON format (full config export, no user data)
+II. Anima card JSON format (full config export, no user data)
 III. Background bundling with card export
 IV. Dynamic export snapshots (outfit + expression capture)
 V. SillyTavern PNG import/export compatibility

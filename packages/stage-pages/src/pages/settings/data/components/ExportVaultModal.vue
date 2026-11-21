@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useDataMaintenance } from '@proj-airi/stage-ui/composables/use-data-maintenance'
-import { Button } from '@proj-airi/ui'
+import { useDataMaintenance } from '@proj-anima/stage-ui/composables/use-data-maintenance'
+import { Button } from '@proj-anima/ui'
 import {
   DialogContent,
   DialogOverlay,

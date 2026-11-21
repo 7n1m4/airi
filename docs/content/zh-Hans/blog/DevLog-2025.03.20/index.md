@@ -19,7 +19,7 @@ import SteinsGateMayori from './assets/steins-gate-mayori.avif'
 
 又见面了！距离上一篇开发日志已经过去10天了。
 
-我们对用户界面进行了大量改进，使其能够集成更多的 LLM 提供商和语音提供商，并首次在 Discord、bilibili 和许多其他社交媒体平台上发布了 AIRI。
+我们对用户界面进行了大量改进，使其能够集成更多的 LLM 提供商和语音提供商，并首次在 Discord、bilibili 和许多其他社交媒体平台上发布了 Anima。
 
 还有很多我们迫不及待想要告诉你的内容。
 
@@ -59,7 +59,7 @@ import SteinsGateMayori from './assets/steins-gate-mayori.avif'
 
 <ThemedVideo muted autoplay src="./assets/histoire-first-look.mp4" />
 
-整个 OKLCH 调色板可以一次性展开到画布上，供我们参考。但是要尝试颜色并获得与 Project AIRI 主题相同的感觉方案并不完美，不是吗？
+整个 OKLCH 调色板可以一次性展开到画布上，供我们参考。但是要尝试颜色并获得与 Project Anima 主题相同的感觉方案并不完美，不是吗？
 
 所以我首先重新实现了颜色滑块，感觉更合适：
 
@@ -68,7 +68,7 @@ import SteinsGateMayori from './assets/steins-gate-mayori.avif'
 
 这确实让滑块更加专业。
 
-logo 和默认的绿色可以被替换以与 AIRI 的主题保持一致，这就是为什么我为 UI 页面专门设计了另一个 logo：
+logo 和默认的绿色可以被替换以与 Anima 的主题保持一致，这就是为什么我为 UI 页面专门设计了另一个 logo：
 
 <img class="light" :src="HistoireLogo" alt="project airi logo for histoire" />
 <img class="dark" :src="HistoireLogoDark" alt="project airi logo for histoire" />

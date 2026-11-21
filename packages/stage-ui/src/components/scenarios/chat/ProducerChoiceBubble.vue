@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useSpeechCaptionPlayer } from '@proj-airi/stage-ui/composables'
-import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
-import { useSettingsUserProfile } from '@proj-airi/stage-ui/stores/settings/user-profile'
+import { useSpeechCaptionPlayer } from '@proj-anima/stage-ui/composables'
+import { useChatOrchestratorStore } from '@proj-anima/stage-ui/stores/chat'
+import { useSettingsUserProfile } from '@proj-anima/stage-ui/stores/settings/user-profile'
 import { useLocalStorage } from '@vueuse/core'
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'

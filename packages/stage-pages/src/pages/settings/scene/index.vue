@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { StageAtmosphere } from '@proj-airi/stage-ui/stores'
+import type { StageAtmosphere } from '@proj-anima/stage-ui/stores'
 
-import { ATMOSPHERE_OPTIONS } from '@proj-airi/stage-layouts/components/Backgrounds'
-import { CharacterAvatar } from '@proj-airi/stage-ui/components'
-import { useAiriCardStore, useBackgroundStore } from '@proj-airi/stage-ui/stores'
-import { Button, Callout, DoubleCheckButton } from '@proj-airi/ui'
+import { ATMOSPHERE_OPTIONS } from '@proj-anima/stage-layouts/components/Backgrounds'
+import { CharacterAvatar } from '@proj-anima/stage-ui/components'
+import { useAiriCardStore, useBackgroundStore } from '@proj-anima/stage-ui/stores'
+import { Button, Callout, DoubleCheckButton } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

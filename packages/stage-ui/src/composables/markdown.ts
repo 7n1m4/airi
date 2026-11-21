@@ -11,7 +11,7 @@ import remarkMath from 'remark-math'
 import RemarkParse from 'remark-parse'
 import RemarkRehype from 'remark-rehype'
 
-import { defaultPerfTracer } from '@proj-airi/stage-shared'
+import { defaultPerfTracer } from '@proj-anima/stage-shared'
 import { unified } from 'unified'
 
 // Define a specific, compatible type for our processor to ensure type safety.

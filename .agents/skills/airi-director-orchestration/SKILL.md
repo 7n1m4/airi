@@ -46,4 +46,4 @@ Do not implement the manual's simplified “Base clears everything” phrase lit
 
 ## Verification
 
-For store/host changes: `pnpm -F @proj-airi/stage-ui typecheck`. Reproduce A, B, and C from Studio: two Layer actors speaking while Director generates; no-token outfit change; Director-off pinned-background swap. Check actor voice/model at actual playback, not just at token arrival. Confirm expression setter persistence, Base/Layer transitions, and note updates in a second window. Also switch sessions during a pending Director job and inspect where its result lands.
+For store/host changes: `pnpm -F @proj-anima/stage-ui typecheck`. Reproduce A, B, and C from Studio: two Layer actors speaking while Director generates; no-token outfit change; Director-off pinned-background swap. Check actor voice/model at actual playback, not just at token arrival. Confirm expression setter persistence, Base/Layer transitions, and note updates in a second window. Also switch sessions during a pending Director job and inspect where its result lands.

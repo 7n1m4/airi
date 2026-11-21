@@ -1,6 +1,6 @@
-# AIRI Pending Items Catalog
+# Anima Pending Items Catalog
 
-This document tracks all active pending items, architectural roadmaps, and feature branches for the AIRI project, grouped by system layers. Completed items are removed to keep this document strictly focused on actionable and pending work.
+This document tracks all active pending items, architectural roadmaps, and feature branches for the Anima project, grouped by system layers. Completed items are removed to keep this document strictly focused on actionable and pending work.
 
 ---
 
@@ -13,7 +13,7 @@ This document tracks all active pending items, architectural roadmaps, and featu
 
 ### Core-Agent Revamp (Apeira Runtime Integration)
 *Reference: [proposal-core-agent-revamp.md](../../../../../proposal-core-agent-revamp.md)*
-*   **Apeira Evaluation (Deferred / On Hold)**: Monitor and evaluate Apeira (v0.0.5+) as a potential lightweight replacement for `@proj-airi/core-agent` once codebase and persistence interfaces stabilize.
+*   **Apeira Evaluation (Deferred / On Hold)**: Monitor and evaluate Apeira (v0.0.5+) as a potential lightweight replacement for `@proj-anima/core-agent` once codebase and persistence interfaces stabilize.
 *   **Plugin Hooks Mapping**: Map fork-specific orchestration behaviors (e.g. autonomous artistry triggers, live session bidirectional audio) to Apeira's Plugin API.
 
 ### AnimaDex Character Creator Wizard
@@ -46,7 +46,7 @@ This document tracks all active pending items, architectural roadmaps, and featu
 
 ### Desktop Computer-Use MCP Architecture & Ambient Group Bot Dynamics
 *References: [project-selective-upstream-sync-shortlist.md](../../../../../project-selective-upstream-sync-shortlist.md) | [design-conversational-group-bot.md](../../../../../design-conversational-group-bot.md)*
-*   **Desktop Computer-Use MCP Integration (`@proj-airi/computer-use-mcp`) [Deferred]**:
+*   **Desktop Computer-Use MCP Integration (`@proj-anima/computer-use-mcp`) [Deferred]**:
     *   Technical evaluation completed for upstream's macOS orchestration service `services/computer-use-mcp` as an architectural addition.
     *   **Scope & Deferred Rationale**: Provides native desktop actions (Quartz clicking/typing/hotkeys), browser DOM bridge (`ws://127.0.0.1:8765`), and terminal runner. Deferred due to non-trivial configuration footprint: requires macOS Accessibility/Screen Recording permissions, interactive action-approval dialogs, application whitelisting, and Chrome extension pairing.
 *   **Character Card Density & Compliance Model (`CardCreationTabGeneration.vue`)**:

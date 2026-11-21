@@ -1,4 +1,4 @@
-import { debug, estimateTokens } from '@proj-airi/stage-shared'
+import { debug, estimateTokens } from '@proj-anima/stage-shared'
 import { defineStore, storeToRefs } from 'pinia'
 import { toast } from 'vue-sonner'
 

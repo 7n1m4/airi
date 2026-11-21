@@ -24,7 +24,7 @@ onMounted(async () => {
 })
 ```
 
-上周，我们的企业设计师/艺术家提交了 Project AIRI 标志的第一版设计稿。
+上周，我们的企业设计师/艺术家提交了 Project Anima 标志的第一版设计稿。
 标志的整体风格看起来是这样的：
 
 ![](./assets/airi-logos-v1.avif)
@@ -62,7 +62,7 @@ onMounted(async () => {
 
 ![](./assets/airi-logos-final.avif)
 
-今天晚些时候，我将 Project AIRI 的[文档网站](https://airi.build)正式上线，
+今天晚些时候，我将 Project Anima 的[文档网站](https://airi.build)正式上线，
 为我自己以及其他开发者和艺术家提供参考和指南。
 
 终于完成了！新设计的标志和配色方案都已经整合到[文档网站](https://airi.build)中：

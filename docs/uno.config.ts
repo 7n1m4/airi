@@ -1,6 +1,6 @@
 import type { Preset } from 'unocss'
 
-import { presetChromatic } from '@proj-airi/unocss-preset-chromatic'
+import { presetChromatic } from '@proj-anima/unocss-preset-chromatic'
 import { blackA, cyan, grass, green, indigo, mauve, purple, red, slate, teal, violet } from '@radix-ui/colors'
 import { defineConfig, presetAttributify, presetIcons, presetTypography, presetWebFonts, presetWind3, transformerDirectives, transformerVariantGroup } from 'unocss'
 

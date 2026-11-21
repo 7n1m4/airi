@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { EntityType, SourceRecord } from '@proj-airi/stage-ui/libs/search/entity-ledger'
+import type { EntityType, SourceRecord } from '@proj-anima/stage-ui/libs/search/entity-ledger'
 import type { ZoomTransform } from 'd3-zoom'
 
 import { select } from 'd3-selection'

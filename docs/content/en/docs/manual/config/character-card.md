@@ -5,7 +5,7 @@ description: How to configure your AI's identity, visual model, and environment.
 
 # Character & Visuals
 
-This section covers the core aspects of your AIRI's identity, from its personality (Airi Card) to its visual representation (Models) and the environment it lives in (Scenes).
+This section covers the core aspects of your Anima's identity, from its personality (Airi Card) to its visual representation (Models) and the environment it lives in (Scenes).
 
 ## Airi Card
 

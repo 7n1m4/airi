@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAudioRecorder } from '@proj-airi/stage-ui/composables'
+import { useAudioRecorder } from '@proj-anima/stage-ui/composables'
 import { useDevicesList, useObjectUrl } from '@vueuse/core'
 import { computed, ref } from 'vue'
 

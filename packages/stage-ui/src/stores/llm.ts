@@ -1,7 +1,7 @@
 import type { ChatProvider } from '@xsai-ext/providers/utils'
 import type { CommonContentPart, CompletionToolCall, Message, Tool } from '@xsai/shared-chat'
 
-import { debug } from '@proj-airi/stage-shared'
+import { debug } from '@proj-anima/stage-shared'
 import { generateText } from '@xsai/generate-text'
 import { listModels } from '@xsai/model'
 import { streamText } from '@xsai/stream-text'
@@ -951,9 +951,9 @@ export const useLLM = defineStore('llm', () => {
   async function generateObject<T>(
     model: string,
     chatProvider: ChatProvider,
-    options: Omit<import('@proj-airi/stage-shared').StructuredOutputOptions<T>, 'model' | 'apiKey' | 'baseURL'>,
+    options: Omit<import('@proj-anima/stage-shared').StructuredOutputOptions<T>, 'model' | 'apiKey' | 'baseURL'>,
   ) {
-    const { generateObject: sharedGenerateObject } = await import('@proj-airi/stage-shared')
+    const { generateObject: sharedGenerateObject } = await import('@proj-anima/stage-shared')
     const chatConfig = getChatConfig(model, chatProvider)
     const settingsChat = useSettingsChat()
     const processedMessages = combineSystemMessagesIfNeeded(options.messages, chatConfig, settingsChat)

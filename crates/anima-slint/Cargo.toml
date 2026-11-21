@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "anima-slint"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+build = "build.rs"
+
+[lib]
+name = "anima_slint"
+path = "src/lib.rs"
+
+[dependencies]
+dirs = { workspace = true }
+anima-store = { path = "../anima-store" }
+anima-llm = { path = "../anima-llm" }
+anima-core = { path = "../anima-core" }
+anima-mcp = { path = "../anima-mcp" }
+anima-channel = { path = "../anima-channel" }
+anima-acp = { path = "../anima-acp" }
+anima-sync = { path = "../anima-sync" }
+anima-discord = { path = "../anima-discord" }
+anima-i18n = { path = "../anima-i18n" }
+anima-render = { path = "../anima-render" }
+anima-mmd = { path = "../anima-mmd" }
+anima-speech = { path = "../anima-speech" }
+futures-util = { workspace = true }
+anyhow = { workspace = true }
+rusqlite = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+tokio = { workspace = true }
+slint = { workspace = true }
+tray-item = { workspace = true }
+global-hotkey = { workspace = true }
+notify-rust = { workspace = true }
+auto-launch = { workspace = true }
+dbus = { workspace = true }
+image = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[build-dependencies]
+slint-build = "1"

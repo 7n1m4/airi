@@ -13,4 +13,4 @@ set AIRI_RENDERER_PORT=%PORT_NUM%
 set AIRI_FORCE_HIGH_PERFORMANCE_GPU=1
 set ELECTRON_RUN_AS_NODE=
 :: AIRI_RENDERER_PORT above is what the Vite config reads (vite.config.ts server.port).
-call pnpm -F @proj-airi/stage-tamagotchi run dev
+call pnpm -F @proj-anima/stage-tamagotchi run dev

@@ -4,7 +4,7 @@
 
 Project AIRI requires fast, battery-efficient, offline neural intelligence on mobile devices (`apps/stage-pocket`). Previous experiments with browser-side WebGPU neural networks (such as WebLLM running inside iOS `WKWebView`) suffer from severe mobile OS constraints: browser sandbox memory ceilings (where iOS terminates `WKWebView` WebContent processes exceeding 1.5–2.0 GB), heavy memory duplication between JavaScript heaps and WebAssembly runtimes, WebGPU device loss under system load, and network/decompression memory spikes during multi-gigabyte shard transfers.
 
-This design document outlines the architecture for **Native On-Device Neural Inference on Apple Silicon (iOS/iPadOS)** utilizing Apple's **Core AI** framework (introduced at WWDC26) bridged directly to AIRI's TypeScript runtime through a dedicated **Capacitor Swift Plugin** (`@proj-airi/cap-native-ai`).
+This design document outlines the architecture for **Native On-Device Neural Inference on Apple Silicon (iOS/iPadOS)** utilizing Apple's **Core AI** framework (introduced at WWDC26) bridged directly to AIRI's TypeScript runtime through a dedicated **Capacitor Swift Plugin** (`@proj-anima/cap-native-ai`).
 
 Crucially, Core AI is **not limited to Large Language Models**. It provides a unified, hardware-accelerated runtime across the **CPU, Metal GPU, and Apple Neural Engine (ANE)** capable of powering AIRI's entire on-device sensory and behavioral suite:
 1. **Consciousness (LLMs)**: Qwen 2.5, Llama 3.2, Ministral, RWKV-7.
@@ -23,7 +23,7 @@ Crucially, Core AI is **not limited to Large Language Models**. It provides a un
    - **Contract**: All supported models are pre-converted into standard `.aimodel` bundles, compressed/quantized (INT4 / INT8 / Palettization), verified for Apple Neural Engine execution, and hosted on **Hugging Face** (`apple/coreai-models`, community repos, and `proj-airi` hubs).
    - **User UX**: The user simply selects from a curated list of verified models in the settings, taps "Download", and the native subsystem handles background streaming and one-time hardware specialization.
 
-2. **Provider-Agnostic Core (`@proj-airi/stage-ui`)**:
+2. **Provider-Agnostic Core (`@proj-anima/stage-ui`)**:
    - The AIRI application layer (Vue 3, Pinia, session orchestrator, `<|ACT:...|>` marker parser, speech runtime) remains 100% engine-agnostic.
    - Core AI presents itself as a standard OpenAI-compatible `ChatProvider` (for LLMs) and dedicated perception adapters (for vision and motion), cleanly isolated behind TypeScript interfaces.
 
@@ -89,7 +89,7 @@ By exporting FlowMDM's UNet denoiser to `.aimodel` and executing it on Apple's *
                         OpenAI-Compatible ChatProvider
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
-│                    @proj-airi/stage-ui Providers                        │
+│                    @proj-anima/stage-ui Providers                        │
 │                 (Router / Capabilities / Registry)                      │
 └──────────────┬─────────────────────┬────────────────────┬───────────────┘
                │                     │                    │
@@ -120,7 +120,7 @@ By exporting FlowMDM's UNet denoiser to `.aimodel` and executing it on Apple's *
 
 ---
 
-## 4. The Native Plugin Contract: `@proj-airi/cap-native-ai`
+## 4. The Native Plugin Contract: `@proj-anima/cap-native-ai`
 
 ### 4.1 TypeScript Plugin Interface (`definitions.ts`)
 
@@ -223,7 +223,7 @@ export interface NativeAIPluginInterface {
 
 ### 5.1 Hugging Face Model Hub Integration
 
-AIRI models are indexed in a static metadata catalog inside `@proj-airi/stage-ui`. Each entry maps a friendly model profile to pre-built `.aimodel` artifacts hosted on Hugging Face:
+AIRI models are indexed in a static metadata catalog inside `@proj-anima/stage-ui`. Each entry maps a friendly model profile to pre-built `.aimodel` artifacts hosted on Hugging Face:
 
 ```typescript
 export const CURATED_COREAI_MODELS: NativeModelInfo[] = [

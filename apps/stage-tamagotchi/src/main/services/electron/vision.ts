@@ -1,9 +1,9 @@
-import type { ScreenCaptureOptions } from '@proj-airi/stage-shared'
+import type { ScreenCaptureOptions } from '@proj-anima/stage-shared'
 
 import process from 'node:process'
 
 import { defineInvokeHandler } from '@moeru/eventa'
-import { visionCaptureScreen, visionCheckPermission, visionGetPrimaryDisplaySize, visionRequestPermission } from '@proj-airi/stage-shared'
+import { visionCaptureScreen, visionCheckPermission, visionGetPrimaryDisplaySize, visionRequestPermission } from '@proj-anima/stage-shared'
 import { Screen } from 'electrobun/main'
 
 import { notImplemented } from '../../rpc'

@@ -20,8 +20,8 @@ Why this shape:
   once, in the core.
 - **The daemon outlives the UI.** An agentic OS companion must keep perceiving, deciding,
   and acting while windows come and go. A UI-restart must not reset the agent's mind.
-  `crates/airi-daemon` already exists as a systemd/D-Bus-activated session daemon, and
-  `crates/airi-channel` runs the authenticated local WebSocket gateway both UI stacks
+  `crates/anima-daemon` already exists as a systemd/D-Bus-activated session daemon, and
+  `crates/anima-channel` runs the authenticated local WebSocket gateway both UI stacks
   speak.
 - **Performance and footprint.** The TS desktop app carries an entire browser-shell
   runtime (now Electrobun/CEF instead of Electron) per surface. A native core plus thin
@@ -34,17 +34,17 @@ Why this shape:
 graph TB
   subgraph surfaces["UI surfaces (thin clients)"]
     web["TS web/desktop app<br/>apps/stage-tamagotchi<br/>(Vue renderer on Electrobun/CEF)"]
-    slint["Unified Rust native app<br/>crates/airi-slint<br/>(desktop + mobile)"]
+    slint["Unified Rust native app<br/>crates/anima-slint<br/>(desktop + mobile)"]
     future["future OS surfaces<br/>(agentic OS)"]
   end
   subgraph core["Rust core (the brain)"]
-    gw["airi-channel<br/>local WS gateway :6121<br/>auth-token handshake"]
-    ac["airi-core AppCore<br/>settings · chat · cards · memory"]
-    st["airi-store"]
-    llm["airi-llm / airi-local-llm"]
-    sp["airi-speech / airi-stt"]
-    mcp["airi-mcp / airi-sync / airi-acp"]
-    daemon["airi-daemon<br/>session awareness<br/>(D-Bus: logind, MPRIS,<br/>NetworkManager, UPower, AT-SPI)"]
+    gw["anima-channel<br/>local WS gateway :6121<br/>auth-token handshake"]
+    ac["anima-core AppCore<br/>settings · chat · cards · memory"]
+    st["anima-store"]
+    llm["anima-llm / anima-local-llm"]
+    sp["anima-speech / anima-stt"]
+    mcp["anima-mcp / anima-sync / anima-acp"]
+    daemon["anima-daemon<br/>session awareness<br/>(D-Bus: logind, MPRIS,<br/>NetworkManager, UPower, AT-SPI)"]
   end
   web --> gw
   slint --> gw
@@ -64,10 +64,10 @@ Be honest about the gap; do not pretend the port is done.
 | Surface / component | State | Where its logic lives today |
 |---|---|---|
 | TS web/desktop app (`apps/stage-tamagotchi`) | Polished, daily-driver. Main process ported in place from Electron to **Electrobun 2** (`design-electrobun-port.md`). | **All business logic still in TypeScript** (`src/main/**` + `packages/*`). This is the strangler's starting point, not a finished client. |
-| Unified Rust native app (`crates/airi-slint`) | Booting profile/settings/store/provider repo, optional gateway, spine rendering. Desktop today; mobile is the same codebase, grown from this shell — the UI must be reactive to screen size so one build ships both. See `proposal-unified-rust-native-app.md`. | Rust, via `airi-core`; UI-feature parity with the TS app is partial. |
+| Unified Rust native app (`crates/anima-slint`) | Booting profile/settings/store/provider repo, optional gateway, spine rendering. Desktop today; mobile is the same codebase, grown from this shell — the UI must be reactive to screen size so one build ships both. See `proposal-unified-rust-native-app.md`. | Rust, via `anima-core`; UI-feature parity with the TS app is partial. |
 | Mobile app (`apps/stage-pocket`, Capacitor) | **Purged 2026-11-13** — replaced by the unified Rust native app; UI must be reactive to screen size so one codebase ships desktop + mobile. | — |
-| Rust core (`airi-core`, `airi-store`, `airi-llm`, …) | Real foundation: typed settings sections, streaming chat pipeline with persistence, character cards (CCv2/v3 + `airi` ext), memory lanes. | Growing toward parity service by service. |
-| `airi-daemon` | Shipped: systemd `Type=dbus` unit + D-Bus activation (`packaging/`), six T0 awareness sources, opt-in AT-SPI, redacted audit JSONL. | Rust. The OS-integration anchor — awareness runs even with no UI open. |
+| Rust core (`anima-core`, `anima-store`, `anima-llm`, …) | Real foundation: typed settings sections, streaming chat pipeline with persistence, character cards (CCv2/v3 + `airi` ext), memory lanes. | Growing toward parity service by service. |
+| `anima-daemon` | Shipped: systemd `Type=dbus` unit + D-Bus activation (`packaging/`), six T0 awareness sources, opt-in AT-SPI, redacted audit JSONL. | Rust. The OS-integration anchor — awareness runs even with no UI open. |
 
 ## The migration path (strangler, not big-bang)
 
@@ -75,14 +75,14 @@ Be honest about the gap; do not pretend the port is done.
    at every step. `docs/port-manifest/` is the feature/IPC/store inventory — treat it as
    the parity ledger the Rust/Qt (Slint) strangler must satisfy, not an Electron→Electrobun
    completion checklist.
-2. **Move one service at a time** TS → Rust (`airi-core`), behind the existing eventa /
+2. **Move one service at a time** TS → Rust (`anima-core`), behind the existing eventa /
    gateway contracts, with the TS UI consuming the Rust service as soon as it reaches
    parity for that service. No feature may exist long-term in both stacks.
 3. **UIs become views.** The Vue renderer and the Slint shell both consume the core
-   through `airi-channel`'s gateway protocol (already implemented on both sides).
+   through `anima-channel`'s gateway protocol (already implemented on both sides).
    Renderer-side business logic shrinks to view-models.
 4. **The daemon is the OS seam.** Presence, awareness, and autonomous cycles (see
-   `design-agentic-os.md`) belong to `airi-daemon`/`airi-core`, not to any window.
+   `design-agentic-os.md`) belong to `anima-daemon`/`anima-core`, not to any window.
 
 ## Rules for contributors
 
@@ -91,7 +91,7 @@ Be honest about the gap; do not pretend the port is done.
   contract; neither invents private business logic.
 - **No new TS business logic in main processes** unless it is explicitly temporary and
   tracked in the parity ledger for its Rust counterpart.
-- **Single source of truth per domain**: settings shape in `airi-store` sections,
+- **Single source of truth per domain**: settings shape in `anima-store` sections,
   persistence inventory in `data-catalog.md`, TS internals map in `rosetta-stone.md`.
 - **The TS app must stay shippable** while the core grows. Every migration step ends
   with both surfaces working.
@@ -123,7 +123,7 @@ Be honest about the gap; do not pretend the port is done.
 1. `design-agentic-os.md` — presence, autonomy, and the heartbeat/autonomous-cycle
    inversion; the behavioral philosophy of an OS-resident agent.
 2. `design-electrobun-port.md` — how the flagship TS surface runs today without Electron.
-3. `crates/airi-channel/src/lib.rs` — the gateway protocol both UIs already speak.
-4. `crates/airi-core/src/lib.rs` — what the Rust core already owns.
+3. `crates/anima-channel/src/lib.rs` — the gateway protocol both UIs already speak.
+4. `crates/anima-core/src/lib.rs` — what the Rust core already owns.
 5. `docs/port-manifest/features.md` — the parity surface the core must cover.
 6. `rosetta-stone.md` — the map of the TS app you are strangling.

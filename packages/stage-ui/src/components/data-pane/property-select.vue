@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Select } from '@proj-airi/ui'
+import { Select } from '@proj-anima/ui'
 
 const props = withDefaults(defineProps<{
   label?: string

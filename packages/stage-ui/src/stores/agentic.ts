@@ -5,11 +5,11 @@ import type {
   AutonomousTrigger,
   CompanionNapState,
   ScoredIntention,
-} from '@proj-airi/stage-shared/agentic'
+} from '@proj-anima/stage-shared/agentic'
 
 import type { System1Response } from '../libs/providers/types'
 
-import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
+import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
 import {
   agenticServiceApplyConfig,
   agenticServiceCycleRequested,
@@ -17,8 +17,8 @@ import {
   agenticServiceGetHttpEndpoint,
   agenticServiceReportPresence,
   agenticServiceRotateHttpToken,
-} from '@proj-airi/stage-shared/agentic'
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+} from '@proj-anima/stage-shared/agentic'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { nanoid } from 'nanoid'
 import { defineStore } from 'pinia'
 import { computed, onScopeDispose, ref, watch } from 'vue'

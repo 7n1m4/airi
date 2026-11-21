@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ConsciousnessWorkspace } from '@proj-airi/stage-ui/components'
+import { ConsciousnessWorkspace } from '@proj-anima/stage-ui/components'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()

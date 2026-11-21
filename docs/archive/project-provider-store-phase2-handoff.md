@@ -16,8 +16,8 @@ Phase 2 runtime, lifecycle, and selector decomposition of `providers.ts` is **10
 
 - `providers.ts` shrank from **837 lines down to 337 lines** ($\mathbf{-60\%}$ reduction).
 - All **38 public store API keys** and **`export type {...}` interface re-exports** were preserved with 0 breaking changes.
-- **Typecheck:** `pnpm -F @proj-airi/stage-ui typecheck` $\rightarrow$ **0 errors**.
-- **Unit Tests:** `pnpm -F @proj-airi/stage-ui test src/stores/providers/ --run` $\rightarrow$ **26 tests passing 100% green**.
+- **Typecheck:** `pnpm -F @proj-anima/stage-ui typecheck` $\rightarrow$ **0 errors**.
+- **Unit Tests:** `pnpm -F @proj-anima/stage-ui test src/stores/providers/ --run` $\rightarrow$ **26 tests passing 100% green**.
 
 ### File Decomposition Summary
 
@@ -53,11 +53,11 @@ Phase 2 runtime, lifecycle, and selector decomposition of `providers.ts` is **10
 
 ```bash
 # Typecheck
-pnpm -F @proj-airi/stage-ui typecheck
+pnpm -F @proj-anima/stage-ui typecheck
 # Result: PASS (0 errors)
 
 # Vitest Suite
-pnpm -F @proj-airi/stage-ui test src/stores/providers/ --run
+pnpm -F @proj-anima/stage-ui test src/stores/providers/ --run
 # Result: PASS (6 files, 26 tests passed)
 ```
 

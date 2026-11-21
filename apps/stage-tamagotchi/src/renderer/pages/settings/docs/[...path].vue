@@ -4,7 +4,7 @@ meta:
 </route>
 
 <script setup lang="ts">
-import { MarkdownRenderer } from '@proj-airi/stage-ui/components'
+import { MarkdownRenderer } from '@proj-anima/stage-ui/components'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'

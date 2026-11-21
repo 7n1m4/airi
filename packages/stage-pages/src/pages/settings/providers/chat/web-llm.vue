@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { detectWebGPU } from '@proj-airi/stage-shared/webgpu'
+import { detectWebGPU } from '@proj-anima/stage-shared/webgpu'
 import {
   Alert,
   ProviderAdvancedSettings,
@@ -7,11 +7,11 @@ import {
   ProviderInstancesSection,
   ProviderSettingsContainer,
   ProviderSettingsLayout,
-} from '@proj-airi/stage-ui/components'
-import { useProviderValidation } from '@proj-airi/stage-ui/composables/use-provider-validation'
-import { clearWebLlmCache, DEFAULT_WEB_LLM_FP32_MODEL, DEFAULT_WEB_LLM_MODEL, formatBytes, getWebLlmCacheSize, isWebLlmModelCached, WEB_LLM_MODELS } from '@proj-airi/stage-ui/libs/inference'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { FieldInput, FieldRange, FieldSelect } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/components'
+import { useProviderValidation } from '@proj-anima/stage-ui/composables/use-provider-validation'
+import { clearWebLlmCache, DEFAULT_WEB_LLM_FP32_MODEL, DEFAULT_WEB_LLM_MODEL, formatBytes, getWebLlmCacheSize, isWebLlmModelCached, WEB_LLM_MODELS } from '@proj-anima/stage-ui/libs/inference'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { FieldInput, FieldRange, FieldSelect } from '@proj-anima/ui'
 import { computed, onMounted, ref, watch } from 'vue'
 
 const providerId = 'web-llm'

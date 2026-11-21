@@ -76,10 +76,10 @@ devtools:
       squint:
         title: Menyipit saat perubahan terang
         description: Menyempitkan mata ketika layar menjadi terang lebih cepat daripada adaptasi karakter. Layar yang tetap terang membiarkan mata terbuka. Nilai 0 mematikan fitur ini.
-      main-window-note: Perubahan akan muncul di jendela utama AIRI.
+      main-window-note: Perubahan akan muncul di jendela utama Anima.
       diagnostics:
         title: Diagnostik tangkapan
-        waiting: Menunggu diagnostik dari jendela utama AIRI.
+        waiting: Menunggu diagnostik dari jendela utama Anima.
         status:
           disabled: Dinonaktifkan
           starting: Memulai
@@ -92,14 +92,14 @@ devtools:
           display: Layar dan batas
           video-size: Video sumber
           sample-size: Bingkai sampel
-          window-bounds: Batas jendela AIRI
+          window-bounds: Batas jendela Anima
           excluded-region: Wilayah yang dikecualikan
           exposure: Eksposur layar
           behind-luminance: Cahaya di belakang karakter
           updated: Pembaruan terakhir
         preview:
           title: Tangkapan diperkecil
-          description: Persegi panjang merah menandai jendela AIRI. Garis putus-putus menandai area yang dicakup peta cahaya.
+          description: Persegi panjang merah menandai jendela Anima. Garis putus-putus menandai area yang dicakup peta cahaya.
           unavailable: Tidak ada bingkai tangkapan yang tersedia.
         pixels:
           title: Keputusan piksel
@@ -110,7 +110,7 @@ devtools:
           see-through: Tembus pandang
         maps:
           title: Peta cahaya
-          window: Setiap peta mencakup jendela AIRI dan setengah jendela di setiap sisinya. Garis luar menandai jendela.
+          window: Setiap peta mencakup jendela Anima dan setengah jendela di setiap sisinya. Garis luar menandai jendela.
           unavailable: Tidak ada lingkungan yang tersedia.
           target: Terukur
           applied: Diterapkan setelah penghalusan
@@ -173,7 +173,7 @@ devtools:
         filtered: Keluaran shader
         unavailable: Pratinjau membutuhkan WebGL, dan jendela ini tidak dapat membuat konteksnya.
         environment:
-          live: Cahaya berasal dari tangkapan terbaru yang dipublikasikan jendela utama AIRI.
+          live: Cahaya berasal dari tangkapan terbaru yang dipublikasikan jendela utama Anima.
           neutral: Belum ada tangkapan yang masuk, pratinjau menggunakan lingkungan netral.
         regions:
           title: Wilayah kartu uji
@@ -181,8 +181,8 @@ devtools:
           bars: Batang selebar {first}, {second}, {third}, {fourth}, dan {fifth} piksel. Menunjukkan seberapa jauh pembungkus cahaya meresap ke dalam bentuk tipis.
           patches: Kedua bercak digambar pada alfa {strong} dan {weak}, yang dipengaruhi oleh opsi pengurangan pembungkusan pada bagian transparan.
     editor:
-      title: Editor AIRI
-      description: Buka jendela Editor AIRI mandiri
+      title: Editor Anima
+      description: Buka jendela Editor Anima mandiri
       button: Buka Editor
     lag-visualizer:
       title: Visualizer Jeda (Lag)
@@ -254,7 +254,7 @@ devtools:
         reset-view: Atur ulang tampilan
         export-project: Ekspor proyek
         import-project: Impor proyek
-        import-error: Berkas ini bukan proyek gerakan Live2D AIRI yang valid.
+        import-error: Berkas ini bukan proyek gerakan Live2D Anima yang valid.
         playback:
           label: Kontrol pemutaran linimasa
           start: Lompat ke awal
@@ -436,7 +436,7 @@ devtools:
           recording: Merekam gerakan
           playing: Memutar gerakan
           ready: '{count} sampel · {duration}'
-        import-error: Berkas ini bukan rekaman gerakan Live2D AIRI yang valid.
+        import-error: Berkas ini bukan rekaman gerakan Live2D Anima yang valid.
     performance-visualizer:
       title: Visualizer Kinerja
       description: Periksa metrik kinerja langsung dan diagnostik runtime
@@ -510,5 +510,5 @@ screen-capture:
     dismiss: Abaikan
     instructions:
       step-1: Buka "Pengaturan Sistem", pilih "Privasi & Keamanan" di bilah samping.
-      step-2: Di bagian "Perekaman Layar & Audio Sistem" dan "Perekaman Audio Sistem Saja", aktifkan sakelar untuk AIRI.
-      step-2-note: Jika AIRI tidak tercantum, tambahkan secara manual dengan mengeklik tombol "+" dan memilih AIRI dari folder Aplikasi.
+      step-2: Di bagian "Perekaman Layar & Audio Sistem" dan "Perekaman Audio Sistem Saja", aktifkan sakelar untuk Anima.
+      step-2-note: Jika Anima tidak tercantum, tambahkan secara manual dengan mengeklik tombol "+" dan memilih Anima dari folder Aplikasi.

@@ -1,4 +1,4 @@
-import type { TransportAdapter, TransportHandler, TransportId, TransportStatus } from '@proj-airi/stage-shared'
+import type { TransportAdapter, TransportHandler, TransportId, TransportStatus } from '@proj-anima/stage-shared'
 
 export const NAP_CHAT_TOPICS = {
   session: 'airi/nap-chat/session',

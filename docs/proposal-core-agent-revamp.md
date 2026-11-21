@@ -3,7 +3,7 @@
 > [!NOTE]
 > **Active Implementation Specification:** Full package replacement with Apeira has been formally deferred due to upstream instability and upcoming persistence redesigns. The active architectural roadmap for core agent modularity is the surgical decomposition plan documented in [`docs/archive/architecture-chat-orchestrator-decomposition.md`](./archive/architecture-chat-orchestrator-decomposition.md).
 
-This document outlines the design considerations, community feedback, technical capabilities, and potential migration path for replacing the custom `@proj-airi/core-agent` orchestrator in this fork with **Apeira** as the core LLM execution runtime.
+This document outlines the design considerations, community feedback, technical capabilities, and potential migration path for replacing the custom `@proj-anima/core-agent` orchestrator in this fork with **Apeira** as the core LLM execution runtime.
 
 ---
 
@@ -11,7 +11,7 @@ This document outlines the design considerations, community feedback, technical 
 
 During discussions on June 10, 2026, the community reviewed the release of **Apeira v0.0.5**, which introduces native support for the Chat Completion API and modular runners (see [Apeira Runners Guide](https://moeru.ai/apeira/guide/runners.html)).
 
-This prompts the question of whether Apeira should replace the current custom `@proj-airi/core-agent` package in the AIRI codebase.
+This prompts the question of whether Apeira should replace the current custom `@proj-anima/core-agent` package in the AIRI codebase.
 
 ---
 

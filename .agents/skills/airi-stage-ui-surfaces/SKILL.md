@@ -62,7 +62,7 @@ Web/pocket never mount the strip inside `WidgetStage` (the `isElectron` guard is
 - **Hover expand / 400ms debounce** — `useElectronMouseInElement(controlStripRoot)` (:83-84) drives `hoverExpanded` with a 400ms collapse timer (:244-258).
 - **State sync to main** — `electronControlStripSyncState` (shared/eventa.ts:290-298; payload `{ activePopover, lastPlacement, orientation, collapsed?, backgroundColor?, stripLength? }`) invoked at `index.vue:357`; handler persists into app window config under `{ title: 'AIRI', tag: 'main' }` (`apps/stage-tamagotchi/src/main/windows/main/rpc/index.electron.ts:92`).
 - **Sizing** — `stripLength = 52 + 44 * activeButtons.length` (ControlStrip.vue, `stripLength` computed); `applySizePreset` dispatches `control-strip:apply-size-preset` with monitor/alignment detail (ControlStrip.vue:~623-636).
-- **Multi-Monitor Display Discovery & Placement** — Desktop stage (`actor.vue`) discovers active displays via `useElectronAllDisplays()` from `@proj-airi/electron-vueuse` and forwards them to `RendererStage.vue` and `HeadTetheredRadialMenu.vue`. The radial menu's `monitor` wedge activates when `monitorCount > 1` or `displays.length > 1`, generating dynamic wedge subtitles with display resolution, orientation, and Primary tags.
+- **Multi-Monitor Display Discovery & Placement** — Desktop stage (`actor.vue`) discovers active displays via `useElectronAllDisplays()` from `@proj-anima/electron-vueuse` and forwards them to `RendererStage.vue` and `HeadTetheredRadialMenu.vue`. The radial menu's `monitor` wedge activates when `monitorCount > 1` or `displays.length > 1`, generating dynamic wedge subtitles with display resolution, orientation, and Primary tags.
 - **Stage Pausing & Render Throttling** — `<WidgetStage :paused="stagePaused">` (`index.vue`) receives `stagePaused` from `useStageWindowLifecycleStore()`. Forwarded through `ControlStripHost.vue` to `RendererStage.vue`, this freezes animation and render loops across Three.js VRM, Live2D, Spine, and MMD when the window is hidden, minimized, or the screen is locked/suspended. See `airi-desktop-lifecycle-power-throttling`.
 
 ## 3. Web / Pocket Integration (`mode="mobile"`)
@@ -103,7 +103,7 @@ Edit the `mode === 'mobile'` branches in §3's table — not a new component. To
 3. Guard every main-process window handle with `!win.isDestroyed()`.
 
 ### 4.4 Styling
-- UnoCSS arrays (`:class="['px-2 py-1', 'flex items-center']"`), `@proj-airi/ui` primitives + Iconify icons over bespoke SVGs.
+- UnoCSS arrays (`:class="['px-2 py-1', 'flex items-center']"`), `@proj-anima/ui` primitives + Iconify icons over bespoke SVGs.
 - Glassmorphic pill styling and `backgroundTint` live in `ControlStrip.vue`; dark tokens via `dark:*`.
 
 ## 5. Known Pitfalls & Failure Modes
@@ -121,10 +121,10 @@ Edit the `mode === 'mobile'` branches in §3's table — not a new component. To
 
 ## 6. Verification
 
-- Shared strip/store changes: `pnpm -F @proj-airi/stage-ui typecheck`
-- Desktop window/page changes: `pnpm -F @proj-airi/stage-tamagotchi typecheck` (`typecheck:node` then `typecheck:web`)
-- stage-pages editor changes: `pnpm -F @proj-airi/stage-pages typecheck`
-- Web/pocket mount or layout changes: build/run the app (`pnpm -F @proj-airi/stage-web dev`); there is no behavior test suite for the strip.
+- Shared strip/store changes: `pnpm -F @proj-anima/stage-ui typecheck`
+- Desktop window/page changes: `pnpm -F @proj-anima/stage-tamagotchi typecheck` (`typecheck:node` then `typecheck:web`)
+- stage-pages editor changes: `pnpm -F @proj-anima/stage-pages typecheck`
+- Web/pocket mount or layout changes: build/run the app (`pnpm -F @proj-anima/stage-web dev`); there is no behavior test suite for the strip.
 - Manual: desktop — drag, dock to each edge, collapse/notch hover, verify OS clicks pass through the notch; mobile — portrait vs landscape, left vs right edge, opposite-edge chatbox placement, `/settings/stage` slot cap.
 
 ## 7. Authoritative Design & Architecture Documents

@@ -9,7 +9,7 @@
  * onMounted, after stores are initialized).
  */
 
-import { detectWebGPU, getCachedWebGPUCapabilities, isWebGPUSupported } from '@proj-airi/stage-shared/webgpu'
+import { detectWebGPU, getCachedWebGPUCapabilities, isWebGPUSupported } from '@proj-anima/stage-shared/webgpu'
 
 import { getKokoroAdapter } from '../libs/inference/adapters/kokoro'
 import { getWebRwkvAdapter } from '../libs/inference/adapters/web-rwkv'

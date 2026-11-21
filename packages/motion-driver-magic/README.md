@@ -1,4 +1,4 @@
-# `@proj-airi/motion-driver-magic`
+# `@proj-anima/motion-driver-magic`
 
 MAGIC means Markovian Animation Generator with Illusory Conditioning.
 This package fits procedural motion models and generates normalized motion frames.
@@ -7,9 +7,9 @@ Its root entry point exports the VAR and AR-HMM models.
 ## Use the package
 
 ```ts
-import type { TrainingSequence } from '@proj-airi/motion-driver-magic'
+import type { TrainingSequence } from '@proj-anima/motion-driver-magic'
 
-import { fit } from '@proj-airi/motion-driver-magic'
+import { fit } from '@proj-anima/motion-driver-magic'
 
 const sequence: TrainingSequence = {
   sampleRateHz: 30,

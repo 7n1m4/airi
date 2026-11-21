@@ -1,2 +1,2 @@
-export type { SearchItem } from '@proj-airi/stage-ui/constants/settings-search-index'
-export { staticIndex } from '@proj-airi/stage-ui/constants/settings-search-index'
+export type { SearchItem } from '@proj-anima/stage-ui/constants/settings-search-index'
+export { staticIndex } from '@proj-anima/stage-ui/constants/settings-search-index'

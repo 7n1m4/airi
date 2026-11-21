@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Select } from '@proj-airi/ui/components/form'
+import { Select } from '@proj-anima/ui/components/form'
 
 defineProps<{
   consciousnessProviderOptions: { value: string, label: string }[]

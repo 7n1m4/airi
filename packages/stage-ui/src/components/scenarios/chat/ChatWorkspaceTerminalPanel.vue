@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useSandbox } from '@proj-airi/stage-ui/composables/use-sandbox'
-import { ansiToHtml } from '@proj-airi/stage-ui/libs/sandbox'
-import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
+import { useSandbox } from '@proj-anima/stage-ui/composables/use-sandbox'
+import { ansiToHtml } from '@proj-anima/stage-ui/libs/sandbox'
+import { useChatSessionStore } from '@proj-anima/stage-ui/stores/chat/session-store'
 import { useElementSize } from '@vueuse/core'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'

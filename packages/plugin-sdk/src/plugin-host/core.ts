@@ -4,7 +4,7 @@ import type {
   ModuleIdentity as ProtocolModuleIdentity,
   ModulePhase as ProtocolModulePhase,
   PluginIdentity as ProtocolPluginIdentity,
-} from '@proj-airi/plugin-protocol/types'
+} from '@proj-anima/plugin-protocol/types'
 import type { ActorRefFrom } from 'xstate'
 
 import type { definePlugin } from '../plugin'
@@ -28,7 +28,7 @@ import {
   modulePrepared,
   moduleStatus,
   registryModulesSync,
-} from '@proj-airi/plugin-protocol/types'
+} from '@proj-anima/plugin-protocol/types'
 import {
   literal,
   object,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useHearingStore } from '@proj-airi/stage-ui/stores/modules/hearing'
+import { useHearingStore } from '@proj-anima/stage-ui/stores/modules/hearing'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 

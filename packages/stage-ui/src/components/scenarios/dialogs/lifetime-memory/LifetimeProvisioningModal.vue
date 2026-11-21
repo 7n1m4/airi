@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useMemoryLifetimeStore } from '@proj-airi/stage-ui/stores/memory-lifetime'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { Button } from '@proj-airi/ui'
+import { useMemoryLifetimeStore } from '@proj-anima/stage-ui/stores/memory-lifetime'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { Button } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot } from 'reka-ui'
 import { computed, ref, watch } from 'vue'

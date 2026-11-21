@@ -13,7 +13,7 @@ import type { System1Provider } from '../../../libs/providers/types'
 import type { AliyunRealtimeSpeechExtraOptions } from '../aliyun/stream-transcription'
 import type { ModelInfo, ProviderMetadata } from '../types'
 
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
 import { createOpenAI } from '@xsai-ext/providers/create'
 import {
   createModelProvider,

@@ -1,5 +1,5 @@
 /**
- * Live2DRuntimeAdapter — bridges the headless `@proj-airi/live2d-runtime` DSL VM onto
+ * Live2DRuntimeAdapter — bridges the headless `@proj-anima/live2d-runtime` DSL VM onto
  * the live `pixi-live2d-display` model that `Model.vue` already owns.
  *
  * This adapter is deliberately additive: it does not replace the existing motion
@@ -17,7 +17,7 @@ import type {
   ITrackingSink,
   MotionRef,
   ResolvedChoice,
-} from '@proj-airi/live2d-runtime'
+} from '@proj-anima/live2d-runtime'
 import type { Live2DModel } from 'pixi-live2d-display/cubism4'
 
 import { useBroadcastChannel } from '@vueuse/core'
@@ -106,7 +106,7 @@ export interface Live2DRuntimeAdapterConfig {
 
 /**
  * The bundle of runtime output ports this adapter produces. Each field matches a
- * `Live2DRuntimePorts` member from `@proj-airi/live2d-runtime` and can be spread into
+ * `Live2DRuntimePorts` member from `@proj-anima/live2d-runtime` and can be spread into
  * the VM host: `new DSLVirtualMachine({ host: adapter.ports })`.
  */
 export class Live2DRuntimeAdapter {

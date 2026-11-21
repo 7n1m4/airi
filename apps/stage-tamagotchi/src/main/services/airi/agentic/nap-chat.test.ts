@@ -1,4 +1,4 @@
-import type { NapChatMessage } from '@proj-airi/stage-shared/agentic'
+import type { NapChatMessage } from '@proj-anima/stage-shared/agentic'
 
 import { randomBytes } from 'node:crypto'
 
@@ -9,7 +9,7 @@ import {
   NAP_CHAT_MAX_TURN_CAP,
   NAP_CHAT_TOPIC,
   parseNapChatMessage,
-} from '@proj-airi/stage-shared/agentic'
+} from '@proj-anima/stage-shared/agentic'
 import { describe, expect, it } from 'vitest'
 
 import { consumeNapChatNonce } from './companion'

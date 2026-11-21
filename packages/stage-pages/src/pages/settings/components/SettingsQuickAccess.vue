@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useOnboardingStore } from '@proj-airi/stage-ui/stores/onboarding'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useOnboardingStore } from '@proj-anima/stage-ui/stores/onboarding'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'

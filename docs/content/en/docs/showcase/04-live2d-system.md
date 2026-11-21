@@ -2,13 +2,13 @@
 
 ![Live2D System & Expression Curation](/showcase/model-customizer-ai-curation.avif)
 
-The **Live2D Interactive Runtime** brings Cubism models into deep parity with AIRI's 3D VRM embodiment pipeline. Beyond standard rendering, AIRI introduces a custom **Live2D Scripting DSL (Domain-Specific Language)**, an automated multi-model archive normalizer, cross-model tactile hit zones with audio reactions, and L-HACK texture surgical tools.
+The **Live2D Interactive Runtime** brings Cubism models into deep parity with Anima's 3D VRM embodiment pipeline. Beyond standard rendering, Anima introduces a custom **Live2D Scripting DSL (Domain-Specific Language)**, an automated multi-model archive normalizer, cross-model tactile hit zones with audio reactions, and L-HACK texture surgical tools.
 
 ---
 
 ## Multi-Moc3 Extraction & Self-Healing
 
-- **Multi-Moc3 Zip Normalizer**: Drag and drop archives containing multiple `.moc3` files. AIRI automatically detects nested subdirectories, separates bundled assets, and normalizes them into individually selectable models.
+- **Multi-Moc3 Zip Normalizer**: Drag and drop archives containing multiple `.moc3` files. Anima automatically detects nested subdirectories, separates bundled assets, and normalizes them into individually selectable models.
 - **In-Memory Manifest Healing**: Automatically repairs broken expression filenames, corrects malformed physics configurations, and resolves missing motion dictionaries at runtime without touching original disk files.
 
 ---

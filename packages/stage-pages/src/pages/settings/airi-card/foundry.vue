@@ -2,21 +2,21 @@
 // --- Step 1: Source & Archetype State ---
 import type { ArchetypePreset } from './foundry-presets'
 
-import { CharacterAvatar } from '@proj-airi/stage-ui/components'
-import { ModelSelectorDialog } from '@proj-airi/stage-ui/components/scenarios/dialogs/model-selector'
+import { CharacterAvatar } from '@proj-anima/stage-ui/components'
+import { ModelSelectorDialog } from '@proj-anima/stage-ui/components/scenarios/dialogs/model-selector'
 import {
   formatBytes,
   getWebRwkvAdapter,
   isModelCached,
   WEB_RWKV_MODELS,
   WEB_RWKV_STATE_CARTRIDGES,
-} from '@proj-airi/stage-ui/libs/inference'
-import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
-import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { buildRwkvPrompt, createThinkPrefixStripper } from '@proj-airi/stage-ui/stores/providers/web-rwkv'
-import { Button, FieldInput } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/libs/inference'
+import { useChatSessionStore } from '@proj-anima/stage-ui/stores/chat/session-store'
+import { useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { buildRwkvPrompt, createThinkPrefixStripper } from '@proj-anima/stage-ui/stores/providers/web-rwkv'
+import { Button, FieldInput } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, toRaw, watch } from 'vue'
 import { useRouter } from 'vue-router'

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { MarkdownRenderer } from '@proj-airi/stage-ui/components'
-import { useAiriCardStore, useEntityLedgerStore, useTextJournalStore } from '@proj-airi/stage-ui/stores'
-import { Button, FieldInput, FieldSelect, Progress } from '@proj-airi/ui'
+import { MarkdownRenderer } from '@proj-anima/stage-ui/components'
+import { useAiriCardStore, useEntityLedgerStore, useTextJournalStore } from '@proj-anima/stage-ui/stores'
+import { Button, FieldInput, FieldSelect, Progress } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useModelStore } from '@proj-airi/stage-ui-three'
-import { Checkbox, FieldRange, SelectTab } from '@proj-airi/ui'
+import { useModelStore } from '@proj-anima/stage-ui-three'
+import { Checkbox, FieldRange, SelectTab } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

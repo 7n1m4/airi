@@ -159,5 +159,5 @@ Each transport wraps a native platform boundary into a typed Eventa context:
 
 ## 5. Verification Workflows
 
-- Run `pnpm -F @proj-airi/stage-tamagotchi typecheck` whenever modifying `shared/eventa.ts` or main/renderer handlers.
+- Run `pnpm -F @proj-anima/stage-tamagotchi typecheck` whenever modifying `shared/eventa.ts` or main/renderer handlers.
 - Test multi-window IPC in dev (`pnpm dev`) to ensure payloads serialize cleanly across processes.

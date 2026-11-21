@@ -139,11 +139,11 @@ const mockStickersStore = {
   currentLibrary: [] as Array<{ label: string }>,
 }
 
-vi.mock('@proj-airi/stage-ui-live2d', () => ({
+vi.mock('@proj-anima/stage-ui-live2d', () => ({
   useLive2d: () => mockLive2dStore,
 }))
 
-vi.mock('@proj-airi/stage-ui-three', () => ({
+vi.mock('@proj-anima/stage-ui-three', () => ({
   useModelStore: () => mockVrmStore,
 }))
 

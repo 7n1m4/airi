@@ -1,7 +1,7 @@
 import type { ProviderMetadata } from '../types'
 
-import { isApplePlatform, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
-import { detectWebGPU, isWebGPUSupported } from '@proj-airi/stage-shared/webgpu'
+import { isApplePlatform, isStageTamagotchi, isStageWeb } from '@proj-anima/stage-shared'
+import { detectWebGPU, isWebGPUSupported } from '@proj-anima/stage-shared/webgpu'
 import { computed } from 'vue'
 
 import { createLocalVisionAdapter, DEFAULT_LOCAL_VISION_MODEL, LOCAL_VISION_MODELS } from '../../../libs/inference'

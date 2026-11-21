@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAiriCardStore, useBackgroundStore } from '@proj-airi/stage-ui/stores'
+import { useAiriCardStore, useBackgroundStore } from '@proj-anima/stage-ui/stores'
 import { computed, ref, watch } from 'vue'
 
 const props = withDefaults(defineProps<{

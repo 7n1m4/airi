@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button } from '@proj-airi/ui'
+import { Button } from '@proj-anima/ui'
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { computed, ref, watch } from 'vue'
 

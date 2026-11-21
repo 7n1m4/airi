@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { DisplayModel } from '@proj-airi/stage-ui/stores/display-models'
+import type { DisplayModel } from '@proj-anima/stage-ui/stores/display-models'
 
-import { ModelSelectorDialog } from '@proj-airi/stage-ui/components/scenarios/dialogs/model-selector'
-import { Live2DCanvas, Live2DModel } from '@proj-airi/stage-ui/components/scenes'
-import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
+import { ModelSelectorDialog } from '@proj-anima/stage-ui/components/scenarios/dialogs/model-selector'
+import { Live2DCanvas, Live2DModel } from '@proj-anima/stage-ui/components/scenes'
+import { useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
 import { useIntervalFn } from '@vueuse/core'
 import { computed, ref } from 'vue'
 

@@ -6,8 +6,8 @@ import type {
   CompanionShareCard,
   CompanionShareInput,
   CompanionShareScope,
-} from '@proj-airi/stage-shared/agentic'
-import type { TransportAdapter } from '@proj-airi/stage-shared/transport-adapter'
+} from '@proj-anima/stage-shared/agentic'
+import type { TransportAdapter } from '@proj-anima/stage-shared/transport-adapter'
 import type { InferOutput } from 'valibot'
 
 import type { AgenticInvokeContext } from './index'
@@ -31,7 +31,7 @@ import {
   companionServiceVisit,
   companionShareReceived,
   NAP_CHAT_EXPIRY_MS,
-} from '@proj-airi/stage-shared/agentic'
+} from '@proj-anima/stage-shared/agentic'
 import { boolean, number, object, optional, picklist } from 'valibot'
 
 import { ipcMain } from '../../../eventa-bus'

@@ -80,7 +80,7 @@ Rather than maintaining legacy regex fallbacks, the runtime now enforces **Syste
 To develop and test Nan0 cognition end-to-end without needing the entire Electron GUI running, a dedicated CLI harness was built:
 
 - **Location**: `packages/nan0-runtime/scripts/nan0-cli.ts`
-- **Execution**: `pnpm -F @proj-airi/nan0-runtime harness [--scenario <path>]`
+- **Execution**: `pnpm -F @proj-anima/nan0-runtime harness [--scenario <path>]`
 - **Architecture**:
   - **System 1**: TypeSafe AI Jev API (`https://api.typesafe.ai/v1/systemone`, model: `jev-latest`).
   - **Consciousness & Outward Speech**: OpenCode Go (`https://opencode.ai/zen/go/v1/`, model: `deepseek-v4-flash`, `thinking: { type: 'disabled' }`).
@@ -111,5 +111,5 @@ Turn 3 (Observation: "Wait, that was a bad joke, I'm sorry.")
 ## 4. Test & Verification Integrity
 
 - **Unit Test Suite**: 343 / 343 unit tests passing in ~1.5s across 26 test suites.
-- **Type Safety**: Clean TypeScript compilation (`tsc --noEmit` 0 errors on `@proj-airi/nan0-runtime` and `vue-tsc --noEmit` 0 errors on `@proj-airi/stage-ui`).
+- **Type Safety**: Clean TypeScript compilation (`tsc --noEmit` 0 errors on `@proj-anima/nan0-runtime` and `vue-tsc --noEmit` 0 errors on `@proj-anima/stage-ui`).
 - **Offline Determinism**: All tests run completely offline and hermetically using `createMockSystemOneProvider()`.

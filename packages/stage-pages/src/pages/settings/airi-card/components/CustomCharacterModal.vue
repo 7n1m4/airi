@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { CustomCharacterEntry } from '@proj-airi/stage-ui/stores/custom-characters'
+import type { CustomCharacterEntry } from '@proj-anima/stage-ui/stores/custom-characters'
 
-import { useCustomCharactersStore } from '@proj-airi/stage-ui/stores/custom-characters'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Button } from '@proj-airi/ui'
+import { useCustomCharactersStore } from '@proj-anima/stage-ui/stores/custom-characters'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Button } from '@proj-anima/ui'
 import {
   DialogContent,
   DialogOverlay,

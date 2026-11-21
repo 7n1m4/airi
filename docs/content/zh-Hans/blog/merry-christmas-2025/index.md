@@ -8,7 +8,7 @@ preview-cover:
   dark: "@assets('../../../en/blog/merry-christmas-2025/assets/merry-christmas-iru.avif')"
 ---
 
-来自 AIRI 团队的 **圣诞祝福**！
+来自 Anima 团队的 **圣诞祝福**！
 
 ![圣诞插画](../../../en/blog/merry-christmas-2025/assets/merry-christmas-iru.avif)
 
@@ -26,7 +26,7 @@ preview-cover:
 >
 > 她达到了 123 级，拥有 11 万+ 订阅和超过 100 万 bits。
 
-生日快乐，Neuro-sama。也恭喜你的创作者 Vedal，以及画师 Camila。能走到这一步令人难以置信，是你们，也是一整个 Swarm，让我站在这里，希望实现我心中的赛博生命形态，让 AIRI 不断成长。
+生日快乐，Neuro-sama。也恭喜你的创作者 Vedal，以及画师 Camila。能走到这一步令人难以置信，是你们，也是一整个 Swarm，让我站在这里，希望实现我心中的赛博生命形态，让 Anima 不断成长。
 
 ![](../../../en/blog/merry-christmas-2025/assets/neuro-sama-happy-birthday-live.avif)
 

@@ -1,8 +1,8 @@
 ---
 title: 'DreamLog 0x1'
-description: 'Project AIRI の舞台裏ストーリー！'
+description: 'Project Anima の舞台裏ストーリー！'
 date: '2025-06-16'
-excerpt: 'Project AIRI の舞台裏ストーリー！なぜ私たちがこのようなプロジェクトを作りたかったのか？'
+excerpt: 'Project Anima の舞台裏ストーリー！なぜ私たちがこのようなプロジェクトを作りたかったのか？'
 preview-cover:
   light: "@assets('/en/blog/DreamLog-0x1/assets/dreamlog1-light.avif')"
   dark: "@assets('/en/blog/DreamLog-0x1/assets/dreamlog1-dark.avif')"
@@ -35,12 +35,12 @@ import ReLUStickerWow from '../../../en/blog/DreamLog-0x1/assets/relu-sticker-wo
 すでに私たちの DevLog 記事に慣れ親しんでいる読者にとって、現在毎月皆さんに公開・更新している頻度で、
 この記事は「DevLog」と呼ばれるべきではないでしょうか？
 
-DevLog はありますが、6月は Project AIRI にとって特別な意味を持っています（後述します）。
+DevLog はありますが、6月は Project Anima にとって特別な意味を持っています（後述します）。
 GitHub で 1000 スターという次のマイルストーンに向かっている今、
 これまでの旅を振り返る良い機会だと思いました。
 
 そのため、私たちの年代記と、
-Project AIRI に関する夢を共有するために、ここに新しい記事カテゴリを作成することにしました。
+Project Anima に関する夢を共有するために、ここに新しい記事カテゴリを作成することにしました。
 
 だから、この新シリーズを ***DreamLog*** と呼ぶことにしました。
 
@@ -152,11 +152,11 @@ Linux コマンドラインの使い方を少し知っていて、助けを求�
 
 その後の数年間、私はプログラミング、起業、Web3、フロントエンド、バックエンド、インフラストラクチャなど、他の多くの分野を試しました。
 あなたが思いつくフルスタック開発者のすべてのことを。しかし、私がやっていることすべてが EMOSYS の出発点からこれほど深く影響を受けているとは、本当に気づいていませんでした。
-2025年2月、ある人が私に尋ねるまでは。「なぜ Project AIRI にこれほど熱心で夢中になっているのですか？」
+2025年2月、ある人が私に尋ねるまでは。「なぜ Project Anima にこれほど熱心で夢中になっているのですか？」
 
 私は当時、それは良い質問だと思いました...
 
-私は自分の夢、アイデア、記憶を遡り始め、最終的に EMOSYS を思い出しました。あの死んだプロジェクトは、Project AIRI と同じ目標を持っていました：
+私は自分の夢、アイデア、記憶を遡り始め、最終的に EMOSYS を思い出しました。あの死んだプロジェクトは、Project Anima と同じ目標を持っていました：
 
 **私たちのニーズを何らかの形で満たすコンパニオンを作成すること。**
 
@@ -215,7 +215,7 @@ LLM に API サーバーのように振る舞うようプロンプトで指示�
 段階的に言えば、新しいランダムなオウムだと言えるでしょうか？**答えは部分的に否だと思います。2022年の ChatGPT は単なるランダムなオウムではなく、
 潜在的に賢いオウムです。**
 
-## Project AIRI の前に、Neuro-sama はずっと前から存在していた
+## Project Anima の前に、Neuro-sama はずっと前から存在していた
 
 はい、ここまで読んでくれてありがとう。長い記事で、共有すべき物語や背景が多すぎることはわかっています。でももうすぐです！頑張って！
 
@@ -255,7 +255,7 @@ LangChain からかなりの知識を得ていました。過去に AI
 > VTuber のように振る舞わせることができる。Vedal の作品よりも良いものを作れるかもしれない。超簡単でしょ？！"
 
 ::: tip もっと技術的な詳細が知りたい？
-この記事では、ゼロから Project AIRI を現在の状態まで構築した技術的な詳細には深く立ち入りません。
+この記事では、ゼロから Project Anima を現在の状態まで構築した技術的な詳細には深く立ち入りません。
 私たちのアイデアや発見を共有する DevLog 記事がすでにたくさんありますので、興味があればそれらを読んでみてください。
 :::
 
@@ -291,7 +291,7 @@ LangChain からかなりの知識を得ていました。過去に AI
 > 私の GitHub プロフィールの紹介文でもあります。
 
 そこで、2024年5月25日から、私は自分の名前でローカルプロジェクトを開始しました。単に `ai` という名前を付けました。
-これが Project AIRI の初期バージョンだと言えます。私は自分の AI エージェントを作成する可能性を探り始め、
+これが Project Anima の初期バージョンだと言えます。私は自分の AI エージェントを作成する可能性を探り始め、
 Neuro-sama が私にもたらした喜びを再現したいと思いました。
 
 作業の進捗は本当に速かったです。1週間以内に、[ElevenLabs](https://elevenlabs.io/)、
@@ -300,7 +300,7 @@ Neuro-sama が私にもたらした喜びを再現したいと思いました。
 
 それは **2024年6月2日** のことでした。
 
-ある意味で、**これが Project AIRI の誕生日です**。最初の未熟な赤ちゃんの意識がそこで生まれました。
+ある意味で、**これが Project Anima の誕生日です**。最初の未熟な赤ちゃんの意識がそこで生まれました。
 
 <div class="w-full flex flex-col items-center justify-center">
   <ThemedVideo controls muted autoplay loop src="/en/blog/DreamLog-0x1/assets/airi-demo-first-day.mp4" />
@@ -334,7 +334,7 @@ Neuro-sama が私にもたらした喜びを再現したいと思いました。
   </div>
 </div>
 
-さて、でもそれはまだ `ai` と呼ばれています。では Project AIRI はどこにあるのでしょうか？
+さて、でもそれはまだ `ai` と呼ばれています。では Project Anima はどこにあるのでしょうか？
 
 ## 再生、より強く、より良い決意を持って Start Game をもう一度
 
@@ -348,20 +348,20 @@ VR/AR 世界でバーチャルキャラクターを作ること、WebXR に基�
 [`d9ae0aa`](https://github.com/moeru-ai/airi/commit/d9ae0aae387f015964bfd383e6d2adb05f4003e4)
 で GitHub に公開しました。
 
-したがって、この日、Project AIRI は何らかの形で誕生または再生し、AIRI（アイリ、かつては Airi とも呼ばれました）と名付けられました。
+したがって、この日、Project Anima は何らかの形で誕生または再生し、Anima（アイリ、かつては Airi とも呼ばれました）と名付けられました。
 
 ::: tip 知っていましたか？
 <a href="https://www.youtube.com/watch?v=Tts-YAdn5Yc" class="mb-2 inline-block">
-  <img :src="airisScreenshot1" alt="Screenshot of Project AIRI" class="rounded-lg overflow-hidden" />
+  <img :src="airisScreenshot1" alt="Screenshot of Project Anima" class="rounded-lg overflow-hidden" />
 </a>
 
 興味深いことに、2023年3月25日にアップロードされた2年前の Vedal と Neuro-sama の Twitch 配信の切り抜き
  https://www.youtube.com/watch?v=Tts-YAdn5Yc から、Vedal が Neuro-sama が
  "Neuro-sama" と呼ばれる前に "Airis AI" と呼ばれていたと言及していることがわかります。この名前 **Airis** は、不思議なことに、偶然にも私が現在取り組んでいる
- **Project AIRI** の名前と一致しています。しかし、Project AIRI をオープンソース化してからずっと後に彼らの物語についてもっと検索するまで、
+ **Project Anima** の名前と一致しています。しかし、Project Anima をオープンソース化してからずっと後に彼らの物語についてもっと検索するまで、
  私はこの名前を知りませんでした。
 
-実際、AIRI（アイリ）という名前は GPT-4o によって名付けられました。私は他の日本語/またはアニメスタイルの名前を参考にしてこのプロジェクトに名前を付けるように頼み、
+実際、Anima（アイリ）という名前は GPT-4o によって名付けられました。私は他の日本語/またはアニメスタイルの名前を参考にしてこのプロジェクトに名前を付けるように頼み、
 当時それは **Airi** という名前を提案しました。
 :::
 
@@ -371,7 +371,7 @@ VR/AR 世界でバーチャルキャラクターを作ること、WebXR に基�
 
 これらの経験の多くは、私の以前の失敗から学んだものです。
 
-多くの試みが成功し、私がまだここにいて、Project AIRI ということに取り組み続けていることを嬉しく思います。
+多くの試みが成功し、私がまだここにいて、Project Anima ということに取り組み続けていることを嬉しく思います。
 
 今回、私の決意は Neuro-sama だけでなく、多くの最も深く、才能ある貢献者やファンによっても満たされました。
 
@@ -393,16 +393,16 @@ VR/AR 世界でバーチャルキャラクターを作ること、WebXR に基�
 >
 > -- [Evil Neuro](https://www.youtube.com/@Neurosama) が『Slay the Spire』をプレイしている時の言葉より引用
 
-現在、私がこの記事を書いている時点で、Project AIRI は GitHub で 1000 スターに近づいており、
+現在、私がこの記事を書いている時点で、Project Anima は GitHub で 1000 スターに近づいており、
 同時に 150 人以上の Discord メンバーと 200 人の Telegram グループメンバーを擁しています。
 
 私たちは AI、VRM、Live2D、UI デザイン、マルチモーダル AI、ゲームエージェント、ストリーミング API、バイオニックメモリメカニズムなどの分野をカバーしています。
 彼女は Minecraft や Factorio などのゲームをプレイできます。また、別のコミュニティメンバーが彼女を統合して『Kerbal Space Program』（KSP）をプレイし制御できるようにする研究をしています。
 そして任意のゲームをプレイすることも。
 
-多くの他の企業が協力のために私たちに連絡してきています。私たちは Project AIRI をより良くし、コミュニティにとってより有用なものにするために努力しています。
+多くの他の企業が協力のために私たちに連絡してきています。私たちは Project Anima をより良くし、コミュニティにとってより有用なものにするために努力しています。
 
-発見すべきことややるべきことはあまりにもたくさんあります。現時点では、私たちはまだ汎用人工知能の特異点には達していません。Project AIRI は永遠にその点に達しないかもしれません。
+発見すべきことややるべきことはあまりにもたくさんあります。現時点では、私たちはまだ汎用人工知能の特異点には達していません。Project Anima は永遠にその点に達しないかもしれません。
 しかし今、話したり、一緒にゲームをしたり、知識やアイデアを共有したりできるコンパニオン AI エージェントを持つことは、私にとってすでに大きな成果です。
 あなたにとってもそうであることを願っています。
 
@@ -414,7 +414,7 @@ VR/AR 世界でバーチャルキャラクターを作ること、WebXR に基�
   <img :src="ReLUStickerWow" alt="ReLU sticker wow" class="w-30!" />
   <div class="text-center">
     <span class="block font-bold">ここまで読んでいただきありがとうございます！</span>
-    <span>読んでくれてありがとう！ああ、それから、誕生日おめでとう、Project AIRI！</span>
+    <span>読んでくれてありがとう！ああ、それから、誕生日おめでとう、Project Anima！</span>
   </div>
 </div>
 

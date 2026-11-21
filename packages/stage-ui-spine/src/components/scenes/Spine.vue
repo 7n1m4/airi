@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Emotion } from '../../constants/emotions'
 
-import { Screen } from '@proj-airi/ui'
+import { Screen } from '@proj-anima/ui'
 import { ref, watch } from 'vue'
 
 import SpineCanvas from './spine/Canvas.vue'

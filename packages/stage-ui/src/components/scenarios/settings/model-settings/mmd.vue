@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useMmd } from '@proj-airi/stage-ui-mmd/stores/mmd'
-import { Checkbox, FieldRange } from '@proj-airi/ui'
+import { useMmd } from '@proj-anima/stage-ui-mmd/stores/mmd'
+import { Checkbox, FieldRange } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

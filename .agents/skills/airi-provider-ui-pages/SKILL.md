@@ -42,7 +42,7 @@ Live API connection testing is powered by `useProviderValidation`.
 ## 5. Verification Workflows
 
 - **Typecheck**: `pnpm -F stage-pages typecheck`
-- **Component Typecheck**: `pnpm -F @proj-airi/stage-ui typecheck`
+- **Component Typecheck**: `pnpm -F @proj-anima/stage-ui typecheck`
 
 ### Authoritative Design & Architecture Documents
 

@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/live2d-runtime",
+  "name": "@proj-anima/live2d-runtime",
   "type": "module",
   "private": true,
   "description": "Headless Live2D DSL runtime & VarFloats state engine for Project AIRI (render-agnostic; no PIXI/Vue/DOM)",

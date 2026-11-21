@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { ScrubReport } from '@proj-airi/stage-ui/composables/use-data-maintenance'
+import type { ScrubReport } from '@proj-anima/stage-ui/composables/use-data-maintenance'
 
-import { useDataMaintenance } from '@proj-airi/stage-ui/composables/use-data-maintenance'
-import { Button } from '@proj-airi/ui'
+import { useDataMaintenance } from '@proj-anima/stage-ui/composables/use-data-maintenance'
+import { Button } from '@proj-anima/ui'
 import {
   DialogContent,
   DialogOverlay,

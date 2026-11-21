@@ -1,6 +1,6 @@
 # Slint (Slint) デスクトップシェル用の文字列：スプラッシュ、コントロールストリップ、ウィンドウ、プレースホルダーページ。
 app:
-  name: AIRI
+  name: Anima
   tagline: あなたのAIコンパニオンが、デスクトップに。
   version-label: バージョン
 splash:
@@ -11,27 +11,27 @@ splash:
     stage_ready: ステージを準備しています…
 strip:
   tooltips:
-    avatar: AIRI
+    avatar: Anima
     mic: マイクの切り替え
     chat: チャット
     stage: ステージ
     settings: 設定
-    about: AIRI について
+    about: Anima について
     collapse: 折りたたむ
     expand: 展開する
     theme: ダーク／ライトモード切り替え
     language: 言語を変更
-    quit: AIRI を終了
+    quit: Anima を終了
     caption: キャプション
 chat:
-  title: AIRI — チャット
+  title: Anima — チャット
   recent: 最近
   new: 新しいチャット
   search-placeholder: チャットを検索…
   delete-session: チャットを削除
   empty-title: 会話を始めましょう
   empty-subtitle: メッセージはこのデバイスにローカル保存されます。
-  input-placeholder: AIRI にメッセージ…
+  input-placeholder: Anima にメッセージ…
   send: 送信
   stop: 停止
   streaming: ストリーミング中…
@@ -45,7 +45,7 @@ chat:
     import: カードをインポート…
     import-error: 'カードをインポートできませんでした — 有効な CCv2/CCv3 カード（png または json）ではありません。'
 settings:
-  title: AIRI — 設定
+  title: Anima — 設定
   description: AIアシスタントを設定します。
   nav:
     providers: プロバイダー
@@ -76,7 +76,7 @@ settings:
     modules: 'モジュール'
   theme-page:
     title: テーマ
-    description: AIRI の色と外観をカスタマイズします。
+    description: Anima の色と外観をカスタマイズします。
     hue: アクセントの色相
     chroma: 彩度の倍率
     dark: ダークモード
@@ -151,16 +151,16 @@ providers:
     aws_secret_access_key: AWS シークレットアクセスキー
     account_id: Cloudflare アカウント ID
 about:
-  title: AIRI — このアプリについて
-  app-name: AIRI
+  title: Anima — このアプリについて
+  app-name: Anima
   tagline: あなたのAIコンパニオンが、デスクトップに。
-  body: AIRI はデスクトップAIコンパニオンです。話し、見て、反応するデジタルの存在。Rust、Slint で構築されています。
+  body: Anima はデスクトップAIコンパニオンです。話し、見て、反応するデジタルの存在。Rust、Slint で構築されています。
   license: GPL-3.0-or-later ライセンス。Slint は GPL 条件の下で使用されています。
   source-label: ソースコード
   source-url: https://github.com/moeru-ai/airi
-  credit: Neko Ayaka と AIRI コントリビューターによって作られました。
+  credit: Neko Ayaka と Anima コントリビューターによって作られました。
   check-update: アップデートを確認
-  update-up-to-date: AIRI は最新です。
+  update-up-to-date: Anima は最新です。
   update-available: 'アップデートがあります:'
 stage:
   description: AI コンパニオンと一緒に、フローティングステージウィンドウを表示・配置します。
@@ -189,7 +189,7 @@ stage:
     head: 頭上
     none: なし
     preview: プレビュー
-    previewSample: AIRI が話しているときのキャプションの見え方です。
+    previewSample: Anima が話しているときのキャプションの見え方です。
   stripSection:
     title: コントロールストリップ
     hint: コントロールストリップに表示するステージ操作を選びます。
@@ -237,7 +237,7 @@ audio:
   save: 保存
   saveError: 保存できませんでした。もう一度お試しください。
 profile:
-  description: AIRI から見たあなたの情報。
+  description: Anima から見たあなたの情報。
   identitySection: アイデンティティ
   name: 表示名
   namePlaceholder: あなたの名前
@@ -251,7 +251,7 @@ profile:
   save: 保存
   saveError: 保存できませんでした。もう一度お試しください。
 notify:
-  replyReady: AIRIが返信しました
+  replyReady: Animaが返信しました
 common:
   close: 閉じる
 
@@ -324,7 +324,7 @@ models:
     paid: 有料 / コミッション
     visit: 訪問
     knowRepository: 他に素晴らしいモデルリポジトリを知っていますか？
-    knowRepositoryHint: 無料のリポジトリ、ツール、アーカイブをもっと推薦して AIRI コミュニティの成長を助けましょう。
+    knowRepositoryHint: 無料のリポジトリ、ツール、アーカイブをもっと推薦して Anima コミュニティの成長を助けましょう。
     submitOnGithub: GitHub で提案
     formats:
       all: すべての形式
@@ -337,9 +337,9 @@ onboarding:
   deferredNotice: 'このSlintビルドでは初回セットアップ完了がまだ接続されていません — これらの画面はプレゼンテーション用です。ウィザードを完了またはスキップするボタンは、オンボーディングストアが実装されると有効になります。'
   deferredTip: '未接続 — 初回オンボーディングストアが実装されるとこの操作が有効になります。'
   v3:
-    brand: 'AIRIコンパニオンセットアップ'
+    brand: 'Animaコンパニオンセットアップ'
     stageReady: 'ステージ準備完了'
-    heroTitle: 'AIRIへようこそ'
+    heroTitle: 'Animaへようこそ'
     heroSubtitle: 'あなたのコンパニオンのステージ — 数分でセットアップ、100% あなたのマシンで。'
     companionQuote: 'こんにちは！私はあなたの自律型デジタルコンパニオンです。音声会話、創造的なステージパフォーマンス、静かなデスクトッププレゼンスなど、どんなことでも、あなたの世界に適応する準備ができています。'
     pillWebgpu: 'ローカルWebGPUコア'
@@ -354,7 +354,7 @@ notice:
   deferredTip: '通知ウィンドウのアクションブリッジ (windowAction / pageMounted / pageUnmounted) が必要です。Slintビルドにはまだありません。'
   index:
     title: '通知'
-    subtitle: 'AIRIのメインプロセスは、一回限りのプロンプト用に一時的な通知ウィンドウを表示します。このページはデスクトップアプリが同梱する通知を一覧します。'
+    subtitle: 'Animaのメインプロセスは、一回限りのプロンプト用に一時的な通知ウィンドウを表示します。このページはデスクトップアプリが同梱する通知を一覧します。'
     surfaces: '通知サーフェス'
     fadeOnHoverTitle: 'Fade on Hoverチュートリアル'
     fadeOnHoverSubtitle: 'カーソルが近づくとキャラクターをフェードする自動非表示の動作を説明します。'
@@ -390,13 +390,13 @@ modules:
   entries:
     memory:
       blurb: 'コンパニオンのための短期・長期記憶、ジャーナル、retrieval。'
-      reason: 'Slint で使用可能 — ルートは設定ナビが処理。バックエンドは airi-core memory (journal・retrieval・embeddings) に着地。設定サーフェスはこのwaveで到着。'
+      reason: 'Slint で使用可能 — ルートは設定ナビが処理。バックエンドは anima-core memory (journal・retrieval・embeddings) に着地。設定サーフェスはこのwaveで到着。'
     speech:
       blurb: 'コンパニオンのテキスト読み上げ音声出力。'
-      reason: 'Slint で使用可能 — バックエンドは airi-speech (TTS 定義26件 + Kokoro) に着地。Slint TTS/STT 設定サーフェスはこのwaveで到着。'
+      reason: 'Slint で使用可能 — バックエンドは anima-speech (TTS 定義26件 + Kokoro) に着地。Slint TTS/STT 設定サーフェスはこのwaveで到着。'
     hearing:
       blurb: 'マイク入力、音声区間検出、文字起こし。'
-      reason: 'Slint で使用可能 — バックエンドは airi-stt (capture・Silero VAD・Deepgram/Aliyun/whisper-local) に着地。Slint ヒアリング設定サーフェスはこのwaveで到着。'
+      reason: 'Slint で使用可能 — バックエンドは anima-stt (capture・Silero VAD・Deepgram/Aliyun/whisper-local) に着地。Slint ヒアリング設定サーフェスはこのwaveで到着。'
     vision:
       blurb: '画面とカメラの視覚認識。'
       reason: '延期 — Slint の vision スタックなし (moondream/blip/apple-core-ai は Rust レジストリにない)。現在は Electron アプリに存在。'
@@ -422,7 +422,7 @@ modules:
       blurb: '自前のストレージへスナップショットをバックアップ (BYOS)。'
       reason: '配線済み — ローカルフォルダーターゲット、スナップショット検証/復元。S3/メッシュ/選択的同期は未配線。'
     pluginHost:
-      blurb: 'AIRI プラグインパッケージのホスト。'
+      blurb: 'Anima プラグインパッケージのホスト。'
       reason: 'スキャフォールドのみ — discovery/有効化/capability バスなし。Slint v1 では免除。Electron のメインプロセスがプラグインをホスト。'
     vrm:
       blurb: 'VRM モデルのレンダリングとステージシーン。'
@@ -452,7 +452,7 @@ memory:
   shortTerm:
     title: '短期 & retrieval'
     badge: '配線済み'
-    note: 'topKはretrievalメモリがプロンプトに注入される数を制限します (1–20)。retrievalのランキングは意味的類似度 (重み0.75) と語彙的重複 (重み0.25) をairi-coreでブレンドします。メモリが有効な間、チャットパイプラインがこれを消費します。'
+    note: 'topKはretrievalメモリがプロンプトに注入される数を制限します (1–20)。retrievalのランキングは意味的類似度 (重み0.75) と語彙的重複 (重み0.25) をanima-coreでブレンドします。メモリが有効な間、チャットパイプラインがこれを消費します。'
   topK:
     label: 'Retrieval top-k'
     description: '1プロンプトあたりretrievalが注入できるメモリの数 (1–20)。'
@@ -465,7 +465,7 @@ memory:
     refresh: '再読み込み'
     emptyTitle: 'ジャーナルエントリはまだありません'
     emptySubtitle: 'ジャーナルエントリはまだありません — アプリを使うにつれチャットメモリが埋めます。'
-  footer: '設定とジャーナルはこのプロファイルの airi-store SQLite バルト (airi.sqlite) に保存されます。メモリはチャットのコンテキストを豊かにします — 設定したLLMプロバイダー以外にマシンの外へ出ません。'
+  footer: '設定とジャーナルはこのプロファイルの anima-store SQLite バルト (airi.sqlite) に保存されます。メモリはチャットのコンテキストを豊かにします — 設定したLLMプロバイダー以外にマシンの外へ出ません。'
   saveError: '保存に失敗しました — 詳細はステータス行を確認してください。'
   time:
     justNow: 'たった今'
@@ -477,7 +477,7 @@ hearing:
   description: 'コンパニオンのマイク入力とリッスン設定。'
   enable:
     title: 'ヒアリングを有効化'
-    description: 'AIRIに聞いてほしいという意志を記録します。キャプチャパイプラインが来れば発効します — これを保存してもマイクは開きません。'
+    description: 'Animaに聞いてほしいという意志を記録します。キャプチャパイプラインが来れば発効します — これを保存してもマイクは開きません。'
   mode:
     title: 'リッスンモード'
     caption: 'Autoは連続リッスン (キャプチャパイプラインが必要)。PTTはホットキーを押している間だけリッスンします。'
@@ -489,7 +489,7 @@ hearing:
     caption: 'このビルドではグローバルホットキー登録は未配線です — 値は保存されますが、ショートカットはまだ動作しません。'
   device:
     title: '入力デバイス'
-    caption: 'キャプチャパイプラインが来たときにAIRIが使うマイクを選択します。'
+    caption: 'キャプチャパイプラインが来たときにAnimaが使うマイクを選択します。'
     emptyTitle: '入力デバイスが列挙されていません'
     emptySubtitle: 'このSlintビルドはまだマイクを列挙できません — 音声キャプチャは未配線です。'
     useDefault: 'システムデフォルト'
@@ -498,7 +498,7 @@ hearing:
   nav: 'ヒアリング'
 speech:
   title: '音声'
-  description: 'AIRI用のテキスト読み上げ。カタログからプロバイダーを選び、声と速度を調整し、確認用にサンプルファイルを書き出します。ポート状態はRust音声レジストリからそのままです。'
+  description: 'Anima用のテキスト読み上げ。カタログからプロバイダーを選び、声と速度を調整し、確認用にサンプルファイルを書き出します。ポート状態はRust音声レジストリからそのままです。'
   providers:
     caption: 'テキスト読み上げプロバイダー'
     empty: 'プロバイダーカタログを読み込めませんでした — コンソールを確認してください。'
@@ -519,19 +519,19 @@ speech:
     caption: 'サンプル合成'
     description: '選択したプロバイダーで短いサンプルを合成し、プロファイルディレクトリ配下の新しいファイルに書き出します。プロバイダーのデフォルトエンドポイントを使用します。何も再生されません。'
     label: 'サンプルテキスト'
-    placeholder: 'こんにちは、私はAIRIです。'
+    placeholder: 'こんにちは、私はAnimaです。'
     button: 'サンプルを合成'
     written: 'サンプルを書き出しました:'
     notPlayable: 'サンプルファイルはディスクに書き出され、アプリ内ではまだ再生できません — システムプレイヤーで開いてください。'
   stt:
     caption: '音声認識'
     title: '音声認識は別の場所にあります (ここでは未配線)'
-    body: 'airi-sttはSTTクライアントをポートします: Whisper (インプロセス、whisper-rs)、OpenAI互換 /audio/transcriptions クライアント、Deepgram streaming クライアント、Aliyun NLS (streaming、事前発行トークンが必要)。それらを駆動するSlintヒアリングサーフェスはまだありません — このページはテキスト読み上げのみを設定します。'
+    body: 'anima-sttはSTTクライアントをポートします: Whisper (インプロセス、whisper-rs)、OpenAI互換 /audio/transcriptions クライアント、Deepgram streaming クライアント、Aliyun NLS (streaming、事前発行トークンが必要)。それらを駆動するSlintヒアリングサーフェスはまだありません — このページはテキスト読み上げのみを設定します。'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
   caption: 'オプトインのawarenessデーモンの状態、ソース別スイッチ、kill switch、ローカル監査ログ。ここにあるものは何も自分では動きません。'
-  daemonDownTitle: 'airi-daemon が起動していません'
+  daemonDownTitle: 'anima-daemon が起動していません'
   daemonDownSubtitle: 'awarenessデーモンはオプトインのユーザーセッションサービスです。dev-run手順: packaging/README.md。'
   retry: '再試行'
   killSwitch:
@@ -625,7 +625,7 @@ widgets:
 
 data:
   title: 'データ'
-  description: 'このデバイスにローカル保存されるすべてのAIRIデータ — エクスポート、インポート、重い履歴のクリーンアップ。'
+  description: 'このデバイスにローカル保存されるすべてのAnimaデータ — エクスポート、インポート、重い履歴のクリーンアップ。'
   status:
     notWired: 'エクスポートはまだRustバックエンドに接続されていません — フェーズノートを参照'
     actionNotWired: 'この操作はまだRustバックエンドに接続されていません — フェーズノートを参照'
@@ -757,9 +757,9 @@ data:
 
 mcp:
   title: 'MCPサーバー＆ツール'
-  description: 'Model Context Protocol (MCP) サーバーに接続・管理して、AIRIに拡張可能なツール機能を与えます。'
-  deferredTip: '未接続 — MCPクライアントは別レーン (airi-mcp) で提供されます。このプレビューはレイアウトのみを表示します。ここから設定を読み書きすることはありません。'
-  deferredNotice: 'MCPブリッジは未接続です。表示されているサーバーはElectronのデフォルト設定のドキュメント例であり、あなたの設定ではありません — airi-mcpレーンが実装されるまで各コントロールは無効のままです。'
+  description: 'Model Context Protocol (MCP) サーバーに接続・管理して、Animaに拡張可能なツール機能を与えます。'
+  deferredTip: '未接続 — MCPクライアントは別レーン (anima-mcp) で提供されます。このプレビューはレイアウトのみを表示します。ここから設定を読み書きすることはありません。'
+  deferredNotice: 'MCPブリッジは未接続です。表示されているサーバーはElectronのデフォルト設定のドキュメント例であり、あなたの設定ではありません — anima-mcpレーンが実装されるまで各コントロールは無効のままです。'
   notWiredBadge: '未接続'
   tabs:
     manage: '管理'
@@ -771,7 +771,7 @@ mcp:
     configPathHint: "Electronのデフォルトは app.getPath('appData') + '/airi/mcp.json'。Slintブリッジも同じ規約に従います。表示されているパスは説明用で、ディスクから読み取られたものではありません。"
     configuredServers: '設定済みサーバー'
     documentedExample: 'ドキュメント例'
-    exampleNote: 'ドキュメントとして表示 — これはAIRI Desktop (Electron main) に組み込まれたデフォルト設定であり、AIRIが接続したサーバーではありません。'
+    exampleNote: 'ドキュメントとして表示 — これはAnima Desktop (Electron main) に組み込まれたデフォルト設定であり、Animaが接続したサーバーではありません。'
     serverStateUnknown: '不明'
     transportStdio: 'ローカルstdio'
     toolsNone: 'ツール 0'
@@ -832,7 +832,7 @@ mcp:
 
 discord:
   title: 'Discord'
-  description: 'あなたのAIRIコンパニオンとDiscordサーバー・ダイレクトメッセージをつなぐメッセージングブリッジ。'
+  description: 'あなたのAnimaコンパニオンとDiscordサーバー・ダイレクトメッセージをつなぐメッセージングブリッジ。'
   deferredNotice: 'DiscordモジュールはまだRustゲートウェイに接続されていません。Bot接続、リレー動作、アクセスルーティングは構造プレビューとして表示されます — ゲートウェイブリッジが実装されるまで各操作は無効です。'
   deferredTip: 'SlintビルドにはDiscordゲートウェイブリッジ (websocketライフサイクル、トークンストア、Rustサービス) が必要です。'
   tabs:
@@ -846,7 +846,7 @@ discord:
     tokenDescription: 'Developer Portalから取得したDiscord Botトークン。'
     tokenPlaceholder: 'Botトークンを貼り付け…'
     ownerLabel: 'Bot所有者 / メインユーザー名'
-    ownerDescription: 'あなたのDiscordハンドル (例: dasilva333)。AIRIは所有者権限とメモリ同期のためにアカウントIDを自動解決します。'
+    ownerDescription: 'あなたのDiscordハンドル (例: dasilva333)。Animaは所有者権限とメモリ同期のためにアカウントIDを自動解決します。'
     ownerPlaceholder: '例: dasilva333'
     ownerIdPending: '解決された所有者ID: 未解決 — ゲートウェイブリッジが必要です。'
     connect: '接続'
@@ -955,7 +955,7 @@ cloudSync:
     endpointPlaceholder: 'https://s3.amazonaws.com'
     bucketLabel: 'バケット名'
     bucketDescription: 'クラウドバケットの名前。'
-    bucketPlaceholder: 'my-airi-sync'
+    bucketPlaceholder: 'my-anima-sync'
     regionLabel: 'リージョン'
     regionDescription: 'バケットのリージョン (空の場合は us-east-1)。'
     regionPlaceholder: 'us-east-1'
@@ -970,7 +970,7 @@ cloudSync:
     localCaption: 'ローカル共有設定'
     localPathLabel: 'バックアップディレクトリパス'
     localPathDescription: 'ローカル同期フォルダまたはマウント済みネットワークドライブ (NAS / Samba共有) への絶対パス。'
-    localPathPlaceholder: '/Volumes/AIRI-Backup-Share'
+    localPathPlaceholder: '/Volumes/Anima-Backup-Share'
     testConnection: '接続テスト'
   sync:
     title: '同期'
@@ -999,11 +999,11 @@ cloudSync:
   mesh:
     title: 'ローカルメッシュ同期'
     enableLabel: 'libp2pメッシュ同期を有効化'
-    enableDescription: 'メモリ、ボールト認証情報、コンパニオンカードをローカルネットワーク上の他のAIRIインスタンスと直接同期します。'
+    enableDescription: 'メモリ、ボールト認証情報、コンパニオンカードをローカルネットワーク上の他のAnimaインスタンスと直接同期します。'
     memoryLabel: 'メモリ (STMM / LTMM / Event Ledger)'
     vaultLabel: 'ボールト (BYOS認証情報)'
     companionsLabel: 'コンパニオン (キャラクターカード)'
-    targetDescription: 'libp2p経由でペアリングされたAIRIインスタンスと同期します。'
+    targetDescription: 'libp2p経由でペアリングされたAnimaインスタンスと同期します。'
   actions:
     title: '手動操作'
     manualTitle: '手動同期'
@@ -1060,7 +1060,7 @@ cloudSync:
     cancel: 'キャンセル'
 pluginHost:
   title: 'Plugin Host'
-  description: 'AIRIプラグインを検査・管理します: 検出されたマニフェスト、有効化、読み込まれたセッション、公開された機能。'
+  description: 'Animaプラグインを検査・管理します: 検出されたマニフェスト、有効化、読み込まれたセッション、公開された機能。'
   notWiredBadge: '未接続'
   deferredTip: '未接続 — Slintビルドにはプラグインホストが存在しません。このプレビューはレイアウトのみを表示します。ここからプラグインを検出・読み込み・永続化することはありません。'
   deferredNotice: 'このビルドではプラグインホストは未接続です。マニフェストはディスクから検出されず、プラグインは読み込まれず、下記の全コントロールはSlintプラグインホスト (またはElectronスタイルのブリッジ) が実装されるまで無効です。'
@@ -1079,7 +1079,7 @@ pluginHost:
     configLabel: '有効化ストア'
     portLabel: 'ポート'
     portValue: 'なし — プロセス内ホスト'
-    portHint: 'Electronのプラグインホストはメインプロセス内で動作し、TCPポートはありません。ポート6121はAIRIチャンネルサーバー (SERVER_CHANNEL_PORT) のもので、プラグインホストとは無関係です。'
+    portHint: 'Electronのプラグインホストはメインプロセス内で動作し、TCPポートはありません。ポート6121はAnimaチャンネルサーバー (SERVER_CHANNEL_PORT) のもので、プラグインホストとは無関係です。'
   installed:
     section: 'インストール済みプラグイン'
     emptyTitle: 'このビルドにはプラグインはインストールされていません'
@@ -1111,7 +1111,7 @@ pluginHost:
     portLabel: 'ポート'
     portDescription: '仮想的なホストポート。実際のホストはプロセス内にあり、ポートはありません。'
     portPlaceholder: '未接続'
-    portHint: 'ポート6121はAIRIチャンネルサーバー (SERVER_CHANNEL_PORT) であり、プラグインホストではありません。ここにどんな値を入れても虚構です。'
+    portHint: 'ポート6121はAnimaチャンネルサーバー (SERVER_CHANNEL_PORT) であり、プラグインホストではありません。ここにどんな値を入れても虚構です。'
     logLevelLabel: 'ログレベル'
     pluginDirLabel: 'プラグインディレクトリ'
     pluginDirPlaceholder: '<userData>/plugins/v1'

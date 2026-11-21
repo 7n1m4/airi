@@ -1,7 +1,7 @@
 # Slint(Slint) 데스크톱 셸 문자열: 스플래시, 컨트롤 스트립, 창 및
 # 플레이스홀더 페이지.
 app:
-  name: AIRI
+  name: Anima
   tagline: 당신의 AI 컴패니언, 이제 데스크톱에.
   version-label: 버전
 splash:
@@ -12,27 +12,27 @@ splash:
     stage_ready: 스테이지 준비 중…
 strip:
   tooltips:
-    avatar: AIRI
+    avatar: Anima
     mic: 마이크 토글
     chat: 채팅
     stage: 스테이지
     settings: 설정
-    about: AIRI 정보
+    about: Anima 정보
     collapse: 접기
     expand: 펼치기
     theme: 다크 / 라이트 모드 전환
     language: 언어 변경
-    quit: AIRI 종료
+    quit: Anima 종료
     caption: 자막
 chat:
-  title: AIRI — 채팅
+  title: Anima — 채팅
   recent: 최근
   new: 새 채팅
   search-placeholder: 채팅 검색…
   delete-session: 채팅 삭제
   empty-title: 대화를 시작하세요
   empty-subtitle: 메시지는 이 기기에 로컬로 저장됩니다.
-  input-placeholder: AIRI에게 메시지 보내기…
+  input-placeholder: Anima에게 메시지 보내기…
   send: 보내기
   stop: 중지
   streaming: 스트리밍 중…
@@ -46,7 +46,7 @@ chat:
     import: 카드 가져오기…
     import-error: '카드를 가져올 수 없습니다 — 유효한 CCv2/CCv3 카드(png 또는 json)가 아닙니다.'
 settings:
-  title: AIRI — 설정
+  title: Anima — 설정
   description: AI 어시스턴트를 설정합니다.
   nav:
     providers: 공급자
@@ -77,7 +77,7 @@ settings:
     modules: '모듈'
   theme-page:
     title: 테마
-    description: AIRI의 색상과 외관을 개인화합니다.
+    description: Anima의 색상과 외관을 개인화합니다.
     hue: 강조 색상
     chroma: 채도 배율
     dark: 다크 모드
@@ -152,16 +152,16 @@ providers:
     aws_secret_access_key: AWS 시크릿 액세스 키
     account_id: Cloudflare 계정 ID
 about:
-  title: AIRI — 정보
-  app-name: AIRI
+  title: Anima — 정보
+  app-name: Anima
   tagline: 당신의 AI 컴패니언, 이제 데스크톱에.
-  body: AIRI는 데스크톱 AI 컴패니언입니다 — 말하고, 보고, 반응하는 디지털 존재입니다. Rust, Slint 6, Slint로 만들어졌습니다.
+  body: Anima는 데스크톱 AI 컴패니언입니다 — 말하고, 보고, 반응하는 디지털 존재입니다. Rust, Slint 6, Slint로 만들어졌습니다.
   license: GPL-3.0-or-later 라이선스. Slint는 해당 GPL 조건에 따라 사용됩니다.
   source-label: 소스 코드
   source-url: https://github.com/moeru-ai/airi
-  credit: Neko Ayaka와 AIRI 기여자들이 만들었습니다.
+  credit: Neko Ayaka와 Anima 기여자들이 만들었습니다.
   check-update: 업데이트 확인
-  update-up-to-date: AIRI가 최신입니다.
+  update-up-to-date: Anima가 최신입니다.
   update-available: '업데이트가 있습니다:'
 stage:
   description: AI 동반자와 함께 플로팅 스테이지 창을 표시하고 배치합니다.
@@ -190,7 +190,7 @@ stage:
     head: 머리 위
     none: 없음
     preview: 미리 보기
-    previewSample: AIRI가 말할 때 자막이 이렇게 표시됩니다.
+    previewSample: Anima가 말할 때 자막이 이렇게 표시됩니다.
   stripSection:
     title: 컨트롤 스트립
     hint: 컨트롤 스트립에 표시할 스테이지 컨트롤을 선택하세요.
@@ -238,7 +238,7 @@ audio:
   save: 저장
   saveError: 저장하지 못했습니다. 다시 시도하세요.
 profile:
-  description: AIRI에게 보이는 당신.
+  description: Anima에게 보이는 당신.
   identitySection: 신원
   name: 표시 이름
   namePlaceholder: 당신의 이름
@@ -252,7 +252,7 @@ profile:
   save: 저장
   saveError: 저장하지 못했습니다. 다시 시도하세요.
 notify:
-  replyReady: AIRI의 답변이 도착했어요
+  replyReady: Anima의 답변이 도착했어요
 common:
   close: 닫기
 
@@ -325,7 +325,7 @@ models:
     paid: 유료 / 커미션
     visit: 방문
     knowRepository: 괜찮은 모델 저장소를 알고 계신가요?
-    knowRepositoryHint: 더 많은 무료 저장소, 도구, 아카이브를 추천하여 AIRI 커뮤니티 성장을 도와주세요.
+    knowRepositoryHint: 더 많은 무료 저장소, 도구, 아카이브를 추천하여 Anima 커뮤니티 성장을 도와주세요.
     submitOnGithub: GitHub에서 제안
     formats:
       all: 모든 형식
@@ -338,9 +338,9 @@ onboarding:
   deferredNotice: '이 Slint 빌드에서는 첫 실행 완료 기능이 아직 연결되지 않았습니다 — 이 화면들은 프레젠테이션용입니다. 마법사를 완료하거나 건너뛰는 버튼은 온보딩 스토어가 들어오면 활성화됩니다.'
   deferredTip: '아직 연결 안 됨 — 첫 실행 온보딩 스토어가 이 동작을 활성화합니다.'
   v3:
-    brand: 'AIRI 컴패니언 설정'
+    brand: 'Anima 컴패니언 설정'
     stageReady: '무대 준비 완료'
-    heroTitle: 'AIRI에 오신 것을 환영합니다'
+    heroTitle: 'Anima에 오신 것을 환영합니다'
     heroSubtitle: '컴패니언의 무대 — 몇 분 만에 설정, 100% 내 컴퓨터에서.'
     companionQuote: '안녕하세요! 저는 당신의 자율 디지털 컴패니언입니다. 음성 대화, 창의적인 무대 공연, 조용한 데스크톱 존재감 — 무엇이든 당신의 세계에 맞게 적응할 수 있습니다.'
     pillWebgpu: '로컬 WebGPU 코어'
@@ -355,7 +355,7 @@ notice:
   deferredTip: '알림 창 액션 브리지(windowAction / pageMounted / pageUnmounted)가 필요하며, Slint 빌드에는 아직 없습니다.'
   index:
     title: '알림'
-    subtitle: 'AIRI의 메인 프로세스는 일회성 프롬프트에 대해 일시적인 알림 창을 표시합니다. 이 페이지는 데스크톱 앱이 제공하는 알림을 나열합니다.'
+    subtitle: 'Anima의 메인 프로세스는 일회성 프롬프트에 대해 일시적인 알림 창을 표시합니다. 이 페이지는 데스크톱 앱이 제공하는 알림을 나열합니다.'
     surfaces: '알림 표면'
     fadeOnHoverTitle: 'Fade on Hover 튜토리얼'
     fadeOnHoverSubtitle: '커서가 가까워지면 캐릭터를 흐리게 하는 자동 숨김 동작을 설명합니다.'
@@ -391,13 +391,13 @@ modules:
   entries:
     memory:
       blurb: '동반자의 단기·장기 기억, 저널, retrieval.'
-      reason: 'Slint에서 사용 가능 — 경로는 설정 내비가 처리. 백엔드는 airi-core memory(journal, retrieval, embeddings)에 구현됨. 설정 표면은 이번 wave에 도착.'
+      reason: 'Slint에서 사용 가능 — 경로는 설정 내비가 처리. 백엔드는 anima-core memory(journal, retrieval, embeddings)에 구현됨. 설정 표면은 이번 wave에 도착.'
     speech:
       blurb: '동반자를 위한 텍스트 음성 출력.'
-      reason: 'Slint에서 사용 가능 — 백엔드는 airi-speech(TTS 정의 26개 + Kokoro)에 구현됨. Slint TTS/STT 설정 표면은 이번 wave에 도착.'
+      reason: 'Slint에서 사용 가능 — 백엔드는 anima-speech(TTS 정의 26개 + Kokoro)에 구현됨. Slint TTS/STT 설정 표면은 이번 wave에 도착.'
     hearing:
       blurb: '마이크 입력, 음성 활동 감지, 전사.'
-      reason: 'Slint에서 사용 가능 — 백엔드는 airi-stt(capture, Silero VAD, Deepgram/Aliyun/whisper-local)에 구현됨. Slint 청취 설정 표면은 이번 wave에 도착.'
+      reason: 'Slint에서 사용 가능 — 백엔드는 anima-stt(capture, Silero VAD, Deepgram/Aliyun/whisper-local)에 구현됨. Slint 청취 설정 표면은 이번 wave에 도착.'
     vision:
       blurb: '화면과 카메라 시각 인식.'
       reason: '연기됨 — Slint vision 스택 없음(moondream/blip/apple-core-ai는 Rust 레지스트리에 없음). 현재 Electron 앱에 존재.'
@@ -423,7 +423,7 @@ modules:
       blurb: '자체 저장소에 스냅샷 백업(BYOS).'
       reason: '연결됨 — 로컬 폴더 타깃, 스냅샷 검증/복원. S3/메시/선택적 동기화 미연결.'
     pluginHost:
-      blurb: 'AIRI 플러그인 패키지의 호스트.'
+      blurb: 'Anima 플러그인 패키지의 호스트.'
       reason: '스캐폴드만 — discovery/활성화/capability 버스 없음. Slint v1 면제. Electron 메인 프로세스가 플러그인을 호스트.'
     vrm:
       blurb: 'VRM 모델 렌더링과 스테이지 씬.'
@@ -453,7 +453,7 @@ memory:
   shortTerm:
     title: '단기 & retrieval'
     badge: '연결됨'
-    note: 'topK는 프롬프트에 주입될 retrieval 메모리 수를 제한합니다 (1–20). retrieval 순위는 의미 유사도(가중 0.75)와 어휘 중첩(가중 0.25)을 airi-core에서 블렌딩합니다. 메모리가 활성화된 동안 채팅 파이프라인이 이를 소비합니다.'
+    note: 'topK는 프롬프트에 주입될 retrieval 메모리 수를 제한합니다 (1–20). retrieval 순위는 의미 유사도(가중 0.75)와 어휘 중첩(가중 0.25)을 anima-core에서 블렌딩합니다. 메모리가 활성화된 동안 채팅 파이프라인이 이를 소비합니다.'
   topK:
     label: 'Retrieval top-k'
     description: '프롬프트당 retrieval이 주입할 수 있는 메모리 수 (1–20).'
@@ -466,7 +466,7 @@ memory:
     refresh: '새로고침'
     emptyTitle: '아직 저널 항목이 없습니다'
     emptySubtitle: '아직 저널 항목이 없습니다 — 앱을 사용할수록 채팅 메모리가 채워집니다.'
-  footer: '설정과 저널은 이 프로필의 airi-store SQLite 볼트(airi.sqlite)에 저장됩니다. 메모리는 채팅 컨텍스트를 풍부하게 하며 — 설정한 LLM 제공자 외에는 기기를 벗어나지 않습니다.'
+  footer: '설정과 저널은 이 프로필의 anima-store SQLite 볼트(airi.sqlite)에 저장됩니다. 메모리는 채팅 컨텍스트를 풍부하게 하며 — 설정한 LLM 제공자 외에는 기기를 벗어나지 않습니다.'
   saveError: '저장에 실패했습니다 — 자세한 내용은 상태 표시줄을 확인하세요.'
   time:
     justNow: '방금 전'
@@ -478,7 +478,7 @@ hearing:
   description: '동반자의 마이크 입력과 청취 환경설정.'
   enable:
     title: '청취 켜기'
-    description: 'AIRI가 듣기를 원한다는 의도를 기록합니다. 캡처 파이프라인이 도착하면 적용됩니다 — 이것을 저장해도 마이크는 열리지 않습니다.'
+    description: 'Anima가 듣기를 원한다는 의도를 기록합니다. 캡처 파이프라인이 도착하면 적용됩니다 — 이것을 저장해도 마이크는 열리지 않습니다.'
   mode:
     title: '청취 모드'
     caption: 'Auto는 계속 듣습니다 (캡처 파이프라인 필요). PTT는 단축키를 누르는 동안만 듣습니다.'
@@ -490,7 +490,7 @@ hearing:
     caption: '이 빌드에서는 전역 단축키 등록이 연결되어 있지 않습니다 — 값은 저장되지만 단축키는 아직 작동하지 않습니다.'
   device:
     title: '입력 장치'
-    caption: '캡처 파이프라인이 도착하면 AIRI가 사용할 마이크를 선택합니다.'
+    caption: '캡처 파이프라인이 도착하면 Anima가 사용할 마이크를 선택합니다.'
     emptyTitle: '입력 장치가 열거되지 않았습니다'
     emptySubtitle: '이 Slint 빌드는 아직 마이크를 나열할 수 없습니다 — 오디오 캡처는 연결되지 않았습니다.'
     useDefault: '시스템 기본값'
@@ -499,7 +499,7 @@ hearing:
   nav: '청취'
 speech:
   title: '음성'
-  description: 'AIRI용 텍스트 음성 변환. 카탈로그에서 제공자를 선택하고, 목소리와 속도를 조정하고, 확인용 샘플 파일을 씁니다. 포트 상태는 Rust speech 레지스트리에서 그대로입니다.'
+  description: 'Anima용 텍스트 음성 변환. 카탈로그에서 제공자를 선택하고, 목소리와 속도를 조정하고, 확인용 샘플 파일을 씁니다. 포트 상태는 Rust speech 레지스트리에서 그대로입니다.'
   providers:
     caption: '텍스트 음성 변환 제공자'
     empty: '제공자 카탈로그를 불러오지 못했습니다 — 콘솔을 확인하세요.'
@@ -520,19 +520,19 @@ speech:
     caption: '샘플 합성'
     description: '선택한 제공자로 짧은 샘플을 합성해 프로필 디렉터리 아래의 새 파일에 씁니다. 제공자의 기본 엔드포인트를 사용하며, 재생하지 않습니다.'
     label: '샘플 텍스트'
-    placeholder: '안녕하세요, 저는 AIRI입니다.'
+    placeholder: '안녕하세요, 저는 Anima입니다.'
     button: '샘플 합성'
     written: '샘플을 썼습니다:'
     notPlayable: '샘플 파일은 디스크에 쓰이며 앱 안에서 아직 재생할 수 없습니다 — 시스템 플레이어로 여세요.'
   stt:
     caption: '음성 인식'
     title: '음성 인식은 다른 곳에 있습니다 (여기서는 연결 안 됨)'
-    body: 'airi-stt는 STT 클라이언트를 이식합니다: Whisper(인프로세스, whisper-rs), OpenAI 호환 /audio/transcriptions 클라이언트, Deepgram streaming 클라이언트, Aliyun NLS(streaming, 사전 발급 토큰 필요). 이를 구동할 Slint 청취 표면은 아직 없습니다 — 이 페이지는 텍스트 음성 변환만 설정합니다.'
+    body: 'anima-stt는 STT 클라이언트를 이식합니다: Whisper(인프로세스, whisper-rs), OpenAI 호환 /audio/transcriptions 클라이언트, Deepgram streaming 클라이언트, Aliyun NLS(streaming, 사전 발급 토큰 필요). 이를 구동할 Slint 청취 표면은 아직 없습니다 — 이 페이지는 텍스트 음성 변환만 설정합니다.'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
   caption: '옵트인 awareness 데몬의 상태, 소스별 스위치, kill switch 및 로컬 감사 로그. 여기의 어떤 것도 스스로 작동하지 않습니다.'
-  daemonDownTitle: 'airi-daemon이 실행 중이 아닙니다'
+  daemonDownTitle: 'anima-daemon이 실행 중이 아닙니다'
   daemonDownSubtitle: 'awareness 데몬은 옵트인 사용자 세션 서비스입니다. dev-run 안내: packaging/README.md.'
   retry: '다시 시도'
   killSwitch:
@@ -626,7 +626,7 @@ widgets:
 
 data:
   title: '데이터'
-  description: '이 기기에 로컬로 저장되는 모든 AIRI 데이터 — 내보내기, 가져오기 또는 무거운 기록 정리.'
+  description: '이 기기에 로컬로 저장되는 모든 Anima 데이터 — 내보내기, 가져오기 또는 무거운 기록 정리.'
   status:
     notWired: '내보내기는 아직 Rust 백엔드에 연결되지 않았습니다 — 단계 노트를 참조하세요'
     actionNotWired: '이 동작은 아직 Rust 백엔드에 연결되지 않았습니다 — 단계 노트를 참조하세요'
@@ -758,9 +758,9 @@ data:
 
 mcp:
   title: 'MCP 서버 & 도구'
-  description: 'Model Context Protocol (MCP) 서버를 연결하고 관리하여 AIRI에 확장 가능한 도구 기능을 제공합니다.'
-  deferredTip: '아직 연결 안 됨 — MCP 클라이언트는 별도 레인(airi-mcp)에서 제공됩니다. 이 미리보기는 레이아웃만 표시하며, 여기서 설정을 읽거나 쓰지 않습니다.'
-  deferredNotice: 'MCP 브리지가 아직 연결되지 않았습니다. 표시된 서버는 Electron의 기본 문서 예시이며 사용자의 설정이 아닙니다 — airi-mcp 레인이 들어올 때까지 모든 컨트롤은 비활성입니다.'
+  description: 'Model Context Protocol (MCP) 서버를 연결하고 관리하여 Anima에 확장 가능한 도구 기능을 제공합니다.'
+  deferredTip: '아직 연결 안 됨 — MCP 클라이언트는 별도 레인(anima-mcp)에서 제공됩니다. 이 미리보기는 레이아웃만 표시하며, 여기서 설정을 읽거나 쓰지 않습니다.'
+  deferredNotice: 'MCP 브리지가 아직 연결되지 않았습니다. 표시된 서버는 Electron의 기본 문서 예시이며 사용자의 설정이 아닙니다 — anima-mcp 레인이 들어올 때까지 모든 컨트롤은 비활성입니다.'
   notWiredBadge: '아직 연결 안 됨'
   tabs:
     manage: '관리'
@@ -772,7 +772,7 @@ mcp:
     configPathHint: "Electron 기본값은 app.getPath('appData') + '/airi/mcp.json'이며 Slint 브리지도 같은 규칙을 따릅니다. 표시된 경로는 예시용이며 디스크에서 읽지 않습니다."
     configuredServers: '구성된 서버'
     documentedExample: '문서 예시'
-    exampleNote: '문서로 표시됨 — AIRI Desktop(Electron main)에 내장된 기본 설정이며, AIRI가 연결한 서버가 아닙니다.'
+    exampleNote: '문서로 표시됨 — Anima Desktop(Electron main)에 내장된 기본 설정이며, Anima가 연결한 서버가 아닙니다.'
     serverStateUnknown: '알 수 없음'
     transportStdio: '로컬 stdio'
     toolsNone: '도구 0개'
@@ -833,7 +833,7 @@ mcp:
 
 discord:
   title: 'Discord'
-  description: 'AIRI 컴패니언과 Discord 서버 및 다이렉트 메시지를 잇는 메시징 브리지.'
+  description: 'Anima 컴패니언과 Discord 서버 및 다이렉트 메시지를 잇는 메시징 브리지.'
   deferredNotice: 'Discord 모듈은 아직 Rust 게이트웨이에 연결되지 않았습니다. Bot 연결, 릴레이 동작, 접근 라우팅은 구조 미리보기로 표시됩니다 — 게이트웨이 브리지가 들어올 때까지 모든 동작은 비활성화됩니다.'
   deferredTip: 'Slint 빌드에는 Discord 게이트웨이 브리지(웹소켓 수명주기, 토큰 저장소, Rust 서비스)가 필요합니다.'
   tabs:
@@ -847,7 +847,7 @@ discord:
     tokenDescription: 'Developer Portal에서 받은 Discord Bot 토큰.'
     tokenPlaceholder: 'Bot 토큰을 붙여넣으세요…'
     ownerLabel: 'Bot 소유자 / 기본 사용자 이름'
-    ownerDescription: '당신의 Discord 핸들(예: dasilva333). AIRI는 소유자 권한과 메모리 동기화를 위해 계정 ID를 자동으로 확인합니다.'
+    ownerDescription: '당신의 Discord 핸들(예: dasilva333). Anima는 소유자 권한과 메모리 동기화를 위해 계정 ID를 자동으로 확인합니다.'
     ownerPlaceholder: '예: dasilva333'
     ownerIdPending: '확인된 소유자 ID: 미확인 — 게이트웨이 브리지 필요.'
     connect: '연결'
@@ -956,7 +956,7 @@ cloudSync:
     endpointPlaceholder: 'https://s3.amazonaws.com'
     bucketLabel: '버킷 이름'
     bucketDescription: '클라우드 버킷의 이름.'
-    bucketPlaceholder: 'my-airi-sync'
+    bucketPlaceholder: 'my-anima-sync'
     regionLabel: '리전'
     regionDescription: '버킷의 리전(비워두면 us-east-1).'
     regionPlaceholder: 'us-east-1'
@@ -971,7 +971,7 @@ cloudSync:
     localCaption: '로컬 공유 설정'
     localPathLabel: '백업 디렉터리 경로'
     localPathDescription: '로컬 동기화 폴더 또는 마운트된 네트워크 드라이브(NAS / Samba 공유)의 절대 경로.'
-    localPathPlaceholder: '/Volumes/AIRI-Backup-Share'
+    localPathPlaceholder: '/Volumes/Anima-Backup-Share'
     testConnection: '연결 테스트'
   sync:
     title: '동기화'
@@ -1000,11 +1000,11 @@ cloudSync:
   mesh:
     title: '로컬 메시 동기화'
     enableLabel: 'libp2p 메시 동기화 켜기'
-    enableDescription: '메모리, 볼트 자격 증명, 컴패니언 카드를 로컬 네트워크의 다른 AIRI 인스턴스와 직접 동기화합니다.'
+    enableDescription: '메모리, 볼트 자격 증명, 컴패니언 카드를 로컬 네트워크의 다른 Anima 인스턴스와 직접 동기화합니다.'
     memoryLabel: '메모리 (STMM / LTMM / Event Ledger)'
     vaultLabel: '볼트 (BYOS 자격 증명)'
     companionsLabel: '컴패니언 (캐릭터 카드)'
-    targetDescription: 'libp2p를 통해 페어링된 AIRI 인스턴스와 동기화됩니다.'
+    targetDescription: 'libp2p를 통해 페어링된 Anima 인스턴스와 동기화됩니다.'
   actions:
     title: '수동 작업'
     manualTitle: '수동 동기화'
@@ -1061,7 +1061,7 @@ cloudSync:
     cancel: '취소'
 pluginHost:
   title: 'Plugin Host'
-  description: 'AIRI 플러그인을 검사하고 관리합니다: 발견된 매니페스트, 활성화, 로드된 세션 및 공지된 기능.'
+  description: 'Anima 플러그인을 검사하고 관리합니다: 발견된 매니페스트, 활성화, 로드된 세션 및 공지된 기능.'
   notWiredBadge: '아직 연결 안 됨'
   deferredTip: '아직 연결 안 됨 — Slint 빌드에는 플러그인 호스트가 없습니다. 이 미리보기는 레이아웃만 보여줍니다. 여기서 플러그인을 발견, 로드하거나 저장하지 않습니다.'
   deferredNotice: '이 빌드에서는 플러그인 호스트가 연결되지 않았습니다. 매니페스트는 디스크에서 발견되지 않고, 플러그인은 로드되지 않으며, 아래 모든 컨트롤은 Slint 플러그인 호스트(또는 Electron 스타일 브리지)가 들어올 때까지 비활성입니다.'
@@ -1080,7 +1080,7 @@ pluginHost:
     configLabel: '활성화 저장소'
     portLabel: '포트'
     portValue: '없음 — 인프로세스 호스트'
-    portHint: 'Electron 플러그인 호스트는 메인 프로세스 내에서 실행되며 TCP 포트가 없습니다. 포트 6121은 AIRI 채널 서버(SERVER_CHANNEL_PORT)의 것이며 플러그인 호스트와 무관합니다.'
+    portHint: 'Electron 플러그인 호스트는 메인 프로세스 내에서 실행되며 TCP 포트가 없습니다. 포트 6121은 Anima 채널 서버(SERVER_CHANNEL_PORT)의 것이며 플러그인 호스트와 무관합니다.'
   installed:
     section: '설치된 플러그인'
     emptyTitle: '이 빌드에 설치된 플러그인이 없습니다'
@@ -1112,7 +1112,7 @@ pluginHost:
     portLabel: '포트'
     portDescription: '가상의 호스트 포트. 실제 호스트는 인프로세스이며 포트가 없습니다.'
     portPlaceholder: '연결 안 됨'
-    portHint: '포트 6121은 AIRI 채널 서버(SERVER_CHANNEL_PORT)이지 플러그인 호스트가 아닙니다. 어떤 값도 허구입니다.'
+    portHint: '포트 6121은 Anima 채널 서버(SERVER_CHANNEL_PORT)이지 플러그인 호스트가 아닙니다. 어떤 값도 허구입니다.'
     logLevelLabel: '로그 레벨'
     pluginDirLabel: '플러그인 디렉터리'
     pluginDirPlaceholder: '<userData>/plugins/v1'

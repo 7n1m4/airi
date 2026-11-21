@@ -1,5 +1,5 @@
 import type { createContext } from '@moeru/eventa/adapters/electron/main'
-import type { ActiveWindowEntry, WindowInfo } from '@proj-airi/stage-shared'
+import type { ActiveWindowEntry, WindowInfo } from '@proj-anima/stage-shared'
 
 import { Buffer } from 'node:buffer'
 import { createRequire } from 'node:module'
@@ -17,7 +17,7 @@ import {
   sensorsGetSystemMemory,
   sensorsGetVolumeLevel,
   sensorsSetTrackingEnabled,
-} from '@proj-airi/stage-shared'
+} from '@proj-anima/stage-shared'
 import { x } from 'tinyexec'
 
 import { notImplemented } from '../../rpc'

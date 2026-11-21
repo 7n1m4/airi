@@ -5,9 +5,9 @@ import type {
   CalibrationTelemetryTrace,
   CatalogGame,
   MiniProgramDefinition,
-} from '@proj-airi/stage-ui/types'
+} from '@proj-anima/stage-ui/types'
 
-import { useArcadeSynthesizer } from '@proj-airi/stage-ui/composables'
+import { useArcadeSynthesizer } from '@proj-anima/stage-ui/composables'
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { computed, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'

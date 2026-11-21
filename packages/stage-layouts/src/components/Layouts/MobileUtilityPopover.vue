@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
 import { storeToRefs } from 'pinia'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { computed, ref } from 'vue'

@@ -59,7 +59,7 @@ Defines generative visual styling for the character:
 
 ## Proactivity, Memory & Operating Schedules
 
-AIRI characters operate on proactive schedules even when you are not actively chatting:
+Anima characters operate on proactive schedules even when you are not actively chatting:
 
 ### Operating Schedules & Cognitive Heartbeats
 
@@ -86,7 +86,7 @@ AIRI characters operate on proactive schedules even when you are not actively ch
 ![Character Gallery Grid](/showcase/card-system-gallery-grid.avif)
 
 - **Drag-and-Drop Import Wizard**: Drop SillyTavern PNG cards or JSON files anywhere on the app for instant parsing with automatic collision renaming.
-- **In-App Webview Browser**: Browse character card repositories and community hubs (Chub.ai, CharacterHub) directly within AIRI and import cards with a single click.
+- **In-App Webview Browser**: Browse character card repositories and community hubs (Chub.ai, CharacterHub) directly within Anima and import cards with a single click.
 
 ![In-App Webview Browser](/showcase/card-system-inapp-webview.avif)
 

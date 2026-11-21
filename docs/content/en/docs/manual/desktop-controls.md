@@ -5,7 +5,7 @@ description: Master the floating Control Strip, window layouts, caption docking,
 
 # Desktop Controls & Shortcuts
 
-Project AIRI is engineered as a lightweight desktop companion that sits harmoniously alongside your work, coding, and gaming windows. This guide explains how to control AIRI's floating windows, manage stage overlays, and use keyboard shortcuts.
+Project Anima is engineered as a lightweight desktop companion that sits harmoniously alongside your work, coding, and gaming windows. This guide explains how to control Anima's floating windows, manage stage overlays, and use keyboard shortcuts.
 
 ---
 
@@ -28,7 +28,7 @@ The **Control Strip** is a compact, floating dock that gives you quick access to
 
 ## 2. Window Modes & Positioning
 
-AIRI's desktop interface consists of several modular windows that can be repositioned and pinned anywhere on your monitors:
+Anima's desktop interface consists of several modular windows that can be repositioned and pinned anywhere on your monitors:
 
 ### Stage Window (Avatar Display)
 - **Dragging**: Click and drag the model stage to place your avatar anywhere on your screen (e.g., bottom-right corner or perched on your taskbar).
@@ -60,4 +60,4 @@ AIRI's desktop interface consists of several modular windows that can be reposit
 
 If you use multiple monitors:
 - You can drag the Stage window and Control Strip across different displays.
-- AIRI remembers window positions across restarts and restores each window to its designated screen.
+- Anima remembers window positions across restarts and restores each window to its designated screen.

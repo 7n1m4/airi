@@ -22,7 +22,7 @@ name: 'CI: Linux Window Smoke'
 #   pnpm install --frozen-lockfile && pnpm run build:packages
 #   SMOKE_EXPECT_SESSION_TYPE=x11 \
 #     xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
-#     pnpm -F @proj-airi/stage-tamagotchi run smoke:linux-window-render
+#     pnpm -F @proj-anima/stage-tamagotchi run smoke:linux-window-render
 
 on:
   push:
@@ -127,7 +127,7 @@ jobs:
         run: hutch electrobun prepare
 
       - run: pnpm run build:packages
-      - run: pnpm -F @proj-airi/stage-tamagotchi run build
+      - run: pnpm -F @proj-anima/stage-tamagotchi run build
 
       - name: Record toolchain versions
         run: |
@@ -150,7 +150,7 @@ jobs:
         # placement and screenshots comparable between runs.
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24 -nolisten tcp" \
-            pnpm -F @proj-airi/stage-tamagotchi run smoke:linux-window-render
+            pnpm -F @proj-anima/stage-tamagotchi run smoke:linux-window-render
 
       - name: Upload smoke report
         if: always()
@@ -220,7 +220,7 @@ jobs:
         run: hutch electrobun prepare
 
       - run: pnpm run build:packages
-      - run: pnpm -F @proj-airi/stage-tamagotchi run build
+      - run: pnpm -F @proj-anima/stage-tamagotchi run build
 
       - name: Record toolchain versions
         run: |
@@ -271,7 +271,7 @@ jobs:
         # asserts the session type it actually ran in matches.
         run: |
           unset DISPLAY
-          pnpm -F @proj-airi/stage-tamagotchi run smoke:linux-window-render
+          pnpm -F @proj-anima/stage-tamagotchi run smoke:linux-window-render
 
       - name: Stop Weston
         if: always()

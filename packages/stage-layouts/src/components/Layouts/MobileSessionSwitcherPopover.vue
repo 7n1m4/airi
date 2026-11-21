@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ChatSessionModal } from '@proj-airi/stage-ui/components'
-import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import { ChatSessionModal } from '@proj-anima/stage-ui/components'
+import { useChatSessionStore } from '@proj-anima/stage-ui/stores/chat/session-store'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
 import { storeToRefs } from 'pinia'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { computed, ref } from 'vue'

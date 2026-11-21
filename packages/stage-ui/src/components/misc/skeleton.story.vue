@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Skeleton } from '@proj-airi/ui'
+import { Skeleton } from '@proj-anima/ui'
 </script>
 
 <template>

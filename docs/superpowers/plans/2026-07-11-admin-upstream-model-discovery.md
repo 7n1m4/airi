@@ -205,7 +205,7 @@ Add localizations for `actions.fetchModels`, `messages.modelsFetched`, and `mess
 - [x] **Step 3: Run focused web verification and commit Task 4**
 
 ```powershell
-pnpm -F @proj-airi/stage-web typecheck
+pnpm -F @proj-anima/stage-web typecheck
 pnpm exec vitest run --config apps/stage-web/src/pages/admin/adminApi.vitest.config.ts apps/stage-web/src/pages/admin/adminApi.test.ts
 git add apps/stage-web/src/pages/admin/components/AdminOfficialGatewayPanel.vue packages/i18n/src/locales/zh-Hans/settings.yaml packages/i18n/src/locales/en/settings.yaml
 git commit -m "feat(web): select discovered upstream models"
@@ -222,8 +222,8 @@ git commit -m "feat(web): select discovered upstream models"
 ```powershell
 & 'D:\\Tools\\airi\\.node24.local\\node-v24.13.0-win-x64\\node.exe' .\\node_modules\\vitest\\vitest.mjs run apps/server/src/services/domain/admin/router-config/tests/admin-router-config.test.ts apps/server/src/routes/admin/config/router/route.test.ts
 pnpm exec vitest run --config apps/stage-web/src/pages/admin/adminApi.vitest.config.ts apps/stage-web/src/pages/admin/adminApi.test.ts
-pnpm -F @proj-airi/server typecheck
-pnpm -F @proj-airi/stage-web typecheck
+pnpm -F @proj-anima/server typecheck
+pnpm -F @proj-anima/stage-web typecheck
 git diff --check
 ```
 

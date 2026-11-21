@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Alert } from '@proj-airi/ui'
+import { Alert } from '@proj-anima/ui'
 import { computed, ref } from 'vue'
 
 import RadioCardDetail from './radio-card-detail.vue'

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MessagingFriends } from '@proj-airi/stage-ui/components'
+import { MessagingFriends } from '@proj-anima/stage-ui/components'
 </script>
 
 <template>

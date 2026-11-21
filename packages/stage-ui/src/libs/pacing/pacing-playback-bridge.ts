@@ -1,4 +1,4 @@
-import type { PlaybackItem } from '@proj-airi/pipelines-audio'
+import type { PlaybackItem } from '@proj-anima/pipelines-audio'
 
 import type { AsideCandidate, Clock, PacingPlaybackMeta, ThinkingCategory } from '../../types/pacing'
 import type { ThinkingAudioFingerprintParams } from './pacing-cache'

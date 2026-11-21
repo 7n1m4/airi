@@ -28,7 +28,7 @@ Instead of searching for broad keywords (`voice`, `game`, `discord`) that yield 
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ 1. TELEGRAM INGESTION (Modern Eventa/SDK vs. Legacy Sidecar)                 │
 │    • Exclude: Legacy `services/telegram` static files                       │
-│    • Signatures: `grammy`, `telegraf`, `@proj-airi/plugin-telegram`,         │
+│    • Signatures: `grammy`, `telegraf`, `@proj-anima/plugin-telegram`,         │
 │                 `telegram-bot-api`, `TelegramBot`, `TelegramClient`          │
 │                                                                             │
 │ 2. IN-BROWSER MACHINE LEARNING & WEBGPU                                      │

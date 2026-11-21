@@ -3,7 +3,7 @@ import type {
   TransportCapabilities,
   TransportHandler,
   TransportStatus,
-} from '@proj-airi/stage-shared/transport'
+} from '@proj-anima/stage-shared/transport'
 
 const DEFAULT_CAPABILITIES: TransportCapabilities = {
   isLocalOnly: false,

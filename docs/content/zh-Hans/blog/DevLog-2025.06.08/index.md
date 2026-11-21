@@ -9,9 +9,9 @@ preview-cover:
   dark: "@assets('./assets/250608-dark.avif')"
 ---
 
-大家好，我是 LemonNeko，AIRI 的维护者之一，由我来为大家带来今天的 DevLog：让 AIRI 桌宠的 Live2D 模型可以注视鼠标位置。
+大家好，我是 LemonNeko，Anima 的维护者之一，由我来为大家带来今天的 DevLog：让 Anima 桌宠的 Live2D 模型可以注视鼠标位置。
 
-Hello everyone, here's LemonNeko, one of maintainer of AIRI. Today's DevLog is talking about: Let Live2D model of AIRI Tamagotchi to focus position.
+Hello everyone, here's LemonNeko, one of maintainer of Anima. Today's DevLog is talking about: Let Live2D model of Anima Tamagotchi to focus position.
 
 ## 思路整理「Chain of Thoughts」
 
@@ -39,16 +39,16 @@ For example, we have a screen like this:
 
 ![](./assets/screen.avif)
 
-蓝色框是屏幕，粉色是 AIRI 的窗口，紫色箭头是鼠标，我们定义：
+蓝色框是屏幕，粉色是 Anima 的窗口，紫色箭头是鼠标，我们定义：
 
-The blue box is the screen, the pink box is the AIRI window, the purple arrow is the cursor, we define:
+The blue box is the screen, the pink box is the Anima window, the purple arrow is the cursor, we define:
 
 - 屏幕高宽为：`A x B`<br>The screen size is: `A x B`
-- AIRI 窗口左上角位置为：`(E, F)`<br>The position of AIRI window is: `(E, F)`
-- AIRI 窗口大小为：`C x D`<br>The size of AIRI window is: `C x D`
+- Anima 窗口左上角位置为：`(E, F)`<br>The position of Anima window is: `(E, F)`
+- Anima 窗口大小为：`C x D`<br>The size of Anima window is: `C x D`
 - 鼠标位置是：`G, H`<br>The position of cursor is: `G, H`
 
-那么鼠标的位置在 AIRI 窗口中的位置应当是：`(G - E, H - F)`
+那么鼠标的位置在 Anima 窗口中的位置应当是：`(G - E, H - F)`
 
 Then the relative position of cursor to window is: `(G - E, H - F)`
 

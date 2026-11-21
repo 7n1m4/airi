@@ -266,14 +266,14 @@ Local model drivers (Kokoro TTS, Whisper STT, WebLLM, Web-RWKV) rely on WebGPU a
 ### Automated Verification & Invariants
 * Run typecheck on affected workspaces:
   ```bash
-  pnpm -F @proj-airi/stage-ui typecheck
+  pnpm -F @proj-anima/stage-ui typecheck
   pnpm -F stage-tamagotchi typecheck
   ```
 
 ### Manual Dev-Mode HMR Verification
 1. Launch `stage-tamagotchi` in dev mode:
    ```bash
-   pnpm -F @proj-airi/stage-tamagotchi dev
+   pnpm -F @proj-anima/stage-tamagotchi dev
    ```
 2. Trigger an LLM chat turn to verify initial speech playback.
 3. Edit `session-store.ts` or `chat.ts` (both Phase 0C accepted stores) and save while the app is running.

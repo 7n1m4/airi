@@ -1,6 +1,6 @@
 ---
 title: コントリビューション
-description: Project AIRI への貢献
+description: Project Anima への貢献
 ---
 
 こんにちは！このプロジェクトへの貢献に興味を持っていただきありがとうございます。このガイドは、あなたが始めるのに役立ちます。

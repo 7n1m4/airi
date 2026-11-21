@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { createAudioBlob } from '@proj-airi/stage-shared'
-import { FieldCheckbox, FieldInput } from '@proj-airi/ui'
+import { createAudioBlob } from '@proj-anima/stage-shared'
+import { FieldCheckbox, FieldInput } from '@proj-anima/ui'
 import { computed, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 

@@ -1,4 +1,4 @@
-import { createAudioBlob } from '@proj-airi/stage-shared'
+import { createAudioBlob } from '@proj-anima/stage-shared'
 import { useBroadcastChannel } from '@vueuse/core'
 import { ref } from 'vue'
 import { toast } from 'vue-sonner'

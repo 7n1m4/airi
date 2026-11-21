@@ -139,6 +139,6 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Run libp2p P2P integration tests
         run: |
-          pnpm -F @proj-airi/stage-tamagotchi exec vitest run \
+          pnpm -F @proj-anima/stage-tamagotchi exec vitest run \
             src/main/services/airi/libp2p/pairing-trust-flow.test.ts \
             src/main/services/airi/libp2p/transports.test.ts

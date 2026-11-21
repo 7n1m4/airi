@@ -5,8 +5,8 @@
 When a desktop mascot renders over a transparent desktop window, standard static lighting often makes the character look "pasted on" or detached from the desktop environment. In real-world lighting, desktop monitors and active applications cast strong localized ambient light onto nearby physical objects.
 
 This document specifies the architecture, mathematical model, and implementation roadmap for **Dynamic Desktop Ambient Lighting** across AIRI's avatar runtimes:
-1. **3D Avatars (VRM & MMD)**: Driving real-time 4-point directional lighting rigs in Three.js (`@proj-airi/stage-ui-three` and `@proj-airi/stage-ui-mmd`).
-2. **2D Avatars (Live2D Extension)**: Driving a real-time WebGL/PixiJS post-processing shader filter (`@proj-airi/stage-ui-live2d`), adopting and integrating the upstream pattern established in **PR #2391** (`feat(stage-*): add screen ambient light`).
+1. **3D Avatars (VRM & MMD)**: Driving real-time 4-point directional lighting rigs in Three.js (`@proj-anima/stage-ui-three` and `@proj-anima/stage-ui-mmd`).
+2. **2D Avatars (Live2D Extension)**: Driving a real-time WebGL/PixiJS post-processing shader filter (`@proj-anima/stage-ui-live2d`), adopting and integrating the upstream pattern established in **PR #2391** (`feat(stage-*): add screen ambient light`).
 
 ```text
                    [ 🖥️ Top Screen Band (Menu Bar / Active App Header) ]
@@ -105,7 +105,7 @@ $$v_{\text{next}} = \text{lerp}(v_{\text{current}}, v_{\text{target}}, \alpha)$$
 ## 4. Three.js Scene Integration
 
 ### 4.1 Lighting Rig in `ThreeScene.vue`
-In `@proj-airi/stage-ui-three`, four dedicated unshadowed directional lights are positioned around the avatar:
+In `@proj-anima/stage-ui-three`, four dedicated unshadowed directional lights are positioned around the avatar:
 
 ```html
 <!-- Dynamic Desktop Ambient Bounce Lights -->
@@ -142,7 +142,7 @@ VRM's MToon shader naturally supports multiple directional lights:
 3. **Bottom Bounce**: Picks up the taskbar/dock color, giving soft under-chin/feet grounding.
 
 ### 4.3 MMD Scene Integration & Shading Feasibility
-Like VRM, AIRI's MMD pipeline (`@proj-airi/stage-ui-mmd` / `packages/stage-ui-mmd/src/components/scenes/MMD.vue`) runs entirely on Three.js:
+Like VRM, AIRI's MMD pipeline (`@proj-anima/stage-ui-mmd` / `packages/stage-ui-mmd/src/components/scenes/MMD.vue`) runs entirely on Three.js:
 - **Shared Scene Graph**: `MMD.vue` manages an underlying Three.js scene, camera, and render loop powered by `MMDLoader` and `MMDAnimationHelper`.
 - **Zero-Shader-Rewrite Feasibility**: MMD PMX materials (`MeshToonMaterial`, `MeshPhongMaterial`, or custom PMX toon shaders) natively receive Three.js directional lights (`THREE.DirectionalLight`).
 - **Direct Drop-in**: The exact same 4-point directional bounce rig (`topLight`, `bottomLight`, `leftLight`, `rightLight`) configured for `ThreeScene.vue` can be mounted in `MMD.vue`, illuminating MMD models with real-time desktop color bounce with zero material modifications.

@@ -4,19 +4,19 @@
 
 ## Topology
 
-The gateway (`airi-channel`, WS on 6121) moves from the desktop app into the
+The gateway (`anima-channel`, WS on 6121) moves from the desktop app into the
 always-on user-session daemon. The app becomes another thin WS client.
 
 ```text
 external clients (Slint app, VS Code, scripts)
         │ ws://[host]:6121   wss://[host]:6121 (TLS flag)
         ▼
-   airi-daemon          org.moeru.airi.Daemon1 (D-Bus control)
+   anima-daemon          org.moeru.airi.Daemon1 (D-Bus control)
         │                 GetGatewayConfig / ApplyGatewayConfig /
         │                 RegenerateGatewayToken
         ▼
-   airi-channel         rustls acceptor, Session state machine,
-        │                typed wire frames (see crates/airi-channel/src/wire.rs)
+   anima-channel         rustls acceptor, Session state machine,
+        │                typed wire frames (see crates/anima-channel/src/wire.rs)
         ▼
    TCP 6121             loopback default; LAN/VPN/tailnet via 0.0.0.0 + TLS
 ```
@@ -92,13 +92,13 @@ what an attacker can *learn* before that gate:
 
 ## Implementation notes
 
-- `crates/airi-channel`: `certs` module (rcgen local-CA + leaf minting,
+- `crates/anima-channel`: `certs` module (rcgen local-CA + leaf minting,
   sidecar staleness detection, `0600` key storage), rustls accept loop
   (`wss://`), `tlsConfig` round-trips in `ChannelConfig`.
-- `crates/airi-daemon`: `gateway` module — config adoption, listener
+- `crates/anima-daemon`: `gateway` module — config adoption, listener
   lifecycle, periodic bind retry, D-Bus methods, audit of mutations,
   `--no-gateway` escape hatch.
-- `packaging/systemd/airi-daemon.service`: `AF_INET`/`AF_INET6` allowed,
+- `packaging/systemd/anima-daemon.service`: `AF_INET`/`AF_INET6` allowed,
   `ReadWritePaths` += server-channel dir, `MemoryMax=256M`.
 - Verification: Rust round-trip TLS test (mint → bind → upgrade → auth →
   `rpc runtime.ping` over `wss://`); D-Bus smoke against a
@@ -131,7 +131,7 @@ Why it's not the data plane:
   it (config apply, token rotation, kill switch).
 - Windows named pipes are first-class but not source-compatible with UDS
   code, and the daemon's data path is hand-rolled threads (no tokio in
-  `airi-channel`), so "both" means platform `cfg` + duplicated accept loops.
+  `anima-channel`), so "both" means platform `cfg` + duplicated accept loops.
 - Performance is not a reason here: message rate is human-cadence, payloads
   are KBs. TCP loopback overhead is unmeasurable in this profile.
 
@@ -149,7 +149,7 @@ Linux (kernel-authenticated, local-only privileged verbs; the renderer/native
 apps re-back to it). Data plane = WS everywhere, `wss://` with
 the minted local CA for anything beyond loopback. Window/Unix paths: parked.
 
-**A cheap future option, not taken now:** `airi-channel` already wraps every
+**A cheap future option, not taken now:** `anima-channel` already wraps every
 connection in a `ConnectionStream` enum (plain or TLS) over the same
 `Read`+`Write` handler. A `cfg(unix)` UnixListener variant for *native-only*
 hot paths (e.g. if the daemon ever pipes high-rate mic/TTS audio) is a small
@@ -172,6 +172,6 @@ says otherwise.
 - LAN clients need the CA (`websocket-ca-cert.pem`) installed/trusted —
   distribution is a UX step not yet designed (show path/fingerprint in
   settings UI?).
-- `renderer.*` handlers: **Slice B (airi-uyz.8) registers exactly one: `core.status`.** `Gateway::renderer_handlers` (crates/airi-daemon/src/gateway.rs) builds a map containing only `"core.status"`, backed by `CoreService::status_reply()` (crates/airi-daemon/src/core.rs) and bound via `ChannelServer::bind_with_renderer`/`bind_with_renderer_tls`. It returns sanitized `CoreStatusReply` JSON on healthy or sanitized `Err("core unavailable: ...")` on unavailable. No embedder progress callbacks are registered in the daemon. Privileged/mutating verbs remain on D-Bus (`GetGatewayConfig`/`ApplyGatewayConfig`/`RegenerateGatewayToken`). All other `renderer.<method>` still reply `rpc_not_implemented`.
+- `renderer.*` handlers: **Slice B (airi-uyz.8) registers exactly one: `core.status`.** `Gateway::renderer_handlers` (crates/anima-daemon/src/gateway.rs) builds a map containing only `"core.status"`, backed by `CoreService::status_reply()` (crates/anima-daemon/src/core.rs) and bound via `ChannelServer::bind_with_renderer`/`bind_with_renderer_tls`. It returns sanitized `CoreStatusReply` JSON on healthy or sanitized `Err("core unavailable: ...")` on unavailable. No embedder progress callbacks are registered in the daemon. Privileged/mutating verbs remain on D-Bus (`GetGatewayConfig`/`ApplyGatewayConfig`/`RegenerateGatewayToken`). All other `renderer.<method>` still reply `rpc_not_implemented`.
 - Slint native app's WS client is not built yet — that's the other consumer
-  of the Rust-canonical wire types (`crates/airi-channel/src/wire.rs`).
+  of the Rust-canonical wire types (`crates/anima-channel/src/wire.rs`).

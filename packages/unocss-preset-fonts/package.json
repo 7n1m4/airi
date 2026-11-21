@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/unocss-preset-fonts",
+  "name": "@proj-anima/unocss-preset-fonts",
   "type": "module",
   "version": "0.9.0-alpha.15",
   "description": "Fonts that are not included by Google Fonts, FontSource but open-source used by Project AIRI",
@@ -30,8 +30,8 @@
     "@unocss/preset-web-fonts": ">=66"
   },
   "dependencies": {
-    "@proj-airi/font-cjkfonts-allseto": "workspace:^",
-    "@proj-airi/font-departure-mono": "workspace:^",
-    "@proj-airi/font-xiaolai": "workspace:^"
+    "@proj-anima/font-cjkfonts-allseto": "workspace:^",
+    "@proj-anima/font-departure-mono": "workspace:^",
+    "@proj-anima/font-xiaolai": "workspace:^"
   }
 }

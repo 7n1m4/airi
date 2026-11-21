@@ -115,7 +115,7 @@ See `airi-llm-dispatch-gateway` §2/§4 and `airi-card-editor-wizard` for author
 
 ## 8. Verification
 
-- Tool additions: `pnpm -F @proj-airi/stage-tamagotchi typecheck`.
+- Tool additions: `pnpm -F @proj-anima/stage-tamagotchi typecheck`.
 - Runtime: one tool-bearing chat turn on desktop, one heartbeat (or `/heartbeat`-style trigger) where relevant, and a Discord turn if relay formatting changed.
 
 ## 9. Sources & Peer Skills

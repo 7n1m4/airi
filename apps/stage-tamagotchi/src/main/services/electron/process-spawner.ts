@@ -1,5 +1,5 @@
 import type { createContext } from '@moeru/eventa/adapters/electron/main'
-import type { ElectronExecuteShellCommandResult } from '@proj-airi/stage-shared'
+import type { ElectronExecuteShellCommandResult } from '@proj-anima/stage-shared'
 import type { BrowserWindow } from 'electron'
 
 import process from 'node:process'
@@ -9,7 +9,7 @@ import { basename } from 'node:path'
 
 import { useLogg } from '@guiiai/logg'
 import { defineInvokeHandler } from '@moeru/eventa'
-import { electronExecuteShellCommand } from '@proj-airi/stage-shared'
+import { electronExecuteShellCommand } from '@proj-anima/stage-shared'
 
 // Env from the renderer sits on top of process.env, minus the keys that would
 // let a payload rewrite the interpreter environment (PATH/loader/preload).

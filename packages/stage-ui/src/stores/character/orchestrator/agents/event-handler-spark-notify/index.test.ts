@@ -1,4 +1,4 @@
-import type { WebSocketEventOf } from '@proj-airi/server-sdk'
+import type { WebSocketEventOf } from '@proj-anima/server-sdk'
 
 import type { SparkNotifyAgentDeps } from './index'
 

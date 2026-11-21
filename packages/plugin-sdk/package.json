@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/plugin-sdk",
+  "name": "@proj-anima/plugin-sdk",
   "type": "module",
   "version": "0.9.0-alpha.15",
   "private": true,
@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@moeru/eventa": "catalog:",
-    "@proj-airi/plugin-protocol": "workspace:*",
+    "@proj-anima/plugin-protocol": "workspace:*",
     "valibot": "^1.2.0",
     "xstate": "^5.28.0"
   }

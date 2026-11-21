@@ -1,7 +1,7 @@
 ---
 name: airi-ui-design-conventions
 description: >-
-  Apply AIRI UI design conventions, UnoCSS grouped array classes, @proj-airi/ui primitives (BasicButton, Button, GhostButton, IconButton, OverlayButton, FieldInput, BottomDrawer), Chromatic dynamic hue, theme switching surfaces, motion timings, and component audit rules.
+  Apply AIRI UI design conventions, UnoCSS grouped array classes, @proj-anima/ui primitives (BasicButton, Button, GhostButton, IconButton, OverlayButton, FieldInput, BottomDrawer), Chromatic dynamic hue, theme switching surfaces, motion timings, and component audit rules.
 ---
 
 # AIRI UI Design Conventions & System Guidelines
@@ -14,7 +14,7 @@ Treat the stage as a space for the character, with compact floating controls aro
 
 ## 1. Core Principles & Architecture
 
-- **Build on `@proj-airi/ui`**: Always use `@proj-airi/ui` primitives (built on `reka-ui`) and Iconify icons (`carbon:*`, `solar:*`, `ph:*`). Never build bespoke raw DOM controls or inline custom SVGs.
+- **Build on `@proj-anima/ui`**: Always use `@proj-anima/ui` primitives (built on `reka-ui`) and Iconify icons (`carbon:*`, `solar:*`, `ph:*`). Never build bespoke raw DOM controls or inline custom SVGs.
 - **Dynamic Theming Over Static Hexes**: Never hardcode brand hex colors (e.g. `#3b82f6`). Color tokens (`primary`, `neutral`) dynamically adapt to the user's selected `--chromatic-hue` and dark/light mode settings.
 - **Readable Class Arrays**: Always format substantial UnoCSS utility lists as multi-line Vue class arrays. Never use long unwrapped class strings or UnoCSS attribute mode.
 - **Decoupled Desktop Surfaces**: Keep the Actor Stage (`windows/stage`, `RendererStage.vue`) pristine for rendering. Keep interactions on the Control Strip (`ControlStrip.vue`, `ControlStripHost.vue`), Desktop Chatbox (`pages/chat.vue`), or modal dialogs. Never resurrect deprecated `controls-island` components.
@@ -102,13 +102,13 @@ There are **4 canonical surfaces** where the user can view or alter the theme:
    - Immediately cycles between light and dark mode directly from the floating stage ribbon without opening settings.
 
 > [!IMPORTANT]
-> **Theme Composable Rule**: Always use `const { isDark } = useTheme()` from `@proj-airi/ui`. If calling VueUse's `useDark()` directly, you MUST set `{ disableTransition: false }` to avoid breaking smooth theme transitions across UnoCSS variables.
+> **Theme Composable Rule**: Always use `const { isDark } = useTheme()` from `@proj-anima/ui`. If calling VueUse's `useDark()` directly, you MUST set `{ disableTransition: false }` to avoid breaking smooth theme transitions across UnoCSS variables.
 
 ---
 
 ## 5. Component Hierarchy & Selection Matrix
 
-Always choose components from `@proj-airi/ui` according to their intended role:
+Always choose components from `@proj-anima/ui` according to their intended role:
 
 ### 5.1 Buttons (`packages/ui/src/components/misc/`)
 

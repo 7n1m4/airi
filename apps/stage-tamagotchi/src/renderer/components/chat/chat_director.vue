@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { DirectorMonitorView } from '@proj-airi/stage-ui/components'
-import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
+import { DirectorMonitorView } from '@proj-anima/stage-ui/components'
+import { useChatSessionStore } from '@proj-anima/stage-ui/stores/chat/session-store'
 import { storeToRefs } from 'pinia'
 
 const chatSessionStore = useChatSessionStore()

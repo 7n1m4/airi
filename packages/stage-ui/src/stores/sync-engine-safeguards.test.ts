@@ -110,7 +110,7 @@ describe('sync-engine-safeguards', () => {
     it('parses S3/R2 XML response, extracts ETags (stripping quotes), and normalizes mtime/size', async () => {
       const s3Client = new S3StorageClient(
         'https://mock-account.s3.amazonaws.com',
-        'airi-sync',
+        'anima-sync',
         'auto',
         'mock-key',
         'mock-secret',
@@ -118,7 +118,7 @@ describe('sync-engine-safeguards', () => {
 
       const mockXml = `<?xml version="1.0" encoding="UTF-8"?>
 <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-  <Name>airi-sync</Name>
+  <Name>anima-sync</Name>
   <Prefix></Prefix>
   <Contents>
     <Key>db/airi-cards.json</Key>

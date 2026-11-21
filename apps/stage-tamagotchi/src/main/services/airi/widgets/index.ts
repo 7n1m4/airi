@@ -4,7 +4,7 @@ import type { BrowserWindow, IpcMainEvent } from 'electron'
 import type { WidgetsWindowManager } from '../../../windows/widgets'
 
 import { defineInvokeHandlers } from '@moeru/eventa'
-import { artistryComfyHealthCheck, artistryGenerateHeadless } from '@proj-airi/stage-shared'
+import { artistryComfyHealthCheck, artistryGenerateHeadless } from '@proj-anima/stage-shared'
 
 import { widgetsAdd, widgetsClear, widgetsFetch, widgetsHideWindow, widgetsOpenWindow, widgetsPrepareWindow, widgetsRemove, widgetsResizeWindow, widgetsUpdate } from '../../../../shared/eventa'
 import { ipcMain } from '../../../eventa-bus'

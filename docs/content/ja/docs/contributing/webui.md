@@ -1,6 +1,6 @@
 ---
 title: ウェブ UI
-description: Project AIRI への貢献
+description: Project Anima への貢献
 ---
 
 ### Stage Web (Web 版 [airi.moeru.ai](https://airi.moeru.ai) 用)

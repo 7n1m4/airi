@@ -341,8 +341,8 @@ VITE_SERVER_URL=https://api.example.com
 ### 7.3 构建前端
 
 ```bash
-pnpm --filter @proj-airi/stage-web build
-pnpm --filter @proj-airi/ui-server-auth build
+pnpm --filter @proj-anima/stage-web build
+pnpm --filter @proj-anima/ui-server-auth build
 
 test -f apps/stage-web/dist/index.html
 test -f apps/ui-server-auth/dist/index.html
@@ -613,8 +613,8 @@ git rev-parse HEAD
 # 4. 使用 Node.js 24 重新安装与构建
 nvm use 24
 pnpm install --frozen-lockfile
-pnpm --filter @proj-airi/stage-web build
-pnpm --filter @proj-airi/ui-server-auth build
+pnpm --filter @proj-anima/stage-web build
+pnpm --filter @proj-anima/ui-server-auth build
 
 # 5. 创建新静态 release
 RELEASE="$(date +%Y%m%d%H%M%S)-$(git rev-parse --short HEAD)"

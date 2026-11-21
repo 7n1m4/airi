@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { useDataMaintenance } from '@proj-airi/stage-ui/composables/use-data-maintenance'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
-import { Button, DoubleCheckButton } from '@proj-airi/ui'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { useDataMaintenance } from '@proj-anima/stage-ui/composables/use-data-maintenance'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useSyncEngineStore } from '@proj-anima/stage-ui/stores/sync-engine'
+import { Button, DoubleCheckButton } from '@proj-anima/ui'
 import {
   DialogContent,
   DialogOverlay,

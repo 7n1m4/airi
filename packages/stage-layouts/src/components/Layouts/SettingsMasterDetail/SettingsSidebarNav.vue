@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SETTINGS_CATALOG_ITEMS } from '@proj-airi/stage-ui/constants'
+import { SETTINGS_CATALOG_ITEMS } from '@proj-anima/stage-ui/constants'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'

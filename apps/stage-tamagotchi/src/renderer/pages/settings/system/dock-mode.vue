@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DockPosition } from '@proj-airi/electron-eventa'
+import type { DockPosition } from '@proj-anima/electron-eventa'
 
 import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'

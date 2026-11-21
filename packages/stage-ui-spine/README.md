@@ -1,4 +1,4 @@
-# @proj-airi/stage-ui-spine
+# @proj-anima/stage-ui-spine
 
 Spine 2D scene components and stores for Project AIRI. Provides Vue components, composables, and utilities for rendering and managing Spine animations within the stage UI.
 
@@ -13,8 +13,8 @@ End users of a shipped product that uses Spine animations do not need their own 
 ## Usage
 
 ```ts
-import { SpineScene } from '@proj-airi/stage-ui-spine/components/scenes'
-import { useSpineStore } from '@proj-airi/stage-ui-spine/stores/spine'
+import { SpineScene } from '@proj-anima/stage-ui-spine/components/scenes'
+import { useSpineStore } from '@proj-anima/stage-ui-spine/stores/spine'
 ```
 
 ## License

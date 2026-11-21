@@ -1,6 +1,6 @@
 import type { SettingsTopology, TopologyTransition } from './types'
 
-export { resolvePath, resolvePathFromRoute, resolveSettingsBackRoute } from '@proj-airi/stage-ui/constants'
+export { resolvePath, resolvePathFromRoute, resolveSettingsBackRoute } from '@proj-anima/stage-ui/constants'
 
 /**
  * Classifies the semantic navigation transition delta between previous path and next path.

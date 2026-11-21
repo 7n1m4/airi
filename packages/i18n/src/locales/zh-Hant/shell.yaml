@@ -1,6 +1,6 @@
 # Slint（Slint）桌面 shell 的字串：啟動畫面、控制條、視窗和佔位頁面。
 app:
-  name: AIRI
+  name: Anima
   tagline: 你的 AI 夥伴，就在桌面上。
   version-label: 版本
 splash:
@@ -11,27 +11,27 @@ splash:
     stage_ready: 正在準備舞台……
 strip:
   tooltips:
-    avatar: AIRI
+    avatar: Anima
     mic: 麥克風開關
     chat: 聊天
     stage: 舞台
     settings: 設定
-    about: 關於 AIRI
+    about: 關於 Anima
     collapse: 收起
     expand: 展開
     theme: 切換深色 / 淺色模式
     language: 切換語言
-    quit: 退出 AIRI
+    quit: 退出 Anima
     caption: 字幕
 chat:
-  title: AIRI — 聊天
+  title: Anima — 聊天
   recent: 最近
   new: 新對話
   search-placeholder: 搜尋對話…
   delete-session: 刪除對話
   empty-title: 開始對話
   empty-subtitle: 你的訊息僅儲存在本裝置。
-  input-placeholder: 傳訊息給 AIRI…
+  input-placeholder: 傳訊息給 Anima…
   send: 傳送
   stop: 停止
   streaming: 生成中…
@@ -45,7 +45,7 @@ chat:
     import: 匯入卡片…
     import-error: '無法匯入該卡片 —— 不是有效的 CCv2/CCv3 卡片（png 或 json）。'
 settings:
-  title: AIRI — 設定
+  title: Anima — 設定
   description: 設定你的 AI 助理。
   nav:
     providers: 提供者
@@ -76,7 +76,7 @@ settings:
     modules: '模組'
   theme-page:
     title: 主題
-    description: 個人化 AIRI 的顏色和外觀。
+    description: 個人化 Anima 的顏色和外觀。
     hue: 強調色相
     chroma: 色度倍率
     dark: 深色模式
@@ -151,16 +151,16 @@ providers:
     aws_secret_access_key: AWS 私密存取金鑰
     account_id: Cloudflare 帳戶 ID
 about:
-  title: AIRI — 關於
-  app-name: AIRI
+  title: Anima — 關於
+  app-name: Anima
   tagline: 你的 AI 夥伴，就在桌面上。
-  body: AIRI 是一款桌面 AI 夥伴——一個會說話、會觀察、會反應的數位生命。使用 Rust、Slint 建構。
+  body: Anima 是一款桌面 AI 夥伴——一個會說話、會觀察、會反應的數位生命。使用 Rust、Slint 建構。
   license: 採用 GPL-3.0-or-later 授權條款。Slint 依其 GPL 條款使用。
   source-label: 原始碼
   source-url: https://github.com/moeru-ai/airi
-  credit: 由 Neko Ayaka 和 AIRI 貢獻者共同創作。
+  credit: 由 Neko Ayaka 和 Anima 貢獻者共同創作。
   check-update: 檢查更新
-  update-up-to-date: AIRI 已是最新版本。
+  update-up-to-date: Anima 已是最新版本。
   update-available: '有可用更新：'
 stage:
   description: 顯示並定位浮動的舞台視窗及你的 AI 夥伴。
@@ -189,7 +189,7 @@ stage:
     head: 頭頂
     none: 無
     preview: 預覽
-    previewSample: 這是 AIRI 說話時字幕的顯示效果。
+    previewSample: 這是 Anima 說話時字幕的顯示效果。
   stripSection:
     title: 控制列
     hint: 選擇在控制列上顯示哪些舞台控制項。
@@ -237,7 +237,7 @@ audio:
   save: 儲存
   saveError: 無法儲存，請重試。
 profile:
-  description: 你在 AIRI 眼中的自己。
+  description: 你在 Anima 眼中的自己。
   identitySection: 身分
   name: 顯示名稱
   namePlaceholder: 你的名字
@@ -251,7 +251,7 @@ profile:
   save: 儲存
   saveError: 無法儲存，請重試。
 notify:
-  replyReady: AIRI 已回覆
+  replyReady: Anima 已回覆
 common:
   close: 關閉
 
@@ -324,7 +324,7 @@ models:
     paid: 付費 / 委託
     visit: 造訪
     knowRepository: 知道其他優秀的模型倉庫嗎？
-    knowRepositoryHint: 透過推薦更多免費倉庫、工具或檔案，幫助 AIRI 社群成長。
+    knowRepositoryHint: 透過推薦更多免費倉庫、工具或檔案，幫助 Anima 社群成長。
     submitOnGithub: 在 GitHub 提交
     formats:
       all: 全部格式
@@ -337,9 +337,9 @@ onboarding:
   deferredNotice: '此 Slint 版本尚未接入首次完成流程 —— 這些頁面僅為展示。完成或跳過精靈的按鈕將在 onboarding 儲存落地後解鎖。'
   deferredTip: '尚未接入 —— 首次執行的 onboarding 儲存將啟用此操作。'
   v3:
-    brand: 'AIRI 夥伴設定'
+    brand: 'Anima 夥伴設定'
     stageReady: '舞台就緒'
-    heroTitle: '歡迎來到 AIRI'
+    heroTitle: '歡迎來到 Anima'
     heroSubtitle: '你夥伴的舞台 —— 幾分鐘即可完成設定，100% 在你的機器上。'
     companionQuote: '你好！我是你的自主數位夥伴。無論你想要語音對話、創意舞台表演，還是一個安靜的桌面存在，我都已準備好適應你的世界。'
     pillWebgpu: '本地 WebGPU 核心'
@@ -354,7 +354,7 @@ notice:
   deferredTip: '需要通知視窗動作橋（windowAction / pageMounted / pageUnmounted），Slint 版本尚未具備。'
   index:
     title: '通知'
-    subtitle: 'AIRI 主行程會為一次性提示顯示暫時通知視窗。本頁面列出桌面應用程式隨附的通知。'
+    subtitle: 'Anima 主行程會為一次性提示顯示暫時通知視窗。本頁面列出桌面應用程式隨附的通知。'
     surfaces: '通知介面'
     fadeOnHoverTitle: '淡出懸停教學'
     fadeOnHoverSubtitle: '解釋當游標靠近時自動淡出角色的隱藏行為。'
@@ -390,13 +390,13 @@ modules:
   entries:
     memory:
       blurb: '為你的夥伴提供短期與長期記憶、日誌與檢索。'
-      reason: 'Slint 中就緒——路由由設定導航處理；後端已落地 airi-core memory（日誌、檢索、向量嵌入）；設定介面在本 wave 到達。'
+      reason: 'Slint 中就緒——路由由設定導航處理；後端已落地 anima-core memory（日誌、檢索、向量嵌入）；設定介面在本 wave 到達。'
     speech:
       blurb: '為你的夥伴提供文字轉語音輸出。'
-      reason: 'Slint 中就緒——後端已落地 airi-speech（26 個 TTS 定義 + Kokoro）；Slint TTS/STT 設定介面在本 wave 到達。'
+      reason: 'Slint 中就緒——後端已落地 anima-speech（26 個 TTS 定義 + Kokoro）；Slint TTS/STT 設定介面在本 wave 到達。'
     hearing:
       blurb: '麥克風輸入、語音活動偵測與轉錄。'
-      reason: 'Slint 中就緒——後端已落地 airi-stt（擷取、Silero VAD、Deepgram/Aliyun/whisper-local）；Slint 聽覺設定介面在本 wave 到達。'
+      reason: 'Slint 中就緒——後端已落地 anima-stt（擷取、Silero VAD、Deepgram/Aliyun/whisper-local）；Slint 聽覺設定介面在本 wave 到達。'
     vision:
       blurb: '螢幕與相機視覺感知。'
       reason: '延期——Slint 無 vision 堆疊（moondream/blip/apple-core-ai 不在 Rust 註冊表中）；目前存在於 Electron 應用。'
@@ -422,7 +422,7 @@ modules:
       blurb: '備份快照到你自己的儲存（BYOS）。'
       reason: '已接線——本地資料夾目標、快照驗證/還原；S3/mesh/選擇性同步未接線。'
     pluginHost:
-      blurb: 'AIRI 外掛套件的主機。'
+      blurb: 'Anima 外掛套件的主機。'
       reason: '僅腳手架——無發現/啟用/capability 匯流排；Slint v1 豁免；外掛由 Electron 主行程託管。'
     vrm:
       blurb: 'VRM 模型渲染與舞台場景。'
@@ -452,7 +452,7 @@ memory:
   shortTerm:
     title: '短期與檢索'
     badge: '已接線'
-    note: 'topK 限制每次注入提示詞的檢索記憶數（1–20）。檢索排序在 airi-core 中混合語義相似度（權重 0.75）與詞彙重合（權重 0.25）；記憶啟用期間，聊天管線會消費它。'
+    note: 'topK 限制每次注入提示詞的檢索記憶數（1–20）。檢索排序在 anima-core 中混合語義相似度（權重 0.75）與詞彙重合（權重 0.25）；記憶啟用期間，聊天管線會消費它。'
   topK:
     label: 'Retrieval top-k'
     description: '每次提示檢索可注入的記憶數（1–20）。'
@@ -465,7 +465,7 @@ memory:
     refresh: '重新整理'
     emptyTitle: '還沒有日誌條目'
     emptySubtitle: '還沒有日誌條目——聊天記憶會隨著你使用應用逐步填充。'
-  footer: '偏好與日誌保存在此設定檔案的 airi-store SQLite 保險庫（airi.sqlite）中。記憶豐富聊天上下文——除已設定的 LLM 提供商外，一切都不會離開這台機器。'
+  footer: '偏好與日誌保存在此設定檔案的 anima-store SQLite 保險庫（airi.sqlite）中。記憶豐富聊天上下文——除已設定的 LLM 提供商外，一切都不會離開這台機器。'
   saveError: '儲存失敗——詳情見狀態行。'
   time:
     justNow: '剛剛'
@@ -477,7 +477,7 @@ hearing:
   description: '為你的夥伴設定麥克風輸入與聆聽偏好。'
   enable:
     title: '啟用聽覺'
-    description: '記錄你希望 AIRI 聽到你。當擷取管線落地時生效——儲存此項不會打開你的麥克風。'
+    description: '記錄你希望 Anima 聽到你。當擷取管線落地時生效——儲存此項不會打開你的麥克風。'
   mode:
     title: '聆聽模式'
     caption: 'Auto 持續聆聽（需要擷取管線）；PTT 僅在按住熱鍵期間聆聽。'
@@ -489,7 +489,7 @@ hearing:
     caption: '本建構中尚未接線全域熱鍵註冊——值會被儲存，但目前沒有任何快捷鍵生效。'
   device:
     title: '輸入裝置'
-    caption: '選擇當擷取管線落地時 AIRI 將使用的麥克風。'
+    caption: '選擇當擷取管線落地時 Anima 將使用的麥克風。'
     emptyTitle: '未列舉到輸入裝置'
     emptySubtitle: '本 Slint 建構尚無法列舉麥克風——音訊擷取未接線。'
     useDefault: '系統預設'
@@ -498,7 +498,7 @@ hearing:
   nav: '聽覺'
 speech:
   title: '語音'
-  description: '為 AIRI 提供文字轉語音。從目錄中挑選提供商，調整聲音與速度，並寫出一個樣本檔案用於檢查。移植狀態直接來自 Rust speech 註冊表。'
+  description: '為 Anima 提供文字轉語音。從目錄中挑選提供商，調整聲音與速度，並寫出一個樣本檔案用於檢查。移植狀態直接來自 Rust speech 註冊表。'
   providers:
     caption: '文字轉語音提供商'
     empty: '提供商目錄載入失敗——請查看控制台。'
@@ -519,19 +519,19 @@ speech:
     caption: '樣本合成'
     description: '用所選提供商合成一段短樣本，並寫入你的設定檔案目錄下的新檔案。使用提供商的預設端點；不播放任何內容。'
     label: '樣本文字'
-    placeholder: '你好，我是 AIRI。'
+    placeholder: '你好，我是 Anima。'
     button: '合成樣本'
     written: '樣本已寫出：'
     notPlayable: '樣本檔案寫入磁碟後尚不能在應用內播放——請用系統播放器開啟。'
   stt:
     caption: '語音辨識'
     title: '語音辨識在別處（此處未接線）'
-    body: 'airi-stt 移植了 STT 用戶端：Whisper（行程內，whisper-rs）、一個 OpenAI 相容 /audio/transcriptions 用戶端、一個 Deepgram streaming 用戶端，以及 Aliyun NLS（streaming，需預先簽發的權杖）。驅動它們的 Slint 聽覺介面尚不存在——本頁僅設定文字轉語音。'
+    body: 'anima-stt 移植了 STT 用戶端：Whisper（行程內，whisper-rs）、一個 OpenAI 相容 /audio/transcriptions 用戶端、一個 Deepgram streaming 用戶端，以及 Aliyun NLS（streaming，需預先簽發的權杖）。驅動它們的 Slint 聽覺介面尚不存在——本頁僅設定文字轉語音。'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
   caption: '這個可選加入的 awareness 守護行程的狀態、各項來源開關、kill switch 與本地稽核日誌。這裡的一切都不會自行行動。'
-  daemonDownTitle: 'airi-daemon 未執行'
+  daemonDownTitle: 'anima-daemon 未執行'
   daemonDownSubtitle: 'awareness 守護行程是一個可選加入的使用者工作階段服務。dev-run 說明：packaging/README.md。'
   retry: '重試'
   killSwitch:
@@ -625,7 +625,7 @@ widgets:
 
 data:
   title: '資料'
-  description: 'AIRI 在此裝置本機儲存的一切 —— 匯出、匯入，或清理重度歷史。'
+  description: 'Anima 在此裝置本機儲存的一切 —— 匯出、匯入，或清理重度歷史。'
   status:
     notWired: '匯出尚未連接到 Rust 後端 —— 見階段說明'
     actionNotWired: '此操作尚未連接到 Rust 後端 —— 見階段說明'
@@ -757,9 +757,9 @@ data:
 
 mcp:
   title: 'MCP 伺服器和工具'
-  description: '連接和管理 Model Context Protocol (MCP) 伺服器，為 AIRI 提供可擴充的工具能力。'
-  deferredTip: '尚未連接 —— MCP 用戶端將在獨立通道 (airi-mcp) 交付。此預覽僅顯示版面，不會讀取或寫入你的設定。'
-  deferredNotice: 'MCP 橋尚未連接。所示伺服器是 Electron 文件記載的預設值，不是你的設定 —— 在 airi-mcp 通道交付前，下面所有控件都處於惰性狀態。'
+  description: '連接和管理 Model Context Protocol (MCP) 伺服器，為 Anima 提供可擴充的工具能力。'
+  deferredTip: '尚未連接 —— MCP 用戶端將在獨立通道 (anima-mcp) 交付。此預覽僅顯示版面，不會讀取或寫入你的設定。'
+  deferredNotice: 'MCP 橋尚未連接。所示伺服器是 Electron 文件記載的預設值，不是你的設定 —— 在 anima-mcp 通道交付前，下面所有控件都處於惰性狀態。'
   notWiredBadge: '尚未連接'
   tabs:
     manage: '管理'
@@ -771,7 +771,7 @@ mcp:
     configPathHint: "Electron 預設值是 app.getPath('appData') + '/airi/mcp.json'；Slint 橋將遵循同樣的慣例。所示路徑僅為示例，不會從磁碟讀取。"
     configuredServers: '已設定的伺服器'
     documentedExample: '文件範例'
-    exampleNote: '作為文件展示 —— 這是 AIRI Desktop (Electron main) 內建的預設設定，並非 AIRI 已連接的伺服器。'
+    exampleNote: '作為文件展示 —— 這是 Anima Desktop (Electron main) 內建的預設設定，並非 Anima 已連接的伺服器。'
     serverStateUnknown: '未知'
     transportStdio: '本地 stdio'
     toolsNone: '0 個工具'
@@ -832,7 +832,7 @@ mcp:
 
 discord:
   title: 'Discord'
-  description: '你的 AIRI 夥伴與 Discord 伺服器及私訊之間的訊息橋。'
+  description: '你的 Anima 夥伴與 Discord 伺服器及私訊之間的訊息橋。'
   deferredNotice: 'Discord 模組尚未連接到 Rust 閘道。Bot 連接、中繼行為和存取路由均作為結構預覽展示 —— 在閘道橋交付之前，所有操作均處於停用狀態。'
   deferredTip: '需要 Slint 版本中的 Discord 閘道橋（websocket 生命週期、權杖儲存、Rust 服務）。'
   tabs:
@@ -846,7 +846,7 @@ discord:
     tokenDescription: '你的 Discord Developer Portal 中的 Bot 權杖。'
     tokenPlaceholder: '貼上你的 Bot 權杖…'
     ownerLabel: 'Bot 擁有者 / 主使用者名稱'
-    ownerDescription: '你的 Discord 使用者名稱（例如 dasilva333）。AIRI 會自動解析你的帳戶 ID，用於擁有者特權與記憶同步。'
+    ownerDescription: '你的 Discord 使用者名稱（例如 dasilva333）。Anima 會自動解析你的帳戶 ID，用於擁有者特權與記憶同步。'
     ownerPlaceholder: '例如 dasilva333'
     ownerIdPending: '已解析擁有者 ID：未解析 —— 需要閘道橋。'
     connect: '連接'
@@ -955,7 +955,7 @@ cloudSync:
     endpointPlaceholder: 'https://s3.amazonaws.com'
     bucketLabel: '儲存桶名稱'
     bucketDescription: '雲端儲存桶的名稱。'
-    bucketPlaceholder: 'my-airi-sync'
+    bucketPlaceholder: 'my-anima-sync'
     regionLabel: '區域'
     regionDescription: '儲存桶的區域（留空時預設 us-east-1）。'
     regionPlaceholder: 'us-east-1'
@@ -970,7 +970,7 @@ cloudSync:
     localCaption: '本機共享設定'
     localPathLabel: '備份目錄路徑'
     localPathDescription: '本機同步資料夾或已掛載網路磁碟機（NAS / Samba 共享）的絕對路徑。'
-    localPathPlaceholder: '/Volumes/AIRI-Backup-Share'
+    localPathPlaceholder: '/Volumes/Anima-Backup-Share'
     testConnection: '測試連線'
   sync:
     title: '同步'
@@ -999,11 +999,11 @@ cloudSync:
   mesh:
     title: '本機網狀同步'
     enableLabel: '啟用 libp2p 網狀同步'
-    enableDescription: '將記憶、保管箱憑證與夥伴卡直接與本機網路中的其他 AIRI 實例同步。'
+    enableDescription: '將記憶、保管箱憑證與夥伴卡直接與本機網路中的其他 Anima 實例同步。'
     memoryLabel: '記憶（STMM / LTMM / Event Ledger）'
     vaultLabel: '保管箱（BYOS 憑證）'
     companionsLabel: '夥伴（角色卡）'
-    targetDescription: '透過 libp2p 與已配對的 AIRI 實例同步。'
+    targetDescription: '透過 libp2p 與已配對的 Anima 實例同步。'
   actions:
     title: '手動操作'
     manualTitle: '手動同步'
@@ -1060,7 +1060,7 @@ cloudSync:
     cancel: '取消'
 pluginHost:
   title: 'Plugin Host'
-  description: '檢查並管理 AIRI 外掛：已發現的清單、啟用狀態、已載入工作階段與已公布能力。'
+  description: '檢查並管理 Anima 外掛：已發現的清單、啟用狀態、已載入工作階段與已公布能力。'
   notWiredBadge: '尚未連接'
   deferredTip: '尚未連接 —— Slint 版本中不存在外掛宿主。此預覽僅顯示版面；此處不會發現、載入或持久化任何外掛。'
   deferredNotice: '此版本尚未連接外掛宿主。不會從磁碟發現任何清單、不會載入任何外掛，在 Slint 外掛宿主（或 Electron 式橋）交付之前，下方所有控件均處於惰性狀態。'
@@ -1079,7 +1079,7 @@ pluginHost:
     configLabel: '啟用儲存'
     portLabel: '連接埠'
     portValue: '無 —— 行程內宿主'
-    portHint: 'Electron 外掛宿主在主行程內執行，沒有 TCP 連接埠。連接埠 6121 屬於 AIRI 通道伺服器（SERVER_CHANNEL_PORT），與外掛宿主無關。'
+    portHint: 'Electron 外掛宿主在主行程內執行，沒有 TCP 連接埠。連接埠 6121 屬於 Anima 通道伺服器（SERVER_CHANNEL_PORT），與外掛宿主無關。'
   installed:
     section: '已安裝外掛'
     emptyTitle: '此版本未安裝任何外掛'
@@ -1111,7 +1111,7 @@ pluginHost:
     portLabel: '連接埠'
     portDescription: '假設的宿主連接埠。真實宿主在行程內，沒有連接埠。'
     portPlaceholder: '未連線'
-    portHint: '連接埠 6121 是 AIRI 通道伺服器（SERVER_CHANNEL_PORT），不是外掛宿主。此處任何值都是虛構的。'
+    portHint: '連接埠 6121 是 Anima 通道伺服器（SERVER_CHANNEL_PORT），不是外掛宿主。此處任何值都是虛構的。'
     logLevelLabel: '記錄層級'
     pluginDirLabel: '外掛目錄'
     pluginDirPlaceholder: '<userData>/plugins/v1'

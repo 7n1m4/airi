@@ -54,7 +54,7 @@ Under the **Producer Directives** suggestions drawer (Producer Lite / OE):
 ## 3. Next Milestones & Task Breakdown
 
 ### Phase A: Global Store & Settings Panel
-- [ ] Create `useUserProfileStore` inside `@proj-airi/stage-ui/stores`.
+- [ ] Create `useUserProfileStore` inside `@proj-anima/stage-ui/stores`.
 - [ ] Add a "User Profile" configuration section under settings UI (`stage-pages` Settings view) to let users customize their name, description, prompt tags, and select/create their own Voice Profile.
 
 ### Phase B: UI Elements

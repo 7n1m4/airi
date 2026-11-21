@@ -170,7 +170,7 @@ export interface ProviderDefinition<TConfig extends any = any> {
   /**
    * Iconify JSON icon name for the provider.
    *
-   * Icons are available for most of the AI provides under @proj-airi/lobe-icons.
+   * Icons are available for most of the AI provides under @proj-anima/lobe-icons.
    */
   icon?: string
   iconColor?: string

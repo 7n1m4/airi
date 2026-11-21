@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import type { MicToggleHotkey } from '@proj-airi/stage-shared/shortcuts'
+import type { MicToggleHotkey } from '@proj-anima/stage-shared/shortcuts'
 
 import type { ProviderMetadata } from '../../../../../../stores/providers'
 import type { ProgressPayload } from '../../v2/whisper-loader'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
-import { electronGetMicToggleHotkey, electronSetMicToggleHotkey } from '@proj-airi/stage-shared/shortcuts'
-import { useAudioAnalyzer, useAudioRecorder } from '@proj-airi/stage-ui/composables'
-import { Button, FieldSelect } from '@proj-airi/ui'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { isStageTamagotchi } from '@proj-anima/stage-shared'
+import { electronGetMicToggleHotkey, electronSetMicToggleHotkey } from '@proj-anima/stage-shared/shortcuts'
+import { useAudioAnalyzer, useAudioRecorder } from '@proj-anima/stage-ui/composables'
+import { Button, FieldSelect } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'

@@ -1,7 +1,7 @@
 # Chuỗi cho Slint desktop shell: màn hình khởi động, thanh điều khiển, các
 # cửa sổ và trang giữ chỗ.
 app:
-  name: AIRI
+  name: Anima
   tagline: Người bạn đồng hành AI của bạn, ngay trên desktop.
   version-label: Phiên bản
 splash:
@@ -12,27 +12,27 @@ splash:
     stage_ready: Đang chuẩn bị sân khấu…
 strip:
   tooltips:
-    avatar: AIRI
+    avatar: Anima
     mic: Bật/tắt micro
     chat: Trò chuyện
     stage: Sân khấu
     settings: Cài đặt
-    about: Giới thiệu AIRI
+    about: Giới thiệu Anima
     collapse: Thu gọn
     expand: Mở rộng
     theme: Chuyển chế độ tối / sáng
     language: Đổi ngôn ngữ
-    quit: Thoát AIRI
+    quit: Thoát Anima
     caption: Phụ đề
 chat:
-  title: AIRI — Trò chuyện
+  title: Anima — Trò chuyện
   recent: Gần đây
   new: Trò chuyện mới
   search-placeholder: Tìm cuộc trò chuyện…
   delete-session: Xóa cuộc trò chuyện
   empty-title: Bắt đầu cuộc trò chuyện
   empty-subtitle: Tin nhắn được lưu cục bộ trên thiết bị này.
-  input-placeholder: Nhắn tin cho AIRI…
+  input-placeholder: Nhắn tin cho Anima…
   send: Gửi
   stop: Dừng
   streaming: Đang tạo…
@@ -46,7 +46,7 @@ chat:
     import: Nhập thẻ…
     import-error: 'Không thể nhập thẻ — không phải thẻ CCv2/CCv3 hợp lệ (png hoặc json).'
 settings:
-  title: AIRI — Cài đặt
+  title: Anima — Cài đặt
   description: Cấu hình trợ lý AI của bạn.
   nav:
     providers: Nhà cung cấp
@@ -77,7 +77,7 @@ settings:
     modules: 'Modules'
   theme-page:
     title: Giao diện
-    description: Cá nhân hóa màu sắc và diện mạo của AIRI.
+    description: Cá nhân hóa màu sắc và diện mạo của Anima.
     hue: Tông màu nhấn
     chroma: Hệ số sắc độ
     dark: Chế độ tối
@@ -152,16 +152,16 @@ providers:
     aws_secret_access_key: Khoá truy cập bí mật AWS
     account_id: ID tài khoản Cloudflare
 about:
-  title: AIRI — Giới thiệu
-  app-name: AIRI
+  title: Anima — Giới thiệu
+  app-name: Anima
   tagline: Người bạn đồng hành AI của bạn, ngay trên desktop.
-  body: AIRI là một người bạn đồng hành AI trên desktop — một thực thể kỹ thuật số biết nói, nhìn và phản ứng. Được xây dựng bằng Rust và Slint.
+  body: Anima là một người bạn đồng hành AI trên desktop — một thực thể kỹ thuật số biết nói, nhìn và phản ứng. Được xây dựng bằng Rust và Slint.
   license: Giấy phép GPL-3.0-or-later. Slint được sử dụng theo các điều khoản GPL của nó.
   source-label: Mã nguồn
   source-url: https://github.com/moeru-ai/airi
-  credit: Được tạo ra bởi Neko Ayaka và các cộng tác viên AIRI.
+  credit: Được tạo ra bởi Neko Ayaka và các cộng tác viên Anima.
   check-update: Kiểm tra cập nhật
-  update-up-to-date: AIRI đã là phiên bản mới nhất.
+  update-up-to-date: Anima đã là phiên bản mới nhất.
   update-available: 'Có bản cập nhật:'
 stage:
   description: Hiển thị và bố trí cửa sổ sân khấu bay cùng bạn đồng hành AI của bạn.
@@ -190,7 +190,7 @@ stage:
     head: Trên đầu
     none: Không có
     preview: Xem thử
-    previewSample: Đây là cách phụ đề hiển thị khi AIRI đang nói.
+    previewSample: Đây là cách phụ đề hiển thị khi Anima đang nói.
   stripSection:
     title: Thanh điều khiển
     hint: Chọn các điều khiển sân khấu hiển thị trên thanh điều khiển.
@@ -238,7 +238,7 @@ audio:
   save: Lưu
   saveError: Không thể lưu. Thử lại.
 profile:
-  description: Bạn là ai đối với AIRI.
+  description: Bạn là ai đối với Anima.
   identitySection: Danh tính
   name: Tên hiển thị
   namePlaceholder: Tên của bạn
@@ -252,7 +252,7 @@ profile:
   save: Lưu
   saveError: Không thể lưu. Thử lại.
 notify:
-  replyReady: AIRI đã trả lời
+  replyReady: Anima đã trả lời
 common:
   close: Đóng
 
@@ -325,7 +325,7 @@ models:
     paid: Trả phí / Hoa hồng
     visit: Truy cập
     knowRepository: Bạn biết kho model tuyệt vời nào khác không?
-    knowRepositoryHint: Giúp cộng đồng AIRI phát triển bằng cách đề cử thêm nhiều kho, công cụ hoặc lưu trữ miễn phí.
+    knowRepositoryHint: Giúp cộng đồng Anima phát triển bằng cách đề cử thêm nhiều kho, công cụ hoặc lưu trữ miễn phí.
     submitOnGithub: Đề xuất trên GitHub
     formats:
       all: Mọi định dạng
@@ -338,9 +338,9 @@ onboarding:
   deferredNotice: 'Việc hoàn tất khởi chạy lần đầu chưa được nối trong bản dựng Slint này — các màn hình chỉ mang tính trình bày. Các nút hoàn tất hoặc bỏ qua trình hướng dẫn sẽ mở khoá khi store onboarding có mặt.'
   deferredTip: 'Chưa được nối — store onboarding lần đầu sẽ kích hoạt hành động này.'
   v3:
-    brand: 'Thiết lập bạn đồng hành AIRI'
+    brand: 'Thiết lập bạn đồng hành Anima'
     stageReady: 'Sân khấu sẵn sàng'
-    heroTitle: 'Chào mừng đến với AIRI'
+    heroTitle: 'Chào mừng đến với Anima'
     heroSubtitle: 'Sân khấu của bạn đồng hành — thiết lập trong vài phút, 100% trên máy của bạn.'
     companionQuote: 'Xin chào! Mình là bạn đồng hành kỹ thuật số tự chủ của bạn. Dù bạn muốn trò chuyện bằng giọng nói, biểu diễn sân khấu sáng tạo hay một sự hiện diện nhẹ nhàng trên desktop, mình sẵn sàng thích nghi với thế giới của bạn.'
     pillWebgpu: 'Lõi WebGPU cục bộ'
@@ -355,7 +355,7 @@ notice:
   deferredTip: 'Cần cầu nối hành động của cửa sổ thông báo (windowAction / pageMounted / pageUnmounted), vốn chưa tồn tại trong bản dựng Slint.'
   index:
     title: 'Thông báo'
-    subtitle: 'Tiến trình chính của AIRI hiển thị các cửa sổ thông báo tạm thời cho các lời nhắc một lần. Trang này liệt kê các thông báo mà ứng dụng desktop đi kèm.'
+    subtitle: 'Tiến trình chính của Anima hiển thị các cửa sổ thông báo tạm thời cho các lời nhắc một lần. Trang này liệt kê các thông báo mà ứng dụng desktop đi kèm.'
     surfaces: 'Bề mặt thông báo'
     fadeOnHoverTitle: 'Hướng dẫn Fade on Hover'
     fadeOnHoverSubtitle: 'Giải thích hành vi tự ẩn làm mờ nhân vật khi con trỏ đến gần.'
@@ -391,13 +391,13 @@ modules:
   entries:
     memory:
       blurb: 'Trí nhớ ngắn/dài hạn, journal và retrieval cho companion của bạn.'
-      reason: 'Sẵn sàng trong Slint — tuyến do điều hướng cài đặt lo; backend đã đưa vào airi-core memory (journal, retrieval, embeddings); bề mặt cài đặt đến trong wave này.'
+      reason: 'Sẵn sàng trong Slint — tuyến do điều hướng cài đặt lo; backend đã đưa vào anima-core memory (journal, retrieval, embeddings); bề mặt cài đặt đến trong wave này.'
     speech:
       blurb: 'Đầu ra giọng nói text-to-speech cho companion của bạn.'
-      reason: 'Sẵn sàng trong Slint — backend đã đưa vào airi-speech (26 định nghĩa TTS + Kokoro); bề mặt cài đặt TTS/STT của Slint đến trong wave này.'
+      reason: 'Sẵn sàng trong Slint — backend đã đưa vào anima-speech (26 định nghĩa TTS + Kokoro); bề mặt cài đặt TTS/STT của Slint đến trong wave này.'
     hearing:
       blurb: 'Đầu vào mic, phát hiện hoạt động giọng nói và chuyển lời thành văn bản.'
-      reason: 'Sẵn sàng trong Slint — backend đã đưa vào airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); bề mặt cài đặt hearing của Slint đến trong wave này.'
+      reason: 'Sẵn sàng trong Slint — backend đã đưa vào anima-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); bề mặt cài đặt hearing của Slint đến trong wave này.'
     vision:
       blurb: 'Nhận thức thị giác màn hình và camera.'
       reason: 'Hoãn lại — không có vision stack trong Slint (moondream/blip/apple-core-ai không có trong Rust registry); hiện sống trong ứng dụng Electron.'
@@ -423,7 +423,7 @@ modules:
       blurb: 'Sao lưu snapshot tới kho lưu trữ của riêng bạn (BYOS).'
       reason: 'Đã nối — mục tiêu thư mục cục bộ, xác minh/khôi phục snapshot; S3/mesh/chọn lọc chưa được nối.'
     pluginHost:
-      blurb: 'Host cho gói plugin AIRI.'
+      blurb: 'Host cho gói plugin Anima.'
       reason: 'Chỉ scaffold — không discovery/bật/tắt/capability bus; miễn trừ cho Slint v1; main process Electron host plugin.'
     vrm:
       blurb: 'Render model VRM và cảnh stage.'
@@ -453,7 +453,7 @@ memory:
   shortTerm:
     title: 'Ngắn hạn & retrieval'
     badge: 'Đã nối'
-    note: 'topK giới hạn số trí nhớ được lấy tiêm vào mỗi prompt (1–20). Xếp hạng retrieval pha trộn tương đồng ngữ nghĩa (trọng số 0.75) với trùng lặp từ vựng (trọng số 0.25) trong airi-core; pipeline chat tiêu thụ điều này khi trí nhớ bật.'
+    note: 'topK giới hạn số trí nhớ được lấy tiêm vào mỗi prompt (1–20). Xếp hạng retrieval pha trộn tương đồng ngữ nghĩa (trọng số 0.75) với trùng lặp từ vựng (trọng số 0.25) trong anima-core; pipeline chat tiêu thụ điều này khi trí nhớ bật.'
   topK:
     label: 'Retrieval top-k'
     description: 'Số trí nhớ retrieval có thể tiêm mỗi prompt (1–20).'
@@ -466,7 +466,7 @@ memory:
     refresh: 'Làm mới'
     emptyTitle: 'Chưa có mục journal nào'
     emptySubtitle: 'Chưa có mục journal nào — trí nhớ chat sẽ lấp đầy khi bạn dùng ứng dụng.'
-  footer: 'Tùy chọn và journal nằm trong vault SQLite airi-store (airi.sqlite) của hồ sơ này. Trí nhớ làm giàu ngữ cảnh chat — không gì rời khỏi máy ngoại trừ tới nhà cung cấp LLM đã cấu hình.'
+  footer: 'Tùy chọn và journal nằm trong vault SQLite anima-store (airi.sqlite) của hồ sơ này. Trí nhớ làm giàu ngữ cảnh chat — không gì rời khỏi máy ngoại trừ tới nhà cung cấp LLM đã cấu hình.'
   saveError: 'Lưu thất bại — xem dòng trạng thái để biết chi tiết.'
   time:
     justNow: 'vừa xong'
@@ -478,7 +478,7 @@ hearing:
   description: 'Đầu vào mic và tùy chọn lắng nghe cho companion của bạn.'
   enable:
     title: 'Bật thính giác'
-    description: 'Ghi nhận rằng bạn muốn AIRI nghe bạn. Có hiệu lực khi pipeline capture đến — lưu điều này không mở mic của bạn.'
+    description: 'Ghi nhận rằng bạn muốn Anima nghe bạn. Có hiệu lực khi pipeline capture đến — lưu điều này không mở mic của bạn.'
   mode:
     title: 'Chế độ lắng nghe'
     caption: 'Auto nghe liên tục (cần pipeline capture); PTT chỉ nghe khi giữ phím nóng.'
@@ -490,7 +490,7 @@ hearing:
     caption: 'Đăng ký phím nóng toàn cục chưa được nối trong build này — giá trị được lưu nhưng chưa có phím tắt nào hoạt động.'
   device:
     title: 'Thiết bị đầu vào'
-    caption: 'Chọn microphone mà AIRI sẽ dùng sau khi pipeline capture đến.'
+    caption: 'Chọn microphone mà Anima sẽ dùng sau khi pipeline capture đến.'
     emptyTitle: 'Không liệt kê được thiết bị đầu vào'
     emptySubtitle: 'Build Slint chưa thể liệt kê microphone — capture audio chưa được nối.'
     useDefault: 'Mặc định của hệ thống'
@@ -499,7 +499,7 @@ hearing:
   nav: 'Thính giác'
 speech:
   title: 'Giọng nói'
-  description: 'Chuyển văn bản thành giọng nói cho AIRI. Chọn một nhà cung cấp từ danh mục, chỉnh giọng và tốc độ, rồi ghi một tệp mẫu để kiểm tra. Trạng thái port lấy từ registry speech Rust nguyên văn.'
+  description: 'Chuyển văn bản thành giọng nói cho Anima. Chọn một nhà cung cấp từ danh mục, chỉnh giọng và tốc độ, rồi ghi một tệp mẫu để kiểm tra. Trạng thái port lấy từ registry speech Rust nguyên văn.'
   providers:
     caption: 'Nhà cung cấp text-to-speech'
     empty: 'Danh mục nhà cung cấp không tải được — xem console.'
@@ -520,19 +520,19 @@ speech:
     caption: 'Tổng hợp mẫu'
     description: 'Tổng hợp một mẫu ngắn với nhà cung cấp đã chọn và ghi vào một tệp mới trong thư mục hồ sơ của bạn. Dùng endpoint mặc định của nhà cung cấp; không phát lại gì.'
     label: 'Văn bản mẫu'
-    placeholder: 'Xin chào, tôi là AIRI.'
+    placeholder: 'Xin chào, tôi là Anima.'
     button: 'Tổng hợp mẫu'
     written: 'Đã ghi mẫu:'
     notPlayable: 'Các tệp mẫu được ghi xuống đĩa và chưa phát được trong ứng dụng — hãy mở bằng trình phát hệ thống của bạn.'
   stt:
     caption: 'Nhận dạng giọng nói'
     title: 'Nhận dạng giọng nói sống ở nơi khác (chưa nối tại đây)'
-    body: 'airi-stt port các client STT: Whisper (in-process, whisper-rs), client OpenAI-compatible /audio/transcriptions, client Deepgram streaming và Aliyun NLS (streaming, cần token cấp trước). Bề mặt hearing Slint sẽ điều khiển chúng chưa tồn tại — trang này chỉ cấu hình text-to-speech.'
+    body: 'anima-stt port các client STT: Whisper (in-process, whisper-rs), client OpenAI-compatible /audio/transcriptions, client Deepgram streaming và Aliyun NLS (streaming, cần token cấp trước). Bề mặt hearing Slint sẽ điều khiển chúng chưa tồn tại — trang này chỉ cấu hình text-to-speech.'
 awareness:
   title: 'Awareness'
   badge: 'Preview'
   caption: 'Trạng thái, công tắc từng nguồn, kill switch và nhật ký kiểm toán cục bộ cho daemon awareness opt-in. Không có gì ở đây tự hành động.'
-  daemonDownTitle: 'airi-daemon chưa chạy'
+  daemonDownTitle: 'anima-daemon chưa chạy'
   daemonDownSubtitle: 'Daemon awareness là dịch vụ phiên người dùng opt-in. Hướng dẫn dev-run: packaging/README.md.'
   retry: 'Thử lại'
   killSwitch:
@@ -626,7 +626,7 @@ widgets:
 
 data:
   title: 'Dữ liệu'
-  description: 'Mọi thứ AIRI lưu cục bộ trên thiết bị này — xuất, nhập hoặc dọn lịch sử nặng.'
+  description: 'Mọi thứ Anima lưu cục bộ trên thiết bị này — xuất, nhập hoặc dọn lịch sử nặng.'
   status:
     notWired: 'Chưa nối xuất dữ liệu với backend Rust — xem ghi chú giai đoạn'
     actionNotWired: 'Hành động này chưa được nối với backend Rust — xem ghi chú giai đoạn'
@@ -758,9 +758,9 @@ data:
 
 mcp:
   title: 'Máy chủ & Công cụ MCP'
-  description: 'Kết nối và quản lý các máy chủ Model Context Protocol (MCP) để trao cho AIRI các khả năng công cụ mở rộng.'
-  deferredTip: 'Chưa nối — máy khách MCP sẽ có ở làn riêng (airi-mcp). Bản xem trước này chỉ hiển thị bố cục; không có gì ở đây đọc hay ghi cấu hình của bạn.'
-  deferredNotice: 'Cầu nối MCP chưa được nối. Các máy chủ hiển thị là mặc định được ghi trong Electron, không phải cấu hình của bạn — mọi điều khiển bên dưới đều vô hiệu cho đến khi làn airi-mcp tới.'
+  description: 'Kết nối và quản lý các máy chủ Model Context Protocol (MCP) để trao cho Anima các khả năng công cụ mở rộng.'
+  deferredTip: 'Chưa nối — máy khách MCP sẽ có ở làn riêng (anima-mcp). Bản xem trước này chỉ hiển thị bố cục; không có gì ở đây đọc hay ghi cấu hình của bạn.'
+  deferredNotice: 'Cầu nối MCP chưa được nối. Các máy chủ hiển thị là mặc định được ghi trong Electron, không phải cấu hình của bạn — mọi điều khiển bên dưới đều vô hiệu cho đến khi làn anima-mcp tới.'
   notWiredBadge: 'Chưa nối'
   tabs:
     manage: 'Quản lý'
@@ -772,7 +772,7 @@ mcp:
     configPathHint: "Mặc định của Electron là app.getPath('appData') + '/airi/mcp.json'; cầu nối Slint sẽ theo cùng quy ước. Đường dẫn hiển thị chỉ mang tính minh họa, không được đọc từ đĩa."
     configuredServers: 'Máy chủ đã cấu hình'
     documentedExample: 'Ví dụ tài liệu'
-    exampleNote: 'Hiển thị như tài liệu — đây là cấu hình mặc định được tích hợp trong AIRI Desktop (Electron main), không phải máy chủ mà AIRI đã kết nối.'
+    exampleNote: 'Hiển thị như tài liệu — đây là cấu hình mặc định được tích hợp trong Anima Desktop (Electron main), không phải máy chủ mà Anima đã kết nối.'
     serverStateUnknown: 'Không rõ'
     transportStdio: 'Stdio cục bộ'
     toolsNone: '0 công cụ'
@@ -833,7 +833,7 @@ mcp:
 
 discord:
   title: 'Discord'
-  description: 'Cầu nối nhắn tin giữa bạn đồng hành AIRI của bạn với các máy chủ Discord và tin nhắn trực tiếp.'
+  description: 'Cầu nối nhắn tin giữa bạn đồng hành Anima của bạn với các máy chủ Discord và tin nhắn trực tiếp.'
   deferredNotice: 'Module Discord chưa được nối với gateway Rust. Kết nối bot, hành vi relay và định tuyến truy cập được hiển thị như một bản xem trước cấu trúc — mọi hành động đều bị vô hiệu hóa cho đến khi cầu nối gateway có mặt.'
   deferredTip: 'Cần cầu nối gateway Discord (vòng đời websocket, kho token, dịch vụ Rust) trong bản dựng Slint.'
   tabs:
@@ -847,7 +847,7 @@ discord:
     tokenDescription: 'Token bot Discord của bạn từ Developer Portal.'
     tokenPlaceholder: 'Dán token bot…'
     ownerLabel: 'Chủ bot / Tên người dùng chính'
-    ownerDescription: 'Handle Discord của bạn (vd. dasilva333). AIRI tự động phân giải ID tài khoản của bạn cho đặc quyền chủ bot & đồng bộ trí nhớ.'
+    ownerDescription: 'Handle Discord của bạn (vd. dasilva333). Anima tự động phân giải ID tài khoản của bạn cho đặc quyền chủ bot & đồng bộ trí nhớ.'
     ownerPlaceholder: 'vd. dasilva333'
     ownerIdPending: 'ID Chủ bot đã phân giải: chưa — cần cầu nối gateway.'
     connect: 'Kết nối'
@@ -956,7 +956,7 @@ cloudSync:
     endpointPlaceholder: 'https://s3.amazonaws.com'
     bucketLabel: 'Tên Bucket'
     bucketDescription: 'Tên bucket đám mây của bạn.'
-    bucketPlaceholder: 'my-airi-sync'
+    bucketPlaceholder: 'my-anima-sync'
     regionLabel: 'Region'
     regionDescription: 'Region của bucket (mặc định us-east-1 nếu để trống).'
     regionPlaceholder: 'us-east-1'
@@ -971,7 +971,7 @@ cloudSync:
     localCaption: 'Cài đặt Chia sẻ Cục bộ'
     localPathLabel: 'Đường dẫn Thư mục Sao lưu'
     localPathDescription: 'Đường dẫn tuyệt đối tới thư mục đồng bộ cục bộ hoặc ổ mạng đã mount (NAS / chia sẻ Samba).'
-    localPathPlaceholder: '/Volumes/AIRI-Backup-Share'
+    localPathPlaceholder: '/Volumes/Anima-Backup-Share'
     testConnection: 'Kiểm tra kết nối'
   sync:
     title: 'Đồng bộ'
@@ -1000,11 +1000,11 @@ cloudSync:
   mesh:
     title: 'Đồng bộ Mesh Cục bộ'
     enableLabel: 'Bật Đồng bộ Mesh libp2p'
-    enableDescription: 'Đồng bộ bộ nhớ, thông tin xác thực vault và thẻ companion trực tiếp với các instance AIRI khác trên mạng cục bộ.'
+    enableDescription: 'Đồng bộ bộ nhớ, thông tin xác thực vault và thẻ companion trực tiếp với các instance Anima khác trên mạng cục bộ.'
     memoryLabel: 'Bộ nhớ (STMM / LTMM / Event Ledger)'
     vaultLabel: 'Vault (thông tin xác thực BYOS)'
     companionsLabel: 'Companion (thẻ nhân vật)'
-    targetDescription: 'Được đồng bộ với các instance AIRI được ghép cặp qua libp2p.'
+    targetDescription: 'Được đồng bộ với các instance Anima được ghép cặp qua libp2p.'
   actions:
     title: 'Hành động Thủ công'
     manualTitle: 'Đồng bộ Thủ công'
@@ -1061,7 +1061,7 @@ cloudSync:
     cancel: 'Hủy'
 pluginHost:
   title: 'Plugin Host'
-  description: 'Kiểm tra và quản lý plugin AIRI: manifest được phát hiện, kích hoạt, phiên đã tải và các capability được công bố.'
+  description: 'Kiểm tra và quản lý plugin Anima: manifest được phát hiện, kích hoạt, phiên đã tải và các capability được công bố.'
   notWiredBadge: 'Chưa nối'
   deferredTip: 'Chưa nối — không có host plugin nào tồn tại trong bản dựng Slint. Bản xem trước này chỉ hiển thị bố cục; không có gì ở đây khám phá, tải hoặc lưu plugin.'
   deferredNotice: 'Host plugin không được nối trong bản dựng này. Không có manifest nào được phát hiện từ đĩa, không có plugin nào được tải, và mọi điều khiển bên dưới đều vô hiệu cho đến khi một host plugin Slint (hoặc một cầu nối kiểu Electron) đến.'
@@ -1080,7 +1080,7 @@ pluginHost:
     configLabel: 'Kho kích hoạt'
     portLabel: 'Cổng'
     portValue: 'Không có — host trong tiến trình'
-    portHint: 'Host plugin của Electron chạy trong tiến trình chính và không có cổng TCP. Cổng 6121 thuộc về server kênh AIRI (SERVER_CHANNEL_PORT) và không liên quan gì đến host plugin.'
+    portHint: 'Host plugin của Electron chạy trong tiến trình chính và không có cổng TCP. Cổng 6121 thuộc về server kênh Anima (SERVER_CHANNEL_PORT) và không liên quan gì đến host plugin.'
   installed:
     section: 'Plugin Đã cài'
     emptyTitle: 'Không có plugin nào được cài trong bản dựng này'
@@ -1112,7 +1112,7 @@ pluginHost:
     portLabel: 'Cổng'
     portDescription: 'Cổng giả tưởng của host. Host thật chạy trong tiến trình và không có cổng nào.'
     portPlaceholder: 'Chưa nối'
-    portHint: 'Cổng 6121 là server kênh AIRI (SERVER_CHANNEL_PORT), không phải host plugin. Bất kỳ giá trị nào ở đây cũng là hư cấu.'
+    portHint: 'Cổng 6121 là server kênh Anima (SERVER_CHANNEL_PORT), không phải host plugin. Bất kỳ giá trị nào ở đây cũng là hư cấu.'
     logLevelLabel: 'Mức Log'
     pluginDirLabel: 'Thư mục Plugin'
     pluginDirPlaceholder: '<userData>/plugins/v1'

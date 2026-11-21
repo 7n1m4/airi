@@ -4,7 +4,7 @@ character-switcher:
   empty: Belum ada karakter
   failed: Gagal mengganti karakter. Coba lagi.
 mobile-tools:
-  sign-in: Masuk ke AIRI
+  sign-in: Masuk ke Anima
   account-description: Akun dan preferensi
   sound: Suara
   character-voice: Suara karakter
@@ -42,7 +42,7 @@ chat:
     stop: Hentikan respons
   message:
     character-name:
-      airi: AIRI
+      airi: Anima
       core-system: Sistem Inti
       you: Anda
   reply:

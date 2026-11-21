@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/server-schema",
+  "name": "@proj-anima/server-schema",
   "type": "module",
   "version": "0.9.0-alpha.15",
   "private": true,
@@ -32,6 +32,6 @@
     "build": "tsdown"
   },
   "devDependencies": {
-    "@proj-airi/unplugin-drizzle-orm-migrations": "^0.1.4"
+    "@proj-anima/unplugin-drizzle-orm-migrations": "^0.1.4"
   }
 }

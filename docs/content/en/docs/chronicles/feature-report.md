@@ -1,4 +1,4 @@
-# AIRI Fork: Core Feature Report
+# Anima Fork: Core Feature Report
 
 > **Provenance**: Revised against commits through `b2fc29edd` (2026-08-30, post `v0.9.27-stable.20260824` & `v0.9.26-stable.20260820`). Previous revisions: `e681bc255` (2026-08-20), `fb1a8a4ab` (2026-08-19), `ca618d5b3` (2026-08-18), `6d5cf8467` (2026-07-18, 34-feature catalog) and `b6917fe4c` (2026-07-10). Sections marked **(NEW)** were added in this revision; bullets marked *new* extend a pre-existing section.
 
@@ -36,7 +36,7 @@ Focuses on immersion, transparency, and reducing the "black box" nature of AI in
 - **Configurable Send Key**: User-selectable chat submission hotkey (e.g., Enter vs. Ctrl+Enter) via General Settings.
 - **In-Flight Turn Cancellation (Stop Button)** *(new)*: First-class user-facing stop/cancel control (`sessionStore.cancelCurrentGeneration()`) that cleanly halts active SSE LLM text streams, drains the TTS speech queue, and cancels pending tool invocations without leaving dangling reactive states.
 - **Composer Typing Soft Gate** *(new)*: Proactivity heartbeats and background vision commentaries automatically enter a quiet hold while the user is actively typing in the composer (`isComposerTyping` mutex), preventing the avatar from interrupting mid-thought.
-- **Dynamic Workspace Window Titles** *(new)*: Desktop Electron window titles update reactively with the active character soul and workspace mode (e.g. `AIRI - Lain [Director's Monitor]`).
+- **Dynamic Workspace Window Titles** *(new)*: Desktop Electron window titles update reactively with the active character soul and workspace mode (e.g. `Anima - Lain [Director's Monitor]`).
 - **Generation Stats Popover** *(new)*: Per-turn generation statistics (tokens, timing, output-limit controls) surfaced inline on messages, so cost/length behavior is inspectable without devtools.
 - **Pre-Flight Grounding Panel** *(new)*: The four context blocks injected on every send — `[ENVIRONMENTAL AWARENESS]`, `[GROUNDED LONG-TERM MEMORIES]`, `[RECENT TOPICS]`, `[VISUAL STATE BOARD]` — are composed and previewable *before* the prompt leaves the machine, making "what does she actually see?" a first-class UI question.
 - **Conversational Pacing & Dynamic Thinking Fillers** *(new)*: Full multi-phase turn pacing coordinator (`useTurnPacing`, `turn-pacing-coordinator.ts`) with prewarming, zero-bloat IndexedDB audio caching (`local:audio:thinking-cache/{voiceId}`), personality thinking bundles (Tsundere, Kuudere, Yandere, Genki, Custom), and speech playback bridging to eliminate awkward silence and mask high TTFT during DeepSeek R1 / o1 / o3 reasoning turns.
@@ -69,12 +69,12 @@ The floating interaction hub for the desktop experience.
 ## 2. Character Card System
 A full-featured card creation, configuration, and portability layer.
 
-- **Per-Character LLM Generation Settings**: Each AIRI card can override the global LLM provider, model, temperature, top-p, and max tokens via a dedicated **Generation** tab. Designed with future SillyTavern preset import compatibility in mind.
+- **Per-Character LLM Generation Settings**: Each Anima card can override the global LLM provider, model, temperature, top-p, and max tokens via a dedicated **Generation** tab. Designed with future SillyTavern preset import compatibility in mind.
 - **V-Hack / Mutation Studio**: A native in-app "V-Hack" style surface for live VRM binary capture, texture decks, and AI-assisted mutation workflows — extending character cards from configuration into runtime visual experimentation.
 - **Audio Studio & Vocal Profile Embedding** *(new)*: Complete end-to-end user vocal profile selection, display model binding in user profiles, and embedding virtual voice profiles directly into character card setups.
-- **AIRI JSON Export**: A full-fidelity native JSON format (`airi-card` v1) that preserves all extensions (modules, artistry, acting, heartbeats). **Does not include personal chat history or private data** — only the configured character settings, ensuring cards are safe to share.
+- **Anima JSON Export**: A full-fidelity native JSON format (`airi-card` v1) that preserves all extensions (modules, artistry, acting, heartbeats). **Does not include personal chat history or private data** — only the configured character settings, ensuring cards are safe to share.
 - **Background Bundling on Export**: The character's currently active background/scene is exported **with the card**, so anyone who imports it gets the background automatically applied.
-- **SillyTavern PNG Import/Export**: Full `chara_card_v2` compatibility, allowing users to **import existing community cards** and export AIRI cards as shareable PNGs with embedded metadata and a framed portrait preview.
+- **SillyTavern PNG Import/Export**: Full `chara_card_v2` compatibility, allowing users to **import existing community cards** and export Anima cards as shareable PNGs with embedded metadata and a framed portrait preview.
 - **Dynamic Card Export Snapshots**: Session-aware snapshot system that captures **active outfits and expressions** in real-time for export previews.
 - **Single-Card ZIP Package v1 & Extended v2 Interop** *(new)*: Full packaging export and import bridge supporting both upstream `moeru-ai/airi` v1 and fork extended v2 ZIP packages with clean multi-asset directory layouts (`cover.png`, `background.png`, `models/`, `voices/`, and optional memory bundles), replacing base64 serialization bloat.
 - **Duplicate Handling**: Automatic rename-on-import (`Lain`, `Lain (2)`, `Lain (3)`) prevents accidental overwrites.
@@ -116,11 +116,11 @@ A fully customizable idle and performance animation system for VRM models.
 Character-scoped backgrounds and the foundation for AI-driven environment control.
 
 - **2 Bundled Scenic Backgrounds**: Ships with **2 built-in scene backgrounds** out of the box for a richer first-run experience.
-- **Character-Scoped Backgrounds**: Each AIRI card can specify a **preferred background** that persists across sessions and can be set directly from the Artistry gallery widget.
+- **Character-Scoped Backgrounds**: Each Anima card can specify a **preferred background** that persists across sessions and can be set directly from the Artistry gallery widget.
 - **Transparency-Aware Rendering**: Both Live2D (PixiJS `backgroundAlpha: 0`) and VRM (Three.js `clearAlpha: 0`) renderers use **fully transparent canvases**, allowing layered composition with DOM backgrounds.
 - **Background-Journal Integration**: The Image Journal and Background systems are **bridged** — generated artistry images can be set as the character's background in a single click.
 - **AI-Driven Background Creation**: The AI can not only set an existing image from the journal as a background, but also **generate a new image and set it as the background** in one action — letting the character "redecorate" on the fly.
-- **Background Portability**: Active backgrounds are exported **with the AIRI card**, so anyone who imports a character gets their scene automatically applied.
+- **Background Portability**: Active backgrounds are exported **with the Anima card**, so anyone who imports a character gets their scene automatically applied.
 - **Photo Mode (Stage Capture)**: A dedicated 3-2-1 countdown capture system that snapshots the character and their active background into a single composite image. Features a full-screen flash transition for immediate visual feedback. *(The old "Control Island" housing was retired; capture now lives on the Control Strip / customizer.)*
 - **Selfie-Enhanced Previews**: Character card previews in the settings menu automatically use the latest "selfie" from the image journal as the portrait, providing a dynamic and personalized view of each character. Includes smart anchoring (object-top) for perfect framing.
 - **AVIF Background Reconciliation** *(new)*: cloud sync converts and reconciles background images to AVIF, shrinking multi-device sync payloads.
@@ -147,7 +147,7 @@ A complete redesign of the image generation pipeline, focusing on performance an
 - **Production Studio (Director Modular Visual Assets)** *(new)*: First-class visual asset production workflow allowing the AI director to select, combine, and manifest scene elements and props dynamically.
 - **Replicate Cloud Support**: First-class integration with **Replicate's API** as a remote generation provider. Pricing transparency is built into the UI — models are sorted with cost-per-generation visible, and starting at **$5 for ~1,600 images** on their cheapest models, it's a great option for users who can't render locally.
 - **Interactive Gallery Widget**: A premium "Flip Card" display with **front-face** image preview, **back-face** generation metadata (Prompt, Remix ID, Render Time), and one-click **"Set as Background"**.
-- **NanoBanana Provider Support**: Added **NanoBanana** as another first-class artistry backend alongside Replicate and ComfyUI, widening the generation and mutation toolset available to AIRI.
+- **NanoBanana Provider Support**: Added **NanoBanana** as another first-class artistry backend alongside Replicate and ComfyUI, widening the generation and mutation toolset available to Anima.
 - **"Bring Your Own Workflow" (BYOW)**: Users can upload any `workflow_api.json` from ComfyUI and visually map specific nodes (prompts, seeds, LoRA weights) to be **controllable by the AI**.
 - **Global & Per-Character Artistry Control**: Added a "None" provider state to the global settings and per-character switches. This allows users to fully disable image generation module-wide or for specific individuals.
 - **Dynamic Prompt Stripping**: Automatically removes image-generation instructions and tool definitions from the system prompt builder whenever Artistry is disabled, preventing AI roleplay confusion.
@@ -208,7 +208,7 @@ Custom provider integrations not present in the upstream project.
 Enables the character to perceive and react to the user's real-world desktop environment.
 
 - **OS Sensor Integration**: Proactive injection of real-time telemetry into the LLM context, including **Active Window Title**, **Program Name**, and **User Idle (AFK) status**.
-- **Activity History Tracking**: AIRI can track and reference **which applications you've been using** and for how long, allowing for more grounded and reactive roleplay.
+- **Activity History Tracking**: Anima can track and reference **which applications you've been using** and for how long, allowing for more grounded and reactive roleplay.
 - **Environment Telemetry**: Real-time awareness of **CPU/GPU load**, **System Volume** (PowerShell-backed sensor), and **Local Time**, allowing characters to coordinate their energy levels or suggestions with your PC's state.
 - **Tool-Aware Proactivity**: Dynamic tool registration for the Heartbeats pipeline — the AI can fetch and use **contextually relevant tools** (Volume, Time, etc.) during proactive evaluation.
 - **Metric-Driven Milestones**: Tracking of session-level metadata (total turns, journal entry counts) to trigger **special conversational milestones** or "save-point" reminders.
@@ -224,10 +224,10 @@ Upstream shipped Discord as a detached sidecar process with limited, text-only f
 - **Generation 2 — Voice & Native Commands**:
     - **Voice Call Engines** (`/voicecall`): **Gemini** (raw Discord VC audio piped directly to a Gemini Live WebSocket for full-duplex, no-text-first voice, with session-ownership routing of transcriptions to the active Discord text channel) and **Classic TTS** (STT → LLM → TTS with 24kHz mono PCM resampling and custom WAV chunk-merging for chat voice notes).
     - **Voice Modes** (`/voicemode`): `puppet` (desktop speakers), `voicenote` (Discord audio attachments), or `none` (muted) — remote-controlling where her speech comes out.
-    - **Native Slash Command Registry**: `/status`, `/imagine`, `/director`, `/character`, `/new`, `/history`, `/chatmode`, `/timelines`, `/summon`, `/leave`, `/journalmoment`, `/voicecall`, `/vision`, `/selfie` — REST-registered with native autocomplete; long ops show "AIRI is thinking…" via interaction deferral.
+    - **Native Slash Command Registry**: `/status`, `/imagine`, `/director`, `/character`, `/new`, `/history`, `/chatmode`, `/timelines`, `/summon`, `/leave`, `/journalmoment`, `/voicecall`, `/vision`, `/selfie` — REST-registered with native autocomplete; long ops show "Anima is thinking…" via interaction deferral.
     - **Interactive Message Widgets**: button-driven `/timelines` (select/fork/paginate), `/characters` (switch/details), and `/manage` (voice mode / voice-call engine / chat mode / module toggles) dashboards.
     - **Full Tool Calls**: LLM-driven tools (journal create/search, artistry) execute natively and render as premium results in Discord responses instead of raw JSON dumps; inline artistry images return as native attachments.
-- **Generation 3 — Cloud Relay ("Vercel for Characters")**: when you close the desktop app entirely, the character keeps talking on Discord. A stateless **Cloudflare Worker** hosted on **your own Cloudflare account** answers interaction webhooks, reads the live character prompt + rolling conversation from **Cloudflare KV**, calls your LLM, and replies — 24/7, zero-custody, no AIRI backend. The desktop client acts as the control plane and even *deploys* this Worker for you via Cloudflare OAuth, then can switch execution between the local gateway and the edge. Full architecture, deployment flow, and the BYOS/Edge-Vault sync story live in **§19 Cloud Relay & Zero-Custody Sync**.
+- **Generation 3 — Cloud Relay ("Vercel for Characters")**: when you close the desktop app entirely, the character keeps talking on Discord. A stateless **Cloudflare Worker** hosted on **your own Cloudflare account** answers interaction webhooks, reads the live character prompt + rolling conversation from **Cloudflare KV**, calls your LLM, and replies — 24/7, zero-custody, no Anima backend. The desktop client acts as the control plane and even *deploys* this Worker for you via Cloudflare OAuth, then can switch execution between the local gateway and the edge. Full architecture, deployment flow, and the BYOS/Edge-Vault sync story live in **§19 Cloud Relay & Zero-Custody Sync**.
 - **Cloud Relay Execution Handover** *(discord-side detail)*: deploying a relay switches `executionMode` to `remote` and pauses the local Discord gateway (so a single bot token isn't contends for by two listeners). The right-panel memory-review modal lets you inspect the Worker's KV conversation log and hand execution back to local, with relay instances tracked per-character.
 - **Discord & Gemini Live Voice Transcription Sync** *(new)*: Full parity between spoken voice channels and chat transcripts via pure JS bidirectional audio bridging (`d0762c3216`, `8d0c89b5ad`). Both user voice STT and character assistant voice transcriptions from active Gemini Live WebSocket calls are automatically captured and ingested into active conversation history logs.
 - **Mission Control Settings** (`Settings → Modules → Discord`): live gateway status + ping, guild/VC presence table, scrollable event stream, force identity-sync + test/restart buttons, granular toggles, and **DMs disabled by default** for security.
@@ -275,7 +275,7 @@ A premium, Antigravity-inspired interface for orchestrating the Model Context Pr
 ## 15. Modular Wardrobe System
 A persistent, multi-layered clothing and expression management system.
 
-- **Schema-Driven Outfits**: Outfits are stored as part of the AIRI character card, specifying `name`, `icon`, `base/overlay` type, and a set of `expressions`.
+- **Schema-Driven Outfits**: Outfits are stored as part of the Anima character card, specifying `name`, `icon`, `base/overlay` type, and a set of `expressions`.
 - **Base vs. Overlay Logic**:
     - **Base Outfits**: Mutually exclusive. Applying a new Base outfit will "zero out" any other active Base expressions (e.g., swapping a full dress for a swimsuit).
     - **Overlays**: Stackable layers (e.g., glasses, ribbons, hats) that can be toggled on/off independently without disturbing the Base outfit.
@@ -336,7 +336,7 @@ The previous "Onboarding Overhaul (Phase 1)" flow that shipped before the V2 wiz
 ---
 
 ## 18. Platform Parity: Web, Mobile & Native (NEW)
-Running AIRI is no longer desktop-only. The core experience (`packages/stage-ui` + `stage-pages`) is deliberately platform-agnostic, so the same brain, memory, voice, and rendering drive three distinct hosts that converge on one interaction model.
+Running Anima is no longer desktop-only. The core experience (`packages/stage-ui` + `stage-pages`) is deliberately platform-agnostic, so the same brain, memory, voice, and rendering drive three distinct hosts that converge on one interaction model.
 
 - **Three Hosts, One Core**:
     - **`stage-tamagotchi`** — the flagship Electron desktop app: multi-window overlays (Stage, Chat, Caption, Customizer, Widgets…), tray integration, Control Strip, tool bridges, and screen-capture hooks.
@@ -346,16 +346,16 @@ Running AIRI is no longer desktop-only. The core experience (`packages/stage-ui`
 - **Mobile Sheet Architecture**: `WhisperDock` was decomposed into a shared `WhisperComposerBar` + `MobileWhisperSheet`, introducing **4 distinct sheet postures** (with mouse-drag and quick-action collapse/expand controls), producer guidance + choice bubbles wired into the composer (`ProducerGuidanceModal` / `ProducerChoiceBubble`), and an unconfigured-safety modal when the persona isn't set up.
 - **Mobile Native Stage**: an overhauled mobile stage with a **story timeline switcher** in the header, pure-Vue popovers, an ambient floating-hearts layer, and a theme-aware frosted Control Strip. A full-screen **Control Strip customizer** supports edge-notch docking and drag positioning, unconstrained on mobile.
 - **Mobile Landscape**: dedicated layout support so the experience holds up when the device rotates (with an updated mobile revamp architecture spec).
-- **iOS Native Neural Inference Suite (Apple Core AI & Capacitor)** *(new)*: Native Apple Neural Engine (ANE) and Metal GPU acceleration for on-device local models on iOS via `@proj-airi/cap-native-ai`, complete with dedicated settings in `apple-core-ai.vue`, testbed in `core-ai-lab.vue`, and out-of-process `.aimodel`/`.aimodelc` sandbox streaming bypassing WebKit memory caps.
+- **iOS Native Neural Inference Suite (Apple Core AI & Capacitor)** *(new)*: Native Apple Neural Engine (ANE) and Metal GPU acceleration for on-device local models on iOS via `@proj-anima/cap-native-ai`, complete with dedicated settings in `apple-core-ai.vue`, testbed in `core-ai-lab.vue`, and out-of-process `.aimodel`/`.aimodelc` sandbox streaming bypassing WebKit memory caps.
 - **Cross-Platform Fixes**: iOS Web Speech API streaming fixes, web-settings back navigation and STT error alerts, and a catalogue of documented mobile lessons (Vue `<Transition>` scoped-CSS opacity lockups, KeepAlive name matching) hardened the shared codebase without leaking regressions between platforms.
 
 ---
 
 ## 19. Cloud Relay & Zero-Custody Sync (NEW)
-The overarching philosophy is **Local-First, Zero-Custody, and Edge-Native**: there is no proprietary AIRI backend anywhere. The character lives on your own machines, and the cloud is an opt-in extension hosted entirely on the user's own accounts.
+The overarching philosophy is **Local-First, Zero-Custody, and Edge-Native**: there is no proprietary Anima backend anywhere. The character lives on your own machines, and the cloud is an opt-in extension hosted entirely on the user's own accounts.
 
-### A. The Platform: `@proj-airi/stage-edge` ("Vercel for Characters")
-A first-class workspace package (`apps/stage-edge`) compiles a Cloudflare Worker, and ships a Node.js SDK/CLI that deploys it programmatically. The AIRI desktop acts as the control plane / authoring client; the serverless Worker handles the 24/7 presence.
+### A. The Platform: `@proj-anima/stage-edge` ("Vercel for Characters")
+A first-class workspace package (`apps/stage-edge`) compiles a Cloudflare Worker, and ships a Node.js SDK/CLI that deploys it programmatically. The Anima desktop acts as the control plane / authoring client; the serverless Worker handles the 24/7 presence.
 
 - **Worker Runtime (`src/index.ts`)**: a single stateless HTTP handler. Wakes on POST (Discord interaction webhook or relay), serves `/health`, proxies `/cors-proxy` and `/proxy`, answers Discord **Ed25519**-verified interaction webhooks, and 404s everything else.
     - **Signature Verification**: every incoming webhook is signature-verified against the Discord application public key (`verifyDiscordSignature`, `src/crypto/ed25519.ts`), including Type-1 PING.
@@ -366,7 +366,7 @@ A first-class workspace package (`apps/stage-edge`) compiles a Cloudflare Worker
 - **Access Control** (`src/discord/acl.ts`): a three-role permission matrix — `OWNER` / `DESIGNATED` / `VISITOR` — that gates which users' interactions the Worker actually answers.
 
 ### B. Deployment: The Deployer + Desktop Control Plane
-Cloud Relay isn't a manual DevOps exercise — **AIRI deploys it for you**.
+Cloud Relay isn't a manual DevOps exercise — **Anima deploys it for you**.
 
 - **OAuth 2.0 PKCE login**: "Sign in with Cloudflare" runs a PKCE code challenge, claims or discovers the account's `workers.dev` subdomain, auto-resolves the account ID from the token, and stores `OAuthTokens` + `apiToken` + `accountId`.
 - **`CloudflareStageDeployer`** (`src/deployer/`): a Node SDK (`cloudflare` v4) that creates/resolves the KV namespace (`ensureKvNamespace`), seeds the system prompt + rolling memory, binds the LLM tuple and Discord keys, bundles the Worker via in-memory **esbuild** (with a zero-fail pre-compiled `BUNDLED_WORKER_SCRIPT` fallback), and uploads the script + webhooks. `packager.ts` guards that single-step bundling.
@@ -376,7 +376,7 @@ Cloud Relay isn't a manual DevOps exercise — **AIRI deploys it for you**.
 ### C. Zero-Custody Sync (BYOS) & Edge Vault
 Relay isn't just a chat bot — it's also the spine of state persistence between devices.
 
-- **Edge Vault Credential Sync** (`airi-edge-vault`): provider secrets and runtime tokens are written to a `vault/credentials` KV key (`saveToEdgeVault` / `fetchFromEdgeVault` — direct REST first, CORS-proxy fallback), and are **auto-restored on login**, so a fresh device sign-in can recover your configuration without ever touching an AIRI server.
+- **Edge Vault Credential Sync** (`airi-edge-vault`): provider secrets and runtime tokens are written to a `vault/credentials` KV key (`saveToEdgeVault` / `fetchFromEdgeVault` — direct REST first, CORS-proxy fallback), and are **auto-restored on login**, so a fresh device sign-in can recover your configuration without ever touching an Anima server.
 - **Sync Engine (BYOS adapters)**: a reconciliation engine replicates active state (settings, character artifacts, per-device binaries) to user-owned object storage. The S3 client streams binary blobs directly to the bucket and guarantees initial remote manifest creation, with voice-profile + data-catalog reconciliation and selective model-download guards. The Web bridge uses the CORS-proxy edge worker.
 - **Onboarding cloud track**: Onboarding V2 adds **Cloud Infrastructure** and **Selective Restore** steps — Cloudflare sign-in provisions your own edge CORS proxy / Discord worker / R2 backup bucket, then offers a per-artifact selective restore of prior state (see §17).
 - **Platform Parity via Relay**: by routing DB and vault reads through the Cloudflare Web CORS reverse-proxy, the same cloud surface serves the web (`stage-web`) and mobile (`stage-pocket`) targets — a single zero-custody spine across desktop, web, and mobile.
@@ -394,7 +394,7 @@ Internal hardening so the app remains a stable, performant "daily driver" across
 - **Dev-loop Hygiene**: `ELECTRON_RUN_AS_NODE` is explicitly cleared in dev scripts, `start_airi.sh` resolves turbo/electron-vite + checks dependencies automatically.
 - **Production Electron Sandbox**: full Chromium sandbox is enabled for the Electron environment, a meaningful security improvement for web-forwarded provider integrations.
 - **Release Provenance**: published releases follow a `v0.9.x-stable.YYYYMMDD` tag (e.g., `v0.9.27-stable.20260824`, `v0.9.26-stable.20260820`, `v0.9.25-stable.20260818`, `v0.9.24-stable.20260813`, `v0.9.23-stable.20260808`), giving community users a stable pull point.
-- **Operations Skills Catalog**: 56 specialized AIRI skill files + a Rosetta-Stone governing index (`ae3025738`, `35c7fd580`) document subsystem contracts and failure modes, keeping contributors and agents in sync with shipping reality.
+- **Operations Skills Catalog**: 56 specialized Anima skill files + a Rosetta-Stone governing index (`ae3025738`, `35c7fd580`) document subsystem contracts and failure modes, keeping contributors and agents in sync with shipping reality.
 
 ### Retained Legacy Hardening
 Carried forward from the previous revision's Platform & Operations section; still in force.

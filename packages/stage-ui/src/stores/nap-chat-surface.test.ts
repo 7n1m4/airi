@@ -1,4 +1,4 @@
-import type { PresenceState } from '@proj-airi/stage-shared/agentic'
+import type { PresenceState } from '@proj-anima/stage-shared/agentic'
 
 import type { AiriCard } from './modules/airi-card'
 import type { NapChatSessionRecord } from './nap-chat'
@@ -28,13 +28,13 @@ vi.mock('vue-i18n', () => ({
   useI18n: () => ({ t: (key: string) => key }),
 }))
 
-vi.mock('@proj-airi/electron-vueuse', () => ({
+vi.mock('@proj-anima/electron-vueuse', () => ({
   useElectronEventaInvoke: () => async () => undefined,
   useElectronEventaContext: () => ({ value: undefined }),
 }))
 
-vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@proj-airi/stage-shared')>()
+vi.mock('@proj-anima/stage-shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@proj-anima/stage-shared')>()
   return {
     ...actual,
     debug: vi.fn(),

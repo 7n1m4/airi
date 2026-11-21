@@ -1,16 +1,16 @@
-import { detectWebGPU } from '@proj-airi/stage-shared/webgpu'
+import { detectWebGPU } from '@proj-anima/stage-shared/webgpu'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { NativeAI } from '../../../libs/native-ai'
 import { localEngineMetadata } from './local-engines'
 
-vi.mock('@proj-airi/stage-shared', () => ({
+vi.mock('@proj-anima/stage-shared', () => ({
   isApplePlatform: () => false,
   isStageTamagotchi: () => false,
   isStageWeb: () => true,
 }))
 
-vi.mock('@proj-airi/stage-shared/webgpu', () => ({
+vi.mock('@proj-anima/stage-shared/webgpu', () => ({
   detectWebGPU: vi.fn(async () => ({ fp16Supported: true })),
   isWebGPUSupported: vi.fn(() => true),
 }))

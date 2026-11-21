@@ -364,10 +364,10 @@ Provider setup is solved (global System1 config); what remains is per-character 
 
 ```bash
 # Store-level (existing suite must stay green)
-pnpm -F @proj-airi/stage-ui test packages/stage-ui/src/stores/modules/system-one.test.ts
+pnpm -F @proj-anima/stage-ui test packages/stage-ui/src/stores/modules/system-one.test.ts
 # Typecheck affected surfaces
-pnpm -F @proj-airi/stage-ui typecheck
-pnpm -F @proj-airi/stage-pages typecheck
+pnpm -F @proj-anima/stage-ui typecheck
+pnpm -F @proj-anima/stage-pages typecheck
 ```
 
 Text-only doc change: no validation run required for this scaffold.

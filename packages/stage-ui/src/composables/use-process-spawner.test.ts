@@ -1,4 +1,4 @@
-import type { ElectronExecuteShellCommandPayload } from '@proj-airi/stage-shared'
+import type { ElectronExecuteShellCommandPayload } from '@proj-anima/stage-shared'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
@@ -10,7 +10,7 @@ import { useProcessSpawner } from './use-process-spawner'
 const allowedBasenames = ['python3', 'npx', 'npm', 'pkill']
 const invocations: ElectronExecuteShellCommandPayload[] = []
 
-vi.mock('@proj-airi/electron-vueuse', () => ({
+vi.mock('@proj-anima/electron-vueuse', () => ({
   useElectronEventaInvoke: () => async (payload: ElectronExecuteShellCommandPayload) => {
     invocations.push(payload)
     const bin = payload.argv[0].split('/').pop() || ''

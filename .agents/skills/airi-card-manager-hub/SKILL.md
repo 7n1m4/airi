@@ -83,7 +83,7 @@ flowchart TD
 ## 5. Verification Commands
 
 ```bash
-pnpm -F @proj-airi/stage-pages typecheck
-pnpm -F @proj-airi/stage-tamagotchi typecheck
-pnpm -F @proj-airi/stage-ui typecheck
+pnpm -F @proj-anima/stage-pages typecheck
+pnpm -F @proj-anima/stage-tamagotchi typecheck
+pnpm -F @proj-anima/stage-ui typecheck
 ```

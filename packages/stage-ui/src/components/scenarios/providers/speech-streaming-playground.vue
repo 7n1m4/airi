@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TTSInputChunk } from '../../../utils/tts'
 
-import { createQueue } from '@proj-airi/stream-kit'
+import { createQueue } from '@proj-anima/stream-kit'
 import { animate } from 'animejs'
 import { ref } from 'vue'
 

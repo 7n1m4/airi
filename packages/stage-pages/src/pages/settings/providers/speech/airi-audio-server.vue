@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import type { VoiceInfo } from '@proj-airi/stage-ui/stores/providers'
+import type { VoiceInfo } from '@proj-anima/stage-ui/stores/providers'
 import type { SpeechProvider } from '@xsai-ext/providers/utils'
 
 import {
   ProcessLifecycleCard,
   SpeechPlayground,
   SpeechProviderSettings,
-} from '@proj-airi/stage-ui/components'
-import { useProcessSpawner } from '@proj-airi/stage-ui/composables'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { FieldRange, FieldSelect } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/components'
+import { useProcessSpawner } from '@proj-anima/stage-ui/composables'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { FieldRange, FieldSelect } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,

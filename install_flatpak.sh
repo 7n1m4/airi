@@ -14,7 +14,7 @@ if ! command -v flatpak-builder &>/dev/null; then
 fi
 
 pnpm run build:packages
-pnpm -F @proj-airi/stage-tamagotchi run build:flatpak
+pnpm -F @proj-anima/stage-tamagotchi run build:flatpak
 
 echo "========================================================"
 echo " Flatpak Installation Complete!"

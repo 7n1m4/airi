@@ -6,11 +6,11 @@ import type {
   CompanionShareScope,
   NapChatMessage,
   NapChatProposalMessage,
-} from '@proj-airi/stage-shared/agentic'
+} from '@proj-anima/stage-shared/agentic'
 
 import type { NapChatCloseReason, NapChatSessionRecord } from './nap-chat'
 
-import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
+import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
 import {
   COMPANION_TOPIC,
   companionConsentChanged,
@@ -31,8 +31,8 @@ import {
   NAP_CHAT_TOPIC,
   parseCompanionShare,
   parseNapChatMessage,
-} from '@proj-airi/stage-shared/agentic'
-import { libp2pMessageReceived } from '@proj-airi/stage-shared/libp2p'
+} from '@proj-anima/stage-shared/agentic'
+import { libp2pMessageReceived } from '@proj-anima/stage-shared/libp2p'
 import { useLocalStorage } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { defineStore } from 'pinia'
@@ -642,7 +642,7 @@ export const useCompanionStore = defineStore('companion', () => {
    * synchronous IPC round-trip inside `finishSessionRecord`. Two owners of one
    * format is exactly what main's export was meant to prevent, so the correct
    * long-term fix is a single owner: once a `companionServiceComposeNapChatRecap`
-   * rail exists in `@proj-airi/stage-shared`, this copy must be deleted and the
+   * rail exists in `@proj-anima/stage-shared`, this copy must be deleted and the
    * call below pointed at the invoke. Until then, the shapes are pinned to be
    * byte-identical by the tests in `nap-chat.test.ts`, which fail if either side
    * changes without the other.

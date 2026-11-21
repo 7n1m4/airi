@@ -2,7 +2,7 @@
 import {
   ProviderSettingsContainer,
   ProviderSettingsLayout,
-} from '@proj-airi/stage-ui/components'
+} from '@proj-anima/stage-ui/components'
 import {
   clearLayaCache,
   downloadLayaModel,
@@ -13,10 +13,10 @@ import {
   LAYA_MODEL_SPECS,
   resetLayaSession,
   runLayaSystemOne,
-} from '@proj-airi/stage-ui/libs/inference'
-import { useSystemOneStore } from '@proj-airi/stage-ui/stores/modules/system-one'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Button, FieldCheckbox, Progress, Select } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/libs/inference'
+import { useSystemOneStore } from '@proj-anima/stage-ui/stores/modules/system-one'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Button, FieldCheckbox, Progress, Select } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'

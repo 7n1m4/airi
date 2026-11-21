@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FieldInput } from '@proj-airi/ui'
+import { FieldInput } from '@proj-anima/ui'
 import { ref } from 'vue'
 
 const textValue = ref('')

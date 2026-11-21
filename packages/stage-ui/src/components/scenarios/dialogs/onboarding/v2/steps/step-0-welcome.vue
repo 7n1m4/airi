@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { OnboardingStepNextHandler } from '../../types'
 
-import { Button } from '@proj-airi/ui'
+import { Button } from '@proj-anima/ui'
 import { useI18n } from 'vue-i18n'
 
 import CompanionBubble from '../components/companion-bubble.vue'

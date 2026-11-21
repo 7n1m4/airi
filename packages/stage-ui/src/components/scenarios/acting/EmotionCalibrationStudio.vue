@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { CuratedExpressionItem } from '../../../composables/use-expression-curation'
 
-import { useLive2d } from '@proj-airi/stage-ui-live2d/stores'
-import { useMmd } from '@proj-airi/stage-ui-mmd'
-import { useSpine } from '@proj-airi/stage-ui-spine'
-import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
+import { useLive2d } from '@proj-anima/stage-ui-live2d/stores'
+import { useMmd } from '@proj-anima/stage-ui-mmd'
+import { useSpine } from '@proj-anima/stage-ui-spine'
+import { useCustomVrmAnimationsStore, useModelStore } from '@proj-anima/stage-ui-three'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,

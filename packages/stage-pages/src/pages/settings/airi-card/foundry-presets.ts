@@ -1,2 +1,2 @@
-export type { ArchetypePreset } from '@proj-airi/stage-ui/libs/inference'
-export { PRESETS } from '@proj-airi/stage-ui/libs/inference'
+export type { ArchetypePreset } from '@proj-anima/stage-ui/libs/inference'
+export { PRESETS } from '@proj-anima/stage-ui/libs/inference'

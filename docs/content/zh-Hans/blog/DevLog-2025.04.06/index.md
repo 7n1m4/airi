@@ -45,7 +45,7 @@ import ReLUStickerWow from './assets/relu-sticker-wow.avif'
 
 ### 记忆系统
 
-最近正在重构 [`telegram-bot`](https://github.com/moeru-ai/airi/tree/main/services/telegram-bot) 以为已经准备了数月的 Project AIRI 即将到来的「记忆更新」作准备。
+最近正在重构 [`telegram-bot`](https://github.com/moeru-ai/airi/tree/main/services/telegram-bot) 以为已经准备了数月的 Project Anima 即将到来的「记忆更新」作准备。
 
 我们计划使实现后的记忆系统成为当下最先进、最强大、最健壮的系统，其中很多的思想都深受真实世界中的人类记忆系统的启发。
 
@@ -401,10 +401,10 @@ const combinedScore = sql<number>`((1.2 * ${similarity}) + (0.2 * ${timeRelevanc
 
   用于帮助生成用于部署项目到 HuggingFace Spaces 的 [`hfup`](https://github.com/moeru-ai/hfup) 工具已经算是从 `moeru-ai/airi` 大仓库中阶段性毕业了，现在正式迁移到 [@moeru-ai](https://github.com/moeru-ai) 的组织名下（不需要任何迁移操作，继续安装 `hfup` 就可以用了）。非常有意义的是，`hfup` 为了跟上时代，也采用了 [rolldown](https://rolldown.rs/) 和 [oxlint](https://oxc.rs/docs/guide/usage/linter) 帮助开发，希望能借此机会参与到 rolldown，rolldown-vite 和 oxc 的开发当中。非常感谢 [@sxzz](https://github.com/sxzz) 在迁移过程中给到的援助。
 
-- `@proj-airi/drizzle-duckdb-wasm`, `@proj-airi/duckdb-wasm`
-  用于为 Drizzle 添加 DuckDB WASM 驱动支持的 `@proj-airi/drizzle-duckdb-wasm` 和 `@proj-airi/duckdb-wasm` 也算是阶段性毕业了，现在正式迁移到 [@proj-airi](https://github.com/proj-airi) 的组织名下（不需要任何迁移操作，继续安装原来的包就可以用了）。
+- `@proj-anima/drizzle-duckdb-wasm`, `@proj-anima/duckdb-wasm`
+  用于为 Drizzle 添加 DuckDB WASM 驱动支持的 `@proj-anima/drizzle-duckdb-wasm` 和 `@proj-anima/duckdb-wasm` 也算是阶段性毕业了，现在正式迁移到 [@proj-airi](https://github.com/proj-airi) 的组织名下（不需要任何迁移操作，继续安装原来的包就可以用了）。
 
-现在项目速度快了很多，这个月应该会把 `@proj-airi/providers-transformers` 正式毕业到 `xsai` 名下。
+现在项目速度快了很多，这个月应该会把 `@proj-anima/providers-transformers` 正式毕业到 `xsai` 名下。
 
 在其他工程改进方面，我们还集成了全新的面向工作流的工具包 [`@llama-flow/core`](https://github.com/run-llama/@llama-flow/core)，以帮助协调 token 处理、字节流和数据流的 pipeline 编排。记得看看他们的仓库，真的非常好用！
 
@@ -426,7 +426,7 @@ const combinedScore = sql<number>`((1.2 * ${similarity}) + (0.2 * ${timeRelevanc
   </div>
 </div>
 
-当然，一个包含模型、声线和 Project AIRI 支持的所有模块 🎉 的配置的能力的编辑器也包含在内了。
+当然，一个包含模型、声线和 Project Anima 支持的所有模块 🎉 的配置的能力的编辑器也包含在内了。
 
 真的很感谢 [@luoling8192](https://github.com/luoling8192)！
 
@@ -489,9 +489,9 @@ const combinedScore = sql<number>`((1.2 * ${similarity}) + (0.2 * ${timeRelevanc
 - 支持 Featherless.ai 提供商
 - 支持 Gemini 提供商（感谢 [@asukaminato0721](https://github.com/asukaminato0721)）
 - 修复了 Telegram Bot 集成的灾难性 OOM 错误（感谢 [@sumimakito](https://github.com/sumimakito)、[@kwaa](https://github.com/kwaa) 和 [@QiroNT](https://github.com/QiroNT)）
-- 为 Project AIRI 的特殊 DevLog 新增了 98.css 集成（感谢 [@OverflowCat](https://github.com/OverflowCat)）
+- 为 Project Anima 的特殊 DevLog 新增了 98.css 集成（感谢 [@OverflowCat](https://github.com/OverflowCat)）
 
-> 这是 Project AIRI 一篇特别版的开发日志，其灵感主要来自 [@OverflowCat](https://github.com/OverflowCat) 的博文 [ModTran](https://blog.xinshijiededa.men/modtran/)，代码风格大量借鉴了 [@OverflowCat](https://github.com/OverflowCat) 在 https://github.com/OverflowCat/blog/blob/0a92f916629ad942b7da84b894759fde1616bf37/src/components/98/98.ts 里的实现。
+> 这是 Project Anima 一篇特别版的开发日志，其灵感主要来自 [@OverflowCat](https://github.com/OverflowCat) 的博文 [ModTran](https://blog.xinshijiededa.men/modtran/)，代码风格大量借鉴了 [@OverflowCat](https://github.com/OverflowCat) 在 https://github.com/OverflowCat/blog/blob/0a92f916629ad942b7da84b894759fde1616bf37/src/components/98/98.ts 里的实现。
 >
 > 她写的博文很棒，几乎涉及所有我不熟悉的内容，请一定去看看，你会喜欢的。
 

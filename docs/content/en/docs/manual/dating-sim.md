@@ -1,11 +1,11 @@
 ---
 title: Dating Sim & Interactive Scenarios
-description: Experience visual novel gameplay, intimacy and mood mechanics, branching story choices, and scene overlays in AIRI.
+description: Experience visual novel gameplay, intimacy and mood mechanics, branching story choices, and scene overlays in Anima.
 ---
 
 # Dating Sim & Interactive Scenarios
 
-Project AIRI transforms static roleplay into a dynamic, game-like experience through its built-in **Dating Sim Engine**. Inspired by classic visual novel mechanics (such as *Amagami* and *Tokimeki Memorial*), this mode introduces real-time intimacy tracking, dynamic emotional moods, branching choice trees, and immersive visual HUDs.
+Project Anima transforms static roleplay into a dynamic, game-like experience through its built-in **Dating Sim Engine**. Inspired by classic visual novel mechanics (such as *Amagami* and *Tokimeki Memorial*), this mode introduces real-time intimacy tracking, dynamic emotional moods, branching choice trees, and immersive visual HUDs.
 
 ---
 

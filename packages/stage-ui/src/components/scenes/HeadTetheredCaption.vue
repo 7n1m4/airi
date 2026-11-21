@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { AttachLive2DHeadTetheredCaptionResult } from '@proj-airi/stage-ui-live2d/composables/live2d'
+import type { AttachLive2DHeadTetheredCaptionResult } from '@proj-anima/stage-ui-live2d/composables/live2d'
 
-import { subChunkText } from '@proj-airi/stage-shared/utils/caption-sentiment'
-import { useLive2d } from '@proj-airi/stage-ui-live2d'
-import { attachLive2DHeadTetheredCaption } from '@proj-airi/stage-ui-live2d/composables/live2d'
+import { subChunkText } from '@proj-anima/stage-shared/utils/caption-sentiment'
+import { useLive2d } from '@proj-anima/stage-ui-live2d'
+import { attachLive2DHeadTetheredCaption } from '@proj-anima/stage-ui-live2d/composables/live2d'
 import { useBroadcastChannel } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { onBeforeUnmount, ref, watch } from 'vue'

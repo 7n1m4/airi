@@ -14,7 +14,7 @@ description: >-
 | --- | --- | --- |
 | `stream(model, chatProvider, messages, options?)` | :562 | Wraps `streamFrom`; catches `isToolRelatedError` → flips `toolsCompatibility[key] = false` (:568) then rethrows |
 | `generate(...)` | :576 | Non-streaming twin via `generateFrom` |
-| `generateObject<T>(model, chatProvider, options)` | :580 | Structured output; delegates to `@proj-airi/stage-shared` `generateObject` with chatConfig `apiKey/baseURL/fetch` merged in |
+| `generateObject<T>(model, chatProvider, options)` | :580 | Structured output; delegates to `@proj-anima/stage-shared` `generateObject` with chatConfig `apiKey/baseURL/fetch` merged in |
 | `discoverToolsCompatibility(model, chatProvider, _, options?)` | :601 | Cached; skipped when `${baseURL}-${model}` key already known |
 | `models(apiUrl, apiKey)` | ~:611 | `@xsai/model` `listModels`; returns `[]` on invalid-URL rather than throwing |
 | `toolsCompatibility` (internal) | :560 | `useLocalStorage('settings/llm/tools-compatibility-v3', {})` |
@@ -115,7 +115,7 @@ Combines multiple system messages into one for Gemini (`googleapis.com`), web-ll
 
 ## 8. Verification
 
-- Type changes: `pnpm -F @proj-airi/stage-ui typecheck`.
+- Type changes: `pnpm -F @proj-anima/stage-ui typecheck`.
 - Behavior changes: exercise one streaming chat turn, one `generateObject` path (e.g. echo-chips summarize), and one tools-bearing turn, because all three settle through different promise paths.
 
 ## 9. Authoritative Sources

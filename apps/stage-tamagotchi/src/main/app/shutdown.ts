@@ -23,17 +23,17 @@ export function runShutdown(): Promise<void> {
   if (running)
     return running
 
-  console.info('[@proj-airi/stage-tamagotchi] Shutdown sequence started...')
+  console.info('[@proj-anima/stage-tamagotchi] Shutdown sequence started...')
   running = (async () => {
     for (const hook of hooks) {
       try {
         await hook()
       }
       catch (err) {
-        console.error('[@proj-airi/stage-tamagotchi] Shutdown step failed:', err)
+        console.error('[@proj-anima/stage-tamagotchi] Shutdown step failed:', err)
       }
     }
-    console.info('[@proj-airi/stage-tamagotchi] Shutdown complete.')
+    console.info('[@proj-anima/stage-tamagotchi] Shutdown complete.')
   })()
 
   return running

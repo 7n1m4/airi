@@ -11,7 +11,7 @@ import {
   validateProviderBaseUrl,
 } from './helpers'
 
-vi.mock('@proj-airi/stage-shared', () => ({
+vi.mock('@proj-anima/stage-shared', () => ({
   isUrl: (url: string) => {
     try {
       // eslint-disable-next-line no-new
@@ -25,7 +25,7 @@ vi.mock('@proj-airi/stage-shared', () => ({
 }))
 
 const { isWebGPUSupported } = vi.hoisted(() => ({ isWebGPUSupported: vi.fn() }))
-vi.mock('@proj-airi/stage-shared/webgpu', () => ({
+vi.mock('@proj-anima/stage-shared/webgpu', () => ({
   isWebGPUSupported,
 }))
 

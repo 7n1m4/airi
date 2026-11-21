@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { SerializableDesktopCapturerSource } from '@proj-airi/electron-screen-capture'
+import type { SerializableDesktopCapturerSource } from '@proj-anima/electron-screen-capture'
 
-import { useVisionStore } from '@proj-airi/stage-ui/stores/modules/vision'
-import { ATTENTION_GUARD_WORKLOAD_ID, useVisionOrchestratorStore, VISION_WORKLOADS } from '@proj-airi/stage-ui/stores/modules/vision/orchestrator'
-import { Button, FieldCheckbox, FieldRange, FieldSelect, SelectTab } from '@proj-airi/ui'
+import { useVisionStore } from '@proj-anima/stage-ui/stores/modules/vision'
+import { ATTENTION_GUARD_WORKLOAD_ID, useVisionOrchestratorStore, VISION_WORKLOADS } from '@proj-anima/stage-ui/stores/modules/vision/orchestrator'
+import { Button, FieldCheckbox, FieldRange, FieldSelect, SelectTab } from '@proj-anima/ui'
 import { useIntervalFn } from '@vueuse/core'
 import { computed, onBeforeUnmount, ref } from 'vue'
 

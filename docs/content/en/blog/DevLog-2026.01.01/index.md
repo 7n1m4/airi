@@ -3,7 +3,7 @@ title: DevLog @ 2026.01.01
 category: DevLog
 date: 2026-01-01
 excerpt: |
-  Sharing AIRI's progress on the iOS platform, the problems we encountered and their solutions, as well as some achievements and implementation details of the memory layer experiments in FlowChat by LemonNeko.
+  Sharing Anima's progress on the iOS platform, the problems we encountered and their solutions, as well as some achievements and implementation details of the memory layer experiments in FlowChat by LemonNeko.
 preview-cover:
   light: "@assets('./assets/cover-light.png')"
   dark: "@assets('./assets/cover-dark.png')"
@@ -13,7 +13,7 @@ preview-cover:
 This article was translated from Chinese to English using AI. The original Chinese version is available [here](../zh-Hans/blog/DevLog-2026.01.01/). If you notice any translation issues, please feel free to open an issue or submit a pull request.
 :::
 
-Happy New Year! This is [@LemonNekoGH](https://github.com/LemonNekoGH), one of AIRI's maintainers. The first DevLog of the new year is mine, (pressing B key to select laughing emoji) hahahahaha!
+Happy New Year! This is [@LemonNekoGH](https://github.com/LemonNekoGH), one of Anima's maintainers. The first DevLog of the new year is mine, (pressing B key to select laughing emoji) hahahahaha!
 
 <p style="display: flex; justify-content: center;">
     <img src="./assets/helldiver-laughing.png" alt="Helldiver Laughing Emotion" />
@@ -21,15 +21,15 @@ Happy New Year! This is [@LemonNekoGH](https://github.com/LemonNekoGH), one of A
 
 Alright, let's get to the point.
 
-## AIRI Pocket
+## Anima Pocket
 
-Two days ago, we introduced [Capacitor](https://capacitorjs.com/) to build mobile applications for AIRI ([#845](https://github.com/moeru-ai/airi/pull/845)), which we call AIRI Pocket.
+Two days ago, we introduced [Capacitor](https://capacitorjs.com/) to build mobile applications for Anima ([#845](https://github.com/moeru-ai/airi/pull/845)), which we call Anima Pocket.
 
 We got iOS working and added notification capabilities to it. This means that if she wants to, she can proactively remind you to spend time with her through notifications.
 
 Don't worry too much about that default Capacitor icon—we'll replace it later.
 
-In the video, I removed AIRI from the background app list, and shortly after, AIRI popped up a notification. This kind of background notification is hard to achieve in PWAs, but it's a breeze on native iOS apps.
+In the video, I removed Anima from the background app list, and shortly after, Anima popped up a notification. This kind of background notification is hard to achieve in PWAs, but it's a breeze on native iOS apps.
 
 Wait, was it that smooth? Didn't we encounter any problems?
 

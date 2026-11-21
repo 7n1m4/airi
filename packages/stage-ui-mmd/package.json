@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/stage-ui-mmd",
+  "name": "@proj-anima/stage-ui-mmd",
   "type": "module",
   "private": true,
   "description": "MMD scene components and stores for Project AIRI",
@@ -30,8 +30,8 @@
   },
   "dependencies": {
     "@moeru/std": "catalog:",
-    "@proj-airi/stage-shared": "workspace:^",
-    "@proj-airi/ui": "workspace:^",
+    "@proj-anima/stage-shared": "workspace:^",
+    "@proj-anima/ui": "workspace:^",
     "@vueuse/core": "catalog:",
     "ammojs-typed": "catalog:",
     "es-toolkit": "catalog:",

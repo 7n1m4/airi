@@ -1,17 +1,17 @@
 electronCallback:
   title:
     loading: Menyelesaikan proses masuk
-    openingAiri: Membuka AIRI
+    openingAiri: Membuka Anima
     signedIn: Anda telah masuk
     signInFailed: Gagal masuk
-    finishSignInInAiri: Selesaikan proses masuk di AIRI
-    openAiriToContinue: Buka AIRI untuk melanjutkan
+    finishSignInInAiri: Selesaikan proses masuk di Anima
+    openAiriToContinue: Buka Anima untuk melanjutkan
   message:
-    checkingResponse: Memeriksa respons masuk Anda dan menyiapkan pengalihan ke AIRI.
-    passingToAiri: Mengalihkan proses masuk Anda kembali ke AIRI. Halaman ini akan segera ditutup.
-    syncedAndSafeToClose: Kami telah memberi tahu klien AIRI tempat Anda masuk.
+    checkingResponse: Memeriksa respons masuk Anda dan menyiapkan pengalihan ke Anima.
+    passingToAiri: Mengalihkan proses masuk Anda kembali ke Anima. Halaman ini akan segera ditutup.
+    syncedAndSafeToClose: Kami telah memberi tahu klien Anima tempat Anda masuk.
     invalidResponse: Respons masuk ini tidak dapat digunakan.
-    loopbackUnreachable: Peramban tidak dapat menjangkau AIRI melalui port callback lokal.
+    loopbackUnreachable: Peramban tidak dapat menjangkau Anima melalui port callback lokal.
     tryOpenDirectly: Kami akan mencoba membuka pengalihan lokal secara langsung. Jika masih gagal, gunakan tombol di bawah ini.
     automaticHandoffFailed: Pengalihan otomatis tidak selesai dalam sesi peramban ini.
   label:
@@ -19,7 +19,7 @@ electronCallback:
     safeToClose: Tab ini sekarang aman untuk ditutup.
     whyStillHere: Mengapa tab ini masih terbuka?
   action:
-    openAiriManually: Buka AIRI secara manual
+    openAiriManually: Buka Anima secara manual
   hint:
     closeTabManually: Beberapa peramban tidak mengizinkan halaman ini menutup sendiri secara otomatis. Anda dapat menutupnya secara manual.
 signIn:
@@ -156,7 +156,7 @@ profile:
     setLinkSent: Periksa {email} untuk tautan pembuatan kata sandi Anda.
     setLinkFailed: Kami tidak dapat mengirimkan tautan pembuatan kata sandi.
   linkedAccounts:
-    description: Masuk ke AIRI melalui penyedia ini. Putuskan tautan untuk mencabut akses, lalu tautkan kembali untuk beralih ke akun lain.
+    description: Masuk ke Anima melalui penyedia ini. Putuskan tautan untuk mencabut akses, lalu tautkan kembali untuk beralih ke akun lain.
     status:
       linked: Terhubung
       notLinked: Belum terhubung
@@ -198,6 +198,6 @@ webCallback:
     missingCodeOrState: Kode otorisasi atau state tidak ditemukan
     missingFlowState: State alur OIDC tidak ditemukan - silakan coba masuk kembali
     tokenExchangeFailed: Pertukaran token gagal
-    finalizing: Menyelesaikan autentikasi dengan AIRI.
+    finalizing: Menyelesaikan autentikasi dengan Anima.
   action:
     tryAgain: Coba lagi

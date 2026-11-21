@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { AiriCard } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import type { AiriCard } from '@proj-anima/stage-ui/stores/modules/airi-card'
 
 import DOMPurify from 'dompurify'
 
-import { CharacterContextDialog, StageBackgroundPicker } from '@proj-airi/stage-ui/components/scenarios/dialogs'
-import { DEFAULT_ARTISTRY_WIDGET_INSTRUCTION } from '@proj-airi/stage-ui/constants/prompts/artistry-instruction'
+import { CharacterContextDialog, StageBackgroundPicker } from '@proj-anima/stage-ui/components/scenarios/dialogs'
+import { DEFAULT_ARTISTRY_WIDGET_INSTRUCTION } from '@proj-anima/stage-ui/constants/prompts/artistry-instruction'
 import {
   DEFAULT_ACTING_MODEL_EXPRESSION_PROMPT,
   DEFAULT_ACTING_SPEECH_EXPRESSION_PROMPT,
@@ -15,18 +15,18 @@ import {
   DEFAULT_JOURNAL_INTRUSION_PROMPT,
   DEFAULT_POST_HISTORY_INSTRUCTIONS,
   DEFAULT_TEXT_JOURNAL_WIDGET_INSTRUCTION,
-} from '@proj-airi/stage-ui/constants/prompts/character-defaults'
+} from '@proj-anima/stage-ui/constants/prompts/character-defaults'
 import {
   useArtistryStore,
   useConsciousnessStore,
   useDisplayModelsStore,
   useSpeechStore,
-} from '@proj-airi/stage-ui/stores'
+} from '@proj-anima/stage-ui/stores'
 import {
   buildSystemPrompt,
   useAiriCardStore,
-} from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { Button } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { Button } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,

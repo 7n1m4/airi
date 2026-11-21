@@ -281,8 +281,8 @@ Observed: both commands exit 0 with 29 total passing tests: 27 Stage UI audio-st
 - [x] **Step 2: Run scoped type checks**
 
 ```powershell
-& "$nodeHome\corepack.cmd" pnpm --filter '@proj-airi/stage-ui' typecheck
-& "$nodeHome\corepack.cmd" pnpm --filter '@proj-airi/stage-layouts' typecheck
+& "$nodeHome\corepack.cmd" pnpm --filter '@proj-anima/stage-ui' typecheck
+& "$nodeHome\corepack.cmd" pnpm --filter '@proj-anima/stage-layouts' typecheck
 ```
 
 Expected: both commands exit 0 with no TypeScript errors.
@@ -290,7 +290,7 @@ Expected: both commands exit 0 with no TypeScript errors.
 - [x] **Step 3: Build the production Web app**
 
 ```powershell
-& "$nodeHome\corepack.cmd" pnpm --filter '@proj-airi/stage-web' build
+& "$nodeHome\corepack.cmd" pnpm --filter '@proj-anima/stage-web' build
 ```
 
 Expected: Vite production build exits 0 and emits `apps/stage-web/dist`.

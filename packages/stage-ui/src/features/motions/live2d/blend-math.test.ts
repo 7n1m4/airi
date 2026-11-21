@@ -1,4 +1,4 @@
-import { evaluateLive2dBlend } from '@proj-airi/stage-ui-live2d'
+import { evaluateLive2dBlend } from '@proj-anima/stage-ui-live2d'
 import { describe, expect, it } from 'vitest'
 
 describe('live2d: Cubism parameter blend mode math invariants', () => {

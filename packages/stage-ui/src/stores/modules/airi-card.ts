@@ -1,13 +1,13 @@
-import type { Card, ccv3 } from '@proj-airi/ccc'
+import type { Card, ccv3 } from '@proj-anima/ccc'
 
 import type { AiriCadence, AiriCognition, AiriPacing, CardCustomSticker, CharacterCueAllowlist } from '../../types/card.schema'
 import type { VoiceProfile } from '../providers'
 
-import { debug } from '@proj-airi/stage-shared'
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
-import { useLive2d } from '@proj-airi/stage-ui-live2d'
-import { useSpine } from '@proj-airi/stage-ui-spine'
-import { useModelStore } from '@proj-airi/stage-ui-three'
+import { debug } from '@proj-anima/stage-shared'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
+import { useLive2d } from '@proj-anima/stage-ui-live2d'
+import { useSpine } from '@proj-anima/stage-ui-spine'
+import { useModelStore } from '@proj-anima/stage-ui-three'
 import { until, useBroadcastChannel } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { defineStore, getActivePinia, storeToRefs } from 'pinia'
@@ -1166,7 +1166,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
           }
         }
         else if (selectedModel.format === DisplayModelFormat.PMXZip || selectedModel.format === DisplayModelFormat.PMD || selectedModel.format === DisplayModelFormat.PMXDirectory) {
-          const mmdStore = await import('@proj-airi/stage-ui-mmd/stores/mmd').then(m => m.useMmd())
+          const mmdStore = await import('@proj-anima/stage-ui-mmd/stores/mmd').then(m => m.useMmd())
           mmdStore.morphMappings = emotionMap
           if (force || modelChanged) {
             mmdStore.shouldUpdateView()

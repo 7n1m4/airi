@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
-import { FieldInput, FieldSelect } from '@proj-airi/ui'
+import { useArtistryStore } from '@proj-anima/stage-ui/stores/modules/artistry'
+import { FieldInput, FieldSelect } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 

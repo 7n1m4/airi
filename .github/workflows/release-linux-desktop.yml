@@ -72,7 +72,7 @@ jobs:
       - run: pnpm run build:packages
 
       - name: Build (Linux, Electrobun/Hutch)
-        run: pnpm -F @proj-airi/stage-tamagotchi run build
+        run: pnpm -F @proj-anima/stage-tamagotchi run build
 
       # ---------
       # Nightly (schedule) builds only

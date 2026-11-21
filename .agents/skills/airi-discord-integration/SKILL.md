@@ -60,7 +60,7 @@ Discord is the primary consumer of Cloud Relay: the local gateway service and th
 
 ## Verification
 
-- Typecheck: `pnpm -F @proj-airi/stage-ui typecheck` for the store; `pnpm -F stage-tamagotchi build` (includes typecheck) when touching the main-process service.
+- Typecheck: `pnpm -F @proj-anima/stage-ui typecheck` for the store; `pnpm -F stage-tamagotchi build` (includes typecheck) when touching the main-process service.
 - Manual: connect the bot, run a slash command, send a text message (confirm tool calls execute), send an image with vision on (confirm VLM turn, tools stripped) and off (confirm text-only path), and confirm `COMMANDS_VERSION` bump triggers re-registration.
 
 ## Related Skills & References

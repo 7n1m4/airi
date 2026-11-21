@@ -4,10 +4,10 @@ import localforage from 'localforage'
 import {
   SpeechPlayground,
   SpeechProviderSettings,
-} from '@proj-airi/stage-ui/components'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Button, Callout, Input, Progress, Select } from '@proj-airi/ui'
+} from '@proj-anima/stage-ui/components'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { Button, Callout, Input, Progress, Select } from '@proj-anima/ui'
 import { computed, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 

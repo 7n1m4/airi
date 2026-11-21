@@ -2,7 +2,7 @@ import type { Tool } from '@xsai/shared-chat'
 
 import z from 'zod'
 
-import { useCustomVrmAnimationsStore } from '@proj-airi/stage-ui-three'
+import { useCustomVrmAnimationsStore } from '@proj-anima/stage-ui-three'
 import { tool } from '@xsai/tool'
 
 import { DisplayModelFormat, useDisplayModelsStore } from '../../display-models'

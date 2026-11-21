@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/server-sdk",
+  "name": "@proj-anima/server-sdk",
   "type": "module",
   "version": "0.9.0-alpha.15",
   "description": "Client-side SDK implementation for connecting to AIRI server components and runtimes",
@@ -37,7 +37,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@proj-airi/server-shared": "workspace:^",
+    "@proj-anima/server-shared": "workspace:^",
     "crossws": "^0.4.4",
     "superjson": "catalog:"
   },

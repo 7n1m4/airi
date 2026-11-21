@@ -169,7 +169,7 @@ To keep the system intuitive, Capability Packs are categorized into three config
 * **Concept**: Elevating the companion from a conversationalist to an active desktop assistant capable of navigating desktop applications, inspecting windows, capturing screenshots, and executing keyboard or mouse input.
 
 ##### The Naive Assumption vs. Upstream Reality (PR #2565 Lessons)
-The initial naive roadmap envisioned computer use as a simple 1-line entry in `mcp.json` (e.g. `@proj-airi/computer-use-mcp`) delegated through generic stdio `mcp_call_tool`. Upstream's production implementation in **PR #2565** proved why generic MCP stdio is inadequate for native OS automation, establishing 6 critical lessons:
+The initial naive roadmap envisioned computer use as a simple 1-line entry in `mcp.json` (e.g. `@proj-anima/computer-use-mcp`) delegated through generic stdio `mcp_call_tool`. Upstream's production implementation in **PR #2565** proved why generic MCP stdio is inadequate for native OS automation, establishing 6 critical lessons:
 
 1. **Multimodal VLM Injection vs. Text-Only MCP**:
    - *Problem*: Generic MCP stdio returns text strings. Vision models (Claude 3.5 Sonnet, GPT-4o, Gemini 1.5/2.0) require native `{ type: 'image_url' }` base64 data URLs to visually inspect the desktop.

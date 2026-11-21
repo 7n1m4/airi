@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { SpeechProviderWithExtraOptions } from '@xsai-ext/providers/utils'
 
-import AudioStudio from '@proj-airi/stage-ui/components/scenarios/settings/model-settings/audio-studio.vue'
+import AudioStudio from '@proj-anima/stage-ui/components/scenarios/settings/model-settings/audio-studio.vue'
 
-import { createAudioBlob } from '@proj-airi/stage-shared'
+import { createAudioBlob } from '@proj-anima/stage-shared'
 import {
   Alert,
   ErrorContainer,
@@ -11,11 +11,11 @@ import {
   RadioCardSimple,
   TestDummyMarker,
   VoiceCardManySelect,
-} from '@proj-airi/stage-ui/components'
-import { useAnalytics } from '@proj-airi/stage-ui/composables'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { useSettingsAudioDevice } from '@proj-airi/stage-ui/stores/settings'
+} from '@proj-anima/stage-ui/components'
+import { useAnalytics } from '@proj-anima/stage-ui/composables'
+import { useSpeechStore } from '@proj-anima/stage-ui/stores/modules/speech'
+import { useProvidersStore } from '@proj-anima/stage-ui/stores/providers'
+import { useSettingsAudioDevice } from '@proj-anima/stage-ui/stores/settings'
 import {
   FieldCheckbox,
   FieldInput,
@@ -23,7 +23,7 @@ import {
   FieldSelect,
   Skeleton,
   Textarea,
-} from '@proj-airi/ui'
+} from '@proj-anima/ui'
 import { generateSpeech } from '@xsai/generate-speech'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'

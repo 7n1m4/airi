@@ -30,4 +30,4 @@ Read `docs/arch-chat-stt-proactivity-pipelines.md` for architecture, then verify
 
 ## Verification
 
-Trace one input through its actual route and inspect history, hooks, speech, and captions. Test a second window for bridge changes. Use `pnpm -F @proj-airi/stage-ui typecheck` for orchestration changes; add the affected desktop/layout workspace only when its code changes. Follow the selected reference's failure cases.
+Trace one input through its actual route and inspect history, hooks, speech, and captions. Test a second window for bridge changes. Use `pnpm -F @proj-anima/stage-ui typecheck` for orchestration changes; add the affected desktop/layout workspace only when its code changes. Follow the selected reference's failure cases.

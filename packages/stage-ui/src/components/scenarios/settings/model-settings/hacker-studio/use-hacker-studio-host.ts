@@ -1,7 +1,7 @@
 import type { HackerAdapter } from './adapters/types'
 import type { useHackerStudio } from './composables/use-hacker-studio'
 
-import { useModelStore } from '@proj-airi/stage-ui-three'
+import { useModelStore } from '@proj-anima/stage-ui-three'
 import { effectScope, watch } from 'vue'
 
 import { useVrmHackerAdapter } from './adapters/vrm/use-vrm-hacker-adapter'

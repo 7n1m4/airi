@@ -40,6 +40,6 @@ Own prompt composition and refresh. Marker execution belongs to [ACT tokens](../
 
 ## Verification
 
-For store/composable changes, `pnpm -F @proj-airi/stage-ui typecheck`. Inspect the composed prompt with Dating Sim on/off, artistry autonomous/manual, tools enabled/disabled, memory present/absent, and no ACTOR configuration. Refresh repeatedly: preserve context, avoid duplicated persona, and check a second window for reload loops. Switch characters/sessions and confirm injected context follows the target.
+For store/composable changes, `pnpm -F @proj-anima/stage-ui typecheck`. Inspect the composed prompt with Dating Sim on/off, artistry autonomous/manual, tools enabled/disabled, memory present/absent, and no ACTOR configuration. Refresh repeatedly: preserve context, avoid duplicated persona, and check a second window for reload loops. Switch characters/sessions and confirm injected context follows the target.
 
 Design context: `docs/design-prompt-crafting-catalog.md`, `docs/design-director-producer-roles.md`, and `docs/proposal-dynamic-memory-rag-injection.md`. Proposals describe intended behavior; inspect current builders before implementing.

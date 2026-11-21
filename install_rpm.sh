@@ -9,7 +9,7 @@ echo " [AIRI (dasilva333)] Building and Installing RPM Package"
 echo "========================================================"
 
 pnpm run build:packages
-pnpm -F @proj-airi/stage-tamagotchi run build:rpm
+pnpm -F @proj-anima/stage-tamagotchi run build:rpm
 
 RPM_FILE=$(ls -t "$REPO_ROOT/apps/stage-tamagotchi/dist/"*linux-x86_64.rpm 2>/dev/null | head -n 1 || true)
 

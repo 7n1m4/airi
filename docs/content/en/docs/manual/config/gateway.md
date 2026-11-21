@@ -1,16 +1,16 @@
 ---
-title: Configuring the AIRI Gateway
+title: Configuring the Anima Gateway
 description: How the local WebSocket gateway works, where the authentication token lives, and how to pair external companion apps.
 ---
 
-# Configuring the AIRI Gateway
+# Configuring the Anima Gateway
 
-The **AIRI Gateway** is a local WebSocket server on port `6121` that lets external clients — VS Code extensions, custom Python scripts, and (soon) the unified Rust native app — securely connect, stream audio, and interact with your AIRI instance.
+The **Anima Gateway** is a local WebSocket server on port `6121` that lets external clients — VS Code extensions, custom Python scripts, and (soon) the unified Rust native app — securely connect, stream audio, and interact with your Anima instance.
 
-On Linux, the gateway is hosted by the **AIRI daemon** (`airi-daemon`, D-Bus name `org.moeru.airi.Daemon1`); the desktop app connects to it as a thin client and does not bind the port itself. On other platforms, the desktop app hosts the gateway in-process ("in-app fallback"). Behavior is the same; only ownership differs.
+On Linux, the gateway is hosted by the **Anima daemon** (`anima-daemon`, D-Bus name `org.moeru.airi.Daemon1`); the desktop app connects to it as a thin client and does not bind the port itself. On other platforms, the desktop app hosts the gateway in-process ("in-app fallback"). Behavior is the same; only ownership differs.
 
 :::warning
-The old **Stage Pocket** (Android/iOS Capacitor app) was purged in November 2026 and no longer exists. Pairing instructions below apply to any client that implements the AIRI gateway wire protocol (`airi-gateway` / `airi-channel`).
+The old **Stage Pocket** (Android/iOS Capacitor app) was purged in November 2026 and no longer exists. Pairing instructions below apply to any client that implements the Anima gateway wire protocol (`airi-gateway` / `anima-channel`).
 :::
 
 ---
@@ -26,7 +26,7 @@ On first run the daemon generates a strong random token. Any client connecting m
 ### Finding Your Gateway Token
 
 1. **Settings UI**: open **Settings → System → Connection**. The **Auth Token** field holds the client-side copy the settings page uses.
-2. **Daemon-hosted (Linux)**: `<data>/airi-slint/server-channel/config.json` — read the `"authToken"` field (file is `0600`).
+2. **Daemon-hosted (Linux)**: `<data>/anima-slint/server-channel/config.json` — read the `"authToken"` field (file is `0600`).
 3. **In-app fallback (macOS/Windows)**: `<userData>/server-channel-config.json` — same `"authToken"` field.
 
 ### Rotating the Gateway Token

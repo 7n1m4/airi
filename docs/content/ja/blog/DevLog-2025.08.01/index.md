@@ -3,7 +3,7 @@ title: DevLog @ 2025.08.01
 category: DevLog
 date: 2025-08-01
 excerpt: |
-  Makito が AIRI でのテキストアニメーション実装プロセスと、UTF-8 バイトストリームから「書記素クラスタ」(grapheme cluster) を読み取るライブラリの構築方法を共有します。インスピレーションになれば幸いです！
+  Makito が Anima でのテキストアニメーション実装プロセスと、UTF-8 バイトストリームから「書記素クラスタ」(grapheme cluster) を読み取るライブラリの構築方法を共有します。インスピレーションになれば幸いです！
 preview-cover:
   light: "@assets('/en/blog/DevLog-2025.08.01/assets/cover-light.avif')"
   dark: "@assets('/en/blog/DevLog-2025.08.01/assets/cover-dark.avif')"
@@ -40,9 +40,9 @@ import RollingText from '../../../en/blog/DevLog-2025.08.01/RollingText.vue'
 
 終わりのない8月が始まりました。この[現実味のある数学の問題](https://oeis.org/A180632/a180632.pdf)で時間をつぶすのもいいかもしれません。ごめんなさい……話がそれました。
 
-私は長い間 Project AIRI に関わってきましたが、DevLog に投稿するのは今回が初めてです。
+私は長い間 Project Anima に関わってきましたが、DevLog に投稿するのは今回が初めてです。
 
-この記事では、AIRI でのテキストアニメーションの実装プロセスと、UTF-8 バイトストリームから「書記素クラスタ」(grapheme cluster) を受信しながら読み取るライブラリの構築方法を共有します。インスピレーションになれば幸いです！
+この記事では、Anima でのテキストアニメーションの実装プロセスと、UTF-8 バイトストリームから「書記素クラスタ」(grapheme cluster) を受信しながら読み取るライブラリの構築方法を共有します。インスピレーションになれば幸いです！
 
 ## 背景
 
@@ -50,7 +50,7 @@ import RollingText from '../../../en/blog/DevLog-2025.08.01/RollingText.vue'
 
 テキストアニメーションは、チャットメッセージを UI 上でよりクールに表示させることができます。一般的に、メッセージは受信した時点で完全なものなので、受信したテキストを文字ごとに分割してアニメーション化するだけで済みます。
 
-Project AIRI では、パートナーの [@nekomeowww](https://github.com/nekomeowww) も滑らかなチャットバブルコンポーネントを作成しました：
+Project Anima では、パートナーの [@nekomeowww](https://github.com/nekomeowww) も滑らかなチャットバブルコンポーネントを作成しました：
 
 <div text-sm text-center>
 
@@ -143,6 +143,6 @@ while (true) {
 
 この DevLog を書いている時点で、文字列を書記素クラスタに分割できるライブラリはコミュニティにすでにいくつかありました。しかし、UTF-8 バイトストリームを受け入れ、書記素クラスタを到着順に出力できる実装は見つかりませんでした。そこで私は自分で実装し、アイデアを皆さんと共有し、Unicode の「書記素クラスタ」の概念に対応して [Clustr](https://github.com/sumimakito/clustr) と名付けました。
 
-コアコードは 100 行未満ですが、プロジェクトで UTF-8 バイトストリームをクールなテキストアニメーションにしたい場合（Project AIRI で行ったように）、役立つかもしれません。
+コアコードは 100 行未満ですが、プロジェクトで UTF-8 バイトストリームをクールなテキストアニメーションにしたい場合（Project Anima で行ったように）、役立つかもしれません。
 
-Project AIRI に興味がある場合は、GitHub リポジトリ [moeru-ai/airi](https://github.com/moeru-ai/airi) もぜひご覧ください！
+Project Anima に興味がある場合は、GitHub リポジトリ [moeru-ai/airi](https://github.com/moeru-ai/airi) もぜひご覧ください！

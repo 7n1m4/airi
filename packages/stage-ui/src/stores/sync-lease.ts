@@ -1,4 +1,4 @@
-import { debug } from '@proj-airi/stage-shared'
+import { debug } from '@proj-anima/stage-shared'
 import { nanoid } from 'nanoid'
 
 export type SyncLeaseKind = 'reconcile' | 'outbox'

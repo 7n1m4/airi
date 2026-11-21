@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { JournalPreviewModal, MarkdownRenderer } from '@proj-airi/stage-ui/components'
-import { useAiriCardStore, useEchoesStore, useJournalPreviewStore, useShortTermMemoryStore } from '@proj-airi/stage-ui/stores'
-import { Button, FieldInput, FieldSelect } from '@proj-airi/ui'
+import { JournalPreviewModal, MarkdownRenderer } from '@proj-anima/stage-ui/components'
+import { useAiriCardStore, useEchoesStore, useJournalPreviewStore, useShortTermMemoryStore } from '@proj-anima/stage-ui/stores'
+import { Button, FieldInput, FieldSelect } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'

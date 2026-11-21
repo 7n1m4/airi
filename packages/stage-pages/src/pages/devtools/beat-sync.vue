@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { BeatSyncStyleName } from '@proj-airi/stage-ui-live2d'
+import type { BeatSyncStyleName } from '@proj-anima/stage-ui-live2d'
 
-import { createBeatSyncController } from '@proj-airi/stage-ui-live2d'
-import { Section } from '@proj-airi/stage-ui/components'
-import { Button, Callout, FieldCheckbox, FieldRange, FieldSelect } from '@proj-airi/ui'
+import { createBeatSyncController } from '@proj-anima/stage-ui-live2d'
+import { Section } from '@proj-anima/stage-ui/components'
+import { Button, Callout, FieldCheckbox, FieldRange, FieldSelect } from '@proj-anima/ui'
 import { useRafFn } from '@vueuse/core'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 

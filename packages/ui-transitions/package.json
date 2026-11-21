@@ -1,5 +1,5 @@
 {
-  "name": "@proj-airi/ui-transitions",
+  "name": "@proj-anima/ui-transitions",
   "type": "module",
   "private": true,
   "description": "A collection of transition animations that used by Project AIRI",

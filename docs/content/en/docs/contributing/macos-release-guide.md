@@ -2,7 +2,7 @@
 
 > **[2026-11-13] iOS half superseded**: the Capacitor `apps/stage-pocket` app was purged — web tech on mobile was rejected in favor of a unified Rust native app (desktop + mobile from one screen-size-reactive Slint codebase). See `docs/proposal-unified-rust-native-app.md`. The macOS `.dmg` sections remain valid; the iOS `.ipa` sections are historical until the Rust native app has a packaging lane.
 
-This document captures the specific technical steps required to successfully build, package, and release stable versions of AIRI for Apple platforms (Electron macOS `.dmg` and Capacitor iOS `.ipa`).
+This document captures the specific technical steps required to successfully build, package, and release stable versions of Anima for Apple platforms (Electron macOS `.dmg` and Capacitor iOS `.ipa`).
 
 ## 1. Release Workflow
 
@@ -20,7 +20,7 @@ Do not proceed blindly. Draft notes inline for user review before stamping or ta
 Every stable release must adhere to the following standard template and quality rules:
 
 ```markdown
-# 🚀 AIRI v[version] — Release Notes
+# 🚀 Anima v[version] — Release Notes
 
 [Opening Executive Blurb: 1–2 paragraphs synthesizing the headlining themes, brand new systems, and major improvements of this release.]
 
@@ -75,8 +75,8 @@ Ensure all manifests, package definitions, and documentation links are synchroni
    [`README.md`](../../../../README.md) contains explicit hardcoded download URLs for release assets. Update all download button targets to point to the new tag `v[version]`:
    - Windows setup: `.../releases/download/v[version]/airi-dasilva333-[version]-windows-x64-setup.exe`
    - macOS DMG: `.../releases/download/v[version]/airi-dasilva333-[version]-darwin-arm64.dmg`
-   - Android APK: `.../releases/download/v[version]/AIRI-[version]-android.apk`
-   - iOS IPA: `.../releases/download/v[version]/AIRI-[version]-ios.ipa`
+   - Android APK: `.../releases/download/v[version]/Anima-[version]-android.apk`
+   - iOS IPA: `.../releases/download/v[version]/Anima-[version]-ios.ipa`
 
 5. **Commit Manifest Updates**:
    Commit the updated `package.json`, `project.pbxproj`, and `README.md` files to `main` before creating the release tag.
@@ -120,14 +120,14 @@ To compile the web bundle, sync native Capacitor dependencies, build the `.xcarc
 ```bash
 pnpm run release:ios
 ```
-*(Or from the pocket workspace: `pnpm -F @proj-airi/stage-pocket run release:ios`.)*
+*(Or from the pocket workspace: `pnpm -F @proj-anima/stage-pocket run release:ios`.)*
 
 This script (`apps/stage-pocket/scripts/build-ipa.ts`):
 1. Executes `pnpm run build && pnpm exec cap sync ios` to compile the web bundle into `dist/` and sync assets into `ios/App/App/public/`.
 2. Automatically patches `CapApp-SPM/Package.swift` to ensure Swift 6.0 compatibility and links `CoreLLMKit` / `CoreMLBackend` for native on-device AI.
 3. Runs `xcodebuild archive` to create `build/App.xcarchive`.
-4. Extracts `App.app` into an `ipa-staging/Payload` container and packages `AIRI-[version]-ios.ipa` (and `App.ipa`).
-5. Uploads `AIRI-[version]-ios.ipa` to the matching GitHub release `v[version]` on `dasilva333/airi` with `--clobber`.
+4. Extracts `App.app` into an `ipa-staging/Payload` container and packages `Anima-[version]-ios.ipa` (and `App.ipa`).
+5. Uploads `Anima-[version]-ios.ipa` to the matching GitHub release `v[version]` on `dasilva333/airi` with `--clobber`.
 
 ---
 
@@ -145,14 +145,14 @@ If you are developing locally, testing in the Xcode iOS Simulator, or exporting 
    ```
    Or manually:
    ```bash
-   pnpm -F @proj-airi/stage-pocket run build
-   pnpm -F @proj-airi/stage-pocket exec cap sync ios
+   pnpm -F @proj-anima/stage-pocket run build
+   pnpm -F @proj-anima/stage-pocket exec cap sync ios
    ```
 2. **Local Headless IPA Compilation (Without Upload)**:
    ```bash
    pnpm run build:pocket:ipa
    ```
-   Output: `apps/stage-pocket/build/AIRI-[version]-ios.ipa`.
+   Output: `apps/stage-pocket/build/Anima-[version]-ios.ipa`.
 3. **Manual Xcode Archive / Distribution**:
    - In Xcode, select target **App** and destination **Any iOS Device (arm64)**.
    - Select **Product** → **Archive**.
@@ -164,11 +164,11 @@ If you are developing locally, testing in the Xcode iOS Simulator, or exporting 
 If you need to run macOS desktop packaging manually:
 1. **Build macOS Executable**:
    ```bash
-   pnpm -F @proj-airi/stage-tamagotchi run build:mac
+   pnpm -F @proj-anima/stage-tamagotchi run build:mac
    ```
 2. **Publish to GitHub Releases**:
    ```bash
-   GITHUB_TOKEN="" GH_SSL_NO_VERIFY="true" gh release upload v[version] apps/stage-tamagotchi/dist/AIRI-[version]-darwin-arm64.dmg --repo dasilva333/airi --clobber
+   GITHUB_TOKEN="" GH_SSL_NO_VERIFY="true" gh release upload v[version] apps/stage-tamagotchi/dist/Anima-[version]-darwin-arm64.dmg --repo dasilva333/airi --clobber
    ```
 
 ---
@@ -198,7 +198,7 @@ If you need to run macOS desktop packaging manually:
 
 ### Strict TypeScript Errors (TS6133)
 - **Symptoms**: `pnpm run typecheck` or pre-build step crashes on unused imports or variables.
-- **Resolution**: Run `pnpm -F @proj-airi/stage-tamagotchi run typecheck` prior to release to identify and clean up any unused symbols.
+- **Resolution**: Run `pnpm -F @proj-anima/stage-tamagotchi run typecheck` prior to release to identify and clean up any unused symbols.
 
 ### Vue Template Compilation Errors
 - **Symptoms**: `[unplugin-vue-named-template-pre] Element is missing end tag.`
@@ -206,10 +206,10 @@ If you need to run macOS desktop packaging manually:
 
 ### Xcode SPM Dependency or CoreAI Failures
 - **Symptoms**: `xcodebuild archive` fails resolving Swift Package Manager packages or complains about missing `CoreLLMKit`.
-- **Resolution**: Run `pnpm -F @proj-airi/stage-pocket run ios:resolve` to refresh SPM dependencies, or verify that `apps/stage-pocket/scripts/build-ipa.ts` successfully executed `patchSpmPackageForCoreAI()`.
+- **Resolution**: Run `pnpm -F @proj-anima/stage-pocket run ios:resolve` to refresh SPM dependencies, or verify that `apps/stage-pocket/scripts/build-ipa.ts` successfully executed `patchSpmPackageForCoreAI()`.
 
 ### iOS Simulator Blank White Screen (Missing `index.html`)
 - **Symptoms**: Simulator or device launches into a blank screen with error: `[DevBridge] Navigation failed: The file “index.html” couldn’t be opened because there is no such file.`
 - **Cause**: The Vite web bundle was never compiled into `apps/stage-pocket/dist` or synced to `apps/stage-pocket/ios/App/App/public`.
-- **Resolution**: Run `pnpm -F @proj-airi/stage-pocket run build && pnpm -F @proj-airi/stage-pocket exec cap sync ios` (or `pnpm run open:ios`), then re-run the scheme in Xcode.
+- **Resolution**: Run `pnpm -F @proj-anima/stage-pocket run build && pnpm -F @proj-anima/stage-pocket exec cap sync ios` (or `pnpm run open:ios`), then re-run the scheme in Xcode.
 

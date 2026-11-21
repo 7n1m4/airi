@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { CachedModelInfo, DownloadProgressEvent, HardwareTelemetry, LoadModelResult, PingResponse, TokenStreamEvent } from '@proj-airi/stage-ui/libs/native-ai'
+import type { CachedModelInfo, DownloadProgressEvent, HardwareTelemetry, LoadModelResult, PingResponse, TokenStreamEvent } from '@proj-anima/stage-ui/libs/native-ai'
 
-import { formatBytes, NativeAI } from '@proj-airi/stage-ui/libs/native-ai'
+import { formatBytes, NativeAI } from '@proj-anima/stage-ui/libs/native-ai'
 import { useClipboard, useLocalStorage } from '@vueuse/core'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 

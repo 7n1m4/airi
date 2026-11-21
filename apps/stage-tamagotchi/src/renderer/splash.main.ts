@@ -6,7 +6,7 @@ import type { StartupMilestoneId, StartupSnapshot } from '../shared/eventa'
 import './view-context'
 
 import { defineInvoke } from '@moeru/eventa'
-import { getViewEventaContext } from '@proj-airi/electrobun-eventa/view'
+import { getViewEventaContext } from '@proj-anima/electrobun-eventa/view'
 import { version } from '~build/package'
 
 import {

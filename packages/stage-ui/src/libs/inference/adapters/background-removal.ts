@@ -13,7 +13,7 @@ import type { ProgressPayload } from '../protocol'
 
 import { defineInvoke, defineStreamInvoke } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/webworkers'
-import { defaultPerfTracer } from '@proj-airi/stage-shared'
+import { defaultPerfTracer } from '@proj-anima/stage-shared'
 
 import { removeInferenceStatus, updateInferenceStatus } from '../../../composables/use-inference-status'
 import { applyAlphaMask } from '../../stickers/image-convert'

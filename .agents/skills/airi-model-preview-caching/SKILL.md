@@ -205,4 +205,4 @@ AIRI provides both single-model preview regeneration and gallery-wide batch repr
 - [ ] `toRaw` is used before writing back to IndexedDB (`localforage`).
 - [ ] The updated thumbnail immediately reflects in the UI and persists across page reloads.
 - [ ] Batch processing runs sequentially without triggering `CONTEXT_LOST_WEBGL`.
-- [ ] Run `pnpm --filter @proj-airi/stage-ui typecheck` and verify no type errors.
+- [ ] Run `pnpm --filter @proj-anima/stage-ui typecheck` and verify no type errors.

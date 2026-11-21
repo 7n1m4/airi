@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSettingsTheme } from '@proj-airi/stage-ui/stores/settings'
-import { useTheme } from '@proj-airi/ui'
+import { useSettingsTheme } from '@proj-anima/stage-ui/stores/settings'
+import { useTheme } from '@proj-anima/ui'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 
 withDefaults(defineProps<{

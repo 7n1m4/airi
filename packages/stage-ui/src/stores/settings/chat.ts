@@ -1,4 +1,4 @@
-import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
+import { useLocalStorageManualReset } from '@proj-anima/stage-shared/composables'
 import { defineStore } from 'pinia'
 
 export type ChatSendMode = 'enter' | 'ctrl-enter' | 'double-enter'

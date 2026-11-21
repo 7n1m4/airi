@@ -1,6 +1,6 @@
 import type { ChatProvider } from '@xsai-ext/providers/utils'
 
-import workletUrl from '@proj-airi/stage-ui/workers/vad/process.worklet?worker&url'
+import workletUrl from '@proj-anima/stage-ui/workers/vad/process.worklet?worker&url'
 
 import { storeToRefs } from 'pinia'
 import { computed, isRef, nextTick, onUnmounted, ref, watch } from 'vue'

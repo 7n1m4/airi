@@ -15,7 +15,7 @@ import type { ProgressPayload } from '../protocol'
 import { defineStreamInvoke } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/webworkers'
 import { errorMessageFrom } from '@moeru/std'
-import { defaultPerfTracer } from '@proj-airi/stage-shared'
+import { defaultPerfTracer } from '@proj-anima/stage-shared'
 import { Mutex } from 'async-mutex'
 
 import { removeInferenceStatus, updateInferenceStatus } from '../../../composables/use-inference-status'

@@ -41,7 +41,7 @@ const mocks = vi.hoisted(() => ({
   triggerSignIn: vi.fn(),
 }))
 
-vi.mock('@proj-airi/stage-shared', () => ({
+vi.mock('@proj-anima/stage-shared', () => ({
   isStageTamagotchi: () => false,
 }))
 
@@ -98,7 +98,7 @@ describe('auth initialization', () => {
 Run from `D:\Tools\airi`:
 
 ```powershell
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-ui exec vitest run src/stores/auth-initialization.test.ts
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-ui exec vitest run src/stores/auth-initialization.test.ts
 ```
 
 Expected: FAIL because `initialize` and `initialized` are not exposed and the current `async initialize()` cannot return the same Promise identity to concurrent callers.
@@ -152,7 +152,7 @@ Expected: 1 test passes; `fetchSession` is called once even though store constru
 - [ ] **Step 5: Run the existing auth regression test**
 
 ```powershell
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-ui exec vitest run src/libs/auth.test.ts
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-ui exec vitest run src/libs/auth.test.ts
 ```
 
 Expected: existing OIDC ordering test passes.
@@ -292,7 +292,7 @@ it('checks returning-user authentication before Stage initialization', () => {
 - [ ] **Step 2: Run Web tests and verify RED**
 
 ```powershell
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-web exec vitest run src/modules/returning-user-login.test.ts src/modules/app-startup.test.ts
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-web exec vitest run src/modules/returning-user-login.test.ts src/modules/app-startup.test.ts
 ```
 
 Expected: FAIL because `returning-user-login.ts` and the App wiring do not exist.
@@ -368,8 +368,8 @@ Expected: all returning-user and app-startup tests pass.
 - [ ] **Step 6: Run onboarding and OIDC regression tests**
 
 ```powershell
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-web exec vitest run src/modules/onboarding-login.test.ts src/modules/returning-user-login.test.ts src/modules/app-startup.test.ts
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-ui exec vitest run src/stores/auth-initialization.test.ts src/libs/auth.test.ts src/components/scenarios/dialogs/onboarding/step-welcome.test.ts
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-web exec vitest run src/modules/onboarding-login.test.ts src/modules/returning-user-login.test.ts src/modules/app-startup.test.ts
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-ui exec vitest run src/stores/auth-initialization.test.ts src/libs/auth.test.ts src/components/scenarios/dialogs/onboarding/step-welcome.test.ts
 ```
 
 Expected: all focused tests pass. The existing Vite remote-font close warning may still print after Stage Web tests, but the test process must exit 0.
@@ -389,8 +389,8 @@ git commit -m "fix(web): redirect unauthenticated returning users"
 - [ ] **Step 1: Run type checks**
 
 ```powershell
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-ui typecheck
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-web typecheck
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-ui typecheck
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-web typecheck
 ```
 
 Expected: Stage UI exits 0. Stage Web must add no new diagnostics; the unrelated pre-existing `apps/stage-web/src/pages/settings/system/index.vue:63` TS2322 may remain.
@@ -399,7 +399,7 @@ Expected: Stage UI exits 0. Stage Web must add no new diagnostics; the unrelated
 
 ```powershell
 $env:NODE_OPTIONS='--max-old-space-size=4096'
-& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-airi/stage-web build
+& 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node.exe' 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\node_modules\corepack\dist\pnpm.js' -F @proj-anima/stage-web build
 ```
 
 Expected: build exits 0 and generates `apps/stage-web/dist`.

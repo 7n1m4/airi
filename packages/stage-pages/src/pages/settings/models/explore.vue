@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { ModelMarketplace, SpotlightModel } from '@proj-airi/stage-ui/constants'
+import type { ModelMarketplace, SpotlightModel } from '@proj-anima/stage-ui/constants'
 
-import { MODEL_MARKETPLACES, SPOTLIGHT_MODELS } from '@proj-airi/stage-ui/constants'
+import { MODEL_MARKETPLACES, SPOTLIGHT_MODELS } from '@proj-anima/stage-ui/constants'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 

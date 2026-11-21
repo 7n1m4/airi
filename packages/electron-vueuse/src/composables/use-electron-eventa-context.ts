@@ -20,7 +20,7 @@ let contextProvider: (() => EventaContext | undefined) | undefined
  * Install the runtime's eventa context provider.
  *
  * The Electrobun renderer entry calls this with the shared context from
- * `@proj-airi/electrobun-eventa/view`, so every composable in this package (and
+ * `@proj-anima/electrobun-eventa/view`, so every composable in this package (and
  * every `useElectronEventaInvoke` call site) rides the Electrobun RPC instead
  * of the Electron `window.electron` shim. Passing `undefined` restores the
  * Electron-adapter path for web / Electron builds.

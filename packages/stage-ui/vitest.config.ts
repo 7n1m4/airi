@@ -26,8 +26,8 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@lemonneko/crop-empty-pixels': resolve(import.meta.dirname, '../../node_modules/@lemonneko/crop-empty-pixels/dist/index.js'),
-        '@proj-airi/i18n': resolve(join(import.meta.dirname, '..', '..', 'packages', 'i18n', 'src')),
-        '@proj-airi/stage-shared': resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-shared', 'src')),
+        '@proj-anima/i18n': resolve(join(import.meta.dirname, '..', '..', 'packages', 'i18n', 'src')),
+        '@proj-anima/stage-shared': resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-shared', 'src')),
       },
     },
     test: {

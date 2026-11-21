@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import SelectiveSyncPanel from '@proj-airi/stage-ui/components/scenarios/providers/selective-sync-panel.vue'
+import SelectiveSyncPanel from '@proj-anima/stage-ui/components/scenarios/providers/selective-sync-panel.vue'
 
-import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useLibp2pStore } from '@proj-airi/stage-ui/stores/modules/libp2p'
-import { isMergeableSyncKey, useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
-import { DoubleCheckButton, FieldCheckbox } from '@proj-airi/ui'
+import { useDisplayModelsStore } from '@proj-anima/stage-ui/stores/display-models'
+import { useAiriCardStore } from '@proj-anima/stage-ui/stores/modules/airi-card'
+import { useLibp2pStore } from '@proj-anima/stage-ui/stores/modules/libp2p'
+import { isMergeableSyncKey, useSyncEngineStore } from '@proj-anima/stage-ui/stores/sync-engine'
+import { DoubleCheckButton, FieldCheckbox } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,

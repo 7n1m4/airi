@@ -1,6 +1,6 @@
 import type { StreamingAssistantMessage } from '../../types/chat'
 
-import { debug } from '@proj-airi/stage-shared'
+import { debug } from '@proj-anima/stage-shared'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 

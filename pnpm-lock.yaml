@@ -99,11 +99,11 @@ catalogs:
     '@pinia/testing':
       specifier: ^1.0.3
       version: 1.0.3
-    '@proj-airi/iconify-meteocons':
-      specifier: ^0.1.4
+    '@proj-anima/iconify-meteocons':
+      specifier: npm:@proj-airi/iconify-meteocons@^0.1.4
       version: 0.1.4
-    '@proj-airi/unplugin-fetch':
-      specifier: ^0.2.2
+    '@proj-anima/unplugin-fetch':
+      specifier: npm:@proj-airi/unplugin-fetch@^0.2.2
       version: 0.2.2
     '@types/audioworklet':
       specifier: ^0.0.96
@@ -358,6 +358,12 @@ overrides:
   '@libp2p/crypto': 5.1.8
   '@libp2p/record': 4.0.12
   '@multiformats/dns': 1.0.12
+  '@proj-anima/chromatic': npm:@proj-airi/chromatic@^1.0.2
+  '@proj-anima/drizzle-orm-browser-migrator': npm:@proj-airi/drizzle-orm-browser-migrator@^0.1.6
+  '@proj-anima/lobe-icons': npm:@proj-airi/lobe-icons@^1.0.18
+  '@proj-anima/unocss-preset-chromatic': npm:@proj-airi/unocss-preset-chromatic@^1.0.2
+  '@proj-anima/unplugin-drizzle-orm-migrations': npm:@proj-airi/unplugin-drizzle-orm-migrations@^0.1.4
+  '@proj-anima/unplugin-live2d-sdk': npm:@proj-airi/unplugin-live2d-sdk@^0.1.6
   array-flatten: npm:@nolyfill/array-flatten@^1.0.44
   is-core-module: npm:@nolyfill/is-core-module@^1.0.39
   isarray: npm:@nolyfill/isarray@^1.0.44
@@ -418,9 +424,9 @@ importers:
       '@moeru/eslint-config':
         specifier: 'catalog:'
         version: 0.1.0-beta.15(@antfu/eslint-config@7.6.1(@typescript-eslint/rule-tester@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(@typescript-eslint/typescript-estree@8.56.1(typescript@5.9.3))(@typescript-eslint/utils@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(@unocss/eslint-plugin@66.6.2(@typescript-eslint/types@8.56.1)(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(@vue/compiler-sfc@3.5.29)(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)(vitest@4.0.18))(eslint-plugin-oxlint@1.50.0)(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
-      '@proj-airi/unocss-preset-chromatic':
-        specifier: ^1.0.2
-        version: 1.0.2
+      '@proj-anima/unocss-preset-chromatic':
+        specifier: npm:@proj-airi/unocss-preset-chromatic@^1.0.2
+        version: '@proj-airi/unocss-preset-chromatic@1.0.2'
       '@types/node':
         specifier: ^24.10.14
         version: 24.10.14
@@ -526,7 +532,7 @@ importers:
 
   apps/component-calling:
     dependencies:
-      '@proj-airi/ui':
+      '@proj-anima/ui':
         specifier: workspace:^
         version: link:../../packages/ui
       '@valibot/to-json-schema':
@@ -647,10 +653,10 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.40.0
         version: 1.40.0
-      '@proj-airi/drizzle-orm-browser-migrator':
-        specifier: ^0.1.6
-        version: 0.1.6(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8)(sql.js@1.15.2))
-      '@proj-airi/server-schema':
+      '@proj-anima/drizzle-orm-browser-migrator':
+        specifier: npm:@proj-airi/drizzle-orm-browser-migrator@^0.1.6
+        version: '@proj-airi/drizzle-orm-browser-migrator@0.1.6(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8)(sql.js@1.15.2))'
+      '@proj-anima/server-schema':
         specifier: workspace:*
         version: link:../../packages/server-schema
       better-auth:
@@ -753,61 +759,61 @@ importers:
       '@multiformats/multiaddr':
         specifier: 'catalog:'
         version: 12.5.1
-      '@proj-airi/audio':
+      '@proj-anima/audio':
         specifier: workspace:^
         version: link:../../packages/audio
-      '@proj-airi/ccc':
+      '@proj-anima/ccc':
         specifier: workspace:^
         version: link:../../packages/ccc
-      '@proj-airi/electron-eventa':
+      '@proj-anima/electron-eventa':
         specifier: workspace:^
         version: link:../../packages/electron-eventa
-      '@proj-airi/electron-screen-capture':
+      '@proj-anima/electron-screen-capture':
         specifier: workspace:^
         version: link:../../packages/electron-screen-capture
-      '@proj-airi/electron-vueuse':
+      '@proj-anima/electron-vueuse':
         specifier: workspace:^
         version: link:../../packages/electron-vueuse
-      '@proj-airi/font-cjkfonts-allseto':
+      '@proj-anima/font-cjkfonts-allseto':
         specifier: workspace:^
         version: link:../../packages/font-cjkfonts-allseto
-      '@proj-airi/font-xiaolai':
+      '@proj-anima/font-xiaolai':
         specifier: workspace:^
         version: link:../../packages/font-xiaolai
-      '@proj-airi/i18n':
+      '@proj-anima/i18n':
         specifier: workspace:^
         version: link:../../packages/i18n
-      '@proj-airi/model-driver-magic-live2d':
+      '@proj-anima/model-driver-magic-live2d':
         specifier: workspace:^
         version: link:../../packages/model-driver-magic-live2d
-      '@proj-airi/motion-driver-magic':
+      '@proj-anima/motion-driver-magic':
         specifier: workspace:^
         version: link:../../packages/motion-driver-magic
-      '@proj-airi/plugin-sdk':
+      '@proj-anima/plugin-sdk':
         specifier: workspace:^
         version: link:../../packages/plugin-sdk
-      '@proj-airi/server-sdk':
+      '@proj-anima/server-sdk':
         specifier: workspace:*
         version: link:../../packages/server-sdk
-      '@proj-airi/stage-layouts':
+      '@proj-anima/stage-layouts':
         specifier: workspace:^
         version: link:../../packages/stage-layouts
-      '@proj-airi/stage-pages':
+      '@proj-anima/stage-pages':
         specifier: workspace:^
         version: link:../../packages/stage-pages
-      '@proj-airi/stage-ui':
+      '@proj-anima/stage-ui':
         specifier: workspace:^
         version: link:../../packages/stage-ui
-      '@proj-airi/stage-ui-live2d':
+      '@proj-anima/stage-ui-live2d':
         specifier: workspace:^
         version: link:../../packages/stage-ui-live2d
-      '@proj-airi/stage-ui-mmd':
+      '@proj-anima/stage-ui-mmd':
         specifier: workspace:^
         version: link:../../packages/stage-ui-mmd
-      '@proj-airi/stage-ui-three':
+      '@proj-anima/stage-ui-three':
         specifier: workspace:^
         version: link:../../packages/stage-ui-three
-      '@proj-airi/ui':
+      '@proj-anima/ui':
         specifier: workspace:^
         version: link:../../packages/ui
       '@shikijs/markdown-it':
@@ -1054,27 +1060,27 @@ importers:
       '@pnpm/find-workspace-dir':
         specifier: ^1000.1.4
         version: 1000.1.4
-      '@proj-airi/iconify-meteocons':
+      '@proj-anima/iconify-meteocons':
         specifier: 'catalog:'
-        version: 0.1.4
-      '@proj-airi/lobe-icons':
-        specifier: ^1.0.18
-        version: 1.0.18
-      '@proj-airi/server-runtime':
+        version: '@proj-airi/iconify-meteocons@0.1.4'
+      '@proj-anima/lobe-icons':
+        specifier: npm:@proj-airi/lobe-icons@^1.0.18
+        version: '@proj-airi/lobe-icons@1.0.18'
+      '@proj-anima/server-runtime':
         specifier: workspace:^
         version: link:../../packages/server-runtime
-      '@proj-airi/stage-shared':
+      '@proj-anima/stage-shared':
         specifier: workspace:^
         version: link:../../packages/stage-shared
-      '@proj-airi/ui-transitions':
+      '@proj-anima/ui-transitions':
         specifier: workspace:^
         version: link:../../packages/ui-transitions
-      '@proj-airi/unplugin-fetch':
+      '@proj-anima/unplugin-fetch':
         specifier: 'catalog:'
-        version: 0.2.2(vite@6.2.7(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1))
-      '@proj-airi/unplugin-live2d-sdk':
-        specifier: ^0.1.6
-        version: 0.1.6(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1)
+        version: '@proj-airi/unplugin-fetch@0.2.2(vite@6.2.7(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1))'
+      '@proj-anima/unplugin-live2d-sdk':
+        specifier: npm:@proj-airi/unplugin-live2d-sdk@^0.1.6
+        version: '@proj-airi/unplugin-live2d-sdk@0.1.6(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1)'
       '@types/audioworklet':
         specifier: 'catalog:'
         version: 0.0.96
@@ -1210,49 +1216,49 @@ importers:
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.17
-      '@proj-airi/audio':
+      '@proj-anima/audio':
         specifier: workspace:^
         version: link:../../packages/audio
-      '@proj-airi/ccc':
+      '@proj-anima/ccc':
         specifier: workspace:^
         version: link:../../packages/ccc
-      '@proj-airi/font-cjkfonts-allseto':
+      '@proj-anima/font-cjkfonts-allseto':
         specifier: workspace:^
         version: link:../../packages/font-cjkfonts-allseto
-      '@proj-airi/font-xiaolai':
+      '@proj-anima/font-xiaolai':
         specifier: workspace:^
         version: link:../../packages/font-xiaolai
-      '@proj-airi/i18n':
+      '@proj-anima/i18n':
         specifier: workspace:^
         version: link:../../packages/i18n
-      '@proj-airi/model-driver-mediapipe':
+      '@proj-anima/model-driver-mediapipe':
         specifier: workspace:^
         version: link:../../packages/model-driver-mediapipe
-      '@proj-airi/pipelines-audio':
+      '@proj-anima/pipelines-audio':
         specifier: workspace:^
         version: link:../../packages/pipelines-audio
-      '@proj-airi/server-sdk':
+      '@proj-anima/server-sdk':
         specifier: workspace:^
         version: link:../../packages/server-sdk
-      '@proj-airi/stage-layouts':
+      '@proj-anima/stage-layouts':
         specifier: workspace:^
         version: link:../../packages/stage-layouts
-      '@proj-airi/stage-shared':
+      '@proj-anima/stage-shared':
         specifier: workspace:^
         version: link:../../packages/stage-shared
-      '@proj-airi/stage-ui':
+      '@proj-anima/stage-ui':
         specifier: workspace:^
         version: link:../../packages/stage-ui
-      '@proj-airi/stage-ui-three':
+      '@proj-anima/stage-ui-three':
         specifier: workspace:^
         version: link:../../packages/stage-ui-three
-      '@proj-airi/stream-kit':
+      '@proj-anima/stream-kit':
         specifier: workspace:^
         version: link:../../packages/stream-kit
-      '@proj-airi/ui':
+      '@proj-anima/ui':
         specifier: workspace:^
         version: link:../../packages/ui
-      '@proj-airi/ui-transitions':
+      '@proj-anima/ui-transitions':
         specifier: workspace:^
         version: link:../../packages/ui-transitions
       '@tresjs/cientos':
@@ -1406,19 +1412,19 @@ importers:
       '@intlify/unplugin-vue-i18n':
         specifier: ^11.0.7
         version: 11.0.7(@vue/compiler-dom@3.5.29)(eslint@9.39.3(jiti@2.6.1))(rollup@2.80.0)(typescript@5.9.3)(vite@6.2.7(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1))(vue-i18n@11.2.8(vue@3.5.29(typescript@5.9.3)))(vue@3.5.29(typescript@5.9.3))
-      '@proj-airi/iconify-meteocons':
+      '@proj-anima/iconify-meteocons':
         specifier: 'catalog:'
-        version: 0.1.4
-      '@proj-airi/lobe-icons':
-        specifier: ^1.0.18
-        version: 1.0.18
-      '@proj-airi/unplugin-fetch':
+        version: '@proj-airi/iconify-meteocons@0.1.4'
+      '@proj-anima/lobe-icons':
+        specifier: npm:@proj-airi/lobe-icons@^1.0.18
+        version: '@proj-airi/lobe-icons@1.0.18'
+      '@proj-anima/unplugin-fetch':
         specifier: 'catalog:'
-        version: 0.2.2(vite@6.2.7(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1))
-      '@proj-airi/unplugin-live2d-sdk':
-        specifier: ^0.1.6
-        version: 0.1.6(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1)
-      '@proj-airi/vite-plugin-warpdrive':
+        version: '@proj-airi/unplugin-fetch@0.2.2(vite@6.2.7(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1))'
+      '@proj-anima/unplugin-live2d-sdk':
+        specifier: npm:@proj-airi/unplugin-live2d-sdk@^0.1.6
+        version: '@proj-airi/unplugin-live2d-sdk@0.1.6(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1)'
+      '@proj-anima/vite-plugin-warpdrive':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-warpdrive
       '@shikijs/markdown-it':
@@ -1511,10 +1517,10 @@ importers:
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.17
-      '@proj-airi/chromatic':
-        specifier: ^1.0.2
-        version: 1.0.2
-      '@proj-airi/i18n':
+      '@proj-anima/chromatic':
+        specifier: npm:@proj-airi/chromatic@^1.0.2
+        version: '@proj-airi/chromatic@1.0.2'
+      '@proj-anima/i18n':
         specifier: workspace:^
         version: link:../packages/i18n
       '@vueuse/core':
@@ -1572,7 +1578,7 @@ importers:
       '@napi-rs/image':
         specifier: ^1.12.0
         version: 1.12.0
-      '@proj-airi/stage-ui':
+      '@proj-anima/stage-ui':
         specifier: workspace:^
         version: link:../packages/stage-ui
       '@radix-ui/colors':
@@ -1630,12 +1636,12 @@ importers:
         specifier: ^3.2.5
         version: 3.2.5(typescript@5.9.3)
 
-  integrations/claude-code/airi-plugin-claude-code:
+  integrations/claude-code/anima-plugin-claude-code:
     dependencies:
       '@guiiai/logg':
         specifier: 'catalog:'
         version: 1.2.11
-      '@proj-airi/server-sdk':
+      '@proj-anima/server-sdk':
         specifier: workspace:*
         version: link:../../../packages/server-sdk
       cac:
@@ -1652,16 +1658,16 @@ importers:
         specifier: ^4.21.0
         version: 4.21.0
 
-  integrations/oh-my-pi/airi-plugin-oh-my-pi:
+  integrations/oh-my-pi/anima-plugin-oh-my-pi:
     dependencies:
-      '@proj-airi/server-sdk':
+      '@proj-anima/server-sdk':
         specifier: workspace:*
         version: link:../../../packages/server-sdk
     devDependencies:
       '@oh-my-pi/pi-coding-agent':
         specifier: ^18.17.0
         version: 18.17.0(bufferutil@4.1.0)(onnxruntime-node@1.21.0)(utf-8-validate@5.0.10)(yauzl@2.10.0)
-      '@proj-airi/server-shared':
+      '@proj-anima/server-shared':
         specifier: workspace:*
         version: link:../../../packages/server-shared
       tsdown:
@@ -1674,13 +1680,13 @@ importers:
         specifier: catalog:vitest
         version: 4.0.18(@opentelemetry/api@1.10.0)(@types/node@24.10.14)(@vitest/browser-playwright@4.0.18)(jiti@2.6.1)(jsdom@30.0.1(@noble/hashes@2.4.0))(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1)
 
-  integrations/vscode/airi-plugin-vscode:
+  integrations/vscode/anima-plugin-vscode:
     devDependencies:
-      '@proj-airi/plugin-sdk':
+      '@proj-anima/plugin-sdk':
         specifier: workspace:*
         version: link:../../../packages/plugin-sdk
 
-  integrations/vscode/vscode-airi:
+  integrations/vscode/vscode-anima:
     devDependencies:
       '@guiiai/logg':
         specifier: 'catalog:'
@@ -1688,7 +1694,7 @@ importers:
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.17
-      '@proj-airi/server-sdk':
+      '@proj-anima/server-sdk':
         specifier: workspace:*
         version: link:../../../packages/server-sdk
       '@types/vscode':
@@ -1753,7 +1759,7 @@ importers:
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.17
-      '@proj-airi/stream-kit':
+      '@proj-anima/stream-kit':
         specifier: workspace:^
         version: link:../stream-kit
 
@@ -1840,7 +1846,7 @@ importers:
         specifier: '>=3'
         version: 3.5.29(typescript@5.9.3)
     devDependencies:
-      '@proj-airi/electron-eventa':
+      '@proj-anima/electron-eventa':
         specifier: workspace:^
         version: link:../electron-eventa
 
@@ -1878,7 +1884,7 @@ importers:
 
   packages/model-driver-magic-live2d:
     dependencies:
-      '@proj-airi/motion-driver-magic':
+      '@proj-anima/motion-driver-magic':
         specifier: workspace:^
         version: link:../motion-driver-magic
       es-toolkit:
@@ -1957,7 +1963,7 @@ importers:
       '@moeru/eventa':
         specifier: 'catalog:'
         version: 1.0.0-beta.10(patch_hash=202582ad335e20eb2238183adf33edbbfca9fbf30bdc046a1ddf4db6e95467f7)(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))(hono@4.12.2)
-      '@proj-airi/plugin-protocol':
+      '@proj-anima/plugin-protocol':
         specifier: workspace:*
         version: link:../plugin-protocol
       valibot:
@@ -1975,7 +1981,7 @@ importers:
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.17
-      '@proj-airi/server-shared':
+      '@proj-anima/server-shared':
         specifier: workspace:^
         version: link:../server-shared
       crossws:
@@ -1996,13 +2002,13 @@ importers:
 
   packages/server-schema:
     devDependencies:
-      '@proj-airi/unplugin-drizzle-orm-migrations':
-        specifier: ^0.1.4
-        version: 0.1.4(magicast@0.5.2)(vite@6.2.7(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1))
+      '@proj-anima/unplugin-drizzle-orm-migrations':
+        specifier: npm:@proj-airi/unplugin-drizzle-orm-migrations@^0.1.4
+        version: '@proj-airi/unplugin-drizzle-orm-migrations@0.1.4(magicast@0.5.2)(vite@6.2.7(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1))'
 
   packages/server-sdk:
     dependencies:
-      '@proj-airi/server-shared':
+      '@proj-anima/server-shared':
         specifier: workspace:^
         version: link:../server-shared
       crossws:
@@ -2018,26 +2024,26 @@ importers:
 
   packages/server-shared:
     dependencies:
-      '@proj-airi/plugin-protocol':
+      '@proj-anima/plugin-protocol':
         specifier: workspace:*
         version: link:../plugin-protocol
 
   packages/speech-transformer-chem:
     dependencies:
-      '@proj-airi/mathjson':
+      '@proj-anima/mathjson':
         specifier: workspace:^
         version: link:../mathjson
       mhchemparser:
         specifier: 'catalog:'
         version: 4.2.1
     devDependencies:
-      '@proj-airi/speech-transformer-math':
+      '@proj-anima/speech-transformer-math':
         specifier: workspace:^
         version: link:../speech-transformer-math
 
   packages/speech-transformer-math:
     dependencies:
-      '@proj-airi/mathjson':
+      '@proj-anima/mathjson':
         specifier: workspace:^
         version: link:../mathjson
       katex:
@@ -2052,22 +2058,22 @@ importers:
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.17
-      '@proj-airi/ccc':
+      '@proj-anima/ccc':
         specifier: workspace:*
         version: link:../ccc
-      '@proj-airi/i18n':
+      '@proj-anima/i18n':
         specifier: workspace:*
         version: link:../i18n
-      '@proj-airi/server-sdk':
+      '@proj-anima/server-sdk':
         specifier: workspace:*
         version: link:../server-sdk
-      '@proj-airi/stage-ui':
+      '@proj-anima/stage-ui':
         specifier: workspace:*
         version: link:../stage-ui
-      '@proj-airi/stage-ui-three':
+      '@proj-anima/stage-ui-three':
         specifier: workspace:*
         version: link:../stage-ui-three
-      '@proj-airi/ui':
+      '@proj-anima/ui':
         specifier: workspace:*
         version: link:../ui
       '@vueuse/core':
@@ -2131,7 +2137,7 @@ importers:
       '@nekopaw/tempora':
         specifier: 'catalog:'
         version: 0.4.0-alpha.1
-      '@proj-airi/stage-shared':
+      '@proj-anima/stage-shared':
         specifier: workspace:^
         version: link:../stage-shared
       '@types/audioworklet':
@@ -2155,37 +2161,37 @@ importers:
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.17
-      '@proj-airi/ccc':
+      '@proj-anima/ccc':
         specifier: workspace:*
         version: link:../ccc
-      '@proj-airi/electron-vueuse':
+      '@proj-anima/electron-vueuse':
         specifier: workspace:*
         version: link:../electron-vueuse
-      '@proj-airi/i18n':
+      '@proj-anima/i18n':
         specifier: workspace:*
         version: link:../i18n
-      '@proj-airi/server-sdk':
+      '@proj-anima/server-sdk':
         specifier: workspace:*
         version: link:../server-sdk
-      '@proj-airi/stage-layouts':
+      '@proj-anima/stage-layouts':
         specifier: workspace:*
         version: link:../stage-layouts
-      '@proj-airi/stage-shared':
+      '@proj-anima/stage-shared':
         specifier: workspace:*
         version: link:../stage-shared
-      '@proj-airi/stage-ui':
+      '@proj-anima/stage-ui':
         specifier: workspace:*
         version: link:../stage-ui
-      '@proj-airi/stage-ui-live2d':
+      '@proj-anima/stage-ui-live2d':
         specifier: workspace:*
         version: link:../stage-ui-live2d
-      '@proj-airi/stage-ui-mmd':
+      '@proj-anima/stage-ui-mmd':
         specifier: workspace:*
         version: link:../stage-ui-mmd
-      '@proj-airi/stage-ui-three':
+      '@proj-anima/stage-ui-three':
         specifier: workspace:*
         version: link:../stage-ui-three
-      '@proj-airi/ui':
+      '@proj-anima/ui':
         specifier: workspace:*
         version: link:../ui
       '@vueuse/core':
@@ -2294,7 +2300,7 @@ importers:
       '@moeru/eventa':
         specifier: 'catalog:'
         version: 1.0.0-beta.10(patch_hash=202582ad335e20eb2238183adf33edbbfca9fbf30bdc046a1ddf4db6e95467f7)(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))(hono@4.12.2)
-      '@proj-airi/electrobun-eventa':
+      '@proj-anima/electrobun-eventa':
         specifier: workspace:^
         version: link:../electrobun-eventa
       '@vueuse/core':
@@ -2328,7 +2334,7 @@ importers:
       '@nekopaw/tempora':
         specifier: 'catalog:'
         version: 0.4.0-alpha.1
-      '@proj-airi/electron-screen-capture':
+      '@proj-anima/electron-screen-capture':
         specifier: workspace:^
         version: link:../electron-screen-capture
       '@types/audioworklet':
@@ -2358,73 +2364,73 @@ importers:
       '@pixi/core':
         specifier: ^6.5.10
         version: 6.5.10(@pixi/constants@6.5.10)(@pixi/extensions@6.5.10)(@pixi/math@6.5.10)(@pixi/runner@6.5.10)(@pixi/settings@6.5.10(@pixi/constants@6.5.10))(@pixi/ticker@6.5.10(@pixi/extensions@6.5.10)(@pixi/settings@6.5.10(@pixi/constants@6.5.10)))(@pixi/utils@6.5.10(@pixi/constants@6.5.10)(@pixi/settings@6.5.10(@pixi/constants@6.5.10)))
-      '@proj-airi/audio':
+      '@proj-anima/audio':
         specifier: workspace:^
         version: link:../audio
-      '@proj-airi/ccc':
+      '@proj-anima/ccc':
         specifier: workspace:^
         version: link:../ccc
-      '@proj-airi/chromatic':
-        specifier: ^1.0.2
-        version: 1.0.2
-      '@proj-airi/electron-screen-capture':
+      '@proj-anima/chromatic':
+        specifier: npm:@proj-airi/chromatic@^1.0.2
+        version: '@proj-airi/chromatic@1.0.2'
+      '@proj-anima/electron-screen-capture':
         specifier: workspace:^
         version: link:../electron-screen-capture
-      '@proj-airi/electron-vueuse':
+      '@proj-anima/electron-vueuse':
         specifier: workspace:^
         version: link:../electron-vueuse
-      '@proj-airi/font-cjkfonts-allseto':
+      '@proj-anima/font-cjkfonts-allseto':
         specifier: workspace:^
         version: link:../font-cjkfonts-allseto
-      '@proj-airi/font-xiaolai':
+      '@proj-anima/font-xiaolai':
         specifier: workspace:^
         version: link:../font-xiaolai
-      '@proj-airi/i18n':
+      '@proj-anima/i18n':
         specifier: workspace:^
         version: link:../i18n
-      '@proj-airi/mathjson':
+      '@proj-anima/mathjson':
         specifier: workspace:^
         version: link:../mathjson
-      '@proj-airi/model-driver-lipsync':
+      '@proj-anima/model-driver-lipsync':
         specifier: workspace:^
         version: link:../model-driver-lipsync
-      '@proj-airi/model-driver-magic-live2d':
+      '@proj-anima/model-driver-magic-live2d':
         specifier: workspace:^
         version: link:../model-driver-magic-live2d
-      '@proj-airi/motion-driver-magic':
+      '@proj-anima/motion-driver-magic':
         specifier: workspace:^
         version: link:../motion-driver-magic
-      '@proj-airi/nan0-runtime':
+      '@proj-anima/nan0-runtime':
         specifier: workspace:^
         version: link:../nan0-runtime
-      '@proj-airi/pipelines-audio':
+      '@proj-anima/pipelines-audio':
         specifier: workspace:^
         version: link:../pipelines-audio
-      '@proj-airi/server-sdk':
+      '@proj-anima/server-sdk':
         specifier: workspace:^
         version: link:../server-sdk
-      '@proj-airi/speech-transformer-chem':
+      '@proj-anima/speech-transformer-chem':
         specifier: workspace:^
         version: link:../speech-transformer-chem
-      '@proj-airi/speech-transformer-math':
+      '@proj-anima/speech-transformer-math':
         specifier: workspace:^
         version: link:../speech-transformer-math
-      '@proj-airi/stage-shared':
+      '@proj-anima/stage-shared':
         specifier: workspace:^
         version: link:../stage-shared
-      '@proj-airi/stage-ui-live2d':
+      '@proj-anima/stage-ui-live2d':
         specifier: workspace:^
         version: link:../stage-ui-live2d
-      '@proj-airi/stage-ui-mmd':
+      '@proj-anima/stage-ui-mmd':
         specifier: workspace:^
         version: link:../stage-ui-mmd
-      '@proj-airi/stage-ui-spine':
+      '@proj-anima/stage-ui-spine':
         specifier: workspace:^
         version: link:../stage-ui-spine
-      '@proj-airi/stage-ui-three':
+      '@proj-anima/stage-ui-three':
         specifier: workspace:^
         version: link:../stage-ui-three
-      '@proj-airi/ui':
+      '@proj-anima/ui':
         specifier: workspace:^
         version: link:../ui
       '@shikijs/rehype':
@@ -2671,13 +2677,13 @@ importers:
       '@pinia/testing':
         specifier: 'catalog:'
         version: 1.0.3(pinia@3.0.4(typescript@5.9.3)(vue@3.5.29(typescript@5.9.3)))
-      '@proj-airi/lobe-icons':
-        specifier: ^1.0.18
-        version: 1.0.18
-      '@proj-airi/stream-kit':
+      '@proj-anima/lobe-icons':
+        specifier: npm:@proj-airi/lobe-icons@^1.0.18
+        version: '@proj-airi/lobe-icons@1.0.18'
+      '@proj-anima/stream-kit':
         specifier: workspace:*
         version: link:../stream-kit
-      '@proj-airi/vite-plugin-warpdrive':
+      '@proj-anima/vite-plugin-warpdrive':
         specifier: workspace:*
         version: link:../vite-plugin-warpdrive
       '@types/audioworklet':
@@ -2761,16 +2767,16 @@ importers:
       '@pixi/ticker':
         specifier: ^6.5.10
         version: 6.5.10(@pixi/extensions@6.5.10)(@pixi/settings@6.5.10(@pixi/constants@6.5.10))
-      '@proj-airi/live2d-runtime':
+      '@proj-anima/live2d-runtime':
         specifier: workspace:^
         version: link:../live2d-runtime
-      '@proj-airi/model-driver-magic-live2d':
+      '@proj-anima/model-driver-magic-live2d':
         specifier: workspace:^
         version: link:../model-driver-magic-live2d
-      '@proj-airi/stage-shared':
+      '@proj-anima/stage-shared':
         specifier: workspace:^
         version: link:../stage-shared
-      '@proj-airi/ui':
+      '@proj-anima/ui':
         specifier: workspace:^
         version: link:../ui
       '@vueuse/core':
@@ -2816,10 +2822,10 @@ importers:
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.17
-      '@proj-airi/stage-shared':
+      '@proj-anima/stage-shared':
         specifier: workspace:^
         version: link:../stage-shared
-      '@proj-airi/ui':
+      '@proj-anima/ui':
         specifier: workspace:^
         version: link:../ui
       '@vueuse/core':
@@ -2874,10 +2880,10 @@ importers:
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.17
-      '@proj-airi/stage-shared':
+      '@proj-anima/stage-shared':
         specifier: workspace:^
         version: link:../stage-shared
-      '@proj-airi/ui':
+      '@proj-anima/ui':
         specifier: workspace:^
         version: link:../ui
       '@vueuse/core':
@@ -2920,10 +2926,10 @@ importers:
       '@pixiv/three-vrm-core':
         specifier: ^3.5.1
         version: 3.5.1(three@0.183.1)
-      '@proj-airi/stage-shared':
+      '@proj-anima/stage-shared':
         specifier: workspace:*
         version: link:../stage-shared
-      '@proj-airi/ui':
+      '@proj-anima/ui':
         specifier: workspace:*
         version: link:../ui
       '@tresjs/core':
@@ -2999,7 +3005,7 @@ importers:
 
   packages/ui-loading-screens:
     dependencies:
-      '@proj-airi/font-departure-mono':
+      '@proj-anima/font-departure-mono':
         specifier: workspace:^
         version: link:../font-departure-mono
       '@rive-app/canvas-lite':
@@ -3015,7 +3021,7 @@ importers:
         specifier: 'catalog:'
         version: 3.5.29(typescript@5.9.3)
     devDependencies:
-      '@proj-airi/ui':
+      '@proj-anima/ui':
         specifier: workspace:^
         version: link:../ui
       '@unocss/reset':
@@ -3076,13 +3082,13 @@ importers:
 
   packages/unocss-preset-fonts:
     dependencies:
-      '@proj-airi/font-cjkfonts-allseto':
+      '@proj-anima/font-cjkfonts-allseto':
         specifier: workspace:^
         version: link:../font-cjkfonts-allseto
-      '@proj-airi/font-departure-mono':
+      '@proj-anima/font-departure-mono':
         specifier: workspace:^
         version: link:../font-departure-mono
-      '@proj-airi/font-xiaolai':
+      '@proj-anima/font-xiaolai':
         specifier: workspace:^
         version: link:../font-xiaolai
       '@unocss/core':
@@ -3108,7 +3114,7 @@ importers:
         specifier: 'catalog:'
         version: 0.1.0-beta.17
 
-  plugins/airi-plugin-web-extension:
+  plugins/anima-plugin-web-extension:
     devDependencies:
       '@iconify-json/solar':
         specifier: ^1.2.5
@@ -3119,10 +3125,10 @@ importers:
       '@moeru/eventa':
         specifier: 'catalog:'
         version: 1.0.0-beta.10(patch_hash=202582ad335e20eb2238183adf33edbbfca9fbf30bdc046a1ddf4db6e95467f7)(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))(hono@4.12.2)
-      '@proj-airi/server-sdk':
+      '@proj-anima/server-sdk':
         specifier: workspace:^
         version: link:../../packages/server-sdk
-      '@proj-airi/ui':
+      '@proj-anima/ui':
         specifier: workspace:^
         version: link:../../packages/ui
       '@unocss/reset':
@@ -3142,7 +3148,7 @@ importers:
         version: 3.5.29(typescript@5.9.3)
       vue-tsc:
         specifier: ^3.1.8
-        version: 3.2.5(typescript@5.9.3)
+        version: 3.2.8(typescript@5.9.3)
       wxt:
         specifier: ^0.20.18
         version: 0.20.18(@types/node@24.10.14)(canvas@3.2.1)(eslint@9.39.3(jiti@2.6.1))(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(rollup@4.59.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1)
@@ -3475,11 +3481,6 @@ packages:
 
   '@babel/parser@7.27.7':
     resolution: {integrity: sha512-qnzXzDXdr/po3bOTbTIQZ7+TxNKxpkN5IifVLXS+r7qwynkZfPyjZfE7hCXbo7IoO9TNcSyibgONsf2HauUd3Q==}
-    engines: {node: '>=6.0.0'}
-    hasBin: true
-
-  '@babel/parser@7.29.0':
-    resolution: {integrity: sha512-IyDgFV5GeDUVX4YdF/3CPULtVGSXXMLh1xVIgdCgxApktqnQV0r7/8Nqthg+8YLGaAtdyIlo2qIdZrbCv4+7ww==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
@@ -12996,10 +12997,6 @@ packages:
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
-  picomatch@2.3.1:
-    resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
-    engines: {node: '>=8.6'}
-
   picomatch@2.3.2:
     resolution: {integrity: sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA==}
     engines: {node: '>=8.6'}
@@ -14021,10 +14018,6 @@ packages:
   string-width@7.2.0:
     resolution: {integrity: sha512-tsaTIkKW9b4N+AEj+SVA+WhJzV7/zMhcSu78mLKWSk7cXMOSHsBKFWUs0fWwq8QyK3MgJBQRX6Gbi4kYbdvGkQ==}
     engines: {node: '>=18'}
-
-  string-width@8.2.0:
-    resolution: {integrity: sha512-6hJPQ8N0V0P3SNmP6h2J99RLuzrWz2gvT7VnK5tKvrNqJoyS9W4/Fb8mo31UiPvy00z7DQXkP2hnKBVav76thw==}
-    engines: {node: '>=20'}
 
   string-width@8.2.2:
     resolution: {integrity: sha512-GaPUh5gfdrYzqeVNZvUfT23vYYxXzKYidUcnMtJg/3rxRV63EFZy3k6xfKlmfeJD0176lnUV/Usr3XcwSvFzpg==}
@@ -15603,9 +15596,9 @@ snapshots:
   '@aklinker1/rollup-plugin-visualizer@5.12.0(rollup@4.59.0)':
     dependencies:
       open: 8.4.2
-      picomatch: 2.3.1
+      picomatch: 2.3.2
       source-map: 0.7.6
-      yargs: 17.7.2
+      yargs: 17.7.3
     optionalDependencies:
       rollup: 4.59.0
 
@@ -15676,7 +15669,7 @@ snapshots:
       fzf: 0.5.2
       package-manager-detector: 1.6.0
       tinyexec: 1.0.2
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
 
   '@anthropic-ai/claude-code@2.1.59':
     optionalDependencies:
@@ -15763,7 +15756,7 @@ snapshots:
       '@babel/helper-compilation-targets': 7.28.6
       '@babel/helper-module-transforms': 7.28.6(@babel/core@7.28.5)
       '@babel/helpers': 7.28.4
-      '@babel/parser': 7.29.0
+      '@babel/parser': 7.29.9
       '@babel/template': 7.28.6
       '@babel/traverse': 7.29.0
       '@babel/types': 7.29.0
@@ -15778,7 +15771,7 @@ snapshots:
 
   '@babel/generator@7.29.1':
     dependencies:
-      '@babel/parser': 7.29.0
+      '@babel/parser': 7.29.9
       '@babel/types': 7.29.0
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
@@ -15803,7 +15796,7 @@ snapshots:
 
   '@babel/helper-annotate-as-pure@7.27.3':
     dependencies:
-      '@babel/types': 7.29.0
+      '@babel/types': 7.29.8
 
   '@babel/helper-annotate-as-pure@7.29.7':
     dependencies:
@@ -15876,7 +15869,7 @@ snapshots:
   '@babel/helper-member-expression-to-functions@7.28.5':
     dependencies:
       '@babel/traverse': 7.29.0
-      '@babel/types': 7.29.0
+      '@babel/types': 7.29.8
     transitivePeerDependencies:
       - supports-color
 
@@ -15890,7 +15883,7 @@ snapshots:
   '@babel/helper-module-imports@7.28.6':
     dependencies:
       '@babel/traverse': 7.29.0
-      '@babel/types': 7.29.0
+      '@babel/types': 7.29.8
     transitivePeerDependencies:
       - supports-color
 
@@ -15921,7 +15914,7 @@ snapshots:
 
   '@babel/helper-optimise-call-expression@7.27.1':
     dependencies:
-      '@babel/types': 7.29.0
+      '@babel/types': 7.29.8
 
   '@babel/helper-optimise-call-expression@7.29.7':
     dependencies:
@@ -15961,7 +15954,7 @@ snapshots:
   '@babel/helper-skip-transparent-expression-wrappers@7.27.1':
     dependencies:
       '@babel/traverse': 7.29.0
-      '@babel/types': 7.29.0
+      '@babel/types': 7.29.8
     transitivePeerDependencies:
       - supports-color
 
@@ -15999,15 +15992,11 @@ snapshots:
   '@babel/helpers@7.28.4':
     dependencies:
       '@babel/template': 7.28.6
-      '@babel/types': 7.29.0
+      '@babel/types': 7.29.8
 
   '@babel/parser@7.27.7':
     dependencies:
-      '@babel/types': 7.29.0
-
-  '@babel/parser@7.29.0':
-    dependencies:
-      '@babel/types': 7.29.0
+      '@babel/types': 7.29.8
 
   '@babel/parser@7.29.9':
     dependencies:
@@ -16407,7 +16396,7 @@ snapshots:
       '@babel/helper-module-imports': 7.28.6
       '@babel/helper-plugin-utils': 7.28.6
       '@babel/plugin-syntax-jsx': 7.27.1(@babel/core@7.28.5)
-      '@babel/types': 7.29.0
+      '@babel/types': 7.29.8
     transitivePeerDependencies:
       - supports-color
 
@@ -16609,8 +16598,8 @@ snapshots:
   '@babel/template@7.28.6':
     dependencies:
       '@babel/code-frame': 7.29.0
-      '@babel/parser': 7.29.0
-      '@babel/types': 7.29.0
+      '@babel/parser': 7.29.9
+      '@babel/types': 7.29.8
 
   '@babel/template@7.29.7':
     dependencies:
@@ -16621,10 +16610,10 @@ snapshots:
   '@babel/traverse@7.27.7':
     dependencies:
       '@babel/code-frame': 7.29.0
-      '@babel/generator': 7.29.1
-      '@babel/parser': 7.29.0
+      '@babel/generator': 7.29.8
+      '@babel/parser': 7.29.9
       '@babel/template': 7.28.6
-      '@babel/types': 7.29.0
+      '@babel/types': 7.29.8
       debug: 4.4.3
       globals: 11.12.0
     transitivePeerDependencies:
@@ -16635,9 +16624,9 @@ snapshots:
       '@babel/code-frame': 7.29.0
       '@babel/generator': 7.29.1
       '@babel/helper-globals': 7.28.0
-      '@babel/parser': 7.29.0
+      '@babel/parser': 7.29.9
       '@babel/template': 7.28.6
-      '@babel/types': 7.29.0
+      '@babel/types': 7.29.8
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
@@ -17550,7 +17539,7 @@ snapshots:
       lodash.camelcase: 4.3.0
       long: 5.3.2
       protobufjs: 7.5.4
-      yargs: 17.7.2
+      yargs: 17.7.3
 
   '@guiiai/logg@1.2.11':
     dependencies:
@@ -17885,7 +17874,7 @@ snapshots:
 
   '@intlify/vue-i18n-extensions@8.0.0(@intlify/shared@11.2.8)(@vue/compiler-dom@3.5.29)(vue-i18n@11.2.8(vue@3.5.29(typescript@5.9.3)))(vue@3.5.29(typescript@5.9.3))':
     dependencies:
-      '@babel/parser': 7.29.0
+      '@babel/parser': 7.29.9
     optionalDependencies:
       '@intlify/shared': 11.2.8
       '@vue/compiler-dom': 3.5.29
@@ -18482,7 +18471,7 @@ snapshots:
   '@moeru/eventa@0.3.0(patch_hash=bae5a63fe8dc6c8251889d169f15df22fcd64724aa05ef7fd88606bd4a235ea9)(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))':
     dependencies:
       nanoid: 5.1.11
-      picomatch: 4.0.4
+      picomatch: 4.0.7
     optionalDependencies:
       electron: 40.8.0
       h3: 2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d)))
@@ -18490,7 +18479,7 @@ snapshots:
   '@moeru/eventa@1.0.0-beta.10(patch_hash=202582ad335e20eb2238183adf33edbbfca9fbf30bdc046a1ddf4db6e95467f7)(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))(hono@4.12.2)':
     dependencies:
       nanoid: 5.1.11
-      picomatch: 4.0.4
+      picomatch: 4.0.7
     optionalDependencies:
       electron: 40.8.0
       h3: 2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d)))
@@ -18499,7 +18488,7 @@ snapshots:
   '@moeru/eventa@1.0.0-beta.10(patch_hash=202582ad335e20eb2238183adf33edbbfca9fbf30bdc046a1ddf4db6e95467f7)(electron@40.8.0)(hono@4.11.3)':
     dependencies:
       nanoid: 5.1.11
-      picomatch: 4.0.4
+      picomatch: 4.0.7
     optionalDependencies:
       electron: 40.8.0
       hono: 4.11.3
@@ -18693,8 +18682,8 @@ snapshots:
       pkg-types: 2.3.0
       rc9: 2.1.2
       scule: 1.3.0
-      semver: 7.7.4
-      tinyglobby: 0.2.15
+      semver: 7.8.5
+      tinyglobby: 0.2.17
       ufo: 1.6.3
       unctx: 2.5.0
       untyped: 2.0.0
@@ -18839,7 +18828,7 @@ snapshots:
 
   '@opentelemetry/api-logs@0.213.0':
     dependencies:
-      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/api': 1.10.0
 
   '@opentelemetry/api-logs@0.220.0':
     dependencies:
@@ -18847,7 +18836,7 @@ snapshots:
 
   '@opentelemetry/api-logs@0.57.2':
     dependencies:
-      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/api': 1.10.0
 
   '@opentelemetry/api@1.10.0': {}
 
@@ -19072,7 +19061,7 @@ snapshots:
       '@types/shimmer': 1.2.0
       import-in-the-middle: 1.15.0
       require-in-the-middle: 7.5.2
-      semver: 7.7.4
+      semver: 7.8.5
       shimmer: 1.2.1
     transitivePeerDependencies:
       - supports-color
@@ -20203,7 +20192,7 @@ snapshots:
     dependencies:
       '@types/estree': 1.0.8
       estree-walker: 2.0.2
-      picomatch: 4.0.3
+      picomatch: 4.0.7
     optionalDependencies:
       rollup: 2.80.0
 
@@ -20211,7 +20200,7 @@ snapshots:
     dependencies:
       '@types/estree': 1.0.8
       estree-walker: 2.0.2
-      picomatch: 4.0.3
+      picomatch: 4.0.7
     optionalDependencies:
       rollup: 4.59.0
 
@@ -20370,7 +20359,7 @@ snapshots:
       eslint-visitor-keys: 4.2.1
       espree: 10.4.0
       estraverse: 5.3.0
-      picomatch: 4.0.4
+      picomatch: 4.0.7
 
   '@surma/rollup-plugin-off-main-thread@2.2.3':
     dependencies:
@@ -20792,7 +20781,7 @@ snapshots:
       debug: 4.4.3
       minimatch: 9.0.5
       semver: 7.8.5
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
       ts-api-utils: 2.4.0(typescript@5.9.3)
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -20806,8 +20795,8 @@ snapshots:
       '@typescript-eslint/visitor-keys': 8.56.1
       debug: 4.4.3
       minimatch: 10.2.4
-      semver: 7.7.4
-      tinyglobby: 0.2.15
+      semver: 7.8.5
+      tinyglobby: 0.2.17
       ts-api-utils: 2.4.0(typescript@5.9.3)
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -20862,7 +20851,7 @@ snapshots:
       magic-string: 0.30.21
       pathe: 2.0.3
       perfect-debounce: 2.1.0
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
       unplugin-utils: 0.3.1
 
   '@unocss/config@66.6.2':
@@ -21016,7 +21005,7 @@ snapshots:
       chokidar: 5.0.0
       magic-string: 0.30.21
       pathe: 2.0.3
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
       unplugin-utils: 0.3.1
       vite: 6.2.7(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1)
 
@@ -21382,7 +21371,7 @@ snapshots:
 
   '@vue-macros/reactivity-transform@3.1.2(vue@3.5.29(typescript@5.9.3))':
     dependencies:
-      '@babel/parser': 7.29.0
+      '@babel/parser': 7.29.9
       '@vue-macros/common': 3.1.2(vue@3.5.29(typescript@5.9.3))
       '@vue/compiler-core': 3.5.29
       '@vue/shared': 3.5.29
@@ -21496,7 +21485,7 @@ snapshots:
       '@babel/plugin-syntax-jsx': 7.27.1(@babel/core@7.28.5)
       '@babel/template': 7.28.6
       '@babel/traverse': 7.29.0
-      '@babel/types': 7.29.0
+      '@babel/types': 7.29.8
       '@vue/babel-helper-vue-transform-on': 1.5.0
       '@vue/babel-plugin-resolve-type': 1.5.0(@babel/core@7.28.5)
       '@vue/shared': 3.5.29
@@ -21518,7 +21507,7 @@ snapshots:
 
   '@vue/compiler-core@3.5.29':
     dependencies:
-      '@babel/parser': 7.29.0
+      '@babel/parser': 7.29.9
       '@vue/shared': 3.5.29
       entities: 7.0.1
       estree-walker: 2.0.2
@@ -21531,7 +21520,7 @@ snapshots:
 
   '@vue/compiler-sfc@2.7.16':
     dependencies:
-      '@babel/parser': 7.29.0
+      '@babel/parser': 7.29.9
       postcss: 8.5.6
       source-map: 0.6.1
     optionalDependencies:
@@ -21539,7 +21528,7 @@ snapshots:
 
   '@vue/compiler-sfc@3.5.29':
     dependencies:
-      '@babel/parser': 7.29.0
+      '@babel/parser': 7.29.9
       '@vue/compiler-core': 3.5.29
       '@vue/compiler-dom': 3.5.29
       '@vue/compiler-ssr': 3.5.29
@@ -21631,7 +21620,7 @@ snapshots:
       alien-signals: 2.0.8
       muggle-string: 0.4.1
       path-browserify: 1.0.1
-      picomatch: 4.0.4
+      picomatch: 4.0.7
     optionalDependencies:
       typescript: 5.9.3
 
@@ -21643,7 +21632,7 @@ snapshots:
       alien-signals: 3.1.2
       muggle-string: 0.4.1
       path-browserify: 1.0.1
-      picomatch: 4.0.4
+      picomatch: 4.0.7
 
   '@vue/language-core@3.2.8':
     dependencies:
@@ -21653,7 +21642,7 @@ snapshots:
       alien-signals: 3.1.2
       muggle-string: 0.4.1
       path-browserify: 1.0.1
-      picomatch: 4.0.4
+      picomatch: 4.0.7
 
   '@vue/reactivity@3.5.29':
     dependencies:
@@ -21934,6 +21923,10 @@ snapshots:
     dependencies:
       acorn: 8.16.0
 
+  acorn-jsx@5.3.2(acorn@8.19.0):
+    dependencies:
+      acorn: 8.19.0
+
   acorn@8.16.0: {}
 
   acorn@8.19.0: {}
@@ -22039,7 +22032,7 @@ snapshots:
   anymatch@3.1.3:
     dependencies:
       normalize-path: 3.0.0
-      picomatch: 2.3.1
+      picomatch: 2.3.2
 
   anynum@1.0.1: {}
 
@@ -22088,12 +22081,12 @@ snapshots:
 
   ast-kit@1.4.3:
     dependencies:
-      '@babel/parser': 7.29.0
+      '@babel/parser': 7.29.9
       pathe: 2.0.3
 
   ast-kit@2.2.0:
     dependencies:
-      '@babel/parser': 7.29.0
+      '@babel/parser': 7.29.9
       pathe: 2.0.3
 
   ast-kit@3.0.0-beta.1:
@@ -22110,7 +22103,7 @@ snapshots:
 
   ast-walker-scope@0.8.3:
     dependencies:
-      '@babel/parser': 7.29.0
+      '@babel/parser': 7.29.9
       ast-kit: 2.2.0
 
   async-mutex@0.5.0:
@@ -23391,7 +23384,7 @@ snapshots:
     dependencies:
       empathic: 2.0.0
       module-replacements: 2.10.1
-      semver: 7.7.4
+      semver: 7.8.5
 
   eslint-plugin-es-x@7.8.0(eslint@9.39.3(jiti@2.6.1)):
     dependencies:
@@ -23418,7 +23411,7 @@ snapshots:
       html-entities: 2.6.0
       object-deep-merge: 2.0.0
       parse-imports-exports: 0.2.4
-      semver: 7.7.4
+      semver: 7.8.5
       spdx-expression-parse: 4.0.0
       to-valid-identifier: 1.0.0
     transitivePeerDependencies:
@@ -23449,7 +23442,7 @@ snapshots:
       globals: 15.15.0
       globrex: 0.1.2
       ignore: 5.3.2
-      semver: 7.7.4
+      semver: 7.8.5
       ts-declaration-location: 1.0.7(typescript@5.9.3)
     transitivePeerDependencies:
       - typescript
@@ -23486,7 +23479,7 @@ snapshots:
       jsonc-eslint-parser: 3.1.0
       pathe: 2.0.3
       pnpm-workspace-yaml: 1.6.0
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
       yaml: 2.9.1
       yaml-eslint-parser: 2.0.0
 
@@ -23547,7 +23540,7 @@ snapshots:
       pluralize: 8.0.0
       regexp-tree: 0.1.27
       regjsparser: 0.13.0
-      semver: 7.7.4
+      semver: 7.8.5
       strip-indent: 4.1.1
 
   eslint-plugin-unused-imports@4.4.1(@typescript-eslint/eslint-plugin@8.56.1(@typescript-eslint/parser@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1)):
@@ -23563,7 +23556,7 @@ snapshots:
       natural-compare: 1.4.0
       nth-check: 2.1.1
       postcss-selector-parser: 7.1.1
-      semver: 7.7.4
+      semver: 7.8.5
       vue-eslint-parser: 10.4.0(eslint@9.39.3(jiti@2.6.1))
       xml-name-validator: 4.0.0
     optionalDependencies:
@@ -23649,14 +23642,14 @@ snapshots:
 
   espree@11.1.0:
     dependencies:
-      acorn: 8.16.0
-      acorn-jsx: 5.3.2(acorn@8.16.0)
+      acorn: 8.19.0
+      acorn-jsx: 5.3.2(acorn@8.19.0)
       eslint-visitor-keys: 5.0.0
 
   espree@9.6.1:
     dependencies:
-      acorn: 8.16.0
-      acorn-jsx: 5.3.2(acorn@8.16.0)
+      acorn: 8.19.0
+      acorn-jsx: 5.3.2(acorn@8.19.0)
       eslint-visitor-keys: 3.4.3
 
   esprima@4.0.1: {}
@@ -23677,7 +23670,7 @@ snapshots:
 
   estree-walker@3.0.3:
     dependencies:
-      '@types/estree': 1.0.8
+      '@types/estree': 1.0.9
 
   esutils@2.0.3: {}
 
@@ -24213,7 +24206,7 @@ snapshots:
       es6-error: 4.1.1
       matcher: 3.0.0
       roarr: 2.15.4
-      semver: 7.7.4
+      semver: 7.8.5
       serialize-error: 7.0.1
 
   global-directory@4.0.1:
@@ -25082,14 +25075,14 @@ snapshots:
 
   jsonc-eslint-parser@2.4.2:
     dependencies:
-      acorn: 8.16.0
+      acorn: 8.19.0
       eslint-visitor-keys: 3.4.3
       espree: 9.6.1
       semver: 7.8.5
 
   jsonc-eslint-parser@3.1.0:
     dependencies:
-      acorn: 8.16.0
+      acorn: 8.19.0
       eslint-visitor-keys: 5.0.0
       semver: 7.8.5
 
@@ -25451,8 +25444,8 @@ snapshots:
 
   magicast@0.5.2:
     dependencies:
-      '@babel/parser': 7.29.0
-      '@babel/types': 7.29.0
+      '@babel/parser': 7.29.9
+      '@babel/types': 7.29.8
       source-map-js: 1.2.1
 
   main-event@1.0.5: {}
@@ -26116,7 +26109,7 @@ snapshots:
   micromatch@4.0.8:
     dependencies:
       braces: 3.0.3
-      picomatch: 2.3.1
+      picomatch: 2.3.2
 
   mime-db@1.52.0:
     optional: true
@@ -26569,7 +26562,7 @@ snapshots:
       is-unicode-supported: 2.1.0
       log-symbols: 7.0.1
       stdin-discarder: 0.3.1
-      string-width: 8.2.0
+      string-width: 8.2.2
 
   os-shim@0.1.3: {}
 
@@ -26700,7 +26693,7 @@ snapshots:
 
   parse-json@7.1.1:
     dependencies:
-      '@babel/code-frame': 7.29.0
+      '@babel/code-frame': 7.29.7
       error-ex: 1.3.4
       json-parse-even-better-errors: 3.0.2
       lines-and-columns: 2.0.4
@@ -26806,8 +26799,6 @@ snapshots:
   phonemizer@1.2.1: {}
 
   picocolors@1.1.1: {}
-
-  picomatch@2.3.1: {}
 
   picomatch@2.3.2: {}
 
@@ -27638,7 +27629,7 @@ snapshots:
   rollup-plugin-visualizer@5.14.0(rollup@2.80.0):
     dependencies:
       open: 8.4.2
-      picomatch: 4.0.4
+      picomatch: 4.0.7
       source-map: 0.7.6
       yargs: 17.7.2
     optionalDependencies:
@@ -27647,7 +27638,7 @@ snapshots:
   rollup-plugin-visualizer@5.14.0(rollup@4.59.0):
     dependencies:
       open: 8.4.2
-      picomatch: 4.0.4
+      picomatch: 4.0.7
       source-map: 0.7.6
       yargs: 17.7.2
     optionalDependencies:
@@ -27842,7 +27833,7 @@ snapshots:
     dependencies:
       '@img/colour': 1.0.0
       detect-libc: 2.1.2
-      semver: 7.7.4
+      semver: 7.8.5
     optionalDependencies:
       '@img/sharp-darwin-arm64': 0.34.5
       '@img/sharp-darwin-x64': 0.34.5
@@ -28071,11 +28062,6 @@ snapshots:
   string-width@7.2.0:
     dependencies:
       emoji-regex: 10.6.0
-      get-east-asian-width: 1.5.0
-      strip-ansi: 7.1.2
-
-  string-width@8.2.0:
-    dependencies:
       get-east-asian-width: 1.5.0
       strip-ansi: 7.1.2
 
@@ -28432,7 +28418,7 @@ snapshots:
 
   ts-declaration-location@1.0.7(typescript@5.9.3):
     dependencies:
-      picomatch: 4.0.4
+      picomatch: 4.0.7
       typescript: 5.9.3
 
   ts-interface-checker@0.1.13: {}
@@ -28454,12 +28440,12 @@ snapshots:
       hookable: 6.0.1
       import-without-cache: 0.2.5
       obug: 2.1.1
-      picomatch: 4.0.4
+      picomatch: 4.0.7
       rolldown: 1.0.0-rc.3
       rolldown-plugin-dts: 0.22.1(oxc-resolver@11.16.2)(rolldown@1.0.0-rc.3)(typescript@5.9.3)(vue-tsc@3.2.8(typescript@5.9.3))
-      semver: 7.7.4
+      semver: 7.8.5
       tinyexec: 1.0.2
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
       tree-kill: 1.2.2
       unconfig-core: 7.5.0
       unrun: 0.2.28(synckit@0.11.12)
@@ -28605,7 +28591,7 @@ snapshots:
 
   unctx@2.5.0:
     dependencies:
-      acorn: 8.16.0
+      acorn: 8.19.0
       estree-walker: 3.0.3
       magic-string: 0.30.21
       unplugin: 2.3.11
@@ -28644,18 +28630,18 @@ snapshots:
 
   unimport@5.6.0:
     dependencies:
-      acorn: 8.16.0
+      acorn: 8.19.0
       escape-string-regexp: 5.0.0
       estree-walker: 3.0.3
       local-pkg: 1.1.2
       magic-string: 0.30.21
       mlly: 1.8.0
       pathe: 2.0.3
-      picomatch: 4.0.4
+      picomatch: 4.0.7
       pkg-types: 2.3.0
       scule: 1.3.0
       strip-literal: 3.1.0
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
       unplugin: 2.3.11
       unplugin-utils: 0.3.1
 
@@ -28802,12 +28788,12 @@ snapshots:
   unplugin-utils@0.2.5:
     dependencies:
       pathe: 2.0.3
-      picomatch: 4.0.4
+      picomatch: 4.0.7
 
   unplugin-utils@0.3.1:
     dependencies:
       pathe: 2.0.3
-      picomatch: 4.0.4
+      picomatch: 4.0.7
 
   unplugin-vue-define-options@3.1.2(vue@3.5.29(typescript@5.9.3)):
     dependencies:
@@ -28888,14 +28874,14 @@ snapshots:
   unplugin@2.3.11:
     dependencies:
       '@jridgewell/remapping': 2.3.5
-      acorn: 8.16.0
-      picomatch: 4.0.4
+      acorn: 8.19.0
+      picomatch: 4.0.7
       webpack-virtual-modules: 0.6.2
 
   unplugin@3.0.0:
     dependencies:
       '@jridgewell/remapping': 2.3.5
-      picomatch: 4.0.4
+      picomatch: 4.0.7
       webpack-virtual-modules: 0.6.2
 
   unrun@0.2.28(synckit@0.11.12):
@@ -29239,11 +29225,11 @@ snapshots:
       magic-string: 0.30.21
       obug: 2.1.1
       pathe: 2.0.3
-      picomatch: 4.0.4
+      picomatch: 4.0.7
       std-env: 3.10.0
       tinybench: 2.9.0
       tinyexec: 1.0.2
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
       tinyrainbow: 3.0.3
       vite: 6.2.7(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1)
       why-is-node-running: 2.3.0
@@ -29279,11 +29265,11 @@ snapshots:
       magic-string: 0.30.21
       obug: 2.1.1
       pathe: 2.0.3
-      picomatch: 4.0.4
+      picomatch: 4.0.7
       std-env: 3.10.0
       tinybench: 2.9.0
       tinyexec: 1.0.2
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
       tinyrainbow: 3.0.3
       vite: 6.2.7(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.1)
       why-is-node-running: 2.3.0
@@ -29310,7 +29296,7 @@ snapshots:
   vscode-ext-gen@1.6.0:
     dependencies:
       cac: 6.7.14
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
 
   vscode-uri@3.1.0: {}
 
@@ -29326,7 +29312,7 @@ snapshots:
       eslint-visitor-keys: 5.0.0
       espree: 11.1.0
       esquery: 1.7.0
-      semver: 7.7.4
+      semver: 7.8.5
     transitivePeerDependencies:
       - supports-color
 
@@ -29787,7 +29773,7 @@ snapshots:
       jszip: 3.10.1
       linkedom: 0.18.12(canvas@3.2.1)
       magicast: 0.5.2
-      minimatch: 10.2.4
+      minimatch: 10.2.6
       nano-spawn: 2.0.0
       normalize-path: 3.0.0
       nypm: 0.6.5

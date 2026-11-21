@@ -1,17 +1,17 @@
 ---
 title: Generative Motion & Gestures
-description: How AIRI generates procedural 3D motions, triggers animations on the fly, and uses Text-to-Motion neural diffusion.
+description: How Anima generates procedural 3D motions, triggers animations on the fly, and uses Text-to-Motion neural diffusion.
 ---
 
 # Generative Motion & Gestures
 
-In AIRI, your 3D avatar does not simply repeat the same static idle loop. Through the **Motion Engine**, avatars can gesture while speaking, react emotionally to your words, perform procedural dances, and even synthesize brand-new full-body skeletal animations on demand using neural diffusion models.
+In Anima, your 3D avatar does not simply repeat the same static idle loop. Through the **Motion Engine**, avatars can gesture while speaking, react emotionally to your words, perform procedural dances, and even synthesize brand-new full-body skeletal animations on demand using neural diffusion models.
 
 ---
 
-## 1. How Motion Works in AIRI
+## 1. How Motion Works in Anima
 
-AIRI uses a dual-engine motion architecture:
+Anima uses a dual-engine motion architecture:
 
 ```text
 [ LLM Turn / User Command ]
@@ -42,7 +42,7 @@ These tokens are automatically intercepted by the parser and dispatched to the a
 
 ## 3. Generative Text-to-Motion (FlowMDM)
 
-AIRI includes experimental support for **FlowMDM (Local WebGPU Neural Motion Diffusion)**:
+Anima includes experimental support for **FlowMDM (Local WebGPU Neural Motion Diffusion)**:
 - **How It Works**: Given a text description (e.g., *"Take two steps back and do a dramatic bow"* or *"Celebrate with a victory spin"*), the local WebGPU worker synthesizes a 3D skeletal animation track and compiles it into standard VRMA bytecode directly inside your browser or desktop app.
 - **Zero Cloud Rendering**: Runs on your local GPU with zero external cloud dependencies.
 

@@ -99,9 +99,9 @@ Update `WEB_RWKV_MODELS` in `packages/stage-ui/src/libs/inference/constants.ts` 
 
 ## 5. Verification Workflows
 
-- **Typecheck UI**: `pnpm -F @proj-airi/stage-ui typecheck`
-- **Typecheck Pages**: `pnpm -F @proj-airi/stage-pages typecheck`
-- **Run Inference Suite**: `pnpm -F @proj-airi/stage-ui test run src/libs/inference/`
+- **Typecheck UI**: `pnpm -F @proj-anima/stage-ui typecheck`
+- **Typecheck Pages**: `pnpm -F @proj-anima/stage-pages typecheck`
+- **Run Inference Suite**: `pnpm -F @proj-anima/stage-ui test run src/libs/inference/`
 - **Audit Test Catalog**: `node scripts/audit-test-catalog.mjs`
 
 ### Authoritative Architecture Documents

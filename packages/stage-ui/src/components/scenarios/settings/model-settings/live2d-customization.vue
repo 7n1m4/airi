@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useLive2d } from '@proj-airi/stage-ui-live2d/stores'
-import { Checkbox, FieldRange } from '@proj-airi/ui'
+import { useLive2d } from '@proj-anima/stage-ui-live2d/stores'
+import { Checkbox, FieldRange } from '@proj-anima/ui'
 import { useDebounceFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'

@@ -5,7 +5,7 @@ import {
   computePolarLayout,
   describeAnnularSector,
   getHoveredSliceIndex,
-} from '@proj-airi/stage-shared'
+} from '@proj-anima/stage-shared'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { useControlStripAction } from '../../composables/use-control-strip-action'

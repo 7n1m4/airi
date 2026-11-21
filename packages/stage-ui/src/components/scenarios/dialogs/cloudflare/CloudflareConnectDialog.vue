@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, FieldInput } from '@proj-airi/ui'
+import { Button, FieldInput } from '@proj-anima/ui'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,

@@ -1,4 +1,4 @@
-import type { WebGPUCapabilities } from '@proj-airi/stage-shared/webgpu'
+import type { WebGPUCapabilities } from '@proj-anima/stage-shared/webgpu'
 
 import { describe, expect, it } from 'vitest'
 

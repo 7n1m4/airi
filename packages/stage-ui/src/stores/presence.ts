@@ -1,7 +1,7 @@
-import type { PresenceSignalProvider, PresenceSnapshot, PresenceState, PresenceStateAvailability } from '@proj-airi/stage-shared/agentic'
+import type { PresenceSignalProvider, PresenceSnapshot, PresenceState, PresenceStateAvailability } from '@proj-anima/stage-shared/agentic'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { isElectronWindow, sensorsGetIdleTime } from '@proj-airi/stage-shared'
+import { useElectronEventaInvoke } from '@proj-anima/electron-vueuse'
+import { isElectronWindow, sensorsGetIdleTime } from '@proj-anima/stage-shared'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 

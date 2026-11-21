@@ -1,11 +1,11 @@
 ---
 title: Configuration Guide
-description: Detailed instructions for setting up and managing AIRI.
+description: Detailed instructions for setting up and managing Anima.
 ---
 
 # Configuration Guide
 
-Welcome to the AIRI Configuration Guide. This manual provides a deep dive into every aspect of the application's behavior, from your character's personality to global system settings.
+Welcome to the Anima Configuration Guide. This manual provides a deep dive into every aspect of the application's behavior, from your character's personality to global system settings.
 
 ## Getting Started
 
@@ -25,7 +25,7 @@ Select a category below to learn more:
   <a href="./settings-overview" flex="~ col 1" min-w-64 p-6 rounded-2xl border="1 $border-color" hover:bg="$bg-secondary-color" transition-all no-underline>
     <div text-2xl mb-2 i-lucide:rocket />
     <h3 m-0 mb-2>Settings Overview</h3>
-    <p m-0 text-sm opacity-70>High-level map of the AIRI configuration system.</p>
+    <p m-0 text-sm opacity-70>High-level map of the Anima configuration system.</p>
   </a>
 
   <a href="./character-card" flex="~ col 1" min-w-64 p-6 rounded-2xl border="1 $border-color" hover:bg="$bg-secondary-color" transition-all no-underline>
@@ -51,6 +51,6 @@ Select a category below to learn more:
 
 ### Tips for Customization
 
-- **Start Small**: Use the default AIRI preset cards to get a feel for the interaction before creating your own from scratch.
+- **Start Small**: Use the default Anima preset cards to get a feel for the interaction before creating your own from scratch.
 - **Provider Performance**: If you notice slow responses, try different LLM providers or adjust the context window in the Short-Term Memory settings.
 - **Proactivity**: Fine-tune the proactivity settings to ensure the character feels alive without becoming overwhelming.

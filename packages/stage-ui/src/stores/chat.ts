@@ -1,5 +1,5 @@
-import type { Nan0Observation, Nan0PreparedTurn } from '@proj-airi/nan0-runtime'
-import type { WebSocketEventInputs } from '@proj-airi/server-sdk'
+import type { Nan0Observation, Nan0PreparedTurn } from '@proj-anima/nan0-runtime'
+import type { WebSocketEventInputs } from '@proj-anima/server-sdk'
 import type { ChatProvider } from '@xsai-ext/providers/utils'
 import type { CommonContentPart, CompletionToolCall, Message, ToolMessage } from '@xsai/shared-chat'
 
@@ -8,8 +8,8 @@ import type { PacingMetrics } from '../types/pacing'
 import type { ChatInputBridgePayload } from './chat/input-bridge'
 import type { StreamEvent, StreamOptions } from './llm'
 
-import { debug, healMozibake, isStageTamagotchi } from '@proj-airi/stage-shared'
-import { createQueue } from '@proj-airi/stream-kit'
+import { debug, healMozibake, isStageTamagotchi } from '@proj-anima/stage-shared'
+import { createQueue } from '@proj-anima/stream-kit'
 import { useBroadcastChannel } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { defineStore, storeToRefs } from 'pinia'
@@ -1320,7 +1320,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
         // Check for Dating Sim Climax triggers (Victory/Defeat) to inject instructions dynamically
         let climaxPrompt = ''
         try {
-          const datingSim = (await import('@proj-airi/stage-ui/stores/dating-sim')).useDatingSimStore()
+          const datingSim = (await import('@proj-anima/stage-ui/stores/dating-sim')).useDatingSimStore()
           if (datingSim.enabled && datingSim.settings?.gameMode === 'goal_driven') {
             const msgs = chatSession.messages || []
             const turns = msgs.filter((m: any) => m.role === 'assistant').length
@@ -1767,7 +1767,7 @@ Format your output as a raw thought log.`
                 // Fallback for Dating Sim: if stream finishes, choices are empty, AND AA is disabled,
                 // regenerate choices via the standalone path. When AA is on, the Director pipeline
                 // owns choice generation from turn 1+ — don't race with it.
-                import('@proj-airi/stage-ui/stores/dating-sim').then(({ useDatingSimStore }) => {
+                import('@proj-anima/stage-ui/stores/dating-sim').then(({ useDatingSimStore }) => {
                   const store = useDatingSimStore()
                   const aaEnabled = activeCard.value?.extensions?.airi?.artistry?.autonomousEnabled ?? false
                   if (store.enabled && store.choices.length === 0 && !aaEnabled) {
