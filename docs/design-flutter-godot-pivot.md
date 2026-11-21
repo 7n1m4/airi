@@ -44,9 +44,12 @@ only owner of business logic and replacing the Slint GUI with two purpose-built 
   Flutter dashboard is closed.
 - **Vue web app** — remains the working reference for *full UI behaviour*, kept **out of
   respect to the original AIRI project** (user, 2026-11-21), not merely as a parity target.
-  The reference is specifically `apps/stage-web` (the Vue **web** app), **not**
-  `apps/stage-tamagotchi` (the Electrobun desktop app). The Electrobun/Vue **desktop** app is
-  **retired** (decision C, 2026-11-21); its retirement is a future wave — do not delete it here.
+  The reference is specifically `apps/stage-web` (the Vue **web** app). The Electrobun/Vue
+  **desktop** app (`apps/stage-tamagotchi`) is **kept alive and working** as the live fallback
+  and working full-UI reference throughout the migration: it may be retired only after ALL of
+  its business logic is ported to Rust (`anima-daemon`) AND its frontend is ported to Flutter
+  (decision C, refined by user correction 2026-11-21; gate tracked in `airi-wxp.6.4`). This
+  supersedes the earlier "retire it in a future wave" wording. The Slint cutover is unchanged.
 
 The hard constraint that shapes every wave: **today the gateway cannot push events**. Every
 post-auth server frame is a reply to a client frame
@@ -65,7 +68,7 @@ cannot be built as a GUI feature first — the protocol lane must land first.
 | 2 | Wire protocol evolution | **Additive server→client event frame + event vocabulary in `crates/anima-channel/src/wire.rs`. Keep protocol version 1.** | Verified gap: `GatewayServerFrame` (`wire.rs:220-275`) has only Auth/Authenticated/Pong/Heartbeat/Rpc/Error; all replies flow through `SessionOutcome::replies_only` (`session.rs:95-101`). `design-daemon-client.md:17-19` (decision 3) already records that a new event lane is required before its Slice C. This is that lane. |
 | 3 | Control surface | **Flutter** control/chat app, independent WS client, no local store writer. | Net-new. Must obey decision 1 of `design-daemon-client.md`: the daemon is the single owner of core state; the client holds view state only. |
 | 4 | Pet renderer | **Godot 4 + plugins**, on demand, independent WS client; pet window outlives the Flutter window. **Both backends: Live2D via GDCubism AND 3D (VRM/MMD), plugin-selected per card.** | Net-new. Rendering/asset expertise already in-tree is `crates/anima-render` (spine/vrm); the Slint-specific `spine_render.rs`/`spine_rt.rs` adapters are **not** the reusable core. Decision A resolved 2026-11-21: both backends chosen (plugin per card). The specific Godot plugin/toolchain approach is still to be worked out. No GDCubism/VRM/MMD-in-Godot code exists in-tree yet. On desktop, Godot's own scene/animation system means the TypeScript avatar-driving glue (ACT token parsing, expression dispatch, Stage UI context bridge, BroadcastChannel expression relays) does **not** need porting — the daemon emits high-level events (lip-sync RMS, emotion tags, acting cues) that Godot maps into its animation state; this removes bridge boilerplate, not the event→animation mapping. Food for thought (user, 2026-11-21, `airi-wxp.4.8`): the TypeScript glue is still worth *reading* as a reference — not to port, but to learn how existing models' emotion/expression mappings work and re-express that mapping knowledge in Godot's animation state, mapping them to LLM-driven emotion keys for richer expression; "don't port the glue" ≠ "ignore the knowledge in it". Whether to import the upstream Godot sidecar (`docs/UPSTREAM_RADAR.md`, `docs/project-selective-upstream-sync-shortlist.md`) remains a separate open sub-question. |
-| 5 | Web app / desktop app | **Vue web app remains the full-UI behaviour reference only; the Electrobun/Vue desktop app is RETIRED.** Vue is a reference WS client. | Verified: the Vue renderer is the daily-driver surface (`design-electrobun-port.md`); its full behaviour is the parity ledger. The kept reference is specifically `apps/stage-web` (Vue **web**), **not** `apps/stage-tamagotchi` (Electrobun), retained **out of respect to the original AIRI project** (user, 2026-11-21), not merely as a parity target. Decision C resolved 2026-11-21: retire the Electrobun desktop app. Its retirement is a **future wave — do NOT delete now**. The shim-retirement work (airi-vxt) is delivered; its remaining scope is superseded by retirement. Do not fork business logic into Dart or GDScript to "catch up" — extend the daemon and rebind all clients. |
+| 5 | Web app / desktop app | **Vue web app remains the full-UI behaviour reference; the Electrobun/Vue desktop app (apps/stage-tamagotchi) is KEPT ALIVE until parity, then retired.** Both are live references/fallbacks; retirement needs BOTH gates: all business logic ported to Rust (anima-daemon) AND frontend ported to Flutter. Vue is a reference WS client. | Verified: the Vue renderer is the daily-driver surface (`design-electrobun-port.md`); its full behaviour is the parity ledger. The kept reference is specifically `apps/stage-web` (Vue **web**), retained **out of respect to the original AIRI project** (user, 2026-11-21), not merely as a parity target. Decision C resolved 2026-11-21 and **refined by user correction 2026-11-21**: `apps/stage-tamagotchi` MUST STAY ALIVE and working as the live fallback and working full-UI reference until ALL of its business logic is ported to Rust and its frontend to Flutter; only then may it be retired, gated on the parity checklist (`airi-wxp.6.4`) and explicit approval. This supersedes the earlier "retire the Electrobun desktop app / future wave" wording — it is the working reference/fallback during migration. The Slint cutover is a separate, unchanged big-bang deletion after domain migration (row 6). The shim-retirement work (airi-vxt) is delivered, but its shims must keep working while the app lives. Do not fork business logic into Dart or GDScript to "catch up" — extend the daemon and rebind all clients. |
 | 6 | Slint cutover | **Big-bang deletion of the Slint GUI after domain migration — no surviving fallback.** Move only its business logic into `anima-daemon`. | Net-new deletion; cutover decision resolved 2026-11-21. Once the §4 ports land, delete Slint in one cutover; no Slint fallback path survives. 1,728 lines of `.slint` markup, `run_ui()` (`crates/anima-slint/src/main.rs:100-241`) and Slint-only render adapters go; the bridge logic in §4 is ported, not thrown away. |
 | 7 | Realtime pipeline ownership | **The daemon owns VAD/STT → LLM → TTS and emits events.** | **Net-new integration.** The Rust crates exist (`anima-stt`, `anima-llm`, `anima-speech`, `anima-render/src/vrm/lipsync.rs`) but `anima-daemon/Cargo.toml:17-29` links **none** of them. Slint's hearing/speech bridges are intent-only ("nothing pumps audio into the pipeline yet" — `bridges/hearing.rs:22-23`; "in-app playback is not wired" — `bridges/speech.rs:44`). Live lip-sync today is a TS BroadcastChannel (`packages/stage-shared/src/beat-sync/eventa.ts:21-31`). |
 | 8 | Control plane & process lifecycle | **D-Bus stays for privileged verbs; tray/GUI drives Flutter/Godot process lifecycle.** | D-Bus methods verified in `crates/anima-daemon/src/control.rs:39,218-231`. Tray-driven launch/stop of GUI processes is net-new and must not become a new privileged data path: the daemon owns state, GUIs are clients. |
@@ -88,7 +91,7 @@ flowchart TB
     FLUTTER["Flutter control + chat<br/>NET-NEW · closeable<br/>chat · settings · providers · cards"]
     GODOT["Godot 4 pet<br/>NET-NEW · on demand<br/>window survives Flutter close"]
     MOBILE["Mobile Flutter client<br/>NET-NEW · REMOTE thin client<br/>libp2p / Cloudflare Tunnel / tunnel+libp2p<br/>(no embedded core, no local daemon)"]
-    VUE["Vue WEB app (apps/stage-web) — full UI behaviour reference ONLY<br/>kept out of respect to the original AIRI project (not merely parity)<br/>Electrobun DESKTOP app (apps/stage-tamagotchi): RETIRED (future wave)"]
+    VUE["Vue WEB app (apps/stage-web) — full UI behaviour reference<br/>kept out of respect to the original AIRI project (not merely parity)<br/>Electrobun DESKTOP app (apps/stage-tamagotchi): KEPT ALIVE as live fallback<br/>+ working full-UI reference until Rust-logic AND Flutter-frontend parity"]
   end
 
   subgraph daemon["anima-daemon — Rust, long-lived (the only state owner)"]
@@ -141,8 +144,11 @@ Invariants implied by the diagram:
 5. **Mobile is remote, not a second core.** It reaches the daemon over libp2p / Cloudflare
    Tunnel / tunnel+libp2p as a thin client — no embedded `flutter_rust_bridge` core and no
    separate local mobile daemon (decision B, 2026-11-21).
-6. **No fallback GUI survives the cutover.** Slint is deleted big-bang after domain migration,
-   and the Electrobun desktop app is retired (future wave); Vue web is the behaviour reference.
+6. **No Slint fallback survives the cutover; the Electrobun app does.** Slint is deleted
+   big-bang after domain migration (unchanged). `apps/stage-tamagotchi` is KEPT ALIVE and
+   working as the live fallback and working full-UI reference until ALL business logic is
+   ported to Rust and its frontend is ported to Flutter; only then may it be retired. Vue web
+   (`apps/stage-web`) remains the behaviour reference throughout.
 
 ---
 
@@ -170,12 +176,13 @@ exact Rust module layout is a Wave-1 implementation detail.
 
 The Electrobun port doc measures 227 distinct eventa channels and 77 renderer bridge call
 sites (`design-electrobun-port.md:72-76`). With Slint deleted (big-bang, 2026-11-21) and the
-Electrobun desktop app retired (decision C, 2026-11-21 — retirement is a future wave, do not
-delete now), those channels split three ways:
+Electrobun desktop app KEPT ALIVE as the live fallback until both Rust business-logic parity
+and Flutter frontend parity are reached (decision C, refined by user correction 2026-11-21),
+those channels split three ways:
 
 | Class | Examples | Action |
 |---|---|---|
-| Desktop-main-only | window chrome, splash choreography, dialogs, toasts, devtools trace | **Drop** with Slint/Electrobun. No protocol equivalent. |
+| Desktop-main-only | window chrome, splash choreography, dialogs, toasts, devtools trace | **Drop** with Slint now; drop from Electrobun only at its parity-gated retirement — stage-tamagotchi stays alive meanwhile. No protocol equivalent. |
 | Daemon-worthy | gateway config, plugins, MCP, ACP, Discord, beat-sync, i18n/startup state | **Port** to gateway `rpc` verbs / Wave-0 event vocabulary. |
 | Renderer-internal | `BroadcastChannel('airi::beat-sync')` (`packages/stage-shared/src/beat-sync/eventa.ts:21-31`) | **Not IPC.** Keep inside a single client or replace with daemon events for cross-client sync. |
 
@@ -212,7 +219,7 @@ question — desktop's separate-window model does not apply (bead `airi-wxp.4.7`
 |---|---|---|---|---|
 | **A — RESOLVED 2026-11-21** | Godot character backend | **Both Live2D via GDCubism AND 3D (VRM/MMD), plugin-selected per card.** (Original options: (1) Live2D only via GDCubism; (2) 3D only (VRM/MMD); (3) both, plugin-selected — option 3 chosen.) | Wave 4 (Godot renderer) — unblocked | Determines the plugin boundary, asset pipeline, licensing and whether `crates/anima-render`'s VRM lip-sync logic is ported to GDScript or superseded by Cubism parameter mapping. No GDCubism/VRM/MMD-in-Godot code exists in-tree today. The specific Godot plugin/toolchain approach is still to be worked out. **Still OPEN (separate sub-question):** whether to import the upstream Godot sidecar (`docs/UPSTREAM_RADAR.md`, `docs/project-selective-upstream-sync-shortlist.md`) — not resolved here. |
 | **B — RESOLVED 2026-11-21** | Mobile runtime shape | **Mobile is a REMOTE client of the desktop anima-daemon over libp2p, or Cloudflare Tunnel, or tunnel+libp2p. No embedded `flutter_rust_bridge` core, no separate local mobile daemon.** (Both original options — embedded `flutter_rust_bridge` core; separate daemon process with the same WS protocol — explicitly rejected.) | Post-pivot mobile wave / Wave 7 — unblocked | Preserves the "one long-lived core" invariant; mobile is a thin client. Requires the security/trust model to cover libp2p peer identity and tunnel trust, not only `wss://` + local CA (see §8). Per the user (2026-11-21), when no PC is available the daemon may instead be hosted under **Termux on Android** as a separately installed alternative host — this does not reverse D4: no embedded core and no bundled local daemon remain rejected. Flutter/Godot clients stay thin in every topology specifically for battery life. `design-daemon-gateway.md` threat model needs a future update for libp2p/tunnel — do not edit that doc here. |
-| **C — RESOLVED 2026-11-21** | Fate of the Electrobun/Vue **desktop** app | **RETIRE the Electrobun desktop app; keep the Vue web app as the full-UI behaviour reference only.** (Original options: (1) keep as a shipped reference client; (2) retire it, keeping Vue web as the behaviour reference only — option 2 chosen.) | Wave 5/6 — resolved | The kept reference is specifically `apps/stage-web` (Vue **web**), retained **out of respect to the original AIRI project** (user, 2026-11-21), not merely as a parity target — **not** `apps/stage-tamagotchi` (Electrobun), which is the app retired. Determines whether the Electrobun bridge, 227 eventa channels and packaging chain remain a maintenance obligation (they do not once retired). **Stage-tamagotchi/Electrobun retirement is a future wave — do NOT delete it now.** The shim-retirement work (airi-vxt) is delivered; its remaining scope is superseded by retirement. |
+| **C — RESOLVED 2026-11-21, refined 2026-11-21 (user correction)** | Fate of the Electrobun/Vue **desktop** app | **KEEP `apps/stage-tamagotchi` ALIVE and working until ALL of its business logic is ported to Rust (`anima-daemon`) AND its frontend is ported to the new Flutter app; then retire.** (Original options: (1) keep as a shipped reference client; (2) retire it, keeping Vue web as the behaviour reference only — option 2 was chosen, then refined.) | Wave 5/6 keep-alive; retirement a later parity-gated wave | The kept reference is specifically `apps/stage-web` (Vue **web**), retained **out of respect to the original AIRI project** (user, 2026-11-21), not merely as a parity target — it remains the behaviour reference too. **Supersedes** the earlier "retire the Electrobun desktop app / future wave" wording: the user clarified (2026-11-21) that stage-tamagotchi is the working full-UI reference and live fallback throughout the migration and must not be retired until BOTH gates pass. Retirement is gated on the parity checklist (`airi-wxp.6.4`), E2 conformance evidence (`airi-wxp.2.5`) and explicit approval. This is DIFFERENT from the Slint cutover (row 6), which stays BIG-BANG deletion after domain migration — no Slint fallback; do not change that decision. |
 
 ---
 
@@ -337,27 +344,34 @@ recorded in this document (decision A, 2026-11-21) before implementation begins.
 
 **Scope:** consume Wave-0 events in the Vue **web** reference client; publish the full
 UI-behaviour parity ledger against Vue; update `rosetta-stone.md` and the port manifest with the
-new client topology; apply **resolved decision C (2026-11-21)**: the Vue web app is the
-full-UI behaviour reference only and the Electrobun desktop app is retired. Electrobun /
-stage-tamagotchi **retirement is a future wave — do NOT delete it in this wave**. The
-shim-retirement work (airi-vxt) is delivered; its remaining scope is superseded by retirement.
+new client topology; apply **decision C as refined by user correction (2026-11-21)**: keep
+`apps/stage-tamagotchi` alive and working as the live fallback and working full-UI reference
+alongside the Vue web behaviour reference. It may be retired ONLY AFTER BOTH (a) ALL of its
+business logic is ported to Rust into `anima-daemon` AND (b) its frontend is ported to the new
+Flutter app — gated on the parity checklist (`airi-wxp.6.4`) and explicit approval, not in this
+wave. Track per-capability parity against both live references; the shim-retirement work
+(airi-vxt) is delivered but its shims must keep working while the app lives.
 
 **Exit criteria:** every user-visible behaviour has exactly one owning daemon service and a
-documented reference in Vue web; no feature implemented twice in Dart/GDScript and TS; the
-Electrobun desktop app is not yet deleted from the tree.
+documented reference in Vue web / the live Electrobun fallback; no feature implemented twice in
+Dart/GDScript and TS; stage-tamagotchi still builds, runs and is not deleted from the tree; the
+parity checklist exists and records which of the two retirement gates are still open.
 
 ### Wave 6 — Slint big-bang deletion and doc convergence
 
-**Scope:** **big-bang deletion after domain migration — no surviving fallback** (Slint cutover
-decision resolved 2026-11-21). Only after the §4.1 ports and Wave 1 domain migration land,
-delete §4.3 in one cutover; remove `crates/anima-slint` from the workspace; update AGENTS.md,
-`docs/README.md`, `rosetta-stone.md` and `design-daemon-gateway.md` so Slint is described as
-retired rather than live. Preserve audit archives (no deletion path). Do not delete the
-Electrobun desktop app here — its retirement is a separate future wave (decision C).
+**Scope:** **big-bang deletion after domain migration — no surviving Slint fallback** (Slint
+cutover decision resolved 2026-11-21, unchanged). Only after the §4.1 ports and Wave 1 domain
+migration land, delete §4.3 in one cutover; remove `crates/anima-slint` from the workspace;
+update AGENTS.md, `docs/README.md`, `rosetta-stone.md` and `design-daemon-gateway.md` so Slint
+is described as retired rather than live. Preserve audit archives (no deletion path). Do not
+delete the Electrobun desktop app here: stage-tamagotchi stays alive and working as the live
+fallback until BOTH parity gates are met (all business logic in Rust AND frontend in Flutter),
+per decision C refined 2026-11-21.
 
 **Exit criteria:** `cargo test --workspace --locked` green with Slint gone; no Slint fallback
 path survives; no doc still names Slint as a shipping GUI; archive files untouched;
-stage-tamagotchi/Electrobun still present pending its own retirement wave.
+stage-tamagotchi/Electrobun still present and working as the live fallback pending its
+parity-gated retirement wave.
 
 ### Wave 7 — Packaging, tray, mobile, Electrobun retirement (follow-up)
 
@@ -367,14 +381,17 @@ tunnel+libp2p, hosted on the PC or, when no PC is available, under **Termux on A
 alternative host, with **no embedded `flutter_rust_bridge` core and no bundled local daemon**.
 The Flutter/Godot UI stays thin in every topology to save battery life. The security/trust model
 must cover libp2p peer identity and tunnel trust; `design-daemon-gateway.md` threat model needs a
-future update for libp2p/tunnel. Also schedule
-the **stage-tamagotchi/Electrobun desktop retirement (decision C)** as a future wave — do not
-delete it now. Lifecycle ownership (tray vs daemon) remains an OPEN item (row D/E/F) and must
-not be assumed.
+future update for libp2p/tunnel. Also schedule the **stage-tamagotchi/Electrobun desktop
+retirement (decision C, refined 2026-11-21)** as a later parity-gated wave — keep the app alive
+and working until BOTH (a) ALL business logic is ported to Rust (`anima-daemon`) AND (b) its
+frontend is ported to Flutter, then retire on evidence from the parity checklist
+(`airi-wxp.6.4`) with explicit approval. Lifecycle ownership (tray vs daemon) remains an OPEN
+item (row D/E/F) and must not be assumed.
 
 **Exit criteria:** installed artifacts run; mobile is a remote thin client over
 libp2p/tunnel with no embedded core or local daemon; libp2p/tunnel trust-model update recorded
-as a follow-up; Electrobun retirement scheduled, not silently executed.
+as a follow-up; Electrobun retirement scheduled behind BOTH parity gates, not silently executed
+— stage-tamagotchi still alive until then.
 
 ---
 
@@ -435,8 +452,9 @@ as a follow-up; Electrobun retirement scheduled, not silently executed.
 - [`rosetta-stone.md`](./rosetta-stone.md) — concept→code map; the source of truth for where
   TS behaviour lives before and after the move.
 - [`design-electrobun-port.md`](./design-electrobun-port.md) — measured Vue/Electrobun surface
-  and eventa channel counts that §4.2 triages; resolved decision C (2026-11-21: retire the
-  Electrobun desktop app) concerns this surface.
+  and eventa channel counts that §4.2 triages; decision C (2026-11-21, refined by user
+  correction 2026-11-21) concerns this surface: keep the Electrobun desktop app alive as the
+  live fallback until Rust business-logic AND Flutter frontend parity, then retire.
 - [`decision-audit-archive-retention.md`](./decision-audit-archive-retention.md) — mandatory
   retention/no-GUI-deletion policy that constrains the Slint deletion in Wave 6.
 - [`docs/README.md`](./README.md) — "one core, many surfaces" philosophy; this document
