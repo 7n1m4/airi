@@ -7,6 +7,17 @@ This document is the design contract for the port. It records what was verified 
 real Electrobun 2.0.6 SDK (not doc summaries), the decisions taken, and the wave order.
 Implementation status lives in the wave sections, not in prose elsewhere.
 
+> **Tracker:** this document is the design contract; live completion status is in Beads under
+> epic `airi-nz6` ("Finish Electron to Electrobun port") and its six children — `airi-nz6.1`
+> (main-process services off the Electron shim), `airi-nz6.2` (remaining 10 windows),
+> `airi-nz6.3` (renderer call sites → `electrobun-eventa`), `airi-nz6.4` (wave 5 packaging and
+> CI cleanup), `airi-nz6.5` (collapse Electron-driven peer duplicate packages), `airi-nz6.6`
+> (reconcile port docs and the parity ledger with the code). Check the epic for current state;
+> waves 3–5 are still being implemented in parallel.
+>
+> Do not read `docs/port-manifest/` as an Electron→Electrobun completion checklist: its ticks
+> measure Rust/Qt (Slint) feature parity for the strangler, not this port.
+
 ---
 
 ## 1. Decisions
@@ -190,7 +201,7 @@ adapter lands, not before.
 - `session.defaultSession.webRequest` CORS bypass → a Bun-side proxy (wave 4).
 - Desktop tray left-click → show main window: no Linux equivalent; the menu must carry that action.
 - Dead code found during the survey, to be dropped rather than ported: `windows/dashboard/*`, `windows/inlay/*` (never imported), `createSystemPreferencesService` (never called), `sticker.html` (referenced, never built), `exposeWithCustomAPI` (zero callers), `renderer/utils/windows.ts` Tauri no-ops, `renderer/composables/runtime.ts` hardcoded `'electron'` stub.
-- `electron-builder`-only packaging scripts: `build:win`, `build:mac`, `build:deb`, `build:rpm` all collapsed to `pnpm run build` (one `hutch electrobun build --env=stable` produces the platform artifact); `scripts/copy-deps.ts`, `scripts/package-win-zip.ts` and `scripts/utils.ts` (electron-builder `Configuration` reader) are now dead and get deleted with wave 5.
+- `electron-builder`-only packaging scripts: `build:win`, `build:mac`, `build:deb`, `build:rpm` all collapsed to `pnpm run build` (one `hutch electrobun build --env=stable` produces the platform artifact); `scripts/copy-deps.ts`, `scripts/package-win-zip.ts` and `scripts/utils.ts` (electron-builder `Configuration` reader) were dead and **were deleted with wave 5** (`airi-nz6.4`).
 
 ### 3.2 Verified so far (2026-11-13)
 
@@ -230,18 +241,23 @@ Two errors remain, both intentional: `Optional service not started (services:dis
 | Claim | Evidence |
 |---|---|
 | CEF renderer renders the real Vue app from `views://` | `scripts/linux-window-render-smoke.ts` → `ok: true`, `mainWindowUrl: views://main/index.html`, `visibilityState: visible`, 960x1044, screenshot written |
-| Renderer runs the actual app, not a placeholder | 545 renderer console diagnostics from real code paths (530 warnings incl. live i18n missing-key messages from the settings pages), plus 15 `Error: Electron IPC not available` — the expected bridge gap below |
+| Renderer runs the actual app, not a placeholder | 545 renderer console diagnostics from real code paths (530 warnings incl. live i18n missing-key messages from the settings pages), plus 15 `Error: Electron IPC not available` — the pre-bridge gap, closed by commit `5a906264` (below) |
 | Transparency, click-through and always-on-top all work on Linux/CEF | the four native log lines above; `libNativeWrapper.so` exposes `CEFWebViewImpl::setTransparent/setPassthrough` and links `gdk_window_input_shape_combine_region` |
 | DI graph resolves with the unported surfaces stubbed | `[injeca] RUNNING`; every window `provide` resolves; `notPortedWindow` raises only on a real property read (a throwing `build` aborts `injeca`, which is why the handles are inert Proxies) |
 | No real `electron` package in the bundle | `electron` is aliased to `src/main/electron-shim.ts` in `electrobun.config.ts` **and** kept out of `external`; `bun build` then emits the shim, not `getElectronPath()` |
 | `crossws` needs an explicit Bun adapter | `crossws/server` resolves to the Node adapter under Bun (`[crossws] Using Node.js adapter in an incompatible environment`); aliasing `crossws/server` → `crossws/server/bun` fixes it until Hutch forwards `--conditions` |
 
-**Last wave-1 gap (next task):** the renderer still has no `window.electron`. 15 errors read
-`Error: Electron IPC not available` from `packages/electron-vueuse`'s
-`resolveIpcRenderer()`, which looks for `globalThis.window.electron.ipcRenderer`. The fix is the
-§2.3 shim: in `src/renderer/main.ts` and `splash.main.ts`, install
-`window.electron = { ipcRenderer: <eventa-over-RPC shim> }` plus `window.platform`, backed by
-`@proj-airi/electrobun-eventa`'s view adapter. That keeps all 77 call sites working unchanged.
+**Wave-1 renderer bridge — closed (commit `5a906264`, "wire the renderer bridge; make
+main↔view RPC work").** The "last wave-1 gap" once recorded here was the renderer's missing
+`window.electron`: `resolveIpcRenderer()` in `packages/electron-vueuse` threw
+`Error: Electron IPC not available`. That gap is now fixed in code — both renderer entry
+points import a self-installing bridge (`src/renderer/install-bridge.ts`) that installs the
+§2.3 shim (`window.electron = { ipcRenderer: <eventa-over-RPC shim> }` plus `window.platform`)
+via `@proj-airi/electrobun-eventa`'s view adapter, so the ~77 Electron-shaped call sites from
+§1.3 keep working without being rewritten. The 15 IPC errors in the smoke table above are
+from **before** that commit; this document has not re-run that smoke since. Closing this gap
+closes wave 1, not the port: the shim is a compatibility bridge, and retiring it is tracked
+as `airi-nz6.3` under the `airi-nz6` epic.
 
 ### 3.3 Build-chain swap (this change)
 
@@ -252,7 +268,7 @@ Two errors remain, both intentional: `Optional service not started (services:dis
 | Electrobun build | `hutch electrobun build --env=dev` → `build/dev-linux-x64/AIRI-dev/`, CEF + Dawn bundled; the window smoke boots it and reaches `DevTools listening on ws://127.0.0.1:9222` |
 | Icons | `linux.icon` resolves inside the *packaged* tree, so it names a `build.copy` destination (`resources/icon-512.png`), not the repo path; `mac.icons`/`win.icon` still point into `build/` |
 | CI | `.github/workflows/ci-linux-window-smoke.yml` "Provision Electron binary" + "Verify Electron binary" → one `hutch electrobun prepare` step (both jobs) |
-| Still dead, deleted with wave 5 | `scripts/copy-deps.ts`, `scripts/package-win-zip.ts`, `scripts/utils.ts` (electron-builder `Configuration`), and the deb/rpm/flatpak/DMG artifact scripts that assumed `electron-builder` output under `dist/` |
+| Wave 5 cleanup (done, `airi-nz6.4`) | Deleted `scripts/copy-deps.ts`, `scripts/package-win-zip.ts`, `scripts/utils.ts` (electron-builder `Configuration`), and the deb/rpm/flatpak/DMG artifact scripts that assumed `electron-builder` output under `dist/`. NOTE: hutch currently emits only tarballs + `*-update.json`; deb/rpm/flatpak/dmg parity is still open. |
 
 ---
 

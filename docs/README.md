@@ -73,7 +73,8 @@ Be honest about the gap; do not pretend the port is done.
 
 1. **Polish what ships.** The TS app on Electrobun remains the flagship; keep it working
    at every step. `docs/port-manifest/` is the feature/IPC/store inventory — treat it as
-   the parity ledger the Rust core must satisfy.
+   the parity ledger the Rust/Qt (Slint) strangler must satisfy, not an Electron→Electrobun
+   completion checklist.
 2. **Move one service at a time** TS → Rust (`airi-core`), behind the existing eventa /
    gateway contracts, with the TS UI consuming the Rust service as soon as it reaches
    parity for that service. No feature may exist long-term in both stacks.
@@ -100,7 +101,8 @@ Be honest about the gap; do not pretend the port is done.
 - **Canonical, always current** (referenced by AGENTS.md, skills, scripts — do not move):
   `rosetta-stone.md` (TS internals map), `data-catalog.md` (persistence inventory),
   `settings-yaml.md`, `project-testing-parity.md`, `project-specialized-skills.md`,
-  `port-manifest/` (Electrobun port parity ledger).
+  `port-manifest/` (feature/IPC/store inventory for the Rust/Qt strangler — its ticks track
+  Slint parity, not Electron→Electrobun completion).
 - **Architecture blueprints** — how things work today or the approved design for what
   lands next. Prefixes: `arch-*` (subsystem architecture), `design-*` (feature/system
   design; the authoritative ones), `research-*` / `analysis-*` / `blueprint-*`
