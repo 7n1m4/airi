@@ -40,7 +40,7 @@ public partial class Main : Node2D
         _renderer?.Process(delta);
     }
 
-    protected override void _ExitTree()
+    public override void _ExitTree()
     {
         _renderer?.Dispose();
         _renderer = null;

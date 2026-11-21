@@ -6,7 +6,7 @@ config/features=PackedStringArray("4.7", "C#")
 run/main_scene="res://Main.tscn"
 
 [dotnet]
-dotnet/project/assembly_name="AnimaPet"
+project/assembly_name="AnimaPet"
 
 [display]
 window/size/viewport_width=1280

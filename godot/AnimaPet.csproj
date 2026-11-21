@@ -1,9 +1,9 @@
-<Project Sdk="Godot.NET.Sdk/4.7.0">
+<Project Sdk="Godot.NET.Sdk/4.7.2">
   <!-- Version pinned for the Godot 4.7 renderer spike. Update in lockstep with
        the .NET-enabled Godot editor build used to import this project.
        Research: docs/research-godot-renderer-spike.md (§5, §6). -->
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
