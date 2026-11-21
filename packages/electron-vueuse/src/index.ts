@@ -3,6 +3,7 @@ export { useElectronAutoUpdater } from './composables/use-electron-auto-updater'
 export {
   getElectronEventaContext,
   resetElectronEventaContextForTesting,
+  setElectronEventaContextProvider,
   useElectronEventaContext,
   useElectronEventaInvoke,
 } from './composables/use-electron-eventa-context'

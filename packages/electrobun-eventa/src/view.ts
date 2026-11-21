@@ -70,3 +70,31 @@ export function createContext(
     },
   }
 }
+
+/**
+ * The view-wide eventa context, installed once by the renderer entry point.
+ *
+ * It is a singleton because every composable and renderer helper in a view must
+ * share one context (and therefore one message listener / abort signal). The
+ * entry point also hands it to `@proj-airi/electron-vueuse` via that package's
+ * provider setter, which is how the shared call sites reach it without taking
+ * a new dependency on this package.
+ */
+let installedViewEventa: ReturnType<typeof createContext> | undefined
+
+/** Install the shared view context from the RPC the entry created. Idempotent. */
+export function installViewEventa(rpc: ElectrobunViewRpc): ElectrobunEventaContext {
+  installedViewEventa ??= createContext(rpc)
+  return installedViewEventa.context
+}
+
+/** The installed view context, or `undefined` before `installViewEventa` runs. */
+export function getViewEventaContext(): ElectrobunEventaContext | undefined {
+  return installedViewEventa?.context
+}
+
+/** Test-only: drop the installed context so a fresh RPC can be installed. */
+export function resetViewEventaForTesting(): void {
+  installedViewEventa?.dispose(new Error('eventa: view context reset for testing'))
+  installedViewEventa = undefined
+}

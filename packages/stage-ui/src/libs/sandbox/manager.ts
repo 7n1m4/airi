@@ -1,7 +1,7 @@
 import type { CommandLogEntry, ExecResult, MountedWidget, SandboxChannelMessage, VirtualFileEntry } from './types'
 
 import { defineInvoke, defineInvokeEventa } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/renderer'
+import { getElectronEventaContext } from '@proj-airi/electron-vueuse'
 import { isStageTamagotchi } from '@proj-airi/stage-shared'
 import { Bash } from 'just-bash'
 
@@ -626,13 +626,12 @@ export class SandboxManager {
       this.postChannelMessage({ type: 'widget-mount', widget: w })
       this.notifyMountListeners(w)
 
-      // If switching to standalone widget surface and Electron is available, pop out the standalone desktop window
-      if (surface === 'widget' && typeof window !== 'undefined' && (window as any).electron?.ipcRenderer) {
+      // If switching to standalone widget surface and a desktop bridge is available, pop out the standalone desktop window
+      const breakoutContext = surface === 'widget' && typeof window !== 'undefined' ? getElectronEventaContext() : undefined
+      if (breakoutContext) {
         try {
-          const win = window as any
-          const { context } = createContext(win.electron.ipcRenderer as any)
           const widgetsAddEventa = defineInvokeEventa<string | undefined, any>('eventa:invoke:electron:windows:widgets:add')
-          const invokeAddWidget = defineInvoke(context, widgetsAddEventa)
+          const invokeAddWidget = defineInvoke(breakoutContext, widgetsAddEventa)
           await invokeAddWidget({
             id: w.id,
             componentName: 'generative',
@@ -954,13 +953,12 @@ export class SandboxManager {
 
       this.notifyMountListeners(widget)
 
-      // If surface is standalone widget and Electron is available, pop out the standalone desktop window
-      if (surface === 'widget' && typeof window !== 'undefined' && (window as any).electron?.ipcRenderer) {
+      // If surface is standalone widget and a desktop bridge is available, pop out the standalone desktop window
+      const breakoutContext = surface === 'widget' && typeof window !== 'undefined' ? getElectronEventaContext() : undefined
+      if (breakoutContext) {
         try {
-          const win = window as any
-          const { context } = createContext(win.electron.ipcRenderer as any)
           const widgetsAddEventa = defineInvokeEventa<string | undefined, any>('eventa:invoke:electron:windows:widgets:add')
-          const invokeAddWidget = defineInvoke(context, widgetsAddEventa)
+          const invokeAddWidget = defineInvoke(breakoutContext, widgetsAddEventa)
           await invokeAddWidget({
             id: widget.id,
             componentName: 'generative',

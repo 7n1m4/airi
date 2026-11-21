@@ -1,5 +1,5 @@
 import { defineInvoke, defineInvokeEventa } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/renderer'
+import { useElectronEventaContext } from '@proj-airi/electron-vueuse'
 import { useLocalStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
@@ -129,14 +129,13 @@ export const useDatingSimStore = defineStore('dating-sim', () => {
 
   let addWidget: any = null
   let applySizePresetEventa: any = null
-  if (typeof window !== 'undefined' && (window as any).electron?.ipcRenderer) {
-    const win = window as any
-    const { context } = createContext(win.electron.ipcRenderer as any)
+  const ipcContext = typeof window !== 'undefined' ? useElectronEventaContext()?.value : undefined
+  if (ipcContext) {
     const widgetsAdd = defineInvokeEventa<string | undefined, any>('eventa:invoke:electron:windows:widgets:add')
-    addWidget = defineInvoke(context, widgetsAdd)
+    addWidget = defineInvoke(ipcContext, widgetsAdd)
 
     const applySizePresetContract = defineInvokeEventa<void, { target: 'actor' | 'chat', preset?: string }>('eventa:invoke:electron:windows:apply-size-preset')
-    applySizePresetEventa = defineInvoke(context, applySizePresetContract)
+    applySizePresetEventa = defineInvoke(ipcContext, applySizePresetContract)
   }
 
   async function spawnSceneryWidget(imageUrl: string, title: string) {

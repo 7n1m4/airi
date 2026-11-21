@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { errorEvent } from '../src/contract'
 import { createContext as createMainContext } from '../src/main'
-import { createContext as createViewContext } from '../src/view'
+import { createContext as createViewContext, getViewEventaContext, installViewEventa, resetViewEventaForTesting } from '../src/view'
 
 /**
  * Fake transport pair: two `createRPC`-shaped endpoints wired to each other.
@@ -204,6 +204,31 @@ describe('@proj-airi/electrobun-eventa', () => {
     await vi.waitFor(() => expect(seen).toEqual(['from-this-view']))
 
     mineAdapter.dispose()
+    mainAdapter.dispose()
+  })
+
+  it('(f) installs one view-wide context as a singleton and resets it for tests', async () => {
+    resetViewEventaForTesting()
+    expect(getViewEventaContext()).toBeUndefined()
+
+    const { main, view } = createTransportPair()
+    const mainAdapter = createMainContext({ id: 5, rpc: main })
+    main.handleViewFrame = frame => mainAdapter.receive(frame)
+
+    const installed = installViewEventa(view)
+    expect(getViewEventaContext()).toBe(installed)
+    // Idempotent: a second install must not replace the first context/listener.
+    expect(installViewEventa(view)).toBe(installed)
+
+    const ping = defineEventa<string>('test:eventa:singleton')
+    const seen: string[] = []
+    installed.on(ping, event => seen.push(event.body ?? ''))
+    installed.emit(ping, 'from-view')
+    await vi.waitFor(() => expect(seen).toEqual(['from-view']))
+
+    resetViewEventaForTesting()
+    expect(getViewEventaContext()).toBeUndefined()
+    expect(installed.signal.aborted).toBe(true)
     mainAdapter.dispose()
   })
 })

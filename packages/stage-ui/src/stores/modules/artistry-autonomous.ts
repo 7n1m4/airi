@@ -3,7 +3,7 @@ import type { Message } from '@xsai/shared-chat'
 import type { DirectorNote } from '../../types/director'
 
 import { defineInvoke, defineInvokeEventa } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/renderer'
+import { getElectronEventaContext } from '@proj-airi/electron-vueuse'
 import { artistryGenerateHeadless, isStageTamagotchi } from '@proj-airi/stage-shared'
 import { useBroadcastChannel } from '@vueuse/core'
 import { defineStore } from 'pinia'
@@ -362,9 +362,8 @@ export const useAutonomousArtistryStore = defineStore('artistry-autonomous', () 
   const electronShowToast = defineInvokeEventa<void, { message: string, description?: string, duration?: number }>('eventa:invoke:electron:show-toast')
 
   const getGenerateHeadless = () => {
-    const win = window as any
-    if (typeof window !== 'undefined' && win.electron?.ipcRenderer) {
-      const { context } = createContext(win.electron.ipcRenderer as any)
+    const context = typeof window !== 'undefined' ? getElectronEventaContext() : undefined
+    if (context) {
       return {
         generate: defineInvoke(context, artistryGenerateHeadless),
         addWidget: defineInvoke(context, widgetsAdd),

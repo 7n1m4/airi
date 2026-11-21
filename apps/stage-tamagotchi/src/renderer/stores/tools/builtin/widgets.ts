@@ -3,12 +3,11 @@ import type { Tool } from '@xsai/shared-chat'
 import z from 'zod'
 
 import { defineInvoke } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/renderer'
+import { getElectronEventaContext } from '@proj-airi/electron-vueuse'
 import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
 import { tool } from '@xsai/tool'
 
 import { widgetsAdd, widgetsClear, widgetsOpenWindow, widgetsPrepareWindow, widgetsRemove, widgetsUpdate } from '../../../../shared/eventa'
-import { getIpcRenderer } from '../../../utils/electron'
 
 type SizePreset = 's' | 'm' | 'l'
 
@@ -59,7 +58,11 @@ export type WidgetInvokers = ReturnType<typeof createInvokers>
 let cachedInvokers: WidgetInvokers | undefined
 
 function createInvokers() {
-  const { context } = createContext(getIpcRenderer())
+  // The renderer entry installed the Electrobun view context into electron-vueuse
+  // before this module graph evaluated; every other path passes explicit invokers.
+  const context = getElectronEventaContext()
+  if (!context)
+    throw new Error('[stage_widgets] desktop eventa context is not available')
 
   return {
     prepareWindow: defineInvoke(context, widgetsPrepareWindow),
