@@ -1,0 +1,12 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    # Reserved for whichever Dart wire-model approach the binding decision
+    # selects (bead airi-wxp.10). Empty today; harmless if generation is rejected.
+    - 'lib/daemon_client/generated/**'
+
+linter:
+  rules:
+    avoid_print: true
+    prefer_final_locals: true

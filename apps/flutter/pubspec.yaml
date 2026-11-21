@@ -1,0 +1,22 @@
+name: anima_control
+description: 'Anima control + chat surface — a thin WebSocket client of anima-daemon.'
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # WebSocket transport only. No flutter_rust_bridge / embedded core: mobile is
+  # a REMOTE thin client of the daemon (design-flutter-godot-pivot.md, decision B).
+  web_socket_channel: ^3.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
