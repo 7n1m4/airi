@@ -1,0 +1,9 @@
+{
+  "session_id": "sess-abc",
+  "message_id": "msg-1",
+  "delta": " world",
+  "index": 1,
+  "final": true,
+  "seq": 6,
+  "ts_ms": 1700000001000
+}

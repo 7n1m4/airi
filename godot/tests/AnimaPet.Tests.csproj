@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Decoder fixture tests for the hand-written C# wire codec (D5,
+       docs/decision-client-bindings.md). Validates EventPayloadDecoder
+       against golden JSON fixtures shaped from crates/anima-channel/src/wire.rs.
+       Run: dotnet test godot/ -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <!-- Compile the decoder + wire types directly into the test assembly.
+       The Godot.NET.Sdk project cannot be referenced from a plain dotnet
+       test project, and the decoder is pure C# with no Godot deps. -->
+  <ItemGroup>
+    <Compile Include="../scripts/Net/DaemonEvents.cs" Link="Net/DaemonEvents.cs" />
+    <Compile Include="../scripts/Net/EventPayloadDecoder.cs" Link="Net/EventPayloadDecoder.cs" />
+    <Compile Include="../scripts/Renderers/LipSyncSmoother.cs" Link="Renderers/LipSyncSmoother.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="fixtures/**/*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

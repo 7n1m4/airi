@@ -8,4 +8,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
   </PropertyGroup>
+
+  <!-- Exclude the test project: godot/tests/ has its own csproj and references
+       the decoder source directly (the Godot.NET.Sdk project can't be
+       referenced from a plain dotnet test project). -->
+  <ItemGroup>
+    <Compile Remove="tests/**/*.cs" />
+    <None Remove="tests/**/*" />
+  </ItemGroup>
 </Project>
