@@ -43,11 +43,12 @@
 //! through `GetGatewayConfig` in the meantime; awareness functions are
 //! unaffected either way.
 
+use crate::core::CoreService;
+use crate::events::EventPublisher;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use crate::core::CoreService;
 use std::time::{Duration, Instant};
 
 use anima_channel::{
@@ -101,6 +102,9 @@ pub struct Gateway {
     port_override: Option<u16>,
     inner: Mutex<Inner>,
     core: CoreService,
+    /// The one bus shared by every bind (including retries/rebinds) and every
+    /// D-Bus handler. Created once here so captures never go stale on rebind.
+    publisher: EventPublisher,
 }
 
 impl Gateway {
@@ -116,7 +120,11 @@ impl Gateway {
         Self::start_with_core(port_override, adopt_from, CoreService::open(None))
     }
 
-    pub fn start_with_core(port_override: Option<u16>, adopt_from: Option<PathBuf>, core: CoreService) -> Self {
+    pub fn start_with_core(
+        port_override: Option<u16>,
+        adopt_from: Option<PathBuf>,
+        core: CoreService,
+    ) -> Self {
         let Some(data_dir) = dirs::data_dir() else {
             return Self::disabled_with_core(
                 port_override,
@@ -179,6 +187,7 @@ impl Gateway {
             cert_dir,
             port_override,
             core: core.clone(),
+            publisher: EventPublisher::new(anima_channel::EventBus::with_defaults()),
             inner: Mutex::new(Inner {
                 hostname: DEFAULT_HOSTNAME_PLACEHOLDER.to_string(),
                 auth_token: String::new(),
@@ -191,6 +200,18 @@ impl Gateway {
                 last_attempt: Instant::now() - RETRY_INTERVAL,
             }),
         };
+
+        // Publish the initial, secret-free health snapshot once. Nothing
+        // mutates core health at runtime today; the publisher dedupes further
+        // repeats so `core.status` RPCs never echo an unchanged reading as a
+        // fresh event. Publishing before any bind is harmless (no lanes yet).
+        let reply = gateway.core.status_reply();
+        gateway.publisher().status_changed(
+            reply.core_available,
+            reply.store_available,
+            reply.store_health,
+            None,
+        );
 
         // 2. Load/heal the persisted config, then bind.
         match load_or_heal(&gateway.config_path) {
@@ -239,6 +260,7 @@ impl Gateway {
             cert_dir: PathBuf::new(),
             port_override,
             core,
+            publisher: EventPublisher::new(anima_channel::EventBus::with_defaults()),
             inner: Mutex::new(Inner {
                 hostname: String::new(),
                 auth_token: String::new(),
@@ -327,12 +349,15 @@ impl Gateway {
         // `tlsConfig`/`websocketTlsConfig` are opaque flags: undefined =
         // keep, null = disable, anything else = enable (always `{}`).
         // The legacy `tlsConfig` spelling wins, as before.
-        let tls_flag = patch.tls_config.as_ref().or(patch.websocket_tls_config.as_ref());
+        let tls_flag = patch
+            .tls_config
+            .as_ref()
+            .or(patch.websocket_tls_config.as_ref());
         let mut tls = inner.tls_flag;
         match tls_flag {
-            None => {}                   // key absent: keep the current flag
+            None => {}                                    // key absent: keep the current flag
             Some(serde_json::Value::Null) => tls = false, // explicit `null`: disable
-            Some(_) => tls = true,      // any other value: enable
+            Some(_) => tls = true,                        // any other value: enable
         }
 
         let config = ChannelConfig {
@@ -390,6 +415,18 @@ impl Gateway {
         serde_json::json!({ "authToken": token }).to_string()
     }
 
+    /// Clone of the process-wide gateway bus handle. Use
+    /// [`Self::publisher`] for publishing; this is for diagnostics and for
+    /// injecting the same bus into a bind.
+    pub fn event_bus(&self) -> anima_channel::EventBus {
+        self.publisher.bus().clone()
+    }
+
+    /// Clone of the publisher sharing this gateway's bus and dedupe state.
+    pub fn publisher(&self) -> EventPublisher {
+        self.publisher.clone()
+    }
+
     fn port(&self) -> u16 {
         self.port_override
             .or_else(|| {
@@ -441,23 +478,55 @@ impl Gateway {
 
     /// Stop the current listener (if any) and bind a fresh one with `config`.
 
-    pub(crate) fn renderer_handlers(core: &CoreService) -> anima_channel::RendererHandlers {
+    pub(crate) fn renderer_handlers(
+        core: &CoreService,
+        publisher: &EventPublisher,
+    ) -> anima_channel::RendererHandlers {
         let core = core.clone();
+        let publisher = publisher.clone();
         let mut m = std::collections::HashMap::new();
-        m.insert("core.status".to_string(), Box::new(move |_method: &str, _value: &serde_json::Value| {
-            if !core.available() {
-                let snap = core.snapshot();
-                let reason = snap.reason.unwrap_or_else(|| "unavailable".to_string());
-                return Err(format!("core unavailable: {reason}"));
-            }
-            let reply = core.status_reply();
-            Ok(serde_json::to_value(reply).map_err(|e| e.to_string())?)
-        }) as Box<dyn Fn(&str, &serde_json::Value) -> Result<serde_json::Value, String> + Send + Sync>);
+        m.insert(
+            "core.status".to_string(),
+            Box::new(move |_method: &str, _value: &serde_json::Value| {
+                if !core.available() {
+                    let snap = core.snapshot();
+                    let reason = snap.reason.unwrap_or_else(|| "unavailable".to_string());
+                    return Err(format!("core unavailable: {reason}"));
+                }
+                let reply = core.status_reply();
+                // Deduped inside the publisher: only a real health change emits.
+                publisher.status_changed(
+                    reply.core_available,
+                    reply.store_available,
+                    reply.store_health.clone(),
+                    None,
+                );
+                Ok(serde_json::to_value(reply).map_err(|e| e.to_string())?)
+            })
+                as Box<
+                    dyn Fn(&str, &serde_json::Value) -> Result<serde_json::Value, String>
+                        + Send
+                        + Sync,
+                >,
+        );
         m
     }
 
     fn bind_once(&self, config: &ChannelConfig) {
         let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
+        // Edge-triggered presence: only emit when the bind state really flips.
+        let was_bound = inner.bound;
+        let publisher = &self.publisher;
+        let emit_presence = |bound: bool| {
+            if bound != was_bound {
+                publisher.presence_changed(
+                    "gateway",
+                    if bound { "online" } else { "offline" },
+                    None,
+                );
+            }
+        };
+
         inner.last_attempt = Instant::now();
         // Single sync point: the effective config lives in Inner, kept in
         // lockstep with whatever was persisted/loaded.
@@ -497,23 +566,36 @@ impl Gateway {
                                 inner.last_error =
                                     Some(format!("TLS configuration unusable: {err}"));
                                 inner.bound = false;
+                                emit_presence(false);
                                 return;
                             }
                         };
-                    ChannelServer::bind_with_renderer_tls(&config.hostname, port, config, Self::renderer_handlers(&self.core), tls_config)
+                    ChannelServer::bind_with_renderer_tls(
+                        &config.hostname,
+                        port,
+                        config,
+                        Self::renderer_handlers(&self.core, &self.publisher),
+                        tls_config,
+                    )
                 }
                 Err(err) => {
                     inner.last_error = Some(format!("certificate management failed: {err}"));
                     inner.bound = false;
+                    emit_presence(false);
                     return;
                 }
             }
         } else {
-            ChannelServer::bind_with_renderer(&config.hostname, port, config, Self::renderer_handlers(&self.core))
+            ChannelServer::bind_with_renderer(
+                &config.hostname,
+                port,
+                config,
+                Self::renderer_handlers(&self.core, &self.publisher),
+            )
         };
 
         match result {
-            Ok(server) => match server.spawn() {
+            Ok(server) => match server.with_event_bus(self.event_bus()).spawn() {
                 Ok(handle) => {
                     inner.bound = true;
                     inner.last_error = None;
@@ -532,6 +614,7 @@ impl Gateway {
                 inner.bound = false;
             }
         }
+        emit_presence(inner.bound);
     }
 }
 
@@ -641,6 +724,7 @@ mod tests {
             cert_dir,
             port_override: Some(0),
             core: CoreService::open(None),
+            publisher: EventPublisher::new(anima_channel::EventBus::with_defaults()),
             inner: Mutex::new(Inner {
                 hostname: DEFAULT_HOSTNAME_PLACEHOLDER.to_string(),
                 auth_token: String::new(),
@@ -831,7 +915,9 @@ mod tests {
         gateway.handle(&GatewayRequest::Apply(
             r#"{"websocketTlsConfig": {}}"#.to_string(),
         ));
-        gateway.handle(&GatewayRequest::Apply(r#"{"hostname": "127.0.0.1"}"#.to_string()));
+        gateway.handle(&GatewayRequest::Apply(
+            r#"{"hostname": "127.0.0.1"}"#.to_string(),
+        ));
         assert_eq!(get_json(&gateway)["tlsEnabled"], true);
     }
 
@@ -909,9 +995,18 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().join("server-channel");
         let gateway = test_gateway(dir.clone(), dir.join(CERTS_DIR));
-        let handlers = Gateway::renderer_handlers(&gateway.core);
-        let h = handlers.get("core.status").expect("core.status handler registered");
-        let reply = h("core.status", &serde_json::json!({})).expect("healthy core.status returns Ok");
+
+        // Observe the same bus the injected publisher writes to.
+        let lane = gateway.publisher().bus().new_lane();
+        lane.subscribe(anima_channel::EventTopic::ALL);
+        gateway.publisher().bus().register_lane(&lane);
+
+        let handlers = Gateway::renderer_handlers(&gateway.core, &gateway.publisher);
+        let h = handlers
+            .get("core.status")
+            .expect("core.status handler registered");
+        let reply =
+            h("core.status", &serde_json::json!({})).expect("healthy core.status returns Ok");
         let v: serde_json::Value = reply;
         assert_eq!(v["coreAvailable"], true);
         assert_eq!(v["storeAvailable"], true);
@@ -921,18 +1016,36 @@ mod tests {
         assert!(v.get("token").is_none());
         assert!(v.get("path").is_none());
 
+        // The handler emitted exactly one status.changed event with the same
+        // health fields as the reply, and no secret-bearing payload.
+        let events = lane.drain();
+        assert_eq!(events.len(), 1, "one health snapshot per change");
+        let event = &events[0];
+        assert_eq!(event.topic, anima_channel::EventTopic::StatusChanged);
+        let anima_channel::EventPayload::StatusChanged(data) = &event.data else {
+            panic!("expected StatusChanged payload, got {:?}", event.data);
+        };
+        assert!(data.core_available && data.store_available);
+        assert_eq!(data.store_health, "ok");
+        assert_eq!(data.seq, 0);
+        assert!(data.ts_ms > 0);
+
+        // A second, unchanged RPC must not echo a fresh change event.
+        let _ = h("core.status", &serde_json::json!({})).expect("healthy status");
+        assert_eq!(lane.len(), 0, "unchanged health must be deduped");
+
         let dir2 = tempfile::tempdir().unwrap();
         let db = dir2.path().join("airi.sqlite");
         std::fs::create_dir_all(&db).unwrap();
         let core = CoreService::open(Some(dir2.path().to_path_buf()));
         assert!(!core.available());
-        let handlers = Gateway::renderer_handlers(&core);
+        let handlers = Gateway::renderer_handlers(&core, &gateway.publisher);
         let h = handlers.get("core.status").unwrap();
         let err = h("core.status", &serde_json::json!({})).expect_err("unavailable must Err");
         assert!(err.starts_with("core unavailable:"), "got: {err}");
         assert!(!err.contains('/'));
         assert!(!err.contains("tmp"));
         assert!(!err.contains(".sqlite"));
+        assert_eq!(lane.len(), 0, "an unavailable core emits no status.changed");
     }
-
 }

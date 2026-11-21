@@ -30,6 +30,7 @@
 use dbus::{Message, MessageType};
 
 use crate::audit::AuditLog;
+use crate::events::EventPublisher;
 use crate::gateway::GatewayRequest;
 use crate::ring::Ring;
 use crate::screen::Exclusions;
@@ -81,10 +82,17 @@ pub fn set_source_json(
     enabled: bool,
     awareness: &mut Awareness,
     audit: &AuditLog,
+    publisher: &EventPublisher,
 ) -> String {
     match Source::from_name(source) {
         Some(src) => {
-            awareness.set_source(src, enabled);
+            if awareness.set_source(src, enabled) {
+                publisher.presence_changed(
+                    format!("source.{}", src.name()),
+                    if enabled { "armed" } else { "disarmed" },
+                    None,
+                );
+            }
             audit.append(
                 src.name(),
                 if enabled { "armed" } else { "disarmed" },
@@ -106,8 +114,15 @@ pub fn set_source_json(
 
 /// With `p = true` this is the kill switch: disarms all observers, purges
 /// the in-memory ring, and audits `awareness: paused (kill switch)`.
-pub fn pause(p: bool, awareness: &mut Awareness, audit: &AuditLog, ring: &mut Ring) {
+pub fn pause(
+    p: bool,
+    awareness: &mut Awareness,
+    audit: &AuditLog,
+    ring: &mut Ring,
+    publisher: &EventPublisher,
+) {
     if awareness.pause(p) {
+        publisher.presence_changed("awareness", if p { "paused" } else { "resumed" }, None);
         if p {
             // Kill switch also purges the in-memory ring — "observe nothing"
             // means nothing stays in memory either (§F rail 2).
@@ -148,6 +163,7 @@ pub fn dispatch(
     digest: &dyn Fn(&Exclusions) -> String,
     exclusions: &mut Exclusions,
     gateway: &dyn Fn(GatewayRequest) -> String,
+    publisher: &EventPublisher,
 ) -> Option<ControlOutcome> {
     if msg.msg_type() != MessageType::MethodCall {
         return None;
@@ -166,7 +182,7 @@ pub fn dispatch(
             let enabled: Result<bool, _> = it.read();
             match (source, enabled) {
                 (Ok(source), Ok(enabled)) => Some(ControlOutcome::ReplyString(set_source_json(
-                    &source, enabled, awareness, audit,
+                    &source, enabled, awareness, audit, publisher,
                 ))),
                 _ => Some(ControlOutcome::UnknownMethod(
                     "expected SetSource(source: s, enabled: b)".to_string(),
@@ -178,7 +194,7 @@ pub fn dispatch(
             let p: Result<bool, _> = it.read();
             match p {
                 Ok(p) => {
-                    pause(p, awareness, audit, ring);
+                    pause(p, awareness, audit, ring, publisher);
                     Some(ControlOutcome::ReplyEmpty)
                 }
                 Err(_) => Some(ControlOutcome::UnknownMethod(
@@ -247,9 +263,10 @@ pub fn handle_method_call(
     digest: &dyn Fn(&Exclusions) -> String,
     exclusions: &mut Exclusions,
     gateway: &dyn Fn(GatewayRequest) -> String,
+    publisher: &EventPublisher,
 ) -> Option<Message> {
     match dispatch(
-        msg, awareness, audit, ring, status, digest, exclusions, gateway,
+        msg, awareness, audit, ring, status, digest, exclusions, gateway, publisher,
     )? {
         ControlOutcome::ReplyString(s) => Some(msg.return_with_args((s,))),
         ControlOutcome::ReplyEmpty => Message::new_method_return(msg),
@@ -305,6 +322,20 @@ mod tests {
             GatewayRequest::Apply(raw) => format!(r#"{{"applied":{raw}}}"#),
             GatewayRequest::RegenerateToken => r#"{"authToken":"canned"}"#.to_string(),
         }
+    }
+
+    fn noop_publisher() -> EventPublisher {
+        EventPublisher::new(anima_channel::EventBus::with_defaults())
+    }
+
+    /// A publisher with one lane subscribed to every topic, for asserting
+    /// which presence transitions the D-Bus control mutations actually emit.
+    fn subscribed_publisher() -> (EventPublisher, anima_channel::EventLane) {
+        let bus = anima_channel::EventBus::with_defaults();
+        let lane = bus.new_lane();
+        lane.subscribe(anima_channel::EventTopic::ALL);
+        bus.register_lane(&lane);
+        (EventPublisher::new(bus), lane)
     }
 
     fn ctx<'a>(awareness: &'a Awareness, wake: &'a WakeFacts) -> StatusContext<'a> {
@@ -385,16 +416,30 @@ mod tests {
     fn set_source_known_and_unknown() {
         let mut a = Awareness::new();
         let (log, path) = audit();
-        let ok = set_source_json("media", false, &mut a, &log);
+        let (publisher, lane) = subscribed_publisher();
+        let ok = set_source_json("media", false, &mut a, &log, &publisher);
         assert_eq!(
             serde_json::from_str::<serde_json::Value>(&ok).unwrap()["ok"],
             true
         );
         assert!(!a.effective_armed(Source::Media));
-        let bad = set_source_json("teleport", false, &mut a, &log);
+        // Disarming an armed source is a real transition → presence event.
+        let events = lane.drain();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].topic, anima_channel::EventTopic::PresenceChanged);
+        let anima_channel::EventPayload::PresenceChanged(data) = &events[0].data else {
+            panic!("expected PresenceChanged payload");
+        };
+        assert_eq!(data.subject, "source.media");
+        assert_eq!(data.state, "disarmed");
+        let bad = set_source_json("teleport", false, &mut a, &log, &publisher);
         let v: serde_json::Value = serde_json::from_str(&bad).unwrap();
         assert_eq!(v["ok"], false);
         assert!(v["error"].as_str().unwrap().contains("teleport"));
+        assert!(
+            lane.is_empty(),
+            "unknown source must not publish a transition"
+        );
         let _ = std::fs::remove_file(&path);
     }
 
@@ -402,6 +447,7 @@ mod tests {
     fn method_call_roundtrip_get_status() {
         let a = Awareness::new();
         let (log, path) = audit();
+        let publisher = noop_publisher();
         let msg = Message::method_call(
             &dbus::strings::BusName::new("org.example.Caller").unwrap(),
             &dbus::strings::Path::new(OBJECT_PATH).unwrap(),
@@ -432,6 +478,7 @@ mod tests {
             &digest_canned,
             &mut excl,
             &gateway_canned,
+            &publisher,
         )
         .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {
@@ -446,6 +493,7 @@ mod tests {
     fn method_call_pause_and_unknown_source_and_unknown_method() {
         let mut a = Awareness::new();
         let (log, path) = audit();
+        let (publisher, lane) = subscribed_publisher();
         let wake = WakeFacts::new();
         let status = |awareness: &Awareness, ring_count: u64| {
             get_status_json(&StatusContext {
@@ -479,10 +527,20 @@ mod tests {
             &digest_canned,
             &mut excl,
             &gateway_canned,
+            &publisher,
         )
         .expect("dispatch");
         assert_eq!(outcome, ControlOutcome::ReplyEmpty);
         assert!(a.paused());
+        // The kill switch is a real presence transition → one event.
+        let events = lane.drain();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].topic, anima_channel::EventTopic::PresenceChanged);
+        let anima_channel::EventPayload::PresenceChanged(data) = &events[0].data else {
+            panic!("expected PresenceChanged payload");
+        };
+        assert_eq!(data.subject, "awareness");
+        assert_eq!(data.state, "paused");
         // SetSource with a nonsense source → ok:false, no panic.
         let mut msg = call("SetSource");
         msg.append_all(("teleport".to_string(), true));
@@ -496,6 +554,7 @@ mod tests {
             &digest_canned,
             &mut excl,
             &gateway_canned,
+            &publisher,
         )
         .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {
@@ -505,6 +564,7 @@ mod tests {
             serde_json::from_str::<serde_json::Value>(&s).unwrap()["ok"],
             false
         );
+        assert!(lane.is_empty(), "a rejected SetSource must not publish");
         // Unknown method → error outcome.
         let msg = call("Detonate");
         let mut excl = Exclusions::in_memory();
@@ -517,6 +577,7 @@ mod tests {
             &digest_canned,
             &mut excl,
             &gateway_canned,
+            &publisher,
         )
         .expect("dispatch");
         assert!(matches!(outcome, ControlOutcome::UnknownMethod(_)));
@@ -527,7 +588,8 @@ mod tests {
     fn set_source_screen_is_accepted_and_toggles() {
         let mut a = Awareness::new();
         let (log, path) = audit();
-        let ok = set_source_json("screen", false, &mut a, &log);
+        let publisher = noop_publisher();
+        let ok = set_source_json("screen", false, &mut a, &log, &publisher);
         assert_eq!(
             serde_json::from_str::<serde_json::Value>(&ok).unwrap()["ok"],
             true
@@ -535,7 +597,7 @@ mod tests {
         assert!(!a.effective_armed(Source::Screen));
         // Other sources are untouched.
         assert!(a.effective_armed(Source::Media));
-        let ok = set_source_json("screen", true, &mut a, &log);
+        let ok = set_source_json("screen", true, &mut a, &log, &publisher);
         assert_eq!(
             serde_json::from_str::<serde_json::Value>(&ok).unwrap()["ok"],
             true
@@ -548,6 +610,7 @@ mod tests {
     fn gateway_methods_roundtrip_via_dispatch() {
         let mut a = Awareness::new();
         let (log, path) = audit();
+        let publisher = noop_publisher();
         let wake = WakeFacts::new();
         let status = |awareness: &Awareness, ring_count: u64| {
             get_status_json(&StatusContext {
@@ -581,6 +644,7 @@ mod tests {
             &digest_canned,
             &mut excl,
             &gateway_canned,
+            &publisher,
         )
         .expect("dispatch");
         assert_eq!(
@@ -601,6 +665,7 @@ mod tests {
             &digest_canned,
             &mut excl,
             &gateway_canned,
+            &publisher,
         )
         .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {
@@ -620,6 +685,7 @@ mod tests {
             &digest_canned,
             &mut excl,
             &gateway_canned,
+            &publisher,
         )
         .expect("dispatch");
         assert!(matches!(outcome, ControlOutcome::UnknownMethod(_)));
@@ -636,6 +702,7 @@ mod tests {
             &digest_canned,
             &mut excl,
             &gateway_canned,
+            &publisher,
         )
         .expect("dispatch");
         assert_eq!(
@@ -649,6 +716,7 @@ mod tests {
     fn get_focus_digest_roundtrip_via_dispatch() {
         let mut a = Awareness::new();
         let (log, path) = audit();
+        let publisher = noop_publisher();
         let wake = WakeFacts::new();
         let status = |awareness: &Awareness, ring_count: u64| {
             get_status_json(&StatusContext {
@@ -680,6 +748,7 @@ mod tests {
             &digest_canned,
             &mut excl,
             &gateway_canned,
+            &publisher,
         )
         .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {
@@ -698,6 +767,7 @@ mod tests {
         let excl_path = tmpdir.join("awareness-exclusions.json");
         let mut a = Awareness::new();
         let (log, audit_path) = audit();
+        let publisher = noop_publisher();
         let wake = WakeFacts::new();
         let status = |awareness: &Awareness, ring_count: u64| {
             get_status_json(&StatusContext {
@@ -731,6 +801,7 @@ mod tests {
             &digest_canned,
             &mut excl,
             &gateway_canned,
+            &publisher,
         )
         .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {
@@ -755,6 +826,7 @@ mod tests {
             &digest_canned,
             &mut excl,
             &gateway_canned,
+            &publisher,
         )
         .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {
@@ -778,7 +850,8 @@ mod tests {
         let path = dir.join("audit.jsonl");
         let log = AuditLog::open(path.clone());
         let mut r = Ring::with_default_cap();
-        pause(true, &mut a, &log, &mut r);
+        let publisher = noop_publisher();
+        pause(true, &mut a, &log, &mut r, &publisher);
         let contents = std::fs::read_to_string(&path).expect("audit written");
         assert!(contents.contains("awareness: paused (kill switch)"));
         assert!(contents.contains("\"source\":\"system\""));

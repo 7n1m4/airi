@@ -19,8 +19,9 @@
 //! kill switch drops everything pre-audit, user flag wins over lockdown.
 
 mod audit;
-mod core;
 mod control;
+mod core;
+mod events;
 mod gateway;
 mod observe;
 mod redact;
@@ -234,7 +235,10 @@ fn run(gateway_enabled: bool) {
     // get an honest answer; failure is captured in `bound: false` +
     // `last_error`, never fatal to awareness.
     let core_service = core::CoreService::open(None);
-    eprintln!("airi-daemon: core service available={}", core_service.available());
+    eprintln!(
+        "airi-daemon: core service available={}",
+        core_service.available()
+    );
     let gateway = if gateway_enabled {
         eprintln!("airi-daemon: hosting the gateway (port from SERVER_CHANNEL_PORT, else 6121)");
         gateway::Gateway::start_with_core(None, None, core_service.clone())
@@ -242,6 +246,9 @@ fn run(gateway_enabled: bool) {
         eprintln!("airi-daemon: gateway disabled (--no-gateway); awareness continues");
         gateway::Gateway::start_disabled_with_core("disabled (--no-gateway)", core_service.clone())
     };
+    // One clone of the gateway-owned publisher for the awareness loop. It
+    // shares the bus and dedupe state with every bind and D-Bus handler.
+    let publisher = gateway.publisher();
 
     let mut debounce: HashMap<(String, String), u64> = HashMap::new();
     let mut rate_limited_drops: u64 = 0;
@@ -259,7 +266,10 @@ fn run(gateway_enabled: bool) {
             .blocking_pop_message(Duration::from_millis(20))
         {
             Ok(Some(msg)) => {
-                session_ok = true;
+                if !session_ok {
+                    session_ok = true;
+                    publisher.presence_changed("session_bus", "online", None);
+                }
                 let digest_fn = |excl: &screen::Exclusions| {
                     screen::digest_json(a11y_client.as_ref(), &focus_cache, excl)
                 };
@@ -277,6 +287,7 @@ fn run(gateway_enabled: bool) {
                     exclusions: &mut exclusions,
                     wake: &mut wake,
                     gateway: &gateway,
+                    publisher: &publisher,
                 };
                 handle_message(Bus::Session, msg, &session, &mut ctx);
             }
@@ -289,6 +300,7 @@ fn run(gateway_enabled: bool) {
                 if session_ok {
                     eprintln!("airi-daemon: session bus error: {e}; session sources unavailable until restart (systemd Restart=on-failure is the retry story); no panic");
                     session_ok = false;
+                    publisher.presence_changed("session_bus", "offline", None);
                     for (source, bus, _) in observe::MATCH_RULES {
                         if *bus == Bus::Session {
                             availability.insert(*source, false);
@@ -304,7 +316,10 @@ fn run(gateway_enabled: bool) {
         if let Some(sys) = &system {
             match sys.channel().blocking_pop_message(Duration::from_millis(0)) {
                 Ok(Some(msg)) => {
-                    system_ok = true;
+                    if !system_ok {
+                        system_ok = true;
+                        publisher.presence_changed("system_bus", "online", None);
+                    }
                     let digest_fn = |excl: &screen::Exclusions| {
                         screen::digest_json(a11y_client.as_ref(), &focus_cache, excl)
                     };
@@ -322,6 +337,7 @@ fn run(gateway_enabled: bool) {
                         exclusions: &mut exclusions,
                         wake: &mut wake,
                         gateway: &gateway,
+                        publisher: &publisher,
                     };
                     handle_message(Bus::System, msg, sys, &mut ctx);
                 }
@@ -330,6 +346,7 @@ fn run(gateway_enabled: bool) {
                     if system_ok {
                         eprintln!("airi-daemon: system bus error: {e}; system sources marked unavailable (no panic)");
                         system_ok = false;
+                        publisher.presence_changed("system_bus", "offline", None);
                         for (source, bus, _) in observe::MATCH_RULES {
                             if *bus == Bus::System {
                                 availability.insert(*source, false);
@@ -368,6 +385,7 @@ fn run(gateway_enabled: bool) {
                     eprintln!("airi-daemon: a11y bus error: {e}; screen source disarmed for the rest of this run (no panic)");
                     a11y_client = None;
                     availability.insert(Source::Screen, false);
+                    publisher.presence_changed("screen", "offline", None);
                     audit.append(
                         "screen",
                         "screen unavailable",
@@ -447,6 +465,8 @@ struct LoopCtx<'a> {
     wake: &'a mut WakeFacts,
     /// Gateway hosting state (WS on 6121). Shared, immutable to the handler.
     gateway: &'a gateway::Gateway,
+    /// Event publisher for real state transitions (shares the gateway's bus).
+    publisher: &'a events::EventPublisher,
 }
 
 fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut LoopCtx<'_>) {
@@ -510,6 +530,7 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
                 ctx.digest,
                 ctx.exclusions,
                 &gateway_fn,
+                ctx.publisher,
             );
             if let Some(reply) = reply {
                 // Best-effort reply; a dead peer is not our problem.
@@ -581,6 +602,7 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
             match lockdown_transition {
                 Some(LockdownChange::Lock) => {
                     if ctx.awareness.lockdown_begin(LockdownReason::Locked) {
+                        ctx.publisher.presence_changed("awareness", "locked", None);
                         ctx.ring.clear();
                         ctx.audit.append(
                             "system",
@@ -592,6 +614,8 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
                 Some(LockdownChange::Unlock)
                     if ctx.awareness.lockdown_end(LockdownReason::Locked) =>
                 {
+                    ctx.publisher
+                        .presence_changed("awareness", "unlocked", None);
                     if ctx.awareness.user_paused() {
                         ctx.audit.append(
                             "system",
@@ -608,6 +632,8 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
                 }
                 Some(LockdownChange::Sleep) => {
                     if ctx.awareness.lockdown_begin(LockdownReason::Sleep) {
+                        ctx.publisher
+                            .presence_changed("awareness", "sleeping", None);
                         ctx.ring.clear();
                         ctx.audit.append(
                             "system",
@@ -616,9 +642,8 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
                         );
                     }
                 }
-                Some(LockdownChange::Wake)
-                    if ctx.awareness.lockdown_end(LockdownReason::Sleep) =>
-                {
+                Some(LockdownChange::Wake) if ctx.awareness.lockdown_end(LockdownReason::Sleep) => {
+                    ctx.publisher.presence_changed("awareness", "awake", None);
                     if ctx.awareness.user_paused() {
                         ctx.audit.append(
                             "system",
