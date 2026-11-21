@@ -16,8 +16,14 @@
 //! 4. After auth: `ping` → `pong` (plus the server-runtime
 //!    `transport:connection:heartbeat` mirror), and a typed `rpc` dispatch
 //!    registry (`runtime.ping`, `runtime.status`, `gateway.config`,
-//!    `gateway.auth`) with stable `rpc_*` error codes. See [`dispatch`].
-//!    Unknown types get a typed `error` frame.
+//!    `gateway.auth`, plus `event.subscribe` / `event.unsubscribe`) with stable
+//!    `rpc_*` error codes. See [`dispatch`]. Unknown types get a typed `error`
+//!    frame.
+//! 5. After auth, the gateway can also **push** server-initiated `event` frames
+//!    (`lip_sync.rms`, `emotion.tag`, `token.delta`, `presence.changed`,
+//!    `status.changed`) to clients that opted in. See the ADR in [`wire`] and
+//!    the bounded fan-out in [`event_bus`]. Events are one-way: producers
+//!    publish through [`EventBus`], never by writing to a client socket.
 //!
 //! ## Security posture (read before enabling on a network)
 //!
@@ -66,6 +72,7 @@ pub mod client;
 pub mod config;
 pub mod control;
 pub mod dispatch;
+pub mod event_bus;
 pub mod server;
 pub mod session;
 pub mod sha1;
@@ -83,12 +90,15 @@ pub use control::{GatewayControlApply, GatewayControlStatus};
 pub use dispatch::{
     RendererHandler, RendererHandlers, RpcContext, RpcError, RpcRegistry, APP_NAME, PROTOCOL,
 };
+pub use event_bus::{EventBus, EventLane, DEFAULT_EVENT_POLL_INTERVAL, DEFAULT_LANE_CAPACITY};
 pub use server::{ChannelServer, ServerHandle};
 pub use session::{CloseInfo, Session, SessionOutcome, SessionState, CLOSE_POLICY_VIOLATION};
 pub use wire::{
-    AuthenticatedData, GatewayAuthReply, GatewayClientFrame, GatewayConfigReply,
-    GatewayServerFrame, HeartbeatData, HeartbeatKind, ModuleAuthData, RpcErrorObject,
-    RuntimePingReply, RuntimeStatusReply, CoreStatusReply,
+    AuthenticatedData, CoreStatusReply, CueKind, EmotionTagData, EventPayload,
+    EventSubscriptionReply, EventTopic, GatewayAuthReply, GatewayClientFrame, GatewayConfigReply,
+    GatewayEvent, GatewayServerFrame, HeartbeatData, HeartbeatKind, LipSyncRmsData, ModuleAuthData,
+    PresenceChangedData, RpcErrorObject, RuntimePingReply, RuntimeStatusReply, StatusChangedData,
+    TokenDeltaData, CANONICAL_EMOTION_KEYS,
 };
 pub use ws::{accept_key, encode_frame, Frame, FrameDecoder, OP_CLOSE, OP_PING, OP_PONG, OP_TEXT};
 

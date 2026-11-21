@@ -25,6 +25,8 @@
 //! | `runtime.status`   | `{ "app": "airi-slint", "version": <CARGO_PKG_VERSION>, "pid": <u32>, … }`           | Build/process info |
 //! | `gateway.config`   | `{ "hostname": <str>, "port": <number> }`                                        | **Never** includes `authToken` |
 //! | `gateway.auth`     | `{ "authenticated": true, "sessionStartedMs": <ms> }`                            | Relies on the prior handshake |
+//! | `event.subscribe`  | `{ "topics": ["lip_sync.rms", …] }` (resulting topic set)                         | Opt in to server-initiated event frames |
+//! | `event.unsubscribe`| `{ "topics": ["lip_sync.rms", …] }` (resulting topic set)                         | Opt out; no events are sent by default |
 //! | `renderer.*`       | handler-defined | Embedder-registered read-only handlers; unregistered methods are `rpc_not_implemented` |
 //! | anything else      | —                                                                                | `rpc_unknown_method` |
 //!
@@ -41,6 +43,10 @@
 //! - `rpc_not_implemented` — a `renderer.<method>` with no embedder-registered
 //!   handler for `<method>`.
 //! - `rpc_bad_payload` — the `payload` field is not a JSON object.
+//! - `rpc_bad_topics` — an `event.subscribe` / `event.unsubscribe` payload has
+//!   no `topics` array, or it is empty / non-string.
+//! - `rpc_bad_topic` — a subscribe/unsubscribe topic string is not in the
+//!   five-topic [`EventTopic`] vocabulary.
 //! - `rpc_handler_error` — a registered renderer handler returned `Err(msg)`
 //!   (message truncated to 512 chars).
 //! - `rpc_handler_panic` — a registered renderer handler panicked; the client
@@ -67,13 +73,22 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
-use crate::wire::{GatewayAuthReply, GatewayConfigReply, RuntimePingReply, RuntimeStatusReply};
+use crate::event_bus::EventLane;
+use crate::wire::{
+    EventSubscriptionReply, EventTopic, GatewayAuthReply, GatewayConfigReply, RuntimePingReply,
+    RuntimeStatusReply,
+};
 
 /// Protocol identifier reported by `runtime.status`.
 pub const PROTOCOL: &str = "airi-channel/1";
 
 /// Application name reported by `runtime.status`.
 pub const APP_NAME: &str = "airi-slint";
+
+/// RPC action that adds topics to the session's event-lane subscription.
+pub const EVENT_SUBSCRIBE: &str = "event.subscribe";
+/// RPC action that removes topics from the session's event-lane subscription.
+pub const EVENT_UNSUBSCRIBE: &str = "event.unsubscribe";
 
 /// A JSON payload as it arrived on the wire (or an empty object when absent).
 pub type Payload = Value;
@@ -116,6 +131,9 @@ pub struct RpcContext {
     port: u16,
     server_started: Instant,
     session_started_ms: u64,
+    /// This connection's bounded event lane; mutated by the subscribe RPCs
+    /// and drained by the connection's reader thread.
+    event_lane: EventLane,
 }
 
 impl RpcContext {
@@ -126,18 +144,27 @@ impl RpcContext {
             port,
             server_started: Instant::now(),
             session_started_ms: now_ms(),
+            event_lane: EventLane::with_defaults(),
         }
     }
 
     /// Clone this context for a new session, keeping the server-start instant
-    /// and stamping a fresh `session_started_ms`.
+    /// and stamping a fresh `session_started_ms`. Each session gets its own
+    /// event lane so subscriptions never leak between connections.
     pub(crate) fn for_session(&self) -> Self {
         Self {
             hostname: self.hostname.clone(),
             port: self.port,
             server_started: self.server_started,
             session_started_ms: now_ms(),
+            event_lane: EventLane::with_defaults(),
         }
+    }
+
+    /// This session's event lane. The server registers it with the shared
+    /// [`EventBus`](crate::EventBus) when the connection is accepted.
+    pub fn event_lane(&self) -> &EventLane {
+        &self.event_lane
     }
 
     /// Hostname the server is bound to.
@@ -226,6 +253,23 @@ impl RpcError {
         }
     }
 
+    /// `rpc_bad_topics` — an event subscribe/unsubscribe payload had a missing,
+    /// empty or non-array `topics` field (or a non-string entry).
+    pub fn bad_topics(message: &str) -> Self {
+        Self {
+            code: "rpc_bad_topics",
+            message: message.to_string(),
+        }
+    }
+
+    /// `rpc_bad_topic` — a topic string outside the five-topic vocabulary.
+    pub fn bad_topic(topic: &str) -> Self {
+        Self {
+            code: "rpc_bad_topic",
+            message: format!("unknown event topic: '{topic}'"),
+        }
+    }
+
     /// Stable machine-readable error code.
     pub fn code(&self) -> &'static str {
         self.code
@@ -256,6 +300,8 @@ impl RpcRegistry {
         "runtime.status",
         "gateway.config",
         "gateway.auth",
+        EVENT_SUBSCRIBE,
+        EVENT_UNSUBSCRIBE,
     ];
 
     /// Dispatch `action` with `payload` to its handler.
@@ -280,6 +326,8 @@ impl RpcRegistry {
             "runtime.status" => runtime_status(ctx, payload),
             "gateway.config" => gateway_config(ctx, payload),
             "gateway.auth" => gateway_auth(ctx, payload),
+            EVENT_SUBSCRIBE => event_subscribe(ctx, payload, true),
+            EVENT_UNSUBSCRIBE => event_subscribe(ctx, payload, false),
             _ => {
                 // Embedders (e.g. the daemon) may register handlers under their
                 // full action name (such as "core.status") in addition to the
@@ -390,6 +438,55 @@ fn gateway_auth(ctx: &RpcContext, payload: &Payload) -> Result<RpcValue, RpcErro
     Ok(serde_json::to_value(GatewayAuthReply {
         authenticated: true,
         session_started_ms: ctx.session_started_ms(),
+    })
+    .expect("wire payload serializes"))
+}
+
+/// Parse the `{"topics": ["…"]}` payload shared by subscribe/unsubscribe.
+fn parse_topics(payload: &Payload) -> Result<Vec<EventTopic>, RpcError> {
+    let Some(value) = payload.get("topics") else {
+        return Err(RpcError::bad_topics(
+            "event subscribe/unsubscribe requires a 'topics' array",
+        ));
+    };
+    let array = value
+        .as_array()
+        .ok_or_else(|| RpcError::bad_topics("'topics' must be an array of topic strings"))?;
+    if array.is_empty() {
+        return Err(RpcError::bad_topics("'topics' must not be empty"));
+    }
+    let mut topics = Vec::with_capacity(array.len());
+    for value in array {
+        let name = value
+            .as_str()
+            .ok_or_else(|| RpcError::bad_topics("every entry in 'topics' must be a string"))?;
+        let topic = name
+            .parse::<EventTopic>()
+            .map_err(|_| RpcError::bad_topic(name))?;
+        if !topics.contains(&topic) {
+            topics.push(topic);
+        }
+    }
+    Ok(topics)
+}
+
+/// Add or remove topics on this session's event lane and reply with the
+/// resulting topic set. No global state is touched: the connection thread
+/// drains only this lane and the bus fans out only to subscribed lanes.
+fn event_subscribe(
+    ctx: &RpcContext,
+    payload: &Payload,
+    subscribe: bool,
+) -> Result<RpcValue, RpcError> {
+    require_object_payload(payload)?;
+    let topics = parse_topics(payload)?;
+    if subscribe {
+        ctx.event_lane().subscribe(&topics);
+    } else {
+        ctx.event_lane().unsubscribe(&topics);
+    }
+    Ok(serde_json::to_value(EventSubscriptionReply {
+        topics: ctx.event_lane().subscribed_topics(),
     })
     .expect("wire payload serializes"))
 }
@@ -690,8 +787,80 @@ mod tests {
                 "runtime.ping",
                 "runtime.status",
                 "gateway.config",
-                "gateway.auth"
+                "gateway.auth",
+                EVENT_SUBSCRIBE,
+                EVENT_UNSUBSCRIBE,
             ]
+        );
+    }
+
+    #[test]
+    fn event_subscribe_and_unsubscribe_update_lane() {
+        let ctx = ctx();
+        let out = dispatch_no_renderers(
+            &ctx,
+            EVENT_SUBSCRIBE,
+            &json!({"topics": ["lip_sync.rms", "emotion.tag"]}),
+        )
+        .unwrap();
+        assert_eq!(
+            out["topics"],
+            json!(["lip_sync.rms", "emotion.tag"]),
+            "reply carries the resulting topic set"
+        );
+        assert!(ctx.event_lane().is_subscribed(EventTopic::LipSyncRms));
+        assert!(ctx.event_lane().is_subscribed(EventTopic::EmotionTag));
+
+        // Idempotent add, then an unsubscribe that leaves one topic.
+        let out =
+            dispatch_no_renderers(&ctx, EVENT_SUBSCRIBE, &json!({"topics": ["lip_sync.rms"]}))
+                .unwrap();
+        assert_eq!(out["topics"], json!(["lip_sync.rms", "emotion.tag"]));
+        let out = dispatch_no_renderers(
+            &ctx,
+            EVENT_UNSUBSCRIBE,
+            &json!({"topics": ["lip_sync.rms"]}),
+        )
+        .unwrap();
+        assert_eq!(out["topics"], json!(["emotion.tag"]));
+        assert!(!ctx.event_lane().is_subscribed(EventTopic::LipSyncRms));
+    }
+
+    #[test]
+    fn event_subscribe_rejects_bad_topic_and_bad_payload() {
+        let ctx = ctx();
+        let err = dispatch_no_renderers(&ctx, EVENT_SUBSCRIBE, &json!({"topics": ["noise"]}))
+            .unwrap_err();
+        assert_eq!(err.code(), "rpc_bad_topic");
+        assert!(err.message().contains("noise"));
+        assert!(
+            ctx.event_lane().subscribed_topics().is_empty(),
+            "a rejected subscribe must not mutate the set"
+        );
+
+        for payload in [
+            json!({}),
+            json!({"topics": []}),
+            json!({"topics": "lip_sync.rms"}),
+            json!({"topics": [7]}),
+        ] {
+            let err = dispatch_no_renderers(&ctx, EVENT_SUBSCRIBE, &payload).unwrap_err();
+            assert_eq!(err.code(), "rpc_bad_topics", "payload {payload}");
+        }
+        let err = dispatch_no_renderers(&ctx, EVENT_UNSUBSCRIBE, &json!([1])).unwrap_err();
+        assert_eq!(err.code(), "rpc_bad_payload");
+    }
+
+    #[test]
+    fn each_session_gets_an_independent_event_lane() {
+        let server_ctx = ctx();
+        let a = server_ctx.for_session();
+        let b = server_ctx.for_session();
+        dispatch_no_renderers(&a, EVENT_SUBSCRIBE, &json!({"topics": ["lip_sync.rms"]})).unwrap();
+        assert!(a.event_lane().is_subscribed(EventTopic::LipSyncRms));
+        assert!(
+            b.event_lane().subscribed_topics().is_empty(),
+            "subscriptions must not leak between connections"
         );
     }
 }

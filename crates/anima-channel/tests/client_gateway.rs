@@ -5,10 +5,15 @@
 //! read-only RPCs, and fail authentication cleanly.
 
 use std::sync::Arc;
+use std::time::Duration;
 
+use anima_channel::wire::{
+    CoreStatusReply, EventPayload, EventTopic, GatewayEvent, LipSyncRmsData,
+};
 use anima_channel::{get_or_create_certs, tls_server_config};
-use anima_channel::{ChannelConfig, ChannelServer, GatewayClient, GatewayClientError, RendererHandlers};
-use anima_channel::wire::CoreStatusReply;
+use anima_channel::{
+    ChannelConfig, ChannelServer, GatewayClient, GatewayClientError, RendererHandlers,
+};
 
 const TOKEN: &str = "client-gateway-test-token";
 
@@ -135,6 +140,96 @@ fn core_status_client_happy_path() {
     let got = client.core_status().expect("core.status");
     assert_eq!(got, expected);
     client.close().expect("close gateway");
+    handle.stop();
+}
+
+fn rms_event(actor: &str, level: f32) -> GatewayEvent {
+    GatewayEvent::new(
+        EventTopic::LipSyncRms,
+        EventPayload::LipSyncRms(LipSyncRmsData {
+            actor_id: actor.to_string(),
+            level,
+            seq: 0,
+            ts_ms: 0,
+        }),
+    )
+}
+
+#[test]
+fn server_pushes_event_without_a_preceding_client_frame() {
+    let config = ChannelConfig {
+        hostname: "127.0.0.1".to_string(),
+        auth_token: TOKEN.to_string(),
+        tls_config: None,
+    };
+    let server = ChannelServer::bind("127.0.0.1", 0, &config).expect("bind channel server");
+    let bus = server.event_bus();
+    let handle = server.spawn().expect("spawn channel server");
+    let port = handle.port();
+    let mut client = GatewayClient::connect(&format!("ws://127.0.0.1:{port}/ws"), None)
+        .expect("connect to channel server");
+    client.authenticate(TOKEN).expect("authenticate");
+
+    let reply = client
+        .subscribe(&[EventTopic::LipSyncRms])
+        .expect("subscribe");
+    assert_eq!(reply.topics, vec![EventTopic::LipSyncRms]);
+
+    // From here the client sends NOTHING. The server must still push the
+    // published event on its own read-loop poll.
+    bus.publish(rms_event("actor-1", 0.75));
+    let event = client.next_event().expect("server-initiated event");
+    assert_eq!(event.topic, EventTopic::LipSyncRms);
+    let EventPayload::LipSyncRms(data) = event.data else {
+        panic!("expected a lip_sync.rms payload");
+    };
+    assert_eq!(data.actor_id, "actor-1");
+    assert_eq!(data.level, 0.75);
+    assert!(data.seq < 10, "bus assigns a monotonic sequence");
+    assert!(data.ts_ms > 0, "bus stamps a source timestamp");
+
+    // Unsubscribing stops delivery: a later publish must not arrive.
+    client
+        .unsubscribe(&[EventTopic::LipSyncRms])
+        .expect("unsubscribe");
+    bus.publish(rms_event("actor-1", 0.5));
+    let mut quiet = GatewayClient::connect_with_timeout(
+        &format!("ws://127.0.0.1:{port}/ws"),
+        None,
+        Duration::from_millis(250),
+    )
+    .expect("connect quiet client");
+    quiet
+        .authenticate(TOKEN)
+        .expect("authenticate quiet client");
+    bus.publish(rms_event("quiet", 0.9)); // quiet client never subscribed
+    assert!(
+        quiet.next_event().is_err(),
+        "unsubscribed session must receive no events"
+    );
+
+    client.close().expect("close gateway");
+    handle.stop();
+}
+
+#[test]
+fn subscribe_with_bad_topic_is_a_rpc_error() {
+    let handle = start_server();
+    let port = handle.port();
+    let mut client = GatewayClient::connect(&format!("ws://127.0.0.1:{port}/ws"), None)
+        .expect("connect to channel server");
+    client.authenticate(TOKEN).expect("authenticate");
+
+    let err = client
+        .rpc(
+            "event.subscribe",
+            Some(serde_json::json!({"topics": ["not.a.topic"]})),
+        )
+        .expect_err("unknown topic must fail");
+    assert!(
+        matches!(err, GatewayClientError::Rpc { ref code, .. } if code == "rpc_bad_topic"),
+        "expected rpc_bad_topic, got {err:?}"
+    );
     handle.stop();
 }
 

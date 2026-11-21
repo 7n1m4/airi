@@ -42,11 +42,7 @@ pub struct ChannelConfig {
     /// Opaque TLS flag: `Some(_)` = serve `wss://`; `None` = plaintext.
     /// Round-tripped verbatim so enabling TLS in one build survives a
     /// reload in another.
-    #[serde(
-        rename = "tlsConfig",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "tlsConfig", default, skip_serializing_if = "Option::is_none")]
     // specta rejects serde_json::Value wholesale (BigInt-style Number inside);
     // the opaque flag exports as `unknown`, same as the frame payload fields.
     #[specta(type = specta_typescript::Unknown)]
@@ -78,7 +74,11 @@ pub enum ConfigError {
 /// `~/.local/share`; macOS: `~/Library/Application Support`; Windows:
 /// `%APPDATA%`). Returns `None` when no data dir can be determined.
 pub fn default_config_path() -> Option<PathBuf> {
-    dirs::data_dir().map(|d| d.join("airi-slint").join("server-channel").join("config.json"))
+    dirs::data_dir().map(|d| {
+        d.join("airi-slint")
+            .join("server-channel")
+            .join("config.json")
+    })
 }
 
 /// Load the config at `path`, healing it if missing or invalid.
@@ -215,7 +215,10 @@ mod tests {
         let cfg = load_or_heal(&path).unwrap();
         assert!(cfg.auth_token.len() == 36);
         let mode = fs::metadata(&path).unwrap().permissions().mode() & 0o777;
-        assert_eq!(mode, 0o600, "config.json must never be world/group readable");
+        assert_eq!(
+            mode, 0o600,
+            "config.json must never be world/group readable"
+        );
     }
 
     #[test]

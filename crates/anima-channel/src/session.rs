@@ -46,6 +46,17 @@
 //! - Anything else → typed `error` frame with code `unsupported_type`;
 //!   the connection stays open.
 //!
+//! ## Server-initiated events (Wave 0)
+//!
+//! After auth, [`Session::drain_events`] turns events buffered on this
+//! connection's lane into `event` frames. These are carried in
+//! [`SessionOutcome::events`] and are NOT replies to any client message — the
+//! connection thread emits them on its read-loop poll as well as alongside a
+//! reply. `replies_only` now means "no server-initiated events in *this*
+//! outcome", not "no event frame can ever be sent". Before auth the lane is
+//! never drained and anything queued is discarded on successful auth, so an
+//! unauthenticated peer still receives nothing except the auth reply/error.
+//!
 //! ## Error frame shape
 //!
 //! `{"type": "error", "error": {"code": "<code>", "message": "<message>"}}`
@@ -59,6 +70,7 @@ use std::sync::Arc;
 use serde_json::Value;
 
 use crate::dispatch::{RendererHandlers, RpcContext, RpcRegistry};
+use crate::event_bus::EventLane;
 use crate::wire::{
     AuthenticatedData, GatewayServerFrame, HeartbeatData, HeartbeatKind, RpcErrorObject,
 };
@@ -83,19 +95,37 @@ pub struct CloseInfo {
     pub reason: String,
 }
 
-/// What the transport should do with an inbound text message.
+/// What the transport should do after one read-loop iteration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionOutcome {
-    /// JSON text payloads to send back, in order.
+    /// JSON text payloads answering an inbound client message, in order.
     pub replies: Vec<String>,
-    /// When set, send a close frame after `replies` and drop the connection.
+    /// Server-initiated `event` frames drained from this connection's lane.
+    /// Unlike `replies`, these do not answer a client frame and may be emitted
+    /// on a timed poll with no inbound message at all (post-auth only).
+    pub events: Vec<String>,
+    /// When set, send a close frame after the queued frames and drop the
+    /// connection.
     pub close: Option<CloseInfo>,
 }
 
 impl SessionOutcome {
+    /// Inbound-message replies only. This no longer suppresses the event
+    /// lane: callers merge [`Session::drain_events`] into `events`, and
+    /// [`SessionOutcome::events_only`] covers poll-driven emission.
     fn replies_only(replies: Vec<String>) -> Self {
         Self {
             replies,
+            events: Vec::new(),
+            close: None,
+        }
+    }
+
+    /// Server-initiated frames only — no inbound message to reply to.
+    pub fn events_only(events: Vec<String>) -> Self {
+        Self {
+            replies: Vec::new(),
+            events,
             close: None,
         }
     }
@@ -166,6 +196,30 @@ impl Session {
     /// True once the handshake has completed.
     pub fn is_authenticated(&self) -> bool {
         self.state == SessionState::Authenticated
+    }
+
+    /// This connection's event lane, registered with the shared
+    /// [`EventBus`](crate::EventBus) by the server at accept time.
+    pub fn event_lane(&self) -> &EventLane {
+        self.rpc_ctx.event_lane()
+    }
+
+    /// Turn buffered events into wire frames for the transport to send.
+    ///
+    /// Returns nothing and clears the lane while unauthenticated — an
+    /// unauthenticated peer never receives a server-initiated frame. After
+    /// auth the lane is drained in publication order and encoded as
+    /// `{"type":"event", …}` frames.
+    pub fn drain_events(&self) -> Vec<String> {
+        let lane = self.event_lane();
+        if !self.is_authenticated() {
+            lane.clear();
+            return Vec::new();
+        }
+        lane.drain()
+            .into_iter()
+            .map(|event| encode_frame(&GatewayServerFrame::event(event)))
+            .collect()
     }
 
     /// Handle one inbound text message.
@@ -242,6 +296,10 @@ impl Session {
         }
 
         self.state = SessionState::Authenticated;
+        // Discard anything that was queued before the handshake so a client
+        // never receives events that predate its authentication. Fresh events
+        // can only be queued after an `event.subscribe` RPC, which is post-auth.
+        self.event_lane().clear();
         let reply = match shape {
             AuthShape::Simple => GatewayServerFrame::Auth { ok: true },
             AuthShape::ServerRuntime => GatewayServerFrame::Authenticated {
@@ -338,6 +396,7 @@ impl Session {
     fn fail(&self, reply: &str) -> SessionOutcome {
         SessionOutcome {
             replies: vec![reply.to_string()],
+            events: Vec::new(),
             close: Some(CloseInfo {
                 code: CLOSE_POLICY_VIOLATION,
                 reason: "authentication failed".to_string(),
@@ -671,5 +730,62 @@ mod tests {
         assert!(!tokens_equal("abc", "abd"));
         assert!(!tokens_equal("abc", "abcd"));
         assert!(!tokens_equal("", "a"));
+    }
+
+    fn publish_rms(bus: &crate::EventBus, actor: &str) {
+        use crate::wire::{EventPayload, EventTopic, GatewayEvent, LipSyncRmsData};
+        bus.publish(GatewayEvent::new(
+            EventTopic::LipSyncRms,
+            EventPayload::LipSyncRms(LipSyncRmsData {
+                actor_id: actor.to_string(),
+                level: 0.5,
+                seq: 0,
+                ts_ms: 0,
+            }),
+        ));
+    }
+
+    #[test]
+    fn no_events_before_auth() {
+        let mut s = session();
+        let bus = crate::EventBus::with_defaults();
+        bus.register_lane(s.event_lane());
+        s.event_lane().subscribe(&[crate::EventTopic::LipSyncRms]);
+        publish_rms(&bus, "actor-1");
+
+        // An unauthenticated peer gets nothing and the queued event is
+        // discarded, even though the lane was explicitly subscribed.
+        assert!(s.drain_events().is_empty());
+        assert!(!s.is_authenticated());
+        s.handle_text(r#"{"type":"auth","authToken":"test-token-123"}"#);
+        assert!(s.drain_events().is_empty());
+
+        // After auth, new events flow as event frames with no inbound frame.
+        publish_rms(&bus, "actor-2");
+        let events = s.drain_events();
+        assert_eq!(events.len(), 1);
+        let frame: serde_json::Value = serde_json::from_str(&events[0]).unwrap();
+        assert_eq!(frame["type"], "event");
+        assert_eq!(frame["topic"], "lip_sync.rms");
+    }
+
+    #[test]
+    fn unsubscribed_session_receives_no_events() {
+        let mut s = session();
+        let bus = crate::EventBus::with_defaults();
+        bus.register_lane(s.event_lane());
+        s.handle_text(r#"{"type":"auth","authToken":"test-token-123"}"#);
+        publish_rms(&bus, "actor-1");
+        assert!(s.drain_events().is_empty());
+    }
+
+    #[test]
+    fn events_only_outcome_has_no_replies() {
+        use crate::EventTopic;
+        let outcome = SessionOutcome::events_only(vec![r#"{"type":"event"}"#.to_string()]);
+        assert!(outcome.replies.is_empty());
+        assert_eq!(outcome.events.len(), 1);
+        assert!(outcome.close.is_none());
+        assert_eq!(EventTopic::ALL.len(), 5);
     }
 }

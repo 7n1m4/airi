@@ -29,7 +29,7 @@ export type ChannelConfig = {
 
 /**
  *  `data` payload of a `core.status` reply (read-only, additive).
- * 
+ *
  *  Carries only coarse, secret-free health information. It MUST NOT contain
  *  auth tokens, D-Bus tokens, provider configs, API keys, secrets, prompts,
  *  secret-revealing paths, or raw memory.
@@ -53,6 +53,88 @@ export type CoreStatusReply = {
 	messageCount: number,
 };
 
+/**
+ *  Broad class of an `emotion.tag` cue.
+ *
+ *  The TS host historically mis-routed a *motion* cue into a facial morph.
+ *  Carrying the class on the wire lets every renderer (Godot, Vue, Flutter)
+ *  dispatch correctly without embedding morph names, `.exp3` paths, blend
+ *  modes or DSL opcodes in the daemon protocol — those stay in card/model
+ *  metadata. `motion` and `vfx` MUST NOT be treated as facial expressions.
+ */
+export type CueKind =
+/**  Facial expression / emotion key (the common case). */
+"emotion" |
+/**  Body motion cue — not a facial morph. */
+"motion" |
+/**  Visual effect cue — not a facial morph. */
+"vfx";
+
+/**  Payload of an `emotion.tag` event: a discrete emotion for an actor. */
+export type EmotionTagData = {
+	/**  Character/actor id the tag belongs to. */
+	actor_id: string,
+	/**
+	 *  Normalized emotion key (see [`CANONICAL_EMOTION_KEYS`]) or a raw,
+	 *  model-specific pass-through tag. Never a morph name or DSL command.
+	 */
+	tag: string,
+	/**  Broad cue class; `motion`/`vfx` must not be mapped to facial morphs. */
+	kind: CueKind,
+	/**  Strength of the cue in `[0, 1]`. */
+	intensity: number,
+	/**
+	 *  Optional return-to-neutral duration in milliseconds; `None` lets the
+	 *  renderer use its own default decay.
+	 */
+	duration_ms?: number,
+	/**  Monotonic publication sequence (stamped by the bus). */
+	seq: number,
+	/**  Producer timestamp, unix epoch milliseconds (stamped by the bus). */
+	ts_ms: number,
+};
+
+/**
+ *  Typed payload of a `event` frame. Variants are `serde(untagged)` so the
+ *  payload serializes as a flat JSON object; each payload struct has at least
+ *  one unique required field, making deserialization unambiguous by shape.
+ */
+export type EventPayload =
+/**  A `lip_sync.rms` sample. */
+LipSyncRmsData |
+/**  An `emotion.tag` label. */
+EmotionTagData |
+/**  A `token.delta` stream token. */
+TokenDeltaData |
+/**  A `presence.changed` transition. */
+PresenceChangedData |
+/**  A `status.changed` health update. */
+StatusChangedData;
+
+/**  Reply of `event.subscribe` / `event.unsubscribe`: the resulting topic set. */
+export type EventSubscriptionReply = {
+	/**  Topics the session is subscribed to after the action, in wire order. */
+	topics: EventTopic[],
+};
+
+/**
+ *  Stable topic name carried by a server-initiated `event` frame.
+ *
+ *  The dotted wire names are fixed in protocol version 1; adding a variant is
+ *  additive. Subscribe/unsubscribe RPC actions send these strings verbatim.
+ */
+export type EventTopic =
+/**  One RMS amplitude sample for a speaking actor (~15–40 Hz in-tree). */
+"lip_sync.rms" |
+/**  A discrete emotion label for an actor. */
+"emotion.tag" |
+/**  One streamed assistant token (or the final marker) for a chat turn. */
+"token.delta" |
+/**  A presence/connectivity transition. */
+"presence.changed" |
+/**  Coarse, secret-free core health change. */
+"status.changed";
+
 /**  `data` payload of a `gateway.auth` reply. */
 export type GatewayAuthReply = {
 	/**  Always `true` (only authenticated sessions can ask). */
@@ -65,42 +147,42 @@ export type GatewayAuthReply = {
  *  A client→server text frame. Internally tagged on `type`, exactly as the
  *  gateway has always spoken.
  */
-export type GatewayClientFrame = 
+export type GatewayClientFrame =
 /**  Simple auth shape: `{ "type": "auth", "authToken": "…" }`. */
-{ type: "auth"; 
+{ type: "auth";
 /**  The shared gateway auth token. */
-authToken: string } | 
+authToken: string } |
 /**
  *  Server-runtime mirror shape:
  *  `{ "type": "module:authenticate", "data": { "token": "…" } }`.
  */
-{ type: "module:authenticate"; 
+{ type: "module:authenticate";
 /**  Handshake payload carrying the token. */
-data: ModuleAuthData } | 
+data: ModuleAuthData } |
 /**  Liveness probe: `{ "type": "ping" }` → server replies `pong`. */
-{ type: "ping" } | 
+{ type: "ping" } |
 /**  Gateway heartbeat mirror. Only kind `ping` receives a reply. */
-{ type: "transport:connection:heartbeat"; 
+{ type: "transport:connection:heartbeat";
 /**  Heartbeat payload; kind is `ping` on the wire from clients. */
-data: HeartbeatData } | 
+data: HeartbeatData } |
 /**
  *  Typed RPC request. `id`, when present, is echoed verbatim in the
  *  reply; `payload`, when absent, is treated as `{}` by dispatch.
  */
-{ type: "rpc"; 
+{ type: "rpc";
 /**  RPC method, e.g. `runtime.status` or `renderer.info`. */
-action: string; 
+action: string;
 /**
  *  Arbitrary JSON payload; must be an object (or absent) to pass
  *  dispatch validation.
  */
-payload?: unknown; 
+payload?: unknown;
 /**  Client-chosen echo identifier; any JSON value, verbatim. */
 id?: unknown };
 
 /**
  *  `data` payload of a `gateway.config` reply.
- * 
+ *
  *  Never includes the auth token — the token stays server-side.
  */
 export type GatewayConfigReply = {
@@ -112,7 +194,7 @@ export type GatewayConfigReply = {
 
 /**
  *  Patch payload of `ApplyGatewayConfig` (Electron handler shape).
- * 
+ *
  *  All fields are optional; absent means "keep the current value".
  *  `websocketTlsConfig` is an opaque TLS flag: `null` disables TLS, any
  *  other value (object, even `{}`) enables it. The legacy `tlsConfig`
@@ -156,54 +238,78 @@ export type GatewayControlStatus = {
 };
 
 /**
+ *  A server-initiated event value: topic, typed payload and optional
+ *  correlation id. The bus stamps `seq`/`ts_ms` into the payload on publish.
+ */
+export type GatewayEvent = {
+	/**  Stable topic selecting the payload shape. */
+	topic: EventTopic,
+	/**  Typed payload matching `topic`. */
+	data: EventPayload,
+	/**  Optional producer correlation id, echoed verbatim to clients. */
+	id?: unknown,
+};
+
+/**
  *  A server→client text frame. Internally tagged on `type`, exactly as the
  *  gateway has always spoken.
  */
-export type GatewayServerFrame = 
+export type GatewayServerFrame =
 /**
  *  Reply to the simple auth shape: `{ "type": "auth", "ok": true }`.
  *  Only success is ever sent.
  */
-{ type: "auth"; 
+{ type: "auth";
 /**  Always `true` on success. */
-ok: boolean } | 
+ok: boolean } |
 /**  Reply to the server-runtime mirror auth shape. */
-{ type: "module:authenticated"; 
+{ type: "module:authenticated";
 /**  Always `authenticated: true` on success. */
-data: AuthenticatedData } | 
+data: AuthenticatedData } |
 /**  Reply to `ping`. */
-{ type: "pong" } | 
+{ type: "pong" } |
 /**  Heartbeat pong mirror: kind `pong`, `message` 💛, `at` unix ms. */
-{ type: "transport:connection:heartbeat"; 
+{ type: "transport:connection:heartbeat";
 /**  Pong payload. */
-data: HeartbeatData } | 
+data: HeartbeatData } |
 /**
  *  RPC reply frame. `ok: true` + `data` (and no `error`) on success;
  *  `ok: false` + `error` (and no `data`) on failure. A client-supplied
  *  `id` from the request is echoed verbatim.
  */
-{ type: "rpc"; 
+{ type: "rpc";
 /**  RPC method this reply answers. */
-action: string; 
+action: string;
 /**  `true` on success, `false` on failure. */
-ok: boolean; 
+ok: boolean;
 /**  Handler result, present on success only. */
-data?: unknown; 
+data?: unknown;
 /**  Stable code + sanitized message, present on failure only. */
-error?: RpcErrorObject | null; 
+error?: RpcErrorObject | null;
 /**  Echoed from the request when the client sent one. */
-id?: unknown } | 
+id?: unknown } |
 /**
  *  Typed error frame; the connection stays open (post-auth) or closes
  *  with 1008 (pre-auth).
  */
-{ type: "error"; 
+{ type: "error";
 /**  Stable code + message. */
-error: RpcErrorObject };
+error: RpcErrorObject } |
+/**
+ *  Server-initiated event frame — the Wave 0 event lane. Post-auth only;
+ *  delivered without a preceding client frame. See the module-level ADR.
+ */
+{ type: "event";
+/**  Stable topic selecting the payload shape. */
+topic: EventTopic;
+/**  Typed payload matching `topic`. */
+data: EventPayload;
+/**  Optional producer correlation id, echoed verbatim. */
+id?: unknown };
 
 /**
  *  `data` payload of a `transport:connection:heartbeat` frame.
- * 
+ *
  *  Client→server heartbeats carry only `kind`; server→client pongs carry
  *  `kind`, `message` (the 💛 mirror) and `at` (unix millis). The fields are
  *  optional so the one type covers both directions.
@@ -218,11 +324,23 @@ export type HeartbeatData = {
 };
 
 /**  Wire kind of a heartbeat frame's `data.kind` field. */
-export type HeartbeatKind = 
+export type HeartbeatKind =
 /**  Client heartbeats with kind `ping`; mirrored back as `pong`. */
-"ping" | 
+"ping" |
 /**  Server reply to a `ping` heartbeat. */
 "pong";
+
+/**  Payload of a `lip_sync.rms` event: one amplitude sample in `[0, 1]`. */
+export type LipSyncRmsData = {
+	/**  Character/actor id the sample belongs to. */
+	actor_id: string,
+	/**  RMS level, clamped to `[0, 1]` by the producer. */
+	level: number,
+	/**  Monotonic publication sequence (stamped by the bus). */
+	seq: number,
+	/**  Producer timestamp, unix epoch milliseconds (stamped by the bus). */
+	ts_ms: number,
+};
 
 /**
  *  `data` payload of the `module:authenticate` handshake frame
@@ -231,6 +349,18 @@ export type HeartbeatKind =
 export type ModuleAuthData = {
 	/**  The shared gateway auth token. */
 	token: string,
+};
+
+/**  Payload of a `presence.changed` event: a connectivity/availability change. */
+export type PresenceChangedData = {
+	/**  Subject whose presence changed (actor id, service name, …). */
+	subject: string,
+	/**  New coarse state (e.g. `online`, `away`, `offline`). */
+	state: string,
+	/**  Monotonic publication sequence (stamped by the bus). */
+	seq: number,
+	/**  Producer timestamp, unix epoch milliseconds (stamped by the bus). */
+	ts_ms: number,
 };
 
 /**  The `error` object carried by `error` frames and failing `rpc` replies. */
@@ -269,4 +399,45 @@ export type RuntimeStatusReply = {
 	uptimeSeconds: number,
 	/**  Protocol identifier ([`crate::dispatch::PROTOCOL`]). */
 	protocol: string,
+};
+
+/**
+ *  Payload of a `status.changed` event: coarse, secret-free core health.
+ *
+ *  Mirrors the [`CoreStatusReply`] discipline: it MUST NOT carry auth tokens,
+ *  D-Bus tokens, provider configs, API keys, prompts, secret-revealing paths or
+ *  raw memory.
+ */
+export type StatusChangedData = {
+	/**  Whether the core service is available. */
+	core_available: boolean,
+	/**  Whether the underlying store is available. */
+	store_available: boolean,
+	/**  Coarse store health (`"ok"` or `"unavailable"`). */
+	store_health: string,
+	/**  Monotonic publication sequence (stamped by the bus). */
+	seq: number,
+	/**  Producer timestamp, unix epoch milliseconds (stamped by the bus). */
+	ts_ms: number,
+};
+
+/**  Payload of a `token.delta` event: one streamed LLM token. */
+export type TokenDeltaData = {
+	/**  Chat session id the turn belongs to. */
+	session_id: string,
+	/**  Message id the token stream belongs to. */
+	message_id: string,
+	/**  Raw token text (may be empty only on the terminal event). */
+	delta: string,
+	/**  Zero-based token index within the turn. */
+	index: number,
+	/**
+	 *  `true` on the final token of the turn. Wire name is `final`; Rust
+	 *  cannot use the reserved keyword as a field name.
+	 */
+	final: boolean,
+	/**  Monotonic publication sequence (stamped by the bus). */
+	seq: number,
+	/**  Producer timestamp, unix epoch milliseconds (stamped by the bus). */
+	ts_ms: number,
 };

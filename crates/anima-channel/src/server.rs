@@ -15,6 +15,12 @@
 //! speaks `wss://`; otherwise it speaks plaintext. The cert chain is loaded
 //! by the caller (see [`crate::certs::server_config`]); this module performs
 //! no certificate management of its own.
+//!
+//! Each connection is also registered with a shared [`EventBus`], the Wave 0
+//! server-initiated event lane. The read timeout is shortened to
+//! [`DEFAULT_EVENT_POLL_INTERVAL`] so the thread can drain its bounded lane and
+//! push `event` frames without a preceding client frame; the dead-peer TTL is
+//! still measured from inbound frames only.
 
 use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
@@ -25,8 +31,10 @@ use std::time::{Duration, Instant};
 
 use crate::config::ChannelConfig;
 use crate::dispatch::{RendererHandlers, RpcContext};
+use crate::event_bus::{EventBus, DEFAULT_EVENT_POLL_INTERVAL};
 use crate::session::{
-    Session, CLOSE_GOING_AWAY, CLOSE_MESSAGE_TOO_BIG, CLOSE_PROTOCOL_ERROR, CLOSE_UNSUPPORTED_DATA,
+    Session, SessionOutcome, CLOSE_GOING_AWAY, CLOSE_MESSAGE_TOO_BIG, CLOSE_PROTOCOL_ERROR,
+    CLOSE_UNSUPPORTED_DATA,
 };
 use crate::ws::{
     accept_key, encode_frame, parse_upgrade_request, upgrade_request_complete, upgrade_response,
@@ -96,6 +104,10 @@ pub struct ChannelServer {
     renderer_handlers: Arc<RendererHandlers>,
     tls: Option<Arc<rustls::ServerConfig>>,
     dead_peer_ttl: Duration,
+    /// Shared publisher handle for the Wave 0 event lane. Exposed via
+    /// [`ChannelServer::event_bus`] so daemon services can publish events
+    /// without touching sessions or sockets.
+    event_bus: EventBus,
 }
 
 impl ChannelServer {
@@ -162,6 +174,7 @@ impl ChannelServer {
             renderer_handlers: Arc::new(handlers),
             tls,
             dead_peer_ttl: DEAD_PEER_TTL,
+            event_bus: EventBus::with_defaults(),
         })
     }
 
@@ -170,6 +183,21 @@ impl ChannelServer {
     pub fn with_dead_peer_ttl(mut self, ttl: Duration) -> Self {
         self.dead_peer_ttl = ttl;
         self
+    }
+
+    /// Use an externally owned event bus. Lets a daemon create one bus and
+    /// share it across servers or publish from services before the server
+    /// starts. By default each server owns a fresh bus.
+    pub fn with_event_bus(mut self, bus: EventBus) -> Self {
+        self.event_bus = bus;
+        self
+    }
+
+    /// Cloneable handle for publishing events to every subscribed connection.
+    /// Future daemon services (pipeline, chat) hold this and call
+    /// [`EventBus::publish`]; they never write to a client socket.
+    pub fn event_bus(&self) -> EventBus {
+        self.event_bus.clone()
     }
 
     /// The local address the socket is bound to (useful with port `0`).
@@ -193,6 +221,7 @@ impl ChannelServer {
             self.renderer_handlers,
             self.tls,
             self.dead_peer_ttl,
+            self.event_bus,
             stop,
         )
     }
@@ -208,6 +237,7 @@ impl ChannelServer {
         let renderer_handlers = self.renderer_handlers;
         let tls = self.tls;
         let dead_peer_ttl = self.dead_peer_ttl;
+        let event_bus = self.event_bus;
         let join = std::thread::Builder::new()
             .name("airi-channel-accept".to_string())
             .spawn(move || {
@@ -218,6 +248,7 @@ impl ChannelServer {
                     renderer_handlers,
                     tls,
                     dead_peer_ttl,
+                    event_bus,
                     thread_stop,
                 )
             })?;
@@ -259,6 +290,7 @@ fn serve(
     renderer_handlers: Arc<RendererHandlers>,
     tls: Option<Arc<rustls::ServerConfig>>,
     dead_peer_ttl: Duration,
+    event_bus: EventBus,
     stop: Arc<AtomicBool>,
 ) -> io::Result<()> {
     listener.set_nonblocking(true)?;
@@ -271,6 +303,7 @@ fn serve(
                 let token = Arc::clone(&token);
                 let rpc = rpc.for_session();
                 let renderer_handlers = Arc::clone(&renderer_handlers);
+                let event_bus = event_bus.clone();
                 // Configure the socket *before* any TLS wrapping: the
                 // handshake deadline applies to the raw TCP stream, and the
                 // HTTP upgrade phase must complete within it.
@@ -301,6 +334,7 @@ fn serve(
                             rpc,
                             &renderer_handlers,
                             dead_peer_ttl,
+                            event_bus,
                         ) {
                             tracing::debug!(%peer, %err, "channel connection ended with error");
                         }
@@ -329,6 +363,7 @@ fn handle_connection(
     rpc: RpcContext,
     renderer_handlers: &Arc<RendererHandlers>,
     dead_peer_ttl: Duration,
+    event_bus: EventBus,
 ) -> io::Result<()> {
     // --- HTTP Upgrade phase -------------------------------------------------
     let mut header_buf = Vec::with_capacity(1024);
@@ -375,14 +410,18 @@ fn handle_connection(
     tracing::debug!(path = %request.path, "channel client upgraded");
 
     // --- WebSocket phase ----------------------------------------------------
-    // The read timeout doubles as the dead-peer timer: a read that yields
-    // nothing for `dead_peer_ttl` means the peer went silent. Any decoded
-    // frame refreshes `last_seen`, so an idle-but-connected peer that never
-    // sends a single frame is closed with 1001. This is a byte-silence rule,
-    // not a TCP-liveness probe — see the module docs and the heartbeat
-    // contract in `session.rs`.
-    stream.set_read_timeout(Some(dead_peer_ttl))?;
+    // The socket read timeout is short so the connection thread can poll its
+    // event lane and push server-initiated frames even when the client sends
+    // nothing. The dead-peer TTL is still measured against `last_seen`, which
+    // only refreshes on inbound frames — event writes never keep a silent
+    // peer alive. This is a byte-silence rule, not a TCP-liveness probe.
+    let read_timeout = dead_peer_ttl.min(DEFAULT_EVENT_POLL_INTERVAL);
+    stream.set_read_timeout(Some(read_timeout))?;
     let mut session = Session::with_renderer(token.to_string(), rpc, Arc::clone(renderer_handlers));
+    // Register this connection's lane with the shared bus *before* any frames
+    // are read; unsubscribe (the lane's default) means no events until the
+    // client authenticates and calls `event.subscribe`.
+    event_bus.register_lane(session.event_lane());
     let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
     let mut fragments: Option<(u8, Vec<u8>)> = None;
     let mut last_seen = Instant::now();
@@ -396,6 +435,9 @@ fn handle_connection(
                 if err.kind() == io::ErrorKind::WouldBlock
                     || err.kind() == io::ErrorKind::TimedOut =>
             {
+                // No inbound frame: this is the event-lane poll tick.
+                let events = SessionOutcome::events_only(session.drain_events());
+                write_outcome(&mut stream, &events)?;
                 if last_seen.elapsed() >= dead_peer_ttl {
                     tracing::info!(%peer, ttl_ms = dead_peer_ttl.as_millis() as u64, "closing connection: no frames within dead-peer TTL");
                     send_close(&mut stream, CLOSE_GOING_AWAY, "going away (dead peer)");
@@ -427,7 +469,21 @@ fn handle_connection(
                 }
             }
         }
+        // An inbound frame may have been a subscribe RPC; flush any events
+        // that arrived while it was handled, so they are not delayed to the
+        // next poll tick.
+        let events = SessionOutcome::events_only(session.drain_events());
+        write_outcome(&mut stream, &events)?;
     }
+}
+
+/// Write all text frames carried by an outcome, in order (replies first, then
+/// server-initiated events). Event-only outcomes have no replies.
+fn write_outcome(stream: &mut impl Write, outcome: &SessionOutcome) -> io::Result<()> {
+    for text in outcome.replies.iter().chain(outcome.events.iter()) {
+        stream.write_all(&encode_frame(OP_TEXT, text.as_bytes(), None))?;
+    }
+    Ok(())
 }
 
 /// Handle one decoded frame. Returns `false` when the connection should close.
@@ -517,10 +573,11 @@ fn handle_frame(
         }
     };
 
-    let outcome = session.handle_text(&text);
-    for reply in &outcome.replies {
-        stream.write_all(&encode_frame(OP_TEXT, reply.as_bytes(), None))?;
-    }
+    let mut outcome = session.handle_text(&text);
+    // Merge server-initiated events into this outcome so replies and events
+    // share one ordered write path. `drain_events` is a no-op before auth.
+    outcome.events.extend(session.drain_events());
+    write_outcome(stream, &outcome)?;
     if let Some(close) = outcome.close {
         send_close(stream, close.code, &close.reason);
         return Ok(false);

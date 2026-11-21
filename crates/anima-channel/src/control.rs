@@ -68,7 +68,12 @@ where
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct GatewayControlApply {
     /// Opaque TLS flag: `null` = disable, present (any JSON value) = enable.
-    #[serde(rename = "websocketTlsConfig", default, deserialize_with = "deserialize_some", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "websocketTlsConfig",
+        default,
+        deserialize_with = "deserialize_some",
+        skip_serializing_if = "Option::is_none"
+    )]
     #[specta(type = specta_typescript::Unknown)]
     pub websocket_tls_config: Option<serde_json::Value>,
     /// New shared secret; empty/whitespace is rejected (kept as-is).
@@ -80,7 +85,12 @@ pub struct GatewayControlApply {
     /// Legacy alias for `websocketTlsConfig`, kept for the Electron handler
     /// contract. Not exported to TypeScript. Three-state like
     /// `websocket_tls_config` (absent / `null` / other value).
-    #[serde(rename = "tlsConfig", default, deserialize_with = "deserialize_some", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "tlsConfig",
+        default,
+        deserialize_with = "deserialize_some",
+        skip_serializing_if = "Option::is_none"
+    )]
     #[specta(skip)]
     pub tls_config: Option<serde_json::Value>,
 }

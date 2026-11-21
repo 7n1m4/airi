@@ -141,7 +141,8 @@ mod tests {
 
     #[test]
     fn archive_missing_file_is_not_found() {
-        let dir = std::env::temp_dir().join(format!("airi-audit-archive-none-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("airi-audit-archive-none-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
         let path = dir.join("nope.jsonl");
         let err = archive_audit_file(&path, 1).unwrap_err();

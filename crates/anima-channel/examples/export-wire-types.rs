@@ -27,6 +27,23 @@ fn target_path() -> PathBuf {
         .join(TARGET)
 }
 
+/// Strip trailing whitespace from every generated line while preserving each
+/// line terminator. specta's TS emitter leaves trailing spaces on blank
+/// doc-comment lines (` * `), after union separators (` | `) and after
+/// discriminants (` = `); `git diff --check` rejects all of those.
+fn trim_trailing_whitespace(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    for line in input.split_inclusive('\n') {
+        let (body, newline) = match line.strip_suffix('\n') {
+            Some(body) => (body, "\n"),
+            None => (line, ""),
+        };
+        out.push_str(body.trim_end());
+        out.push_str(newline);
+    }
+    out
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out = target_path();
     let check = std::env::args().skip(1).any(|arg| arg == "--check");
@@ -37,6 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let content = specta_typescript::Typescript::default()
         .header(HEADER)
         .export(&types, specta_serde::Format)?;
+    let content = trim_trailing_whitespace(&content);
 
     if check {
         let current = std::fs::read_to_string(&out).map_err(|e| {

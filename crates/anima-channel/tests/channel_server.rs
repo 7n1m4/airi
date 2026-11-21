@@ -597,7 +597,10 @@ const TEST_TTL: Duration = Duration::from_millis(300);
 
 fn read_text_frame(stream: &mut TcpStream, decoder: &mut FrameDecoder) -> serde_json::Value {
     let frame = read_frame(stream, decoder);
-    assert_ne!(frame.opcode, OP_CLOSE, "server unexpectedly closed the connection");
+    assert_ne!(
+        frame.opcode, OP_CLOSE,
+        "server unexpectedly closed the connection"
+    );
     serde_json::from_slice(&frame.payload).expect("json frame")
 }
 
@@ -619,7 +622,10 @@ fn silent_authenticated_peer_is_reaped_after_ttl() {
 
     // Go silent. The server must close with 1001 once the TTL elapses.
     let frame = read_frame(&mut stream, &mut decoder);
-    assert_eq!(frame.opcode, OP_CLOSE, "expected close frame for a dead peer");
+    assert_eq!(
+        frame.opcode, OP_CLOSE,
+        "expected close frame for a dead peer"
+    );
     let code = u16::from_be_bytes([frame.payload[0], frame.payload[1]]);
     assert_eq!(code, 1001, "dead-peer reap must use close code 1001");
 
@@ -672,7 +678,10 @@ fn rpc_frame_refreshes_last_seen() {
 
     // ~3× TTL of ordinary RPC traffic: the peer must NOT be reaped.
     for _ in 0..12 {
-        send_masked_text(&mut stream, r#"{"type":"rpc","action":"runtime.ping","payload":{}}"#);
+        send_masked_text(
+            &mut stream,
+            r#"{"type":"rpc","action":"runtime.ping","payload":{}}"#,
+        );
         let rpc = read_text_frame(&mut stream, &mut decoder);
         assert_eq!(rpc["type"], "rpc");
         assert_eq!(rpc["ok"], true);

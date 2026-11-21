@@ -7,6 +7,7 @@
 //! read-only `runtime.*` RPCs. It does not reconnect, persist credentials, or
 //! know anything about UIs; those decisions belong to the daemon and clients.
 
+use std::collections::VecDeque;
 use std::io::{self, Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
 use std::sync::Arc;
@@ -17,7 +18,9 @@ use serde_json::{json, Value};
 use thiserror::Error;
 
 use crate::base64::base64_encode;
-use crate::wire::{GatewayClientFrame, GatewayServerFrame};
+use crate::wire::{
+    EventSubscriptionReply, EventTopic, GatewayClientFrame, GatewayEvent, GatewayServerFrame,
+};
 use crate::ws::{
     accept_key, encode_frame, Frame, FrameDecoder, MAX_HTTP_HEADER_BYTES, MAX_WS_PAYLOAD_BYTES,
     OP_CLOSE, OP_PING, OP_PONG, OP_TEXT,
@@ -109,6 +112,9 @@ pub struct GatewayClient {
     decoder: FrameDecoder,
     counter: u64,
     closed: bool,
+    /// Events that arrived while the client was waiting for an RPC reply.
+    /// Kept so event frames can never be mistaken for a reply (and vice versa).
+    pending_events: VecDeque<GatewayEvent>,
 }
 
 impl GatewayClient {
@@ -151,6 +157,7 @@ impl GatewayClient {
             decoder: FrameDecoder::new(MAX_WS_PAYLOAD_BYTES),
             counter: 0,
             closed: false,
+            pending_events: VecDeque::new(),
         };
         client.perform_upgrade(&parsed.path, &parsed.authority)?;
         Ok(client)
@@ -164,7 +171,7 @@ impl GatewayClient {
             auth_token: token.to_string(),
         };
         self.send_json_frame(&frame)?;
-        match self.read_json_frame()? {
+        match self.read_non_event_frame()? {
             GatewayServerFrame::Auth { ok: true } => Ok(()),
             GatewayServerFrame::Error { error } => Err(GatewayClientError::Authentication {
                 code: error.code,
@@ -198,7 +205,7 @@ impl GatewayClient {
             id: None,
         };
         self.send_json_frame(&frame)?;
-        match self.read_json_frame()? {
+        match self.read_non_event_frame()? {
             GatewayServerFrame::Rpc {
                 action: reply_action,
                 ok: true,
@@ -251,6 +258,59 @@ impl GatewayClient {
         serde_json::from_value(value).map_err(|err| {
             GatewayClientError::UnexpectedFrame(format!("invalid core.status reply: {err}"))
         })
+    }
+
+    /// Opt in to a set of server-initiated event topics. The reply carries the
+    /// resulting topic set. Default for a fresh session is no topics.
+    pub fn subscribe(
+        &mut self,
+        topics: &[EventTopic],
+    ) -> Result<EventSubscriptionReply, GatewayClientError> {
+        let payload = serde_json::json!({
+            "topics": topics.iter().map(|t| t.as_str()).collect::<Vec<_>>()
+        });
+        let value = self.rpc("event.subscribe", Some(payload))?;
+        serde_json::from_value(value).map_err(|err| {
+            GatewayClientError::UnexpectedFrame(format!("invalid event.subscribe reply: {err}"))
+        })
+    }
+
+    /// Opt out of a set of event topics. The reply carries the resulting set.
+    pub fn unsubscribe(
+        &mut self,
+        topics: &[EventTopic],
+    ) -> Result<EventSubscriptionReply, GatewayClientError> {
+        let payload = serde_json::json!({
+            "topics": topics.iter().map(|t| t.as_str()).collect::<Vec<_>>()
+        });
+        let value = self.rpc("event.unsubscribe", Some(payload))?;
+        serde_json::from_value(value).map_err(|err| {
+            GatewayClientError::UnexpectedFrame(format!("invalid event.unsubscribe reply: {err}"))
+        })
+    }
+
+    /// Read the next server-initiated event frame, blocking until one arrives.
+    ///
+    /// Events buffered while an RPC reply was pending are returned first. A
+    /// non-event frame here is an error: unsolicited server frames other than
+    /// events are not part of the protocol.
+    pub fn next_event(&mut self) -> Result<GatewayEvent, GatewayClientError> {
+        if let Some(event) = self.pending_events.pop_front() {
+            return Ok(event);
+        }
+        loop {
+            match self.read_json_frame()? {
+                GatewayServerFrame::Event { topic, data, id } => {
+                    return Ok(GatewayEvent { topic, data, id });
+                }
+                frame => {
+                    return Err(GatewayClientError::UnexpectedFrame(format!(
+                        "expected event frame, got {:?}",
+                        std::mem::discriminant(&frame)
+                    )));
+                }
+            }
+        }
     }
 
     /// Send a normal close frame. Repeated calls are no-ops.
@@ -335,6 +395,21 @@ impl GatewayClient {
         serde_json::from_str(&text).map_err(|err| {
             GatewayClientError::UnexpectedFrame(format!("invalid server frame JSON: {err}"))
         })
+    }
+
+    /// Read a frame for the RPC/auth path, stashing any `event` frames that
+    /// arrive first. This keeps the reply/event streams independent on a
+    /// single WebSocket connection.
+    fn read_non_event_frame(&mut self) -> Result<GatewayServerFrame, GatewayClientError> {
+        loop {
+            match self.read_json_frame()? {
+                GatewayServerFrame::Event { topic, data, id } => {
+                    self.pending_events
+                        .push_back(GatewayEvent { topic, data, id });
+                }
+                frame => return Ok(frame),
+            }
+        }
     }
 
     fn read_text_frame(&mut self) -> Result<String, GatewayClientError> {
