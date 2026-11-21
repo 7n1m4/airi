@@ -29,10 +29,6 @@
     "build:linux": "pnpm run build",
     "build:deb": "pnpm run build",
     "build:rpm": "pnpm run build",
-    "build:flatpak": "pnpm run build && flatpak-builder --user --install-deps-from=flathub ./flatpak ai.moeru.airi.dasilva333.flatpak.yml --force-clean",
-    "rename-artifacts": "mkdir -p bundle && tsx scripts/rename-artifacts.ts",
-    "merge-latest-mac": "tsx scripts/merge-latest-mac.ts",
-    "artifacts-metadata": "tsx scripts/artifacts-metadata.ts",
     "smoke:linux-window-render": "NODE_OPTIONS='--experimental-websocket' tsx scripts/linux-window-render-smoke.ts"
   },
   "dependencies": {
@@ -131,7 +127,7 @@
   },
   "devDependencies": {
     "@date-fns/utc": "^2.1.1",
-    "@electron/notarize": "catalog:",
+    "@electron-toolkit/preload": "catalog:",
     "@fontsource-variable/comfortaa": "^5.2.8",
     "@fontsource-variable/dm-sans": "^5.2.8",
     "@fontsource-variable/jura": "^5.2.7",

@@ -92,7 +92,7 @@ The Capacitor app `apps/stage-pocket` was **purged** (web tech on mobile rejecte
 
  - Running or troubleshooting `release:win` / `release:mac`, version stamping, tagging, release-note drafting.
  - Interpreting or fixing `release-linux-desktop.yml` or `deploy-frontends.yml`.
- - Electron-builder config, signing/notarization, artifact naming (`artifacts-metadata.ts`, `rename-artifacts`).
+ - Hutch/Electrobun packaging and artifacts under `apps/stage-tamagotchi/artifacts/`; the old electron-builder config and artifact scripts (`artifacts-metadata.ts`, `rename-artifacts`) were deleted with wave 5 of the port.
  - Any "why did the build fail" involving renderer Node-module leakage, disk space, or file locks.
 
  ## Verification

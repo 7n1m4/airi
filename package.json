@@ -35,7 +35,6 @@
     "build:linux": "pnpm -F @proj-airi/stage-tamagotchi run build:linux",
     "build:deb": "pnpm -F @proj-airi/stage-tamagotchi run build:deb",
     "build:rpm": "pnpm -F @proj-airi/stage-tamagotchi run build:rpm",
-    "build:flatpak": "pnpm -F @proj-airi/stage-tamagotchi run build:flatpak",
     "data:migrate": "tsx scripts/migrate-user-data.ts",
     "build:apps": "node scripts/prune-turbo-cache.js && turbo run build -F=\"./apps/*\"",
     "build:packages": "node scripts/prune-turbo-cache.js && turbo run build -F=\"./packages/*\"",
