@@ -1,0 +1,9 @@
+{
+  "topics": [
+    "lip_sync.rms",
+    "emotion.tag",
+    "token.delta",
+    "presence.changed",
+    "status.changed"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "data": {
+    "delta": " world",
+    "final": true,
+    "index": 1,
+    "message_id": "msg-1",
+    "seq": 6,
+    "session_id": "sess-abc",
+    "ts_ms": 1700000001000
+  },
+  "topic": "token.delta",
+  "type": "event"
+}

@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- C# conformance test (airi-wxp.2.8): validates the hand-written C# wire
+       codec (EventPayloadDecoder) against Rust-canonical golden JSON fixtures
+       in crates/anima-channel/fixtures/golden/. Run: dotnet test -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- The golden fixtures live in crates/anima-channel/fixtures/golden/.
+         Copy them to the test output directory at build time. -->
+    <CopyFixtures Condition="!Exists('$(MSBuildThisFileDirectory)fixtures/golden')">true</CopyFixtures>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <!-- Compile the decoder + wire types directly into the test assembly.
+       These are the same files used by the Godot test project, compiled
+       without the Godot SDK dependency. -->
+  <ItemGroup>
+    <Compile Include="../../../godot/scripts/Net/DaemonEvents.cs" Link="Net/DaemonEvents.cs" />
+    <Compile Include="../../../godot/scripts/Net/EventPayloadDecoder.cs" Link="Net/EventPayloadDecoder.cs" />
+  </ItemGroup>
+
+  <!-- Copy the Rust golden fixtures into the test output directory. -->
+  <ItemGroup>
+    <None Include="../fixtures/golden/**/*.json" CopyToOutputDirectory="PreserveNewest" Link="golden/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+{
+  "data": {
+    "actor_id": "character-7",
+    "level": 0.41999998688697815,
+    "seq": 1024,
+    "ts_ms": 1700000000123
+  },
+  "topic": "lip_sync.rms",
+  "type": "event"
+}

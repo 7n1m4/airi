@@ -1,0 +1,10 @@
+{
+  "data": {
+    "seq": 8,
+    "state": "offline",
+    "subject": "user-42",
+    "ts_ms": 1700000000600
+  },
+  "topic": "presence.changed",
+  "type": "event"
+}

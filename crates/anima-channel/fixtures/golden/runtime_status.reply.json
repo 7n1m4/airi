@@ -1,0 +1,7 @@
+{
+  "app": "airi-daemon",
+  "pid": 1234,
+  "protocol": "airi-channel/1",
+  "uptimeSeconds": 3600,
+  "version": "0.1.0"
+}

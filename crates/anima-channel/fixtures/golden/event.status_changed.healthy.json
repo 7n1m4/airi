@@ -1,0 +1,11 @@
+{
+  "data": {
+    "core_available": true,
+    "seq": 100,
+    "store_available": true,
+    "store_health": "ok",
+    "ts_ms": 1700000000700
+  },
+  "topic": "status.changed",
+  "type": "event"
+}

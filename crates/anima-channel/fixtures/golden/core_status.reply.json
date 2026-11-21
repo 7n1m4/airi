@@ -1,0 +1,10 @@
+{
+  "app": "airi-daemon",
+  "coreAvailable": true,
+  "messageCount": 42,
+  "protocol": "airi-channel/1",
+  "sessionCount": 10,
+  "storeAvailable": true,
+  "storeHealth": "ok",
+  "version": "0.1.0"
+}

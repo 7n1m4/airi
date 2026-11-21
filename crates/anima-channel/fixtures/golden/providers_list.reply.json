@@ -1,0 +1,12 @@
+{
+  "providers": [
+    {
+      "baseUrl": "https://api.openai.com/v1",
+      "enabled": true,
+      "id": "openai",
+      "kind": "openai",
+      "model": "gpt-4o",
+      "updatedAt": 1700000000
+    }
+  ]
+}
