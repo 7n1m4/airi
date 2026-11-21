@@ -1,21 +1,14 @@
+import type { BrowserWindow } from 'electron'
+
 import type { I18n } from '../../libs/i18n'
 import type { ServerChannel } from '../../services/airi/channel-server'
 import type { WidgetsWindowManager } from '../widgets'
 
-import { join, resolve } from 'node:path'
-
 import { defineInvokeHandler } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/main'
-import { BrowserWindow, ipcMain } from 'electron'
 
 import { electronOnboardingClose, electronOnboardingCompleted, electronOnboardingSkipped } from '../../../shared/eventa'
-import { APP_ICON as icon } from '../../assets'
-import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
-import { createReusableWindow } from '../../libs/electron/window-manager'
 import { createWidgetsService } from '../../services/airi/widgets'
-import { toggleWindowShow } from '../shared'
-import { openExternalSafely } from '../shared/open-external'
-import { setupBaseWindowElectronInvokes } from '../shared/window'
+import { createPortedWindow } from '../shared/ported'
 
 export interface OnboardingWindowManager {
   getWindow: () => Promise<BrowserWindow>
@@ -28,80 +21,53 @@ export function setupOnboardingWindowManager(params: {
   i18n: I18n
   widgetsManager: WidgetsWindowManager
 }): OnboardingWindowManager {
-  const rendererBase = baseUrl(resolve(getElectronMainDirname(), '..', 'renderer'))
+  let current: Awaited<ReturnType<typeof createPortedWindow>> | undefined
+  let currentRoute = '/onboarding-v3'
 
-  async function getOnboardingWindow(getWindow: () => Promise<BrowserWindow>) {
-    const window = await getWindow()
-    await toggleWindowShow(window)
-
-    return window
-  }
-
-  const reusableWindow = createReusableWindow(async () => {
-    const newWindow = new BrowserWindow({
+  async function ensureWindow() {
+    if (current && !current.isDestroyed())
+      return current
+    current = await createPortedWindow({
+      tag: 'onboarding',
       title: 'AIRI - Companion Wizard',
       width: 1200,
       height: 760,
-      minWidth: 400,
-      minHeight: 600,
-      show: false,
-      icon,
-      resizable: true,
-      frame: false,
-      titleBarStyle: 'hidden',
-      transparent: false,
-      backgroundColor: '#0f0f0f',
-      webPreferences: {
-        preload: join(getElectronMainDirname(), '../preload/index.cjs'),
-        sandbox: true,
-        webviewTag: true,
-      },
+      route: currentRoute,
+      setupBase: { i18n: params.i18n, serverChannel: params.serverChannel },
     })
 
-    newWindow.on('ready-to-show', () => newWindow.show())
-    newWindow.webContents.setWindowOpenHandler((details) => {
-      openExternalSafely(details.url)
-      return { action: 'deny' }
+    const close = async () => {
+      current?.close()
+    }
+    defineInvokeHandler(current.context, electronOnboardingClose, close)
+    defineInvokeHandler(current.context, electronOnboardingCompleted, close)
+    defineInvokeHandler(current.context, electronOnboardingSkipped, close)
+    createWidgetsService({
+      context: current.context,
+      widgetsManager: params.widgetsManager,
+      window: current.window,
     })
-
-    // TODO: once we refactored eventa to support window-namespaced contexts,
-    // we can remove the setMaxListeners call below since eventa will be able to dispatch and
-    // manage events within eventa's context system.
-    ipcMain.setMaxListeners(0)
-
-    const { context } = createContext(ipcMain, newWindow)
-
-    defineInvokeHandler(context, electronOnboardingClose, async () => newWindow.close())
-    defineInvokeHandler(context, electronOnboardingCompleted, async () => newWindow.close())
-    defineInvokeHandler(context, electronOnboardingSkipped, async () => newWindow.close())
-
-    await setupBaseWindowElectronInvokes({ context, window: newWindow, i18n: params.i18n, serverChannel: params.serverChannel })
-    createWidgetsService({ context, widgetsManager: params.widgetsManager, window: newWindow })
-
-    await load(newWindow, withHashRoute(rendererBase, '/onboarding-v3'))
-
-    return newWindow
-  })
-
-  async function openWindow(route: string = '/onboarding-v3') {
-    const window = await reusableWindow.getWindow()
-
-    if (window.webContents) {
-      await load(window, withHashRoute(rendererBase, route))
-    }
-
-    if (window.isVisible()) {
-      window.show()
-      window.focus()
-    }
-    else {
-      toggleWindowShow(window)
-    }
+    return current
   }
 
   return {
-    getWindow: async () => reusableWindow.getWindow(),
-    getAndToggleWindow: async () => await getOnboardingWindow(reusableWindow.getWindow),
-    openWindow,
+    getWindow: async () => (await ensureWindow()).window,
+    getAndToggleWindow: async () => {
+      const ported = await ensureWindow()
+      if (ported.facade.isVisible())
+        ported.facade.hide()
+      else
+        ported.facade.show()
+      ported.facade.focus()
+      return ported.window
+    },
+    openWindow: async (route = '/onboarding-v3') => {
+      currentRoute = route
+      const ported = await ensureWindow()
+      if (!ported.facade.getURL().includes(`#${route}`))
+        await ported.loadRoute(route)
+      ported.facade.show()
+      ported.facade.focus()
+    },
   }
 }

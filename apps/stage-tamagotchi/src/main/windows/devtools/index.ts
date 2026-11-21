@@ -1,67 +1,46 @@
-import { join, resolve } from 'node:path'
+import type { BrowserWindow } from 'electron'
 
-import { BrowserWindow } from 'electron'
-
-import { APP_ICON as icon } from '../../assets'
-import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
-import { createReusableWindow } from '../../libs/electron/window-manager'
-import { openExternalSafely } from '../shared/open-external'
+import { createPortedWindow } from '../shared/ported'
 
 export interface DevtoolsWindowManager {
   openWindow: (route?: string) => Promise<BrowserWindow>
   getWindow: () => Promise<BrowserWindow>
 }
 
+/** Devtools is just another hash route in the shared renderer entry. */
 export function setupDevtoolsWindow(): DevtoolsWindowManager {
-  const rendererBase = baseUrl(resolve(getElectronMainDirname(), '..', 'renderer'))
   const defaultRoute = '/devtools/markdown-stress'
   let currentRoute = defaultRoute
+  let current: Awaited<ReturnType<typeof createPortedWindow>> | undefined
 
-  const reusable = createReusableWindow(async () => {
-    const window = new BrowserWindow({
+  async function ensureWindow() {
+    if (current && !current.isDestroyed())
+      return current
+    current = await createPortedWindow({
+      tag: 'devtools',
       title: 'AIRI — Devtools',
       width: 1020,
       height: 720,
-      minWidth: 640,
-      minHeight: 480,
-      show: false,
-      icon,
-      webPreferences: {
-        preload: join(getElectronMainDirname(), '../preload/index.cjs'),
-        // Preload exposes Electron APIs and needs Node access.
-        sandbox: true,
-      },
+      route: currentRoute,
     })
-
-    window.on('ready-to-show', () => window.show())
-    window.webContents.setWindowOpenHandler((details) => {
-      openExternalSafely(details.url)
-      return { action: 'deny' }
-    })
-
-    await load(window, withHashRoute(rendererBase, currentRoute))
-    return window
-  })
-
-  async function openWindow(route?: string) {
-    if (route)
-      currentRoute = route
-
-    const window = await reusable.getWindow()
-    const targetRoute = route ?? currentRoute
-    const url = withHashRoute(rendererBase, targetRoute)
-
-    // If the route changes while the window is open, reload to that route.
-    const currentUrl = window.webContents.getURL()
-    if (!currentUrl.includes(`#${targetRoute}`)) {
-      await load(window, url)
-    }
-
-    return window
+    return current
   }
 
   return {
-    openWindow,
-    getWindow: reusable.getWindow,
+    openWindow: async (route) => {
+      if (route)
+        currentRoute = route
+      const ported = await ensureWindow()
+      if (!ported.facade.getURL().includes(`#${currentRoute}`))
+        await ported.loadRoute(currentRoute)
+      ported.facade.show()
+      ported.facade.focus()
+      return ported.window
+    },
+    getWindow: async () => {
+      const ported = await ensureWindow()
+      ported.facade.show()
+      return ported.window
+    },
   }
 }

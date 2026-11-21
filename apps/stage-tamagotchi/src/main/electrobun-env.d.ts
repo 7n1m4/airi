@@ -79,6 +79,7 @@ declare module 'electrobun/main' {
     close(): unknown
     requestClose(): unknown
     activate(): unknown
+    focus(): unknown
     show(): unknown
     showInactive(): unknown
     hide(): unknown

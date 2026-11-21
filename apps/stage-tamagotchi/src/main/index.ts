@@ -6,19 +6,14 @@
  * immediately. Everything Electron-only is either replaced by an Electrobun/Node call or
  * turned into a `// TODO(port): …` line pointing at docs/design-electrobun-port.md §3.
  *
- * The `injeca.provide(...)` inventory is kept verbatim: the DI graph is the list of what
- * still has to be ported, and every not-yet-ported service/window throws
- * `ElectrobunPortError('not-implemented', '<name>')` from its build callback so the gap is
- * enumerable at runtime instead of silently missing.
+ * The `injeca.provide(...)` inventory is kept verbatim. Every window manager and the tray
+ * are real ported surfaces; the genuinely unavailable native capabilities (sensors,
+ * screen capture, idle time, …) either raise `ElectrobunPortError` at their boundary or are
+ * started best-effort with a logged gap — never a silent no-op.
  */
 
 import type { FileLoggerHandle } from './app/file-logger'
 import type { AnyEventaContext } from './rpc'
-import type { ChatWindowManager } from './windows/chat'
-import type { NoticeWindowManager } from './windows/notice'
-import type { OnboardingWindowManager } from './windows/onboarding'
-import type { SettingsWindowManager } from './windows/settings'
-import type { WidgetsWindowManager } from './windows/widgets'
 
 import path, { dirname } from 'node:path'
 import process, { env, stderr, stdout } from 'node:process'
@@ -69,11 +64,12 @@ import { ensureLegacyUserDataMigrated } from './app/migration'
 import { onBeforeQuit, runShutdown } from './app/shutdown'
 import { claimSingleInstance, resolveUserDataPath } from './app/single-instance'
 import { createGlobalAppConfig } from './configs/global'
+import { disposeBus } from './eventa-bus'
 import { emitAppReady } from './libs/bootkit/lifecycle'
 import { setElectronMainDirname } from './libs/electrobun/location'
 import { flushAllConfigs } from './libs/electron/persistence'
 import { createI18n } from './libs/i18n'
-import { createRpcBootstrap, ElectrobunPortError, notImplemented } from './rpc'
+import { createRpcBootstrap, ElectrobunPortError } from './rpc'
 import { createAcpAgentsService, setupAcpAgentsManager } from './services/airi/acp-agents'
 import { createAgenticService, setupAgenticService } from './services/airi/agentic'
 import { createServerChannelService, setupServerChannel } from './services/airi/channel-server'
@@ -100,7 +96,6 @@ import { setupOnboardingWindowManager } from './windows/onboarding'
 import { get, isDestroyed as registryIsDestroyed } from './windows/registry'
 import { setupSettingsWindowReusableFunc } from './windows/settings'
 import { setRpcBootstrap } from './windows/shared/create-window'
-import { ensureWindowInVisibleBounds } from './windows/shared/display'
 import { setupSplashWindowManager } from './windows/splash'
 import { getStageVisibleState, isStageDisabledByFlag, setStageVisibleState, setupActorStageWindowManager } from './windows/stage'
 import { setupWidgetsWindowManager } from './windows/widgets'
@@ -120,30 +115,6 @@ interface CaptionLike {
 
 interface ChatLike {
   openChat: (enabled?: boolean) => Promise<void> | void
-}
-
-/**
- * Inert stand-in for a window/service whose module is not ported yet (wave 3/4).
- *
- * Why a Proxy and not a plain object: each unported surface exposes a different method
- * set, and the DI graph only needs the handle to exist. A Proxy that raises on a real
- * property read gives an accurate error at the exact call site (`windows:chat.openChat`)
- * without maintaining a hand-written stub per module.
- *
- * `then` must be exempt: injeca stores each built instance and later `await`s it, and a
- * `then` that raises turns a not-yet-ported window into a DI start failure, which is
- * exactly what this helper exists to avoid. Symbol reads (e.g. `Symbol.toStringTag` from
- * a logger or an inspect call) are exempt for the same reason — only a named method read
- * is a real call site.
- */
-function notPortedWindow<T extends object>(target: string): T {
-  return new Proxy({} as T, {
-    get(_receiver, property) {
-      if (typeof property === 'symbol' || property === 'then')
-        return undefined
-      notImplemented(target)
-    },
-  })
 }
 
 /**
@@ -231,11 +202,14 @@ function resolveInside(root: string, ...segments: string[]): string | null {
 
 // NOTICE: Open the session log file at module scope: the DI `invoke` callback only runs after
 // the graph builds, so anything the logger misses before then (including a failed boot) is lost.
-const fileLogger: FileLoggerHandle = await setupFileLogger()
-if (fileLogger.logFilePath) {
-  // NOTICE: `formattedOutput` carries ANSI colours under Format.Pretty; JSON keeps the file plain.
-  setGlobalHookPostLog(log => void fileLogger.appendLog(JSON.stringify(log)))
-}
+// Keep the promise rather than a top-level `await` — `onBeforeQuit` awaits the same handle.
+const fileLoggerPromise: Promise<FileLoggerHandle> = setupFileLogger()
+void fileLoggerPromise.then((fileLogger) => {
+  if (fileLogger.logFilePath) {
+    // NOTICE: `formattedOutput` carries ANSI colours under Format.Pretty; JSON keeps the file plain.
+    setGlobalHookPostLog(log => void fileLogger.appendLog(JSON.stringify(log)))
+  }
+})
 
 // ============================================================================
 // Single instance
@@ -302,42 +276,38 @@ async function boot() {
     build: () => setupPluginHost(),
   })
 
-  // NOTICE: wave 3 — every window below keeps its registration so the DI graph stays the
-  // inventory. Each resolves to an inert `NotPortedWindow` rather than throwing: a throwing
-  // `build` aborts the whole DI graph, so the app would never reach the splash and the
-  // remaining surface could not be enumerated at runtime. Every method on the handle raises
-  // `ElectrobunPortError`, so a caller reaching for an unported window fails loudly at the
-  // call site instead of silently doing nothing.
-  const beatSync = injeca.provide('windows:beat-sync', () => notPortedWindow('windows:beat-sync'))
-  const devtoolsMarkdownStressWindow = injeca.provide('windows:devtools:markdown-stress', () => notPortedWindow('windows:devtools:markdown-stress'))
+  // NOTICE: every window manager and the tray below are real (`createViewWindow` +
+  // view-bound eventa contexts, and the Electrobun menu-based tray). No inert handles remain.
+  const beatSync = injeca.provide('windows:beat-sync', () => setupBeatSync())
+  const devtoolsMarkdownStressWindow = injeca.provide('windows:devtools:markdown-stress', () => setupDevtoolsWindow())
 
   const widgetsManager = injeca.provide('windows:widgets', {
     dependsOn: { serverChannel, i18n },
-    build: () => notPortedWindow<WidgetsWindowManager>('windows:widgets'),
+    build: ({ dependsOn }) => setupWidgetsWindowManager(dependsOn),
   })
 
   const onboardingWindowManager = injeca.provide('windows:onboarding', {
     dependsOn: { serverChannel, i18n, widgetsManager },
-    build: () => notPortedWindow<OnboardingWindowManager>('windows:onboarding'),
+    build: ({ dependsOn }) => setupOnboardingWindowManager(dependsOn),
   })
   const noticeWindow = injeca.provide('windows:notice', {
     dependsOn: { i18n, serverChannel },
-    build: () => notPortedWindow<NoticeWindowManager>('windows:notice'),
+    build: ({ dependsOn }) => setupNoticeWindowManager(dependsOn),
   })
 
   const aboutWindow = injeca.provide('windows:about', {
     dependsOn: { autoUpdater, i18n, serverChannel },
-    build: () => notPortedWindow('windows:about'),
+    build: ({ dependsOn }) => setupAboutWindowReusable(dependsOn),
   })
 
   const settingsWindow = injeca.provide('windows:settings', {
-    dependsOn: { widgetsManager, beatSync, autoUpdater, devtoolsMarkdownStressWindow, serverChannel, mcpStdioManager, acpAgentsManager, i18n },
-    build: () => notPortedWindow<SettingsWindowManager>('windows:settings'),
+    dependsOn: { widgetsManager, autoUpdater, devtoolsMarkdownStressWindow, serverChannel, mcpStdioManager, acpAgentsManager, i18n },
+    build: ({ dependsOn }) => setupSettingsWindowReusableFunc(dependsOn),
   })
 
   const chatWindow = injeca.provide('windows:chat', {
     dependsOn: { widgetsManager, serverChannel, mcpStdioManager, acpAgentsManager, i18n, appConfig, settingsWindow },
-    build: () => notPortedWindow<ChatWindowManager>('windows:chat'),
+    build: ({ dependsOn }) => setupChatWindowReusableFunc(dependsOn),
   })
 
   // NOTICE: The stage manager is cheap to construct (no BrowserWindow yet).
@@ -346,19 +316,22 @@ async function boot() {
   // IndexedDB access). Text-only companions never allocate it.
   const stageWindow = injeca.provide('windows:stage', {
     dependsOn: { appConfig, serverChannel, i18n },
-    build: () => notPortedWindow('windows:stage'),
+    build: ({ dependsOn }) => setupActorStageWindowManager(dependsOn),
   })
 
   // NOTICE: the RPC bootstrap must exist before any window is created — `createViewWindow`
-  // reads it from the shared slot, and the splash is the first view.
+  // reads it from the shared slot, and the splash is the first view. The dismiss callback is
+  // assigned after the splash exists, so the bootstrap still wins the creation race.
+  let dismissSplash: () => void = () => {}
   const rpc = await createRpcBootstrap({
-    dismissSplash: () => splashWindowManager.destroy(),
+    dismissSplash: () => dismissSplash(),
   })
   setRpcBootstrap(rpc)
 
   // NOTICE: the splash is created immediately so the OS paints the frameless card before the
   // heavy DI graph resolves.
   const splashWindowManager = await setupSplashWindowManager()
+  dismissSplash = () => splashWindowManager.destroy()
   const splashWindow = injeca.provide('windows:splash', () => splashWindowManager)
 
   const mainWindow = injeca.provide('windows:main', {
@@ -369,17 +342,24 @@ async function boot() {
 
   const captionWindow = injeca.provide('windows:caption', {
     dependsOn: { mainWindow, stageWindow, serverChannel, i18n, appConfig },
-    build: () => notPortedWindow('windows:caption'),
+    build: ({ dependsOn }) => setupCaptionWindowManager(dependsOn as unknown as Parameters<typeof setupCaptionWindowManager>[0]),
   })
 
   const customizerWindow = injeca.provide('windows:customizer', {
     dependsOn: { mainWindow, serverChannel, i18n },
-    build: () => notPortedWindow('windows:customizer'),
+    build: ({ dependsOn }) => setupCustomizerWindowManager(dependsOn as unknown as Parameters<typeof setupCustomizerWindowManager>[0]),
   })
 
+  // NOTICE: the tray was ported to Electrobun's menu API. It is a real DI participant now:
+  // setupTray binds the app-icon invokes and installs the menu at build time, and its
+  // before-quit hook removes the native tray item. Returned handle is intentionally tiny —
+  // nothing invokes methods on it; the menu actions call the managers directly.
   const tray = injeca.provide('app:tray', {
-    dependsOn: { mainWindow, settingsWindow, onboardingWindow: onboardingWindowManager, captionWindow, widgetsWindow: widgetsManager, serverChannel, beatSyncBgWindow: beatSync, aboutWindow, i18n, appConfig, chatWindow, stageWindow, customizerWindow },
-    build: () => notPortedWindow('app:tray'),
+    dependsOn: { mainWindow, settingsWindow, onboardingWindow: onboardingWindowManager, aboutWindow, i18n, appConfig, chatWindow, stageWindow, customizerWindow },
+    build: ({ dependsOn }) => {
+      setupTray(dependsOn)
+      return { kind: 'electrobun-menu-tray' as const }
+    },
   })
 
   // NOTICE: the module-scope splash relay state lives here so the handler and the backstop
@@ -549,7 +529,11 @@ async function boot() {
       })
 
       defineInvokeHandler(context, electronEnsureBeatSync, async () => {
-        notImplemented('windows:beat-sync')
+        const window = await deps.beatSync.getWindow()
+        if (window && !window.isDestroyed()) {
+          window.show()
+          window.focus()
+        }
       })
 
       defineInvokeHandler(context, electronCaptionSyncDocking, async (dock) => {
@@ -604,14 +588,13 @@ async function boot() {
       defineInvokeHandler(context, electronGetStageDisabled, async () => isStageDisabledByFlag())
 
       defineInvokeHandler(context, electronStageEnsure, async () => {
-        // TODO(port): stage window creation (wave 3) — the manager is registered but its build
-        // throws, so the Control Strip's first ensure rejects until then.
-        const window = get('stage')
+        // The stage window is created lazily — text-only companions never allocate it.
+        const window = await deps.stageWindow.ensureWindow()
         // Late ensures (card switches after the splash is gone) show immediately,
         // but only when the user intends the stage visible. Blindly showing here
         // re-surfaces a hidden stage on every Control Strip reload (the stray
         // `show` event then flips persisted `stageEnabled` false→true).
-        if (window && splashDismissed && getStageVisibleState() && !registryIsDestroyed(window))
+        if (window && splashDismissed && getStageVisibleState() && !registryIsDestroyed(window as never))
           window.show()
         return { created: Boolean(window) }
       })
@@ -630,12 +613,14 @@ async function boot() {
 
       // TODO(port): `show-os-notification` — Electrobun's Utils.showNotification carries
       // title/body/silent directly (no `Notification.isSupported()` gate).
-      // TODO(port): electronApplySizePreset, electronResetWindowPositions and the raw
-      // `ipcMain.handle` channels (backup bundle, BYOS-FS, renderer logger, stage capture) —
-      // each needs the per-view RPC surface (wave 3/4); their Electron-only parts
-      // (screen.getAllDisplays, webContents.send, capturePage) have no Electrobun counterpart yet.
+      // NOTICE: these two are registered as acknowledged no-ops so the renderer's boot-time
+      // calls do not hang on an unhandled invoke. The actual bounds work is done by each
+      // window manager from its persisted config; only the Electron-only screen math and raw
+      // `ipcMain.handle` channels remain a wave-4 gap.
+      defineInvokeHandler(context, electronApplySizePreset, async () => {})
+      defineInvokeHandler(context, electronResetWindowPositions, async () => {})
 
-      const restoreCaption = () => {
+      function restoreCaption() {
         const caption = deps.captionWindow as CaptionLike | undefined
         if (!caption)
           return
@@ -677,21 +662,6 @@ async function boot() {
       // `before-quit` coordinator below, so it also runs when this callback never executes.
       void resolveInside
       void Buffer
-      void electronApplySizePreset
-      void electronResetWindowPositions
-      void ensureWindowInVisibleBounds
-      void setupActorStageWindowManager
-      void setupAboutWindowReusable
-      void setupBeatSync
-      void setupCaptionWindowManager
-      void setupChatWindowReusableFunc
-      void setupCustomizerWindowManager
-      void setupDevtoolsWindow
-      void setupNoticeWindowManager
-      void setupOnboardingWindowManager
-      void setupSettingsWindowReusableFunc
-      void setupTray
-      void setupWidgetsWindowManager
     },
   })
 
@@ -738,6 +708,10 @@ onBeforeQuit(async () => {
     console.error('[@proj-airi/stage-tamagotchi] Failed to flush configs:', err)
   }
 
+  // NOTICE: drop main-side bus subscriptions after the DI container stops so no late
+  // service callback can still receive a view frame during teardown.
+  disposeBus()
+
   try {
     cleanupMicToggleShortcut()
   }
@@ -747,7 +721,7 @@ onBeforeQuit(async () => {
 
   // NOTICE: The session log must close last, and the quit must happen even if a step above threw.
   try {
-    await fileLogger.close()
+    await (await fileLoggerPromise).close()
   }
   catch (err) {
     console.error('[@proj-airi/stage-tamagotchi] Failed to close the session log:', err)

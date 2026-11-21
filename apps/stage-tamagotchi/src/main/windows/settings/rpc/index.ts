@@ -1,6 +1,7 @@
 import type { BrowserWindow } from 'electron'
 
 import type { I18n } from '../../../libs/i18n'
+import type { AnyEventaContext } from '../../../rpc'
 import type { AcpAgentsManager } from '../../../services/airi/acp-agents'
 import type { ServerChannel } from '../../../services/airi/channel-server'
 import type { McpStdioManager } from '../../../services/airi/mcp-servers'
@@ -9,17 +10,21 @@ import type { DevtoolsWindowManager } from '../../devtools'
 import type { WidgetsWindowManager } from '../../widgets'
 
 import { defineInvokeHandler } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/main'
-import { ipcMain } from 'electron'
 
 import { electronOpenDevtoolsWindow, electronOpenSettingsDevtools } from '../../../../shared/eventa'
 import { createAcpAgentsService } from '../../../services/airi/acp-agents'
 import { createMcpServersService } from '../../../services/airi/mcp-servers'
 import { createWidgetsService } from '../../../services/airi/widgets'
 import { createAutoUpdaterService } from '../../../services/electron'
-import { setupBaseWindowElectronInvokes } from '../../shared/window'
 
+/**
+ * Settings' own eventa surface, bound to its view context.
+ *
+ * The base window services (screen/window/app/i18n/sensors) are registered by
+ * `createPortedWindow`; only the Settings-specific invokes live here.
+ */
 export async function setupSettingsWindowInvokes(params: {
+  context: AnyEventaContext
   settingsWindow: BrowserWindow
   widgetsManager: WidgetsWindowManager
   autoUpdater: AutoUpdater
@@ -29,24 +34,30 @@ export async function setupSettingsWindowInvokes(params: {
   acpAgentsManager: AcpAgentsManager
   i18n: I18n
 }) {
-  // TODO: once we refactored eventa to support window-namespaced contexts,
-  // we can remove the setMaxListeners call below since eventa will be able to dispatch and
-  // manage events within eventa's context system.
-  ipcMain.setMaxListeners(0)
+  createWidgetsService({
+    context: params.context,
+    widgetsManager: params.widgetsManager,
+    window: params.settingsWindow,
+  })
+  try {
+    createAutoUpdaterService({
+      context: params.context,
+      window: params.settingsWindow,
+      service: params.autoUpdater,
+    })
+  }
+  catch (error) {
+    console.warn('[Settings] Auto-updater service unavailable:', error instanceof Error ? error.message : error)
+  }
+  createMcpServersService({ context: params.context, manager: params.mcpStdioManager })
+  createAcpAgentsService({ context: params.context, manager: params.acpAgentsManager })
 
-  const { context } = createContext(ipcMain, params.settingsWindow)
-
-  await setupBaseWindowElectronInvokes({ context, window: params.settingsWindow, i18n: params.i18n, serverChannel: params.serverChannel })
-
-  createWidgetsService({ context, widgetsManager: params.widgetsManager, window: params.settingsWindow })
-  createAutoUpdaterService({ context, window: params.settingsWindow, service: params.autoUpdater })
-  createMcpServersService({ context, manager: params.mcpStdioManager })
-  createAcpAgentsService({ context, manager: params.acpAgentsManager })
-
-  defineInvokeHandler(context, electronOpenSettingsDevtools, async () => params.settingsWindow.webContents.openDevTools({ mode: 'detach' }))
-  defineInvokeHandler(context, electronOpenDevtoolsWindow, async (payload) => {
+  defineInvokeHandler(params.context, electronOpenSettingsDevtools, async () => {
+    params.settingsWindow.webContents.openDevTools({ mode: 'detach' })
+  })
+  defineInvokeHandler(params.context, electronOpenDevtoolsWindow, async (payload) => {
     await params.devtoolsMarkdownStressWindow.openWindow(payload?.route)
   })
 
-  return context
+  return params.context
 }

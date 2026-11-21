@@ -1,4 +1,5 @@
-import type { BrowserWindow, BrowserWindowConstructorOptions, Rectangle } from 'electron'
+import type { Rectangle } from 'electrobun/main'
+import type { BrowserWindow } from 'electron'
 import type { InferOutput } from 'valibot'
 
 import type { globalAppConfigSchema } from '../../configs/global'
@@ -8,31 +9,18 @@ import type { ServerChannel } from '../../services/airi/channel-server'
 import type { ActorStageWindowManager } from '../stage'
 
 import { createHash } from 'node:crypto'
-import { join, resolve } from 'node:path'
 
 import { defineInvokeHandler } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/main'
-import { BrowserWindow as ElectronBrowserWindow, ipcMain, screen } from 'electron'
+import { Screen } from 'electrobun/main'
 import { debounce, throttle } from 'es-toolkit'
-import { isMacOS } from 'std-env'
 import { boolean, number, object, optional, record, string } from 'valibot'
 
 import { captionFollowStagePositionChanged, captionFollowStageVisibilityChanged, captionGetFollowStagePosition, captionGetFollowStageVisibility } from '../../../shared/eventa'
-import { APP_ICON as icon } from '../../assets'
 import { onAppBeforeQuit } from '../../libs/bootkit/lifecycle'
-import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
-import { createConfig } from '../../libs/electron/persistence'
-import { createReusableWindow } from '../../libs/electron/window-manager'
 import { showWindowOnAllWorkspaces } from '../shared/app-icon'
-import { mapForBreakpoints, resolutionBreakpoints, widthFrom } from '../shared/display'
-import { openExternalSafely } from '../shared/open-external'
-import { setupBaseWindowElectronInvokes, transparentWindowConfig } from '../shared/window'
-
-let isCaptionVisible = false
-
-export function setCaptionVisibleState(visible: boolean) {
-  isCaptionVisible = visible
-}
+import { displayMatching, mapForBreakpoints, resolutionBreakpoints, widthFrom } from '../shared/display'
+import { createConfig } from '../shared/persistence'
+import { createPortedWindow } from '../shared/ported'
 
 const captionConfigSchema = object({
   followStagePosition: boolean(),
@@ -53,151 +41,101 @@ const captionConfigSchema = object({
 type CaptionConfig = InferOutput<typeof captionConfigSchema>
 
 function computeDisplayMatrixHash(): string {
-  const displays = screen.getAllDisplays()
+  let displays: Array<{ bounds: Rectangle, scaleFactor?: number }> = []
+  try {
+    displays = Screen.getAllDisplays()
+  }
+  catch {
+    return 'fallback'
+  }
   const signature = displays
     .slice()
     .sort((a, b) => (a.bounds.x - b.bounds.x) || (a.bounds.y - b.bounds.y))
     .map(d => [d.bounds.x, d.bounds.y, d.bounds.width, d.bounds.height, d.scaleFactor ?? 1].join(','))
     .join('|')
-
   return createHash('sha256').update(signature).digest('hex').slice(0, 16)
 }
 
 function clampBoundsWithinRect(bounds: Rectangle, rect: Rectangle): Rectangle {
-  const x = Math.min(Math.max(bounds.x, rect.x), rect.x + rect.width - bounds.width)
-  const y = Math.min(Math.max(bounds.y, rect.y), rect.y + rect.height - bounds.height)
-  return { x, y, width: bounds.width, height: bounds.height }
+  return {
+    x: Math.min(Math.max(bounds.x, rect.x), rect.x + rect.width - bounds.width),
+    y: Math.min(Math.max(bounds.y, rect.y), rect.y + rect.height - bounds.height),
+    width: bounds.width,
+    height: bounds.height,
+  }
 }
 
-// NOTICE: The stage window may be lazily created after boot (text-only
-// companions bypass it, avatar companions resolve post-splash). Always resolve
-// the live window through the manager instead of caching a snapshot.
-function resolveStageWindow(stageWindow?: BrowserWindow | ActorStageWindowManager | null): BrowserWindow | null {
+function resolveStageWindow(stageWindow?: BrowserWindow | ActorStageWindowManager | null): BrowserWindow | undefined {
   if (!stageWindow)
-    return null
+    return undefined
   if (typeof (stageWindow as ActorStageWindowManager).getExistingWindow === 'function')
-    return (stageWindow as ActorStageWindowManager).getExistingWindow() ?? null
+    return (stageWindow as ActorStageWindowManager).getExistingWindow()
   return stageWindow as BrowserWindow
 }
 
-function computeInitialCaptionBounds(params: { stageWindow?: BrowserWindow | ActorStageWindowManager | null, captionOptions?: Partial<Rectangle> }): Rectangle {
-  const stageWindow = resolveStageWindow(params.stageWindow)
-  const mainBounds = (stageWindow && !stageWindow.isDestroyed())
-    ? stageWindow.getBounds()
-    : { x: 0, y: 0, width: 450, height: 600 }
-
-  let mainX = mainBounds.x
-  let mainY = mainBounds.y
-  let mainWidth = mainBounds.width
-  let mainHeight = mainBounds.height
-  if (mainX === undefined || Number.isNaN(mainX))
-    mainX = 0
-  if (mainY === undefined || Number.isNaN(mainY))
-    mainY = 0
-  if (!mainWidth || Number.isNaN(mainWidth) || mainWidth <= 0)
-    mainWidth = 450
-  if (!mainHeight || Number.isNaN(mainHeight) || mainHeight <= 0)
-    mainHeight = 600
-
-  const sanitizedMain = { x: mainX, y: mainY, width: mainWidth, height: mainHeight }
-
-  let targetDisplay: Electron.Display | undefined
-  try {
-    targetDisplay = screen.getDisplayMatching(sanitizedMain)
+function stageBounds(stageWindow?: BrowserWindow | ActorStageWindowManager | null): Rectangle {
+  const win = resolveStageWindow(stageWindow)
+  const bounds = win?.isDestroyed() ? undefined : win?.getBounds()
+  return {
+    x: Number.isNaN(bounds?.x) ? 0 : bounds?.x ?? 0,
+    y: Number.isNaN(bounds?.y) ? 0 : bounds?.y ?? 0,
+    width: bounds?.width && !Number.isNaN(bounds.width) ? bounds.width : 450,
+    height: bounds?.height && !Number.isNaN(bounds.height) ? bounds.height : 600,
   }
-  catch {
-    targetDisplay = screen.getPrimaryDisplay()
-  }
-  if (!targetDisplay) {
-    targetDisplay = screen.getPrimaryDisplay()
-  }
-  const displayWorkArea = targetDisplay.workArea || screen.getPrimaryDisplay().workArea
-
-  // Base sizing from display width with sensible caps
-  const width = mapForBreakpoints(
-    displayWorkArea.width,
-    {
-      '720p': widthFrom(displayWorkArea, { percentage: 0.9, max: { actual: 560 }, min: { actual: 280 } }),
-      '1080p': widthFrom(displayWorkArea, { percentage: 0.5, max: { actual: 640 }, min: { actual: 320 } }),
-      '2k': widthFrom(displayWorkArea, { percentage: 0.4, max: { actual: 720 }, min: { actual: 360 } }),
-      '4k': widthFrom(displayWorkArea, { percentage: 0.33, max: { actual: 768 }, min: { actual: 420 } }),
-    },
-    { breakpoints: resolutionBreakpoints },
-  )
-  const height = Math.max(Math.floor(width / 3.2), 120)
-
-  const margin = 16
-  // Prefer to the right of stage window, else to the left, else bottom centered
-  let x = sanitizedMain.x + sanitizedMain.width + margin
-  let y = sanitizedMain.y + sanitizedMain.height - height
-
-  const rightEdge = x + width
-  const displayRight = displayWorkArea.x + displayWorkArea.width
-
-  if (rightEdge > displayRight) {
-    // Place to the left
-    x = sanitizedMain.x - width - margin
-  }
-
-  // If still out of bounds horizontally, fallback to bottom center
-  if (x < displayWorkArea.x || (x + width) > displayRight) {
-    x = displayWorkArea.x + Math.floor((displayWorkArea.width - width) / 2)
-  }
-
-  // Clamp vertically
-  if (y < displayWorkArea.y) {
-    y = displayWorkArea.y + margin
-  }
-
-  const initial = clampBoundsWithinRect({ x, y, width, height }, displayWorkArea)
-
-  return { ...initial, ...params.captionOptions }
 }
 
-function createCaptionWindow(options?: BrowserWindowConstructorOptions) {
-  const window = new ElectronBrowserWindow({
-    title: 'AIRI — Caption',
-    width: 480,
-    height: 180,
-    show: false,
-    icon,
-    webPreferences: {
-      preload: join(getElectronMainDirname(), '../preload/index.cjs'),
-      sandbox: true,
-    },
-    // Thanks to [@HeartArmy](https://github.com) for the tip implementation.
-    //
-    // https://github.com/electron/electron/issues/10078#issuecomment-3410164802
-    // https://stackoverflow.com/questions/39835282/set-browserwindow-always-on-top-even-other-app-is-in-fullscreen-electron-mac
-    type: 'panel',
-    ...transparentWindowConfig(),
-    ...options,
-  })
+function computeInitialCaptionBounds(params: {
+  stageWindow?: BrowserWindow | ActorStageWindowManager | null
+  captionOptions?: Partial<Rectangle>
+}): Rectangle {
+  const main = stageBounds(params.stageWindow)
+  const targetDisplay = displayMatching(main)
+  const displayWorkArea = targetDisplay.workArea
+  const width = mapForBreakpoints(displayWorkArea.width, {
+    '720p': widthFrom(displayWorkArea, { percentage: 0.9, max: { actual: 560 }, min: { actual: 280 } }),
+    '1080p': widthFrom(displayWorkArea, { percentage: 0.5, max: { actual: 640 }, min: { actual: 320 } }),
+    '2k': widthFrom(displayWorkArea, { percentage: 0.4, max: { actual: 720 }, min: { actual: 360 } }),
+    '4k': widthFrom(displayWorkArea, { percentage: 0.33, max: { actual: 768 }, min: { actual: 420 } }),
+  }, { breakpoints: resolutionBreakpoints })
+  const height = Math.max(Math.floor(width / 3.2), 120)
+  const margin = 16
+  let x = main.x + main.width + margin
+  let y = main.y + main.height - height
+  const displayRight = displayWorkArea.x + displayWorkArea.width
+  if (x + width > displayRight)
+    x = main.x - width - margin
+  if (x < displayWorkArea.x || x + width > displayRight)
+    x = displayWorkArea.x + Math.floor((displayWorkArea.width - width) / 2)
+  if (y < displayWorkArea.y)
+    y = displayWorkArea.y + margin
+  return { ...clampBoundsWithinRect({ x, y, width, height }, displayWorkArea), ...params.captionOptions }
+}
 
-  // Click-through is controlled by caller via setIgnoreMouseEvents
-  // Avoid window buttons on macOS frameless windows
-  // Thanks to [@HeartArmy](https://github.com) for the tip implementation.
-  //
-  // https://github.com/electron/electron/issues/10078#issuecomment-3410164802
-  // https://stackoverflow.com/questions/39835282/set-browserwindow-always-on-top-even-other-app-is-in-fullscreen-electron-mac
-  window.setAlwaysOnTop(true, 'screen-saver', 2)
-  window.setFullScreenable(false)
-  showWindowOnAllWorkspaces(window)
-  if (isMacOS) {
-    window.setWindowButtonVisibility(false)
+function calculateDockingBounds(win: BrowserWindow, stage: BrowserWindow | ActorStageWindowManager | null | undefined, dock?: 'top' | 'bottom'): Rectangle {
+  const main = stageBounds(stage)
+  const b = win.getBounds()
+  const workArea = displayMatching(main).workArea
+  const maxHeight = 240
+  const dockInsideThreshold = 30
+  const insideHeight = 80
+
+  if (dock === 'bottom') {
+    const spaceBottom = workArea.height - (main.y + main.height - workArea.y)
+    if (spaceBottom >= maxHeight)
+      return { x: main.x, y: Math.round(main.y + main.height), width: main.width, height: maxHeight }
+    if (spaceBottom >= dockInsideThreshold)
+      return { x: main.x, y: Math.round(main.y + main.height), width: main.width, height: Math.round(spaceBottom) }
+    return { x: main.x, y: Math.round(main.y + main.height - insideHeight), width: main.width, height: insideHeight }
   }
-
-  window.on('ready-to-show', () => {
-    if (isCaptionVisible) {
-      window.show()
-    }
-  })
-  window.webContents.setWindowOpenHandler((details) => {
-    openExternalSafely(details.url)
-    return { action: 'deny' }
-  })
-
-  return window
+  if (dock === 'top') {
+    const spaceTop = main.y - workArea.y
+    if (spaceTop >= maxHeight)
+      return { x: main.x, y: Math.round(main.y - maxHeight), width: main.width, height: maxHeight }
+    if (spaceTop >= dockInsideThreshold)
+      return { x: main.x, y: Math.round(workArea.y), width: main.width, height: Math.round(spaceTop) }
+    return { x: main.x, y: main.y, width: main.width, height: insideHeight }
+  }
+  return { x: main.x, y: main.y, width: b.width || 480, height: b.height || 180 }
 }
 
 export function setupCaptionWindowManager(params: {
@@ -207,361 +145,24 @@ export function setupCaptionWindowManager(params: {
   i18n: I18n
   appConfig: Config<typeof globalAppConfigSchema>
 }) {
+  void params.mainWindow
   const matrixHash = computeDisplayMatrixHash()
-
-  const {
-    setup: setupConfig,
-    get: getConfigRaw,
-    update: updateConfig,
-  } = createConfig('windows-caption', 'config.json', captionConfigSchema, {
+  const { setup, get: getConfigRaw, update: updateConfig } = createConfig('windows-caption', 'config.json', captionConfigSchema, {
     default: { followStagePosition: true, followStageVisibility: true, matrices: {} },
     autoHeal: true,
   })
   const getConfig = (): CaptionConfig => getConfigRaw() ?? { followStagePosition: true, followStageVisibility: true, matrices: {} }
-
-  setupConfig()
+  setup()
 
   let followStagePosition = getConfig().followStagePosition ?? true
   let followStageVisibility = getConfig().followStageVisibility ?? true
   let lastProgrammaticMoveAt = 0
-
-  // Keep references to listeners so we can detach when toggling
-  let detachMainMoveListener: (() => void) | undefined
-
-  // Shared mutable state declared before the closures that read/write it.
   let lastTarget: Rectangle | undefined
   let triggerMoveInternal: (() => void) | undefined
-  let currentWindow: BrowserWindow | undefined
+  let detachFollow: (() => void) | undefined
+  let current: Awaited<ReturnType<typeof createPortedWindow>> | undefined
 
-  // NOTICE: Resolve the live stage window on every read. The manager returns
-  // the current window (or undefined across lazy create/destroy cycles).
-  const getStageWindow = () => resolveStageWindow(params.stageWindow)
-
-  // Note: when following window, we compute and persist the current relative offset
-  // and start following without docking, so no immediate reposition is needed here.
-
-  function computeRelativeOffset(win: BrowserWindow): { dx: number, dy: number } {
-    const caption = win.getBounds()
-    const stageWindow = getStageWindow()
-    const main = (stageWindow && !stageWindow.isDestroyed())
-      ? stageWindow.getBounds()
-      : { x: 0, y: 0, width: 450, height: 600 }
-    let dx = caption.x - main.x
-    let dy = caption.y - main.y
-    if (Number.isNaN(dx) || Number.isNaN(dy)) {
-      dx = 466
-      dy = 420
-    }
-    return { dx, dy }
-  }
-
-  function calculateDockingBounds(win: BrowserWindow, dock?: 'top' | 'bottom'): Rectangle {
-    const stageWindow = getStageWindow()
-    const main = (stageWindow && !stageWindow.isDestroyed())
-      ? stageWindow.getBounds()
-      : { x: 0, y: 0, width: 450, height: 600 }
-    const b = win.getBounds()
-
-    let mainX = main.x
-    let mainY = main.y
-    let mainWidth = main.width
-    let mainHeight = main.height
-    if (mainX === undefined || Number.isNaN(mainX))
-      mainX = 0
-    if (mainY === undefined || Number.isNaN(mainY))
-      mainY = 0
-    if (!mainWidth || Number.isNaN(mainWidth) || mainWidth <= 0)
-      mainWidth = 450
-    if (!mainHeight || Number.isNaN(mainHeight) || mainHeight <= 0)
-      mainHeight = 600
-
-    let winWidth = b.width
-    let winHeight = b.height
-    if (!winWidth || Number.isNaN(winWidth) || winWidth <= 0)
-      winWidth = 480
-    if (!winHeight || Number.isNaN(winHeight) || winHeight <= 0)
-      winHeight = 180
-
-    let targetDisplay: Electron.Display | undefined
-    try {
-      targetDisplay = screen.getDisplayMatching(main)
-    }
-    catch {
-      targetDisplay = screen.getPrimaryDisplay()
-    }
-    const workArea = (targetDisplay || screen.getPrimaryDisplay()).workArea
-
-    const maxHeight = 240
-    const dockInsideThreshold = 30
-    const insideHeight = 80
-
-    if (dock === 'bottom') {
-      const spaceBottom = workArea.height - (mainY + mainHeight - workArea.y)
-      if (spaceBottom >= maxHeight) {
-        return {
-          x: mainX,
-          y: Math.round(mainY + mainHeight),
-          width: mainWidth,
-          height: maxHeight,
-        }
-      }
-      else if (spaceBottom >= dockInsideThreshold) {
-        return {
-          x: mainX,
-          y: Math.round(mainY + mainHeight),
-          width: mainWidth,
-          height: Math.round(spaceBottom),
-        }
-      }
-      else {
-        // Dock Inside Bottom
-        return {
-          x: mainX,
-          y: Math.round(mainY + mainHeight - insideHeight),
-          width: mainWidth,
-          height: insideHeight,
-        }
-      }
-    }
-
-    if (dock === 'top') {
-      const spaceTop = mainY - workArea.y
-      if (spaceTop >= maxHeight) {
-        return {
-          x: mainX,
-          y: Math.round(mainY - maxHeight),
-          width: mainWidth,
-          height: maxHeight,
-        }
-      }
-      else if (spaceTop >= dockInsideThreshold) {
-        return {
-          x: mainX,
-          y: Math.round(workArea.y),
-          width: mainWidth,
-          height: Math.round(spaceTop),
-        }
-      }
-      else {
-        // Dock Inside Top
-        return {
-          x: mainX,
-          y: mainY,
-          width: mainWidth,
-          height: insideHeight,
-        }
-      }
-    }
-
-    return {
-      x: mainX,
-      y: mainY,
-      width: winWidth,
-      height: winHeight,
-    }
-  }
-
-  function syncGlobalConfig() {
-    const currentEnabled = isVisible()
-    const appConfig = params.appConfig.get()
-    const windows = appConfig?.windows ?? []
-    const index = windows.findIndex((w: any) => w.tag === 'caption')
-
-    const captionEntry = {
-      tag: 'caption',
-      enabled: currentEnabled,
-    }
-
-    if (index !== -1) {
-      windows[index] = { ...windows[index], ...captionEntry }
-    }
-    else {
-      windows.push(captionEntry)
-    }
-    params.appConfig.update({
-      ...appConfig,
-      language: appConfig?.language ?? 'en',
-      microphoneToggleHotkey: appConfig?.microphoneToggleHotkey ?? 'Scroll',
-      windows,
-    })
-  }
-
-  function applyBounds(win: BrowserWindow, bounds: Rectangle, options: { programmatic?: boolean, resizable?: boolean } = {}) {
-    if (win.isDestroyed())
-      return
-
-    const current = win.getBounds()
-    if (Math.abs(current.x - bounds.x) < 1 && Math.abs(current.y - bounds.y) < 1 && Math.abs(current.width - bounds.width) < 1 && Math.abs(current.height - bounds.height) < 1)
-      return
-
-    if (options.programmatic) {
-      lastProgrammaticMoveAt = Date.now()
-    }
-
-    // Force resizable to true during move to overcome shaping constraints
-    win.setResizable(true)
-
-    try {
-      win.setBounds({
-        x: Math.round(bounds.x),
-        y: Math.round(bounds.y),
-        width: Math.round(bounds.width),
-        height: Math.round(bounds.height),
-      })
-    }
-    catch (err: any) {
-      console.error('[@proj-airi/stage-tamagotchi] [CaptionManager] applyBounds failed:', err.message)
-    }
-    finally {
-      // Resize is only locked when explicitly docked (top/bottom).
-      // Default to resizable=true so free-float and position-tracking modes never accidentally lock the window.
-      if (options.resizable !== undefined) {
-        win.setResizable(options.resizable)
-      }
-      else {
-        win.setResizable(true)
-      }
-    }
-  }
-
-  function followStageWindow(win: BrowserWindow) {
-    detachFromMain()
-
-    const cfg = getConfig() ?? { followStagePosition, followStageVisibility, matrices: {} }
-    const initialOffset = cfg?.matrices?.[matrixHash]?.relativeToMain ?? computeRelativeOffset(win)
-
-    const cfgToSave = getConfig() ?? { followStagePosition, followStageVisibility, matrices: {} }
-    cfgToSave.matrices[matrixHash] = { ...cfgToSave.matrices[matrixHash], relativeToMain: initialOffset }
-    updateConfig(cfgToSave)
-
-    const syncNow = () => {
-      const stageWindow = getStageWindow()
-      if (win.isDestroyed() || !stageWindow || stageWindow.isDestroyed())
-        return
-
-      const config = params.appConfig.get()
-      const dock = config?.windows?.find((w: any) => w.tag === 'caption')?.dock as 'top' | 'bottom' | undefined
-
-      let target: Rectangle
-      if (dock) {
-        target = calculateDockingBounds(win, dock)
-      }
-      else {
-        const stored = getConfig()?.matrices[matrixHash]?.relativeToMain ?? initialOffset
-        let dx = stored?.dx
-        let dy = stored?.dy
-        const stageWindow = getStageWindow()
-        const main = (stageWindow && !stageWindow.isDestroyed())
-          ? stageWindow.getBounds()
-          : { x: 0, y: 0, width: 450, height: 600 }
-        const b = win.getBounds()
-
-        let mainWidth = main.width
-        let mainHeight = main.height
-        if (!mainWidth || Number.isNaN(mainWidth) || mainWidth <= 0)
-          mainWidth = 450
-        if (!mainHeight || Number.isNaN(mainHeight) || mainHeight <= 0)
-          mainHeight = 600
-
-        let winWidth = b.width
-        let winHeight = b.height
-        if (!winWidth || Number.isNaN(winWidth) || winWidth <= 0)
-          winWidth = 480
-        if (!winHeight || Number.isNaN(winHeight) || winHeight <= 0)
-          winHeight = 180
-
-        if (dx === undefined || dy === undefined || Number.isNaN(dx) || Number.isNaN(dy)) {
-          dx = initialOffset?.dx
-          dy = initialOffset?.dy
-          if (dx === undefined || dy === undefined || Number.isNaN(dx) || Number.isNaN(dy)) {
-            dx = mainWidth + 16
-            dy = mainHeight - winHeight
-          }
-        }
-
-        let mainX = main.x
-        let mainY = main.y
-        if (mainX === undefined || Number.isNaN(mainX))
-          mainX = 0
-        if (mainY === undefined || Number.isNaN(mainY))
-          mainY = 0
-
-        target = {
-          x: mainX + dx,
-          y: mainY + dy,
-          width: winWidth,
-          height: winHeight,
-        }
-      }
-
-      let targetDisplay: Electron.Display | undefined
-      try {
-        targetDisplay = screen.getDisplayMatching(target)
-      }
-      catch {
-        targetDisplay = screen.getPrimaryDisplay()
-      }
-      if (!targetDisplay) {
-        targetDisplay = screen.getPrimaryDisplay()
-      }
-      const workArea = targetDisplay.workArea || screen.getPrimaryDisplay().workArea
-      const clamped = clampBoundsWithinRect(target, workArea)
-
-      if (lastTarget && Math.abs(lastTarget.x - clamped.x) < 1 && Math.abs(lastTarget.y - clamped.y) < 1 && Math.abs(lastTarget.width - clamped.width) < 1 && Math.abs(lastTarget.height - clamped.height) < 1)
-        return
-
-      lastTarget = clamped
-      applyBounds(win, clamped, { programmatic: true, resizable: !dock })
-    }
-
-    const moveThrottled = throttle(syncNow, 1000 / 60)
-    const settleDebounced = debounce(() => {
-      if (lastTarget)
-        applyBounds(win, lastTarget, { programmatic: true })
-    }, 200)
-
-    const onMainChange = () => {
-      moveThrottled()
-      settleDebounced()
-    }
-    triggerMoveInternal = () => {
-      syncNow()
-      onMainChange()
-    }
-    onMainChange()
-    // NOTICE: Capture the attached window so detach targets the same instance
-    // even if the stage is destroyed/recreated while follow is active.
-    const attachedStage = getStageWindow()
-    if (attachedStage && !attachedStage.isDestroyed()) {
-      attachedStage.on('move', onMainChange)
-      attachedStage.on('resize', onMainChange)
-    }
-    detachMainMoveListener = () => {
-      moveThrottled.cancel()
-      settleDebounced.cancel()
-      if (attachedStage && !attachedStage.isDestroyed()) {
-        attachedStage.removeListener('move', onMainChange)
-        attachedStage.removeListener('resize', onMainChange)
-      }
-      triggerMoveInternal = undefined
-    }
-
-    onAppBeforeQuit(() => detachFromMain())
-  }
-
-  function detachFromMain() {
-    detachMainMoveListener?.()
-    detachMainMoveListener = undefined
-    triggerMoveInternal = undefined
-    // Restore resizability when detaching from position follow
-    if (currentWindow && !currentWindow.isDestroyed()) {
-      currentWindow.setResizable(true)
-    }
-  }
-
-  let eventaContext: ReturnType<typeof createContext>['context'] | undefined
   const visibilityListeners = new Set<() => void>()
-
   const emitVisibilityChanged = () => {
     for (const listener of visibilityListeners) {
       try {
@@ -571,282 +172,265 @@ export function setupCaptionWindowManager(params: {
     }
   }
 
-  // NOTICE: When the stage is lazily created after boot while position follow
-  // is active, re-attach follow to the new window instance.
-  const stageManager = params.stageWindow as ActorStageWindowManager | undefined
-  if (stageManager && typeof stageManager.onWindowCreated === 'function') {
-    stageManager.onWindowCreated(() => {
-      if (followStagePosition && currentWindow && !currentWindow.isDestroyed())
-        followStageWindow(currentWindow)
+  function syncGlobalConfig() {
+    const appConfig = params.appConfig.get()
+    const windows = appConfig?.windows ?? []
+    const index = windows.findIndex(w => w.tag === 'caption')
+    const entry = { tag: 'caption', enabled: Boolean(current && !current.isDestroyed() && current.facade.isVisible()) }
+    if (index === -1)
+      windows.push(entry)
+    else
+      windows[index] = { ...windows[index], ...entry }
+    params.appConfig.update({
+      ...appConfig,
+      language: appConfig?.language ?? 'en',
+      microphoneToggleHotkey: appConfig?.microphoneToggleHotkey ?? 'Scroll',
+      windows,
     })
   }
 
-  const reusable = createReusableWindow(async () => {
-    ipcMain.setMaxListeners(0)
-    const window = createCaptionWindow()
-    currentWindow = window
-    const { context } = createContext(ipcMain, window)
-    eventaContext = context
+  function computeRelativeOffset(win: BrowserWindow): { dx: number, dy: number } {
+    const caption = win.getBounds()
+    const main = stageBounds(params.stageWindow)
+    let dx = caption.x - main.x
+    let dy = caption.y - main.y
+    if (Number.isNaN(dx) || Number.isNaN(dy)) {
+      dx = 466
+      dy = 420
+    }
+    return { dx, dy }
+  }
 
-    await setupBaseWindowElectronInvokes({ context, window, serverChannel: params.serverChannel, i18n: params.i18n })
+  function applyBounds(win: BrowserWindow, bounds: Rectangle, options: { programmatic?: boolean } = {}) {
+    if (win.isDestroyed())
+      return
+    const now = win.getBounds()
+    if (Math.abs(now.x - bounds.x) < 1 && Math.abs(now.y - bounds.y) < 1 && Math.abs(now.width - bounds.width) < 1 && Math.abs(now.height - bounds.height) < 1)
+      return
+    if (options.programmatic)
+      lastProgrammaticMoveAt = Date.now()
+    win.setBounds({
+      x: Math.round(bounds.x),
+      y: Math.round(bounds.y),
+      width: Math.round(bounds.width),
+      height: Math.round(bounds.height),
+    })
+  }
 
+  function persistBounds() {
+    if (!current || current.isDestroyed())
+      return
+    const config = getConfig()
+    const b = current.facade.getBounds()
+    config.matrices[matrixHash] = { ...config.matrices[matrixHash], bounds: b }
+    config.followStagePosition = followStagePosition
+    config.followStageVisibility = followStageVisibility
+    if (followStagePosition && Date.now() - lastProgrammaticMoveAt > 100)
+      config.matrices[matrixHash] = { ...config.matrices[matrixHash], bounds: b, relativeToMain: computeRelativeOffset(current.window) }
+    updateConfig(config)
+  }
+
+  function followStageWindow(win: BrowserWindow) {
+    detachFollow?.()
     const cfg = getConfig()
-    const saved = cfg?.matrices?.[matrixHash]?.bounds
+    const initialOffset = cfg.matrices?.[matrixHash]?.relativeToMain ?? computeRelativeOffset(win)
+    const toSave = getConfig()
+    toSave.matrices[matrixHash] = { ...toSave.matrices[matrixHash], relativeToMain: initialOffset }
+    updateConfig(toSave)
 
-    if (saved) {
-      const workArea = screen.getDisplayMatching(saved).workArea
-      const clamped = clampBoundsWithinRect(saved, workArea)
-      window.setBounds(clamped)
-    }
-    else {
-      const initialBounds = computeInitialCaptionBounds({ stageWindow: params.stageWindow })
-      window.setBounds(initialBounds)
-    }
-
-    // NOTICE: macOS 'panel' type windows default to non-resizable.
-    // We must explicitly set resizable state after creation.
-    // Rule: locked only when dock=top or dock=bottom; all other modes are freely resizable.
-    const initDock = params.appConfig.get()?.windows?.find((w: any) => w.tag === 'caption')?.dock as 'top' | 'bottom' | undefined
-    window.setResizable(!initDock)
-    console.info(`[@proj-airi/stage-tamagotchi] [Main] Caption window initial resizable=${!initDock} (dock=${initDock ?? 'none'})`)
-
-    const persistBounds = () => {
-      if (window.isDestroyed())
+    const syncNow = () => {
+      if (win.isDestroyed())
         return
-      const config = getConfig() ?? { followStagePosition, followStageVisibility, matrices: {} }
-      const b = window.getBounds()
-      // Always immediately save bounds and relative offset on any user resize/move
-      config.matrices[matrixHash] = { ...config.matrices[matrixHash], bounds: b }
-      config.followStagePosition = followStagePosition
-      config.followStageVisibility = followStageVisibility
-      if (followStagePosition && Date.now() - lastProgrammaticMoveAt > 100) {
-        const rel = computeRelativeOffset(window)
-        config.matrices[matrixHash] = { ...config.matrices[matrixHash], bounds: b, relativeToMain: rel }
-      }
-      updateConfig(config)
-    }
-
-    window.on('resize', persistBounds)
-    window.on('move', persistBounds)
-    window.on('show', () => {
-      isCaptionVisible = true
-      emitVisibilityChanged()
-      syncGlobalConfig()
-      console.info('[@proj-airi/stage-tamagotchi] [Main] Caption window shown, broadcasting state')
-      const mainWin = (params.mainWindow && !params.mainWindow.isDestroyed())
-        ? params.mainWindow
-        : ElectronBrowserWindow.getAllWindows().find(w => (w as any).__is_main_window === true)
-      if (mainWin && !mainWin.isDestroyed() && mainWin.webContents && !mainWin.webContents.isDestroyed()) {
-        mainWin.webContents.send('caption-window-state', true)
-      }
-    })
-    window.on('hide', () => {
-      isCaptionVisible = false
-      emitVisibilityChanged()
-      syncGlobalConfig()
-      console.info('[@proj-airi/stage-tamagotchi] [Main] Caption window hidden, broadcasting state')
-      const mainWin = (params.mainWindow && !params.mainWindow.isDestroyed())
-        ? params.mainWindow
-        : ElectronBrowserWindow.getAllWindows().find(w => (w as any).__is_main_window === true)
-      if (mainWin && !mainWin.isDestroyed() && mainWin.webContents && !mainWin.webContents.isDestroyed()) {
-        mainWin.webContents.send('caption-window-state', false)
-      }
-    })
-
-    await load(window, withHashRoute(baseUrl(resolve(getElectronMainDirname(), '..', 'renderer')), '/caption'))
-
-    const cleanupGetPosition = defineInvokeHandler(context, captionGetFollowStagePosition, async () => followStagePosition)
-    const cleanupGetVisibility = defineInvokeHandler(context, captionGetFollowStageVisibility, async () => followStageVisibility)
-    try {
-      context.emit(captionFollowStagePositionChanged, followStagePosition)
-      context.emit(captionFollowStageVisibilityChanged, followStageVisibility)
-    }
-    catch {}
-
-    if (followStagePosition) {
-      followStageWindow(window)
-    }
-
-    window.on('closed', () => {
-      detachFromMain()
-      try {
-        cleanupGetPosition()
-        cleanupGetVisibility()
-      }
-      catch {}
-
-      if (currentWindow === window) {
-        currentWindow = undefined
-      }
-      eventaContext = undefined
-      emitVisibilityChanged()
-      console.info('[@proj-airi/stage-tamagotchi] [Main] Caption window closed, broadcasting state')
-      const mainWin = (params.mainWindow && !params.mainWindow.isDestroyed())
-        ? params.mainWindow
-        : ElectronBrowserWindow.getAllWindows().find(w => (w as any).__is_main_window === true)
-      if (mainWin && !mainWin.isDestroyed() && mainWin.webContents && !mainWin.webContents.isDestroyed()) {
-        mainWin.webContents.send('caption-window-state', false)
-      }
-    })
-
-    // Captions are click-through by default so you can click whatever is behind them.
-    // We use { forward: true } so the renderer can still detect mouseover for fading.
-    window.setIgnoreMouseEvents(true, { forward: true })
-
-    return window
-  })
-
-  async function getWindow(): Promise<BrowserWindow> {
-    return reusable.getWindow()
-  }
-
-  async function setFollowStagePosition(shouldFollow: boolean) {
-    followStagePosition = shouldFollow
-    if (reusable.hasWindow()) {
-      const window = await reusable.getWindow()
-      if (followStagePosition) {
-        const rel = computeRelativeOffset(window)
-        const cfg = getConfig() ?? { followStagePosition, followStageVisibility, matrices: {} }
-        cfg.matrices[matrixHash] = { ...cfg.matrices[matrixHash], relativeToMain: rel }
-        updateConfig(cfg)
-        followStageWindow(window)
+      const dock = params.appConfig.get()?.windows?.find(w => w.tag === 'caption')?.dock as 'top' | 'bottom' | undefined
+      let target: Rectangle
+      if (dock) {
+        target = calculateDockingBounds(win, params.stageWindow, dock)
       }
       else {
-        detachFromMain()
+        const stored = getConfig()?.matrices[matrixHash]?.relativeToMain ?? initialOffset
+        const main = stageBounds(params.stageWindow)
+        const b = win.getBounds()
+        const dx = stored?.dx ?? main.width + 16
+        const dy = stored?.dy ?? main.height - b.height
+        target = { x: main.x + dx, y: main.y + dy, width: b.width || 480, height: b.height || 180 }
+      }
+      const clamped = clampBoundsWithinRect(target, displayMatching(target).workArea)
+      if (lastTarget && Math.abs(lastTarget.x - clamped.x) < 1 && Math.abs(lastTarget.y - clamped.y) < 1 && Math.abs(lastTarget.width - clamped.width) < 1 && Math.abs(lastTarget.height - clamped.height) < 1)
+        return
+      lastTarget = clamped
+      applyBounds(win, clamped, { programmatic: true })
+    }
+
+    const moveThrottled = throttle(syncNow, 1000 / 60)
+    const settleDebounced = debounce(() => {
+      if (lastTarget)
+        applyBounds(win, lastTarget, { programmatic: true })
+    }, 200)
+    const onMainChange = () => {
+      moveThrottled()
+      settleDebounced()
+    }
+    triggerMoveInternal = () => {
+      syncNow()
+      onMainChange()
+    }
+    onMainChange()
+
+    const stage = params.stageWindow as ActorStageWindowManager | undefined
+    if (stage && typeof stage.on === 'function') {
+      const offMove = stage.on('move', onMainChange)
+      const offResize = stage.on('resize', onMainChange)
+      detachFollow = () => {
+        moveThrottled.cancel()
+        settleDebounced.cancel()
+        offMove()
+        offResize()
+        triggerMoveInternal = undefined
+        detachFollow = undefined
       }
     }
+    else {
+      detachFollow = () => {
+        moveThrottled.cancel()
+        settleDebounced.cancel()
+        triggerMoveInternal = undefined
+        detachFollow = undefined
+      }
+    }
+    onAppBeforeQuit(() => detachFollow?.())
+  }
 
-    const config = getConfig() ?? { followStagePosition, followStageVisibility, matrices: {} }
-    config.followStagePosition = followStagePosition
-    updateConfig(config)
+  function detachFromMain() {
+    detachFollow?.()
+  }
 
+  // Re-attach position-follow when a lazily-created stage appears later.
+  const stageManager = params.stageWindow as ActorStageWindowManager | undefined
+  stageManager?.onWindowCreated(() => {
+    if (followStagePosition && current && !current.isDestroyed())
+      followStageWindow(current.window)
+  })
+
+  async function ensureWindow() {
+    if (current && !current.isDestroyed())
+      return current
+    current = await createPortedWindow({
+      tag: 'caption',
+      title: 'AIRI — Caption',
+      width: 480,
+      height: 180,
+      route: '/caption',
+      transparent: true,
+      passthrough: true,
+      alwaysOnTop: true,
+      setupBase: { i18n: params.i18n, serverChannel: params.serverChannel },
+    })
+    showWindowOnAllWorkspaces(current.native)
+    const win = current.window
+
+    const saved = getConfig().matrices?.[matrixHash]?.bounds
+    if (saved)
+      win.setBounds(clampBoundsWithinRect(saved, displayMatching(saved).workArea))
+    else
+      win.setBounds(computeInitialCaptionBounds({ stageWindow: params.stageWindow }))
+
+    win.on('resize', persistBounds)
+    win.on('move', persistBounds)
+    win.on('show', () => {
+      emitVisibilityChanged()
+      syncGlobalConfig()
+    })
+    win.on('hide', () => {
+      emitVisibilityChanged()
+      syncGlobalConfig()
+    })
+    win.on('close', () => {
+      detachFromMain()
+      emitVisibilityChanged()
+      if (current?.isDestroyed())
+        current = undefined
+    })
+
+    defineInvokeHandler(current.context, captionGetFollowStagePosition, async () => followStagePosition)
+    defineInvokeHandler(current.context, captionGetFollowStageVisibility, async () => followStageVisibility)
     try {
-      eventaContext?.emit(captionFollowStagePositionChanged, followStagePosition)
+      current.context.emit(captionFollowStagePositionChanged, followStagePosition)
+      current.context.emit(captionFollowStageVisibilityChanged, followStageVisibility)
     }
     catch {}
-
-    syncGlobalConfig()
-  }
-
-  async function setFollowStageVisibility(shouldFollow: boolean) {
-    followStageVisibility = shouldFollow
-    const config = getConfig() ?? { followStagePosition, followStageVisibility, matrices: {} }
-    config.followStageVisibility = followStageVisibility
-    updateConfig(config)
-
-    try {
-      eventaContext?.emit(captionFollowStageVisibilityChanged, followStageVisibility)
-    }
-    catch {}
-  }
-
-  function getIsFollowingStagePosition(): boolean {
-    return followStagePosition
-  }
-
-  function getIsFollowingStageVisibility(): boolean {
-    return followStageVisibility
-  }
-
-  async function resetToSide() {
-    if (!reusable.hasWindow())
-      return
-    const window = await reusable.getWindow()
-    lastProgrammaticMoveAt = Date.now()
-    const initialBounds = computeInitialCaptionBounds({ stageWindow: params.stageWindow })
-    window.setBounds(initialBounds)
-
-    const config = getConfig() ?? { followStagePosition, followStageVisibility, matrices: {} }
-    const b = window.getBounds()
-    const rel = computeRelativeOffset(window)
-    config.matrices[matrixHash] = { ...config.matrices[matrixHash], bounds: b, relativeToMain: rel }
-    config.followStagePosition = followStagePosition
-    config.followStageVisibility = followStageVisibility
-    updateConfig(config)
+    if (followStagePosition)
+      followStageWindow(win)
+    return current
   }
 
   function isVisible(): boolean {
-    return Boolean(currentWindow && !currentWindow.isDestroyed() && currentWindow.isVisible())
-  }
-
-  async function toggleVisibility(enabled?: boolean) {
-    if (enabled === undefined) {
-      if (isVisible()) {
-        setCaptionVisibleState(false)
-        if (currentWindow && !currentWindow.isDestroyed()) {
-          currentWindow.destroy()
-        }
-      }
-      else {
-        setCaptionVisibleState(true)
-        const window = await reusable.getWindow()
-        if (window.isMinimized()) {
-          window.restore()
-        }
-        window.show()
-        window.focus()
-      }
-      return
-    }
-
-    if (enabled) {
-      setCaptionVisibleState(true)
-      const window = await reusable.getWindow()
-      if (window.isMinimized()) {
-        window.restore()
-      }
-      window.show()
-      window.focus()
-    }
-    else {
-      setCaptionVisibleState(false)
-      if (currentWindow && !currentWindow.isDestroyed()) {
-        currentWindow.destroy()
-      }
-    }
-  }
-
-  function onVisibilityChanged(listener: () => void): () => void {
-    visibilityListeners.add(listener)
-    return () => {
-      visibilityListeners.delete(listener)
-    }
-  }
-
-  async function triggerMove(forcedDock?: 'top' | 'bottom') {
-    if (!reusable.hasWindow())
-      return
-    const window = await reusable.getWindow()
-    if (window.isDestroyed())
-      return
-
-    if (triggerMoveInternal) {
-      triggerMoveInternal()
-      return
-    }
-
-    const config = params.appConfig.get()
-    const dock = forcedDock || (config?.windows?.find((w: any) => w.tag === 'caption')?.dock as 'top' | 'bottom' | undefined)
-
-    if (dock) {
-      const target = calculateDockingBounds(window, dock)
-      const workArea = screen.getDisplayMatching(target).workArea
-      const clamped = clampBoundsWithinRect(target, workArea)
-      applyBounds(window, clamped, { programmatic: true, resizable: false })
-    }
+    return Boolean(current && !current.isDestroyed() && current.facade.isVisible())
   }
 
   return {
-    getWindow,
-    hasWindow: reusable.hasWindow,
-    setFollowStagePosition,
-    setFollowStageVisibility,
-    getIsFollowingStagePosition,
-    getIsFollowingStageVisibility,
-    resetToSide,
+    getWindow: async () => (await ensureWindow()).window,
+    hasWindow: () => Boolean(current && !current.isDestroyed()),
+    setFollowStagePosition: async (shouldFollow: boolean) => {
+      followStagePosition = shouldFollow
+      if (shouldFollow && current && !current.isDestroyed())
+        followStageWindow(current.window)
+      else
+        detachFromMain()
+      const config = getConfig()
+      config.followStagePosition = followStagePosition
+      updateConfig(config)
+      try {
+        current?.context.emit(captionFollowStagePositionChanged, followStagePosition)
+      }
+      catch {}
+      syncGlobalConfig()
+    },
+    setFollowStageVisibility: async (shouldFollow: boolean) => {
+      followStageVisibility = shouldFollow
+      const config = getConfig()
+      config.followStageVisibility = followStageVisibility
+      updateConfig(config)
+      try {
+        current?.context.emit(captionFollowStageVisibilityChanged, followStageVisibility)
+      }
+      catch {}
+    },
+    getIsFollowingStagePosition: () => followStagePosition,
+    getIsFollowingStageVisibility: () => followStageVisibility,
+    resetToSide: async () => {
+      if (!current || current.isDestroyed())
+        return
+      lastProgrammaticMoveAt = Date.now()
+      current.window.setBounds(computeInitialCaptionBounds({ stageWindow: params.stageWindow }))
+      persistBounds()
+    },
     isVisible,
-    toggleVisibility,
-    onVisibilityChanged,
-    triggerMove,
+    toggleVisibility: async (enabled?: boolean) => {
+      if (enabled === false || (enabled === undefined && isVisible())) {
+        current?.close()
+        return
+      }
+      const ported = await ensureWindow()
+      ported.facade.show()
+      ported.facade.focus()
+    },
+    onVisibilityChanged: (listener: () => void) => {
+      visibilityListeners.add(listener)
+      return () => visibilityListeners.delete(listener)
+    },
+    triggerMove: async (forcedDock?: 'top' | 'bottom') => {
+      if (!current || current.isDestroyed())
+        return
+      const ported = current
+      if (triggerMoveInternal) {
+        triggerMoveInternal()
+        return
+      }
+      const dock = forcedDock || (params.appConfig.get()?.windows?.find(w => w.tag === 'caption')?.dock as 'top' | 'bottom' | undefined)
+      if (dock) {
+        const target = calculateDockingBounds(ported.window, params.stageWindow, dock)
+        applyBounds(ported.window, clampBoundsWithinRect(target, displayMatching(target).workArea), { programmatic: true })
+      }
+    },
   }
 }

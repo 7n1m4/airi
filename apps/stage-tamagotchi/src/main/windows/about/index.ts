@@ -1,53 +1,46 @@
+import type { BrowserWindow } from 'electron'
+
 import type { I18n } from '../../libs/i18n'
 import type { ServerChannel } from '../../services/airi/channel-server'
 import type { AutoUpdater } from '../../services/electron/auto-updater'
 
-import { join, resolve } from 'node:path'
+import { createAutoUpdaterService } from '../../services/electron'
+import { createPortedWindow } from '../shared/ported'
 
-import { BrowserWindow } from 'electron'
-
-import { APP_ICON as icon } from '../../assets'
-import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
-import { createReusableWindow } from '../../libs/electron/window-manager'
-import { openExternalSafely } from '../shared/open-external'
-import { setupAboutWindowElectronInvokes } from './rpc/index.electron'
-
+/**
+ * About is a normal hash route with the shared base services. The auto-updater service is a
+ * wave-4 stub that raises `ElectrobunPortError`, so its registration is best-effort — the
+ * window itself must still open and render (docs/design-electrobun-port.md §3.1).
+ */
 export function setupAboutWindowReusable(params: {
   autoUpdater: AutoUpdater
   i18n: I18n
   serverChannel: ServerChannel
-}) {
-  return createReusableWindow(async () => {
-    const window = new BrowserWindow({
+}): () => Promise<BrowserWindow> {
+  let current: Awaited<ReturnType<typeof createPortedWindow>> | undefined
+
+  return async () => {
+    if (current && !current.isDestroyed())
+      return current.window
+    current = await createPortedWindow({
+      tag: 'about',
       title: 'AIRI — About',
       width: 670,
       height: 730,
-      show: false,
-      resizable: true,
-      maximizable: false,
-      minimizable: false,
-      icon,
-      webPreferences: {
-        preload: join(getElectronMainDirname(), '../preload/index.cjs'),
-        sandbox: true,
-      },
+      route: '/about',
+      setupBase: { i18n: params.i18n, serverChannel: params.serverChannel },
     })
-
-    window.on('ready-to-show', () => window.show())
-    window.webContents.setWindowOpenHandler((details) => {
-      openExternalSafely(details.url)
-      return { action: 'deny' }
-    })
-
-    await load(window, withHashRoute(baseUrl(resolve(getElectronMainDirname(), '..', 'renderer')), '/about'))
-
-    await setupAboutWindowElectronInvokes({
-      window,
-      autoUpdater: params.autoUpdater,
-      i18n: params.i18n,
-      serverChannel: params.serverChannel,
-    })
-
-    return window
-  }).getWindow
+    try {
+      createAutoUpdaterService({
+        context: current.context,
+        window: current.window,
+        service: params.autoUpdater,
+      })
+    }
+    catch (error) {
+      console.warn('[About] Auto-updater service unavailable:', error instanceof Error ? error.message : error)
+    }
+    current.facade.show()
+    return current.window
+  }
 }

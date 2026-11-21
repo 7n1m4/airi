@@ -26,7 +26,7 @@ import { createMainContext as createElectrobunMainContext } from '@proj-airi/ele
 import { BrowserWindow, BrowserView as ElectrobunBrowserView } from 'electrobun/main'
 
 import { electronSplashStateChanged } from '../../shared/eventa'
-import { dispatchToIpcMain } from '../electron-shim'
+import { dispatchToBus } from '../eventa-bus'
 
 /** The single RPC method eventa traffic rides on. */
 const EVENTA_TAG = 'eventa:emit'
@@ -109,6 +109,8 @@ export interface RpcBootstrap {
   attach: (view: BrowserView) => void
   /** Push one eventa frame to every live view (main→view fan-out). */
   broadcast: (tag: EventaLike, body: unknown) => void
+  /** Push one eventa frame to a single view — the per-window `webContents.send` replacement. */
+  sendTo: (view: BrowserView, tag: EventaLike, body: unknown) => void
   startup: StartupRelay
   dispose: () => void
 }
@@ -162,11 +164,43 @@ function fakeIpcMainEvent(viewId: number) {
   }
 }
 
+/**
+ * Restore the Electron `raw.ipcMainEvent` field the service layer reads.
+ *
+ * `packages/electrobun-eventa` stamps inbound frames with `{ viewId }` only, while the
+ * still-Electron-typed services guard mutating invokes with
+ * `options.raw.ipcMainEvent.sender.id === window.webContents.id`. Rather than rewrite those
+ * services (a different wave), the bound context's `emit` enriches inbound options with a
+ * stand-in whose `sender.id` is the view id — the same identity the window adapter exposes
+ * on `webContents.id`.
+ */
+function withElectronRaw(context: AnyEventaContext, viewId: number): AnyEventaContext {
+  const sender = {
+    id: viewId,
+    isDestroyed: () => !viewsById.has(viewId),
+    send: () => {},
+  }
+  const ipcMainEvent = { sender }
+  // Patch the context the adapter itself emits through: `adapter.receive()` closes over this
+  // exact object, so a wrapper/proxy around it would miss every inbound invoke.
+  const emit = context.emit.bind(context)
+  context.emit = ((event: unknown, body: unknown, options?: { raw?: Record<string, unknown> } & Record<string, unknown>) => {
+    const raw = options?.raw
+    if (!raw || raw.ipcMainEvent)
+      return emit(event as never, body as never, options as never)
+    return emit(event as never, body as never, {
+      ...options,
+      raw: { ...raw, ipcMainEvent },
+    } as never)
+  }) as typeof context.emit
+  return context
+}
+
 /** Hand the frame to the global bus and to the bound context, or hold it until one exists. */
 function deliverInbound(viewId: number, frame: unknown, adapter: { receive: (frame: unknown) => void } | undefined): void {
-  // Electron parity: orphan `createContext(ipcMain)` modules (channel-server & friends) live on
-  // the global bus and see every view's frame regardless of per-view bind state.
-  dispatchToIpcMain('eventa-message', fakeIpcMainEvent(viewId), frame)
+  // Electron parity: the view-bound services (channel-server & friends) register once on the
+  // main event bus and see every view's frame regardless of per-view bind state.
+  dispatchToBus('eventa-message', fakeIpcMainEvent(viewId), frame)
   if (adapter) {
     adapter.receive(frame)
     return
@@ -200,18 +234,21 @@ export async function createRpcBootstrap(options: {
     }
   }
 
-  const broadcast = (tag: EventaLike, body: unknown) => {
-    for (const view of views) {
-      const rpc = view.rpc as ElectrobunRpcPort | undefined
-      if (!rpc)
-        continue
-      try {
-        rpc.send(EVENTA_TAG, frame(tag, body))
-      }
-      catch (err) {
-        console.warn(`[RPC] Failed to send ${tag.id}:`, err)
-      }
+  const sendTo = (view: BrowserView | undefined, tag: EventaLike, body: unknown) => {
+    const rpc = view?.rpc as ElectrobunRpcPort | undefined
+    if (!rpc)
+      return
+    try {
+      rpc.send(EVENTA_TAG, frame(tag, body))
     }
+    catch (err) {
+      console.warn(`[RPC] Failed to send ${tag.id}:`, err)
+    }
+  }
+
+  const broadcast = (tag: EventaLike, body: unknown) => {
+    for (const view of views)
+      sendTo(view, tag, body)
   }
 
   const startup: StartupRelay = {
@@ -296,7 +333,8 @@ export async function createRpcBootstrap(options: {
 
       const adapter = contextFactory({ id: view.id, rpc: view.rpc as ElectrobunRpcPort })
       adapters.set(view.id, adapter)
-      contexts.set(view.id, adapter.context)
+      const context = withElectronRaw(adapter.context as AnyEventaContext, view.id)
+      contexts.set(view.id, context)
 
       // Frames that arrived before this view was bound are folded in now, in order,
       // so a view that starts emitting at t=0 is not silently missing events.
@@ -307,9 +345,10 @@ export async function createRpcBootstrap(options: {
           adapter.receive(frame)
       }
 
-      return adapter.context
+      return context
     },
     broadcast,
+    sendTo,
     dispose: () => {
       for (const context of contexts.values())
         context.abort(new ElectrobunPortError('unsupported', 'rpc bootstrap disposed'))

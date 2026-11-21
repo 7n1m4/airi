@@ -1,61 +1,30 @@
-import type { BrowserWindowConstructorOptions } from 'electron'
+import type { BrowserWindow } from 'electron'
 
 import type { I18n } from '../../libs/i18n'
 import type { ServerChannel } from '../../services/airi/channel-server'
 
-import { join, resolve } from 'node:path'
-
 import { defineInvokeHandler } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/main'
-import { BrowserWindow as ElectronBrowserWindow, ipcMain } from 'electron'
-import { isMacOS } from 'std-env'
 
 import { electronCustomizerToggleVisibility, electronGetCustomizerWindowState } from '../../../shared/eventa'
-import { APP_ICON as icon } from '../../assets'
-import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
-import { createReusableWindow } from '../../libs/electron/window-manager'
+import { get } from '../registry'
 import { showWindowOnAllWorkspaces } from '../shared/app-icon'
-import { openExternalSafely } from '../shared/open-external'
-import { setupBaseWindowElectronInvokes, transparentWindowConfig } from '../shared/window'
+import { requireRpcBootstrap } from '../shared/create-window'
+import { createPortedWindow } from '../shared/ported'
 
-function createCustomizerWindow(options?: BrowserWindowConstructorOptions) {
-  const window = new ElectronBrowserWindow({
-    title: 'AIRI — Customizer',
-    width: 780,
-    height: 620,
-    show: false,
-    icon,
-    webPreferences: {
-      preload: join(getElectronMainDirname(), '../preload/index.cjs'),
-      sandbox: true,
-    },
-    type: 'panel',
-    ...transparentWindowConfig(),
-    ...options,
-  })
-
-  window.setAlwaysOnTop(true, 'screen-saver', 2)
-  window.setFullScreenable(false)
-  showWindowOnAllWorkspaces(window)
-  if (isMacOS) {
-    window.setWindowButtonVisibility(false)
-  }
-
-  window.on('ready-to-show', () => window.show())
-  window.webContents.setWindowOpenHandler((details) => {
-    openExternalSafely(details.url)
-    return { action: 'deny' }
-  })
-
-  return window
+export interface CustomizerWindowManager {
+  getWindow: () => Promise<BrowserWindow>
+  isVisible: () => boolean
+  toggleVisibility: (payload?: boolean | { enabled?: boolean, group?: string }) => Promise<void>
+  onVisibilityChanged: (listener: () => void) => () => void
 }
 
 export function setupCustomizerWindowManager(params: {
-  mainWindow: ElectronBrowserWindow
+  mainWindow: BrowserWindow
   serverChannel: ServerChannel
   i18n: I18n
-}) {
-  let currentWindow: ElectronBrowserWindow | undefined
+}): CustomizerWindowManager {
+  void params.mainWindow
+  let current: Awaited<ReturnType<typeof createPortedWindow>> | undefined
   const visibilityListeners = new Set<() => void>()
 
   const emitVisibilityChanged = () => {
@@ -67,97 +36,81 @@ export function setupCustomizerWindowManager(params: {
     }
   }
 
-  const reusable = createReusableWindow(async () => {
-    ipcMain.setMaxListeners(0)
-    const window = createCustomizerWindow()
-    currentWindow = window
-    const { context } = createContext(ipcMain, window)
-
-    await setupBaseWindowElectronInvokes({ context, window, serverChannel: params.serverChannel, i18n: params.i18n })
-
-    window.on('show', () => {
-      emitVisibilityChanged()
-      console.info('[@proj-airi/stage-tamagotchi] [Main] Customizer window shown, broadcasting state')
-      if (params.mainWindow && !params.mainWindow.isDestroyed()) {
-        params.mainWindow.webContents.send('customizer-window-state', true)
-      }
+  async function ensureWindow() {
+    await bindMainHandlers()
+    if (current && !current.isDestroyed())
+      return current
+    current = await createPortedWindow({
+      tag: 'customizer',
+      title: 'AIRI — Customizer',
+      width: 780,
+      height: 620,
+      route: '/customizer',
+      transparent: true,
+      alwaysOnTop: true,
+      setupBase: { i18n: params.i18n, serverChannel: params.serverChannel },
     })
-    window.on('hide', () => {
-      emitVisibilityChanged()
-      console.info('[@proj-airi/stage-tamagotchi] [Main] Customizer window hidden, broadcasting state')
-      if (params.mainWindow && !params.mainWindow.isDestroyed()) {
-        params.mainWindow.webContents.send('customizer-window-state', false)
-      }
-    })
-
-    await load(window, withHashRoute(baseUrl(resolve(getElectronMainDirname(), '..', 'renderer')), '/customizer'))
-
-    window.on('closed', () => {
-      if (currentWindow === window) {
-        currentWindow = undefined
-      }
-      emitVisibilityChanged()
-      console.info('[@proj-airi/stage-tamagotchi] [Main] Customizer window closed, broadcasting state')
-      if (params.mainWindow && !params.mainWindow.isDestroyed()) {
-        params.mainWindow.webContents.send('customizer-window-state', false)
-      }
-    })
-
-    return window
-  })
+    // Electrobun's `setAlwaysOnTop(true)` has no macOS screen-saver level; creation order and
+    // this flag are the closest equivalent (docs/design-electrobun-port.md §1.2).
+    showWindowOnAllWorkspaces(current.native)
+    current.facade.on('show', emitVisibilityChanged)
+    current.facade.on('hide', emitVisibilityChanged)
+    current.facade.on('close', emitVisibilityChanged)
+    return current
+  }
 
   function isVisible(): boolean {
-    return Boolean(currentWindow && !currentWindow.isDestroyed() && currentWindow.isVisible())
+    return Boolean(current && !current.isDestroyed() && current.facade.isVisible())
   }
 
   async function toggleVisibility(payload?: boolean | { enabled?: boolean, group?: string }) {
     const enabled = typeof payload === 'object' ? payload.enabled : payload
     const group = typeof payload === 'object' ? payload.group : undefined
 
-    if (enabled === undefined) {
-      if (isVisible()) {
-        currentWindow?.hide()
-      }
-      else {
-        const window = await reusable.getWindow()
-        if (window.isMinimized()) {
-          window.restore()
-        }
-        window.show()
-        window.focus()
-      }
-    }
-    else if (enabled) {
-      const window = await reusable.getWindow()
-      if (window.isMinimized()) {
-        window.restore()
-      }
-      window.show()
-      window.focus()
-    }
-    else {
-      currentWindow?.hide()
+    if (enabled === false || (enabled === undefined && isVisible())) {
+      current?.facade.hide()
+      emitVisibilityChanged()
+      return
     }
 
-    if (group && currentWindow && !currentWindow.isDestroyed() && isVisible()) {
-      currentWindow.webContents.send('set-customizer-group', group)
-    }
+    const ported = await ensureWindow()
+    ported.facade.show()
+    ported.facade.focus()
+    emitVisibilityChanged()
+
+    // NOTICE: the renderer's `set-customizer-group` listener is a raw ipcRenderer channel.
+    // The Electrobun bridge only carries eventa frames, so this dispatch has no transport yet;
+    // group selection is otherwise driven by the renderer's own state. See wave-4 gap list.
+    void group
   }
 
-  // Bind Eventa Invokes to this manager
-  const { context: mainContext } = createContext(ipcMain, params.mainWindow)
-  defineInvokeHandler(mainContext, electronCustomizerToggleVisibility, async (payload) => {
-    await toggleVisibility(payload)
-  })
-  defineInvokeHandler(mainContext, electronGetCustomizerWindowState, async () => {
-    return isVisible()
-  })
+  // The Control Strip is built after this manager in the DI graph, so bind its two
+  // visibility invokes lazily, on the first call (or once its view is registered).
+  let mainHandlersBound = false
+  let bindAttempts = 0
+  async function bindMainHandlers() {
+    if (mainHandlersBound)
+      return
+    const mainView = get('main')?.webview
+    if (!mainView) {
+      // The Control Strip is provided later in the DI graph; retry briefly instead of
+      // leaving `electronGetCustomizerWindowState` invokes parked with no handler.
+      if (bindAttempts++ < 20)
+        setTimeout(() => void bindMainHandlers().catch(() => {}), 500)
+      return
+    }
+    mainHandlersBound = true
+    const mainContext = await requireRpcBootstrap().contextFor(mainView)
+    defineInvokeHandler(mainContext, electronCustomizerToggleVisibility, async payload => toggleVisibility(payload))
+    defineInvokeHandler(mainContext, electronGetCustomizerWindowState, async () => isVisible())
+  }
+  void bindMainHandlers().catch(err => console.warn('[Customizer] Failed to bind Control Strip invokes:', err))
 
   return {
-    getWindow: reusable.getWindow,
+    getWindow: async () => (await ensureWindow()).window,
     isVisible,
     toggleVisibility,
-    onVisibilityChanged: (listener: () => void) => {
+    onVisibilityChanged: (listener) => {
       visibilityListeners.add(listener)
       return () => {
         visibilityListeners.delete(listener)
@@ -165,5 +118,3 @@ export function setupCustomizerWindowManager(params: {
     },
   }
 }
-
-export type CustomizerWindowManager = ReturnType<typeof setupCustomizerWindowManager>

@@ -2,19 +2,18 @@ import type { BrowserWindow } from 'electron'
 
 import type { createRequestWindowEventa, RequestWindowPayload } from '../../../shared/eventa'
 import type { I18n } from '../../libs/i18n'
+import type { AnyEventaContext } from '../../rpc'
 import type { ServerChannel } from '../../services/airi/channel-server'
+import type { PortedWindow } from './ported'
 
 import { defineInvokeHandler } from '@moeru/eventa'
-import { createContext } from '@moeru/eventa/adapters/electron/main'
-import { safeClose } from '@proj-airi/electron-vueuse/main'
-import { ipcMain } from 'electron'
 
 import { setupBaseWindowElectronInvokes } from './window'
 
 export interface ReferencedWindowHandle {
   id: string
   window: BrowserWindow
-  context: ReturnType<typeof createContext>['context']
+  context: AnyEventaContext
   eventa: ReturnType<typeof createRequestWindowEventa>
 }
 
@@ -24,25 +23,23 @@ export interface ReferencedWindowManager<Payload extends RequestWindowPayload = 
 }
 
 /**
- * Minimal per-id window manager used by notice/widgets-like windows.
- * It opens (or reuses) a window, loads the route with the id in query, and returns the window/context so
- * callers can register their own action handlers.
+ * Per-id window manager for notice-like surfaces.
+ *
+ * Ported to Electrobun: the window and its eventa context are created together by
+ * `createPortedWindow`, so each id gets its own view-bound context instead of sharing the
+ * flat Electron `ipcMain` namespace.
  */
 export function createReferencedWindowManager<Payload extends RequestWindowPayload = RequestWindowPayload>(params: {
   eventa: ReturnType<typeof createRequestWindowEventa>
   i18n: I18n
   serverChannel: ServerChannel
-  createWindow: (id: string) => BrowserWindow
-  loadRoute: (window: BrowserWindow, payload: Payload & { id: string }) => Promise<void>
+  createWindow: (id: string) => Promise<PortedWindow>
+  loadRoute: (ported: PortedWindow, payload: Payload & { id: string }) => Promise<void>
 }): ReferencedWindowManager<Payload> {
-  const windows = new Map<string, { window: BrowserWindow, context: ReturnType<typeof createContext>['context'] }>()
+  const windows = new Map<string, { ported: PortedWindow, context: AnyEventaContext }>()
 
-  async function bindContext(id: string, payload: Payload, win: BrowserWindow) {
-    // TODO: once we refactored eventa to support window-namespaced contexts,
-    // we can remove the setMaxListeners call below since eventa will be able to dispatch and
-    // manage events within eventa's context system.
-    ipcMain.setMaxListeners(0)
-    const { context } = createContext(ipcMain, win)
+  async function bindContext(id: string, payload: Payload, ported: PortedWindow) {
+    const { context } = ported
 
     defineInvokeHandler(context, params.eventa.pageMounted, (req) => {
       if (req?.id && req.id !== id)
@@ -56,29 +53,34 @@ export function createReferencedWindowManager<Payload extends RequestWindowPaylo
       windows.delete(id)
     })
 
-    await setupBaseWindowElectronInvokes({ context, window: win, i18n: params.i18n, serverChannel: params.serverChannel })
+    await setupBaseWindowElectronInvokes({
+      context,
+      window: ported.window,
+      i18n: params.i18n,
+      serverChannel: params.serverChannel,
+    })
 
-    // NOTICE: Electrobun's native layer emits `close-<id>`, so the event name is `close`
+    // NOTICE: the native layer emits `close-<id>`, so the event name is `close`
     // (Electron's `closed`). Listening for `closed` here silently leaked the map entry.
-    win.on('close', () => windows.delete(id))
+    ported.native.on('close', () => windows.delete(id))
 
-    return { window: win, context }
+    return { ported, context }
   }
 
   async function open(payload: Payload & { id?: string }): Promise<ReferencedWindowHandle> {
     const id = payload.id ?? Math.random().toString(36).slice(2, 10)
     let ctx = windows.get(id)
 
-    if (!ctx || ctx.window.isDestroyed()) {
-      const win = params.createWindow(id)
-      ctx = await bindContext(id, payload, win)
+    if (!ctx || ctx.ported.isDestroyed()) {
+      const ported = await params.createWindow(id)
+      ctx = await bindContext(id, payload, ported)
       windows.set(id, ctx)
     }
 
     try {
-      await params.loadRoute(ctx.window, { ...payload, id })
-      ctx.window.show()
-      ctx.window.focus()
+      await params.loadRoute(ctx.ported, { ...payload, id })
+      ctx.ported.facade.show()
+      ctx.ported.facade.focus()
     }
     catch (error) {
       const wrapped = error ?? new Error('Failed to open referenced window')
@@ -86,15 +88,14 @@ export function createReferencedWindowManager<Payload extends RequestWindowPaylo
       throw wrapped
     }
 
-    return { id, window: ctx.window, context: ctx.context, eventa: params.eventa }
+    return { id, window: ctx.ported.window, context: ctx.context, eventa: params.eventa }
   }
 
   function close(id: string) {
     const ctx = windows.get(id)
     if (!ctx)
       return
-
-    safeClose(ctx.window)
+    ctx.ported.close()
     windows.delete(id)
   }
 

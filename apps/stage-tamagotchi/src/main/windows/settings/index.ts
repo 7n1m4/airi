@@ -1,3 +1,5 @@
+import type { BrowserWindow } from 'electron'
+
 import type { I18n } from '../../libs/i18n'
 import type { AcpAgentsManager } from '../../services/airi/acp-agents'
 import type { ServerChannel } from '../../services/airi/channel-server'
@@ -6,18 +8,10 @@ import type { AutoUpdater } from '../../services/electron/auto-updater'
 import type { DevtoolsWindowManager } from '../devtools'
 import type { WidgetsWindowManager } from '../widgets'
 
-import { join, resolve } from 'node:path'
-
-import { initScreenCaptureForWindow } from '@proj-airi/electron-screen-capture/main'
-import { BrowserWindow } from 'electron'
-
 import { electronSettingsNavigate } from '../../../shared/eventa'
-import { APP_ICON as icon } from '../../assets'
-import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
-import { createReusableWindow } from '../../libs/electron/window-manager'
-import { toggleWindowShow } from '../shared'
-import { openExternalSafely } from '../shared/open-external'
-import { setupSettingsWindowInvokes } from './rpc/index.electron'
+import { createPortedWindow } from '../shared/ported'
+import { toggleWindowShow } from '../shared/window'
+import { setupSettingsWindowInvokes } from './rpc'
 
 export interface SettingsWindowManager {
   getWindow: () => Promise<BrowserWindow>
@@ -34,38 +28,25 @@ export function setupSettingsWindowReusableFunc(params: {
   acpAgentsManager: AcpAgentsManager
   i18n: I18n
 }): SettingsWindowManager {
-  const rendererBase = baseUrl(resolve(getElectronMainDirname(), '..', 'renderer'))
   const defaultRoute = '/settings'
   let currentRoute = defaultRoute
-  let settingsContext: Awaited<ReturnType<typeof setupSettingsWindowInvokes>> | undefined
+  let current: Awaited<ReturnType<typeof createPortedWindow>> | undefined
 
-  const reusable = createReusableWindow(async () => {
-    const window = new BrowserWindow({
+  async function ensureWindow() {
+    if (current && !current.isDestroyed())
+      return current
+    current = await createPortedWindow({
+      tag: 'settings',
       title: 'AIRI — Settings',
-      width: 600.0,
-      height: 800.0,
-      show: false,
-      icon,
-      webPreferences: {
-        preload: join(getElectronMainDirname(), '../preload/index.cjs'),
-        sandbox: true,
-        webviewTag: true,
-      },
+      width: 600,
+      height: 800,
+      route: currentRoute,
+      setupBase: { i18n: params.i18n, serverChannel: params.serverChannel },
     })
-
-    if (params.onWindowCreated) {
-      params.onWindowCreated(window)
-    }
-
-    window.on('ready-to-show', () => window.show())
-    window.webContents.setWindowOpenHandler((details) => {
-      openExternalSafely(details.url)
-      return { action: 'deny' }
-    })
-
-    await load(window, withHashRoute(rendererBase, currentRoute))
-    settingsContext = await setupSettingsWindowInvokes({
-      settingsWindow: window,
+    params.onWindowCreated?.(current.window)
+    await setupSettingsWindowInvokes({
+      context: current.context,
+      settingsWindow: current.window,
       widgetsManager: params.widgetsManager,
       autoUpdater: params.autoUpdater,
       devtoolsMarkdownStressWindow: params.devtoolsMarkdownStressWindow,
@@ -74,39 +55,20 @@ export function setupSettingsWindowReusableFunc(params: {
       acpAgentsManager: params.acpAgentsManager,
       i18n: params.i18n,
     })
-
-    window.on('closed', () => {
-      if (settingsContext)
-        settingsContext = undefined
-    })
-
-    initScreenCaptureForWindow(window)
-
-    return window
-  })
-
-  async function openWindow(route?: string) {
-    if (route) {
-      currentRoute = route
-    }
-
-    const window = await reusable.getWindow()
-
-    if (route && settingsContext) {
-      settingsContext.emit(electronSettingsNavigate, { route })
-    }
-
-    if (window.isVisible()) {
-      window.show()
-      window.focus()
-    }
-    else {
-      toggleWindowShow(window)
-    }
+    return current
   }
 
   return {
-    getWindow: reusable.getWindow,
-    openWindow,
+    getWindow: async () => (await ensureWindow()).window,
+    openWindow: async (route) => {
+      if (route)
+        currentRoute = route
+      const ported = await ensureWindow()
+      if (route)
+        ported.context.emit(electronSettingsNavigate, { route })
+      if (!ported.facade.getURL().includes(`#${currentRoute}`))
+        await ported.loadRoute(currentRoute)
+      toggleWindowShow(ported.window)
+    },
   }
 }

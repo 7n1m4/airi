@@ -1,32 +1,33 @@
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import type { BrowserWindow } from 'electron'
 
-import { initScreenCaptureForWindow } from '@proj-airi/electron-screen-capture/main'
-import { BrowserWindow } from 'electron'
-
-import { baseUrl, getElectronMainDirname, load } from '../../libs/electrobun/location'
-import { createReusableWindow } from '../../libs/electron/window-manager'
+import { createPortedWindow } from '../shared/ported'
 
 export interface BeatSyncWindowManager {
   getWindow: () => Promise<BrowserWindow>
 }
 
+/**
+ * Beat-sync owns its own MPA entry (`beat-sync.html`); it has no hash route and no base
+ * window services (the renderer talks to the channel server directly).
+ *
+ * `initScreenCaptureForWindow` from `@proj-airi/electron-screen-capture` is deliberately
+ * dropped: `desktopCapturer` has no Electrobun equivalent (docs/design-electrobun-port.md §3.1).
+ */
 export function setupBeatSync(): BeatSyncWindowManager {
-  const reusable = createReusableWindow(async () => {
-    const window = new BrowserWindow({
-      show: false,
-      webPreferences: {
-        preload: join(dirname(fileURLToPath(import.meta.url)), '../preload/index.cjs'),
-        sandbox: true,
-      },
-    })
-
-    await load(window, baseUrl(resolve(getElectronMainDirname(), '..', 'renderer'), 'beat-sync.html'))
-    initScreenCaptureForWindow(window)
-    return window
-  })
+  let current: Awaited<ReturnType<typeof createPortedWindow>> | undefined
 
   return {
-    getWindow: reusable.getWindow,
+    getWindow: async () => {
+      if (current && !current.isDestroyed())
+        return current.window
+      current = await createPortedWindow({
+        tag: 'beat-sync',
+        title: 'AIRI — Beat Sync',
+        width: 1020,
+        height: 640,
+        html: 'beat-sync.html',
+      })
+      return current.window
+    },
   }
 }

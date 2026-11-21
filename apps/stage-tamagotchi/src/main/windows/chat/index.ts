@@ -1,3 +1,5 @@
+import type { BrowserWindow } from 'electron'
+
 import type { globalAppConfigSchema } from '../../configs/global'
 import type { Config } from '../../libs/electron/persistence'
 import type { I18n } from '../../libs/i18n'
@@ -7,23 +9,11 @@ import type { McpStdioManager } from '../../services/airi/mcp-servers'
 import type { SettingsWindowManager } from '../settings'
 import type { WidgetsWindowManager } from '../widgets'
 
-import { join, resolve } from 'node:path'
-
-import { BrowserWindow } from 'electron'
 import { throttle } from 'es-toolkit'
 
-import { APP_ICON as icon } from '../../assets'
-import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electrobun/location'
-import { createReusableWindow } from '../../libs/electron/window-manager'
 import { ensureWindowInVisibleBounds } from '../shared/display'
-import { openExternalSafely } from '../shared/open-external'
-import { setupChatWindowElectronInvokes } from './rpc/index.electron'
-
-let isChatVisible = false
-
-export function setChatVisibleState(visible: boolean) {
-  isChatVisible = visible
-}
+import { createPortedWindow } from '../shared/ported'
+import { setupChatWindowElectronInvokes } from './rpc'
 
 export interface ChatWindowManager {
   getWindow: () => Promise<BrowserWindow>
@@ -42,175 +32,71 @@ export function setupChatWindowReusableFunc(params: {
   i18n: I18n
   appConfig: Config<typeof globalAppConfigSchema>
 }): ChatWindowManager {
-  const reusable = createReusableWindow(async () => {
-    const getConfig = () => params.appConfig.get() ?? { language: 'en', windows: [], microphoneToggleHotkey: 'Scroll' as const }
-    const chatConfig = getConfig().windows?.find((w: any) => w.title === 'AIRI' && w.tag === 'chat')
+  let current: Awaited<ReturnType<typeof createPortedWindow>> | undefined
 
-    let initialWidth = chatConfig?.width ?? 600.0
-    let initialHeight = chatConfig?.height ?? 800.0
-    let initialX = chatConfig?.x
-    let initialY = chatConfig?.y
+  const getConfig = () => params.appConfig.get() ?? { language: 'en', windows: [], microphoneToggleHotkey: 'Scroll' as const }
+  const chatConfig = () => getConfig().windows?.find(w => w.title === 'AIRI' && w.tag === 'chat')
 
-    if (initialX !== undefined && initialY !== undefined && !Number.isNaN(initialX) && !Number.isNaN(initialY)) {
+  function persistBounds() {
+    if (!current || current.isDestroyed())
+      return
+    const bounds = current.facade.getBounds()
+    const config = getConfig()
+    const windows = Array.isArray(config.windows) ? config.windows : []
+    const index = windows.findIndex(w => w.title === 'AIRI' && w.tag === 'chat')
+    const entry = {
+      ...(index === -1 ? { title: 'AIRI', tag: 'chat' } : windows[index]),
+      x: Math.round(bounds.x),
+      y: Math.round(bounds.y),
+      width: Math.round(bounds.width),
+      height: Math.round(bounds.height),
+    }
+    if (index === -1)
+      windows.push(entry)
+    else
+      windows[index] = entry
+    params.appConfig.update({ ...config, windows })
+  }
+
+  const throttledPersist = throttle(persistBounds, 200)
+
+  async function ensureWindow() {
+    if (current && !current.isDestroyed())
+      return current
+
+    const saved = chatConfig()
+    let width = saved?.width ?? 600
+    let height = saved?.height ?? 800
+    let x = saved?.x
+    let y = saved?.y
+    if (x !== undefined && y !== undefined && !Number.isNaN(x) && !Number.isNaN(y)) {
       const valid = ensureWindowInVisibleBounds({
-        x: Math.round(initialX),
-        y: Math.round(initialY),
-        width: Math.round(initialWidth),
-        height: Math.round(initialHeight),
+        x: Math.round(x),
+        y: Math.round(y),
+        width: Math.round(width),
+        height: Math.round(height),
       })
-      initialX = valid.x
-      initialY = valid.y
-      initialWidth = valid.width
-      initialHeight = valid.height
+      ;({ x, y, width, height } = valid)
     }
 
-    const window = new BrowserWindow({
+    current = await createPortedWindow({
+      tag: 'chat',
       title: 'AIRI — Chat',
-      width: initialWidth,
-      height: initialHeight,
-      x: initialX,
-      y: initialY,
-      show: false,
-      backgroundColor: '#121212',
-      icon,
-      webPreferences: {
-        preload: join(getElectronMainDirname(), '../preload/index.cjs'),
-        sandbox: true,
-      },
+      width,
+      height,
+      x,
+      y,
+      route: '/chat',
+      setupBase: { i18n: params.i18n, serverChannel: params.serverChannel },
     })
-
-    function restoreBounds() {
-      const config = getConfig()
-      const currentChatConfig = config.windows?.find((w: any) => w.title === 'AIRI' && w.tag === 'chat')
-      const x = currentChatConfig?.x
-      const y = currentChatConfig?.y
-      const width = currentChatConfig?.width ?? 600.0
-      const height = currentChatConfig?.height ?? 800.0
-      if (x !== undefined && y !== undefined && !Number.isNaN(x) && !Number.isNaN(y)) {
-        const valid = ensureWindowInVisibleBounds({
-          x: Math.round(x),
-          y: Math.round(y),
-          width: Math.round(width),
-          height: Math.round(height),
-        })
-        window.setBounds(valid)
-      }
-    }
-
-    window.on('ready-to-show', () => {
-      restoreBounds()
-      console.info(`[Main Process] [Chat Window] Event: "ready-to-show" triggered. isChatVisible: ${isChatVisible}`)
-      if (isChatVisible) {
-        window.show()
-      }
-      setTimeout(() => restoreBounds(), 500)
-    })
-    window.on('show', () => {
-      console.info('[Main Process] [Chat Window] Event: "show" triggered.')
-      isChatVisible = true
-      const allWins = BrowserWindow.getAllWindows()
-      const mainWin = allWins.find(w => (w as any).__is_main_window === true)
-      console.info(`[Main Process] [Chat Window] Searching for main window. Total windows: ${allWins.length}, Main window found: ${!!mainWin}`)
-      if (mainWin && !mainWin.isDestroyed() && mainWin.webContents && !mainWin.webContents.isDestroyed()) {
-        try {
-          console.info('[Main Process] [Chat Window] Sending "chat-window-state" -> true to main window webContents')
-          mainWin.webContents.send('chat-window-state', true)
-        }
-        catch (e) {
-          console.error('[Main Process] Failed to send chat-window-state show event:', e)
-        }
-      }
-    })
-    window.on('hide', () => {
-      console.info('[Main Process] [Chat Window] Event: "hide" triggered.')
-      isChatVisible = false
-      const allWins = BrowserWindow.getAllWindows()
-      const mainWin = allWins.find(w => (w as any).__is_main_window === true)
-      console.info(`[Main Process] [Chat Window] Searching for main window. Total windows: ${allWins.length}, Main window found: ${!!mainWin}`)
-      if (mainWin && !mainWin.isDestroyed() && mainWin.webContents && !mainWin.webContents.isDestroyed()) {
-        try {
-          console.info('[Main Process] [Chat Window] Sending "chat-window-state" -> false to main window webContents')
-          mainWin.webContents.send('chat-window-state', false)
-        }
-        catch (e) {
-          console.error('[Main Process] Failed to send chat-window-state hide event:', e)
-        }
-      }
-    })
-    window.on('closed', () => {
-      console.info('[Main Process] [Chat Window] Event: "closed" triggered.')
-      isChatVisible = false
-      const allWins = BrowserWindow.getAllWindows()
-      const mainWin = allWins.find(w => (w as any).__is_main_window === true)
-      console.info(`[Main Process] [Chat Window] Searching for main window. Total windows: ${allWins.length}, Main window found: ${!!mainWin}`)
-      if (mainWin && !mainWin.isDestroyed() && mainWin.webContents && !mainWin.webContents.isDestroyed()) {
-        try {
-          console.info('[Main Process] [Chat Window] Sending "chat-window-state" -> false to main window webContents')
-          mainWin.webContents.send('chat-window-state', false)
-        }
-        catch (e) {
-          console.error('[Main Process] Failed to send chat-window-state closed event:', e)
-        }
-      }
-    })
-
-    function handleNewBounds(newBounds: { x: number, y: number, width: number, height: number }) {
-      if (window.isDestroyed())
-        return
-
-      const config = getConfig()
-      if (!config.windows || !Array.isArray(config.windows)) {
-        config.windows = []
-      }
-
-      const existingConfigIndex = config.windows.findIndex((w: any) => w.title === 'AIRI' && w.tag === 'chat')
-
-      if (existingConfigIndex === -1) {
-        config.windows.push({
-          title: 'AIRI',
-          tag: 'chat',
-          x: Math.round(newBounds.x),
-          y: Math.round(newBounds.y),
-          width: Math.round(newBounds.width),
-          height: Math.round(newBounds.height),
-        })
-      }
-      else {
-        const currentConfig = config.windows[existingConfigIndex]
-        config.windows[existingConfigIndex] = {
-          ...currentConfig,
-          x: Math.round(newBounds.x),
-          y: Math.round(newBounds.y),
-          width: Math.round(newBounds.width),
-          height: Math.round(newBounds.height),
-        }
-      }
-
-      params.appConfig.update(config)
-    }
-
-    const throttledHandleNewBounds = throttle(handleNewBounds, 200)
-
-    window.on('resize', () => {
-      if (!window.isDestroyed()) {
-        throttledHandleNewBounds(window.getBounds())
-      }
-    })
-    window.on('move', () => {
-      if (!window.isDestroyed()) {
-        throttledHandleNewBounds(window.getBounds())
-      }
-    })
-
-    window.webContents.setWindowOpenHandler((details) => {
-      openExternalSafely(details.url)
-      return { action: 'deny' }
-    })
-
-    await load(window, withHashRoute(baseUrl(resolve(getElectronMainDirname(), '..', 'renderer')), '/chat'))
-
+    current.facade.on('resize', () => throttledPersist())
+    current.facade.on('move', () => throttledPersist())
+    // NOTICE: the Electron listeners pushed `chat-window-state` to the Control Strip over a raw
+    // webContents channel the renderer's eventa bridge cannot receive. The Control Strip now
+    // reads the authoritative state via `electronGetChatWindowState`, registered in main/index.ts.
     await setupChatWindowElectronInvokes({
-      window,
+      context: current.context,
+      window: current.window,
       settingsWindow: params.settingsWindow,
       widgetsManager: params.widgetsManager,
       serverChannel: params.serverChannel,
@@ -218,60 +104,24 @@ export function setupChatWindowReusableFunc(params: {
       acpAgentsManager: params.acpAgentsManager,
       i18n: params.i18n,
     })
-
-    return window
-  })
+    return current
+  }
 
   async function openChat(enabled?: boolean) {
     if (enabled === false) {
-      if (!reusable.hasWindow()) {
-        setChatVisibleState(false)
-        return
-      }
-      const win = await reusable.getWindow()
-      setChatVisibleState(false)
-      if (!win.isDestroyed()) {
-        win.destroy()
-      }
+      current?.close()
       return
     }
-
-    if (enabled === true) {
-      setChatVisibleState(true)
-      const win = await reusable.getWindow()
-      win.show()
-      win.focus()
-      return
-    }
-
-    // enabled is undefined (toggle)
-    if (!reusable.hasWindow()) {
-      setChatVisibleState(true)
-      const win = await reusable.getWindow()
-      win.show()
-      win.focus()
-      return
-    }
-
-    const win = await reusable.getWindow()
-    const nextState = !win.isVisible()
-    setChatVisibleState(nextState)
-    if (!nextState) {
-      if (!win.isDestroyed()) {
-        win.destroy()
-      }
-    }
-    else {
-      win.show()
-      win.focus()
-    }
+    const ported = await ensureWindow()
+    ported.facade.show()
+    ported.facade.focus()
   }
 
   return {
-    getWindow: reusable.getWindow,
+    getWindow: async () => (await ensureWindow()).window,
     openChat,
-    isVisible: reusable.isVisible,
-    hasWindow: reusable.hasWindow,
-    getExistingWindow: reusable.getExistingWindow,
+    isVisible: () => Boolean(current && !current.isDestroyed() && current.facade.isVisible()),
+    hasWindow: () => Boolean(current && !current.isDestroyed()),
+    getExistingWindow: () => (current && !current.isDestroyed() ? current.window : undefined),
   }
 }
