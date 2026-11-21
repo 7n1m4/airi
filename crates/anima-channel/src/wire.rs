@@ -199,6 +199,125 @@ pub struct CoreStatusReply {
     pub message_count: u64,
 }
 
+/// `data` payload of a `providers.list` reply.
+///
+/// Lists configured LLM providers (metadata only, no secrets). The `apiKey`
+/// field is NEVER included in this reply — it is write-only via `providers.set`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ProvidersListReply {
+    /// List of provider metadata (no secrets).
+    pub providers: Vec<ProviderInfo>,
+}
+
+/// Provider metadata (no secrets).
+///
+/// This type NEVER contains `apiKey`, `secret`, `token`, or `config` fields.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderInfo {
+    /// Provider identifier (e.g. `openai`, `llama-cpp-local`).
+    pub id: String,
+    /// Provider kind tag (`openai`, `llama-cpp`, etc.).
+    pub kind: String,
+    /// Model name (empty string if not configured).
+    pub model: String,
+    /// Base URL (empty string if using default).
+    pub base_url: String,
+    /// Whether this provider is active.
+    pub enabled: bool,
+    /// Unix milliseconds of last update.
+    pub updated_at: i32,
+}
+
+/// `data` payload of a `settings.get` reply.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsGetReply {
+    /// Settings section name.
+    pub section: String,
+    /// Settings data as JSON string.
+    pub settings: String,
+}
+
+/// `data` payload of a `settings.set` reply.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+pub struct SettingsSetReply {
+    /// Whether the save succeeded.
+    pub ok: bool,
+}
+
+/// `data` payload of a `vault.status` reply.
+///
+/// Vault statistics (counts and byte sizes only, no secret material).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultStatusReply {
+    /// Whether the vault is available.
+    pub available: bool,
+    /// Vault statistics.
+    pub stats: Option<VaultStatsData>,
+}
+
+/// Vault statistics data.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultStatsData {
+    /// Chat domain statistics.
+    pub chats: DomainStatsData,
+    /// Memory domain statistics.
+    pub memory: MemoryStatsData,
+    /// Provider domain statistics.
+    pub providers: ProviderStatsData,
+    /// Character domain statistics.
+    pub characters: CharacterStatsData,
+}
+
+/// Chat domain statistics.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainStatsData {
+    /// Number of sessions.
+    pub sessions: u32,
+    /// Number of messages.
+    pub messages: u32,
+    /// Total bytes.
+    pub bytes: u32,
+}
+
+/// Memory domain statistics.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryStatsData {
+    /// Number of summaries.
+    pub summaries: u32,
+    /// Number of journal entries.
+    pub journal_entries: u32,
+    /// Total bytes.
+    pub bytes: u32,
+}
+
+/// Provider domain statistics.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderStatsData {
+    /// Number of providers.
+    pub count: u32,
+    /// Total bytes.
+    pub bytes: u32,
+}
+
+/// Character domain statistics.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CharacterStatsData {
+    /// Number of characters.
+    pub count: u32,
+    /// Total bytes.
+    pub bytes: u32,
+}
+
+
 /// `data` payload of a `gateway.config` reply.
 ///
 /// Never includes the auth token — the token stays server-side.
@@ -680,6 +799,16 @@ pub fn type_collection() -> specta::Types {
         .register::<CoreStatusReply>()
         .register::<GatewayConfigReply>()
         .register::<GatewayAuthReply>()
+        .register::<ProvidersListReply>()
+        .register::<ProviderInfo>()
+        .register::<SettingsGetReply>()
+        .register::<SettingsSetReply>()
+        .register::<VaultStatusReply>()
+        .register::<VaultStatsData>()
+        .register::<DomainStatsData>()
+        .register::<MemoryStatsData>()
+        .register::<ProviderStatsData>()
+        .register::<CharacterStatsData>()
         .register::<crate::config::ChannelConfig>()
         .register::<crate::control::GatewayControlStatus>()
         .register::<crate::control::GatewayControlApply>()
@@ -1090,5 +1219,87 @@ mod tests {
                 "forbidden field present: {forbidden}"
             );
         }
+    }
+
+    #[test]
+    fn providers_list_reply_has_no_secret_bearing_fields() {
+        let reply = ProvidersListReply {
+            providers: vec![ProviderInfo {
+                id: "openai".to_string(),
+                kind: "openai".to_string(),
+                model: "gpt-4o".to_string(),
+                base_url: "https://api.openai.com/v1".to_string(),
+                enabled: true,
+                updated_at: 1234567890,
+            }],
+        };
+        let value = serde_json::to_value(&reply).unwrap();
+        let obj = value.as_object().unwrap();
+        let providers = obj.get("providers").unwrap().as_array().unwrap();
+        let provider = providers[0].as_object().unwrap();
+        for forbidden in [
+            "apiKey",
+            "api_key",
+            "secret",
+            "token",
+            "authToken",
+            "config",
+        ] {
+            assert!(
+                !provider.contains_key(forbidden),
+                "forbidden field present in provider: {forbidden}"
+            );
+        }
+    }
+
+    #[test]
+    fn vault_status_reply_has_no_secret_bearing_fields() {
+        let reply = VaultStatusReply {
+            available: true,
+            stats: Some(VaultStatsData {
+                chats: DomainStatsData {
+                    sessions: 10,
+                    messages: 42,
+                    bytes: 123456,
+                },
+                memory: MemoryStatsData {
+                    summaries: 5,
+                    journal_entries: 12,
+                    bytes: 67890,
+                },
+                providers: ProviderStatsData {
+                    count: 3,
+                    bytes: 1024,
+                },
+                characters: CharacterStatsData {
+                    count: 8,
+                    bytes: 2048000,
+                },
+            }),
+        };
+        let value = serde_json::to_value(&reply).unwrap();
+        let obj = value.as_object().unwrap();
+        for forbidden in [
+            "apiKey",
+            "api_key",
+            "secret",
+            "token",
+            "authToken",
+            "config",
+            "keys",
+            "ciphertext",
+        ] {
+            assert!(
+                !obj.contains_key(forbidden),
+                "forbidden field present: {forbidden}"
+            );
+        }
+        // Stats contain only counts and byte sizes
+        let stats = obj.get("stats").unwrap().as_object().unwrap();
+        let providers = stats.get("providers").unwrap().as_object().unwrap();
+        assert!(providers.contains_key("count"));
+        assert!(providers.contains_key("bytes"));
+        assert!(!providers.contains_key("config"));
+        assert!(!providers.contains_key("keys"));
     }
 }

@@ -260,6 +260,47 @@ impl GatewayClient {
         })
     }
 
+    /// Call `providers.list` and decode the typed reply.
+    pub fn providers_list(&mut self) -> Result<crate::wire::ProvidersListReply, GatewayClientError> {
+        let value = self.rpc("providers.list", None)?;
+        serde_json::from_value(value).map_err(|err| {
+            GatewayClientError::UnexpectedFrame(format!("invalid providers.list reply: {err}"))
+        })
+    }
+
+    /// Call `settings.get` and decode the typed reply.
+    pub fn settings_get(
+        &mut self,
+        section: &str,
+    ) -> Result<crate::wire::SettingsGetReply, GatewayClientError> {
+        let payload = serde_json::json!({ "section": section });
+        let value = self.rpc("settings.get", Some(payload))?;
+        serde_json::from_value(value).map_err(|err| {
+            GatewayClientError::UnexpectedFrame(format!("invalid settings.get reply: {err}"))
+        })
+    }
+
+    /// Call `settings.set`.
+    pub fn settings_set(
+        &mut self,
+        section: &str,
+        settings: serde_json::Value,
+    ) -> Result<crate::wire::SettingsSetReply, GatewayClientError> {
+        let payload = serde_json::json!({ "section": section, "settings": settings });
+        let value = self.rpc("settings.set", Some(payload))?;
+        serde_json::from_value(value).map_err(|err| {
+            GatewayClientError::UnexpectedFrame(format!("invalid settings.set reply: {err}"))
+        })
+    }
+
+    /// Call `vault.status` and decode the typed reply.
+    pub fn vault_status(&mut self) -> Result<crate::wire::VaultStatusReply, GatewayClientError> {
+        let value = self.rpc("vault.status", None)?;
+        serde_json::from_value(value).map_err(|err| {
+            GatewayClientError::UnexpectedFrame(format!("invalid vault.status reply: {err}"))
+        })
+    }
+
     /// Opt in to a set of server-initiated event topics. The reply carries the
     /// resulting topic set. Default for a fresh session is no topics.
     pub fn subscribe(

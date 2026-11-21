@@ -27,6 +27,14 @@ export type ChannelConfig = {
 	tlsConfig?: unknown,
 };
 
+/**  Character domain statistics. */
+export type CharacterStatsData = {
+	/**  Number of characters. */
+	count: number,
+	/**  Total bytes. */
+	bytes: number,
+};
+
 /**
  *  `data` payload of a `core.status` reply (read-only, additive).
  *
@@ -69,6 +77,16 @@ export type CueKind =
 "motion" |
 /**  Visual effect cue — not a facial morph. */
 "vfx";
+
+/**  Chat domain statistics. */
+export type DomainStatsData = {
+	/**  Number of sessions. */
+	sessions: number,
+	/**  Number of messages. */
+	messages: number,
+	/**  Total bytes. */
+	bytes: number,
+};
 
 /**  Payload of an `emotion.tag` event: a discrete emotion for an actor. */
 export type EmotionTagData = {
@@ -342,6 +360,16 @@ export type LipSyncRmsData = {
 	ts_ms: number,
 };
 
+/**  Memory domain statistics. */
+export type MemoryStatsData = {
+	/**  Number of summaries. */
+	summaries: number,
+	/**  Number of journal entries. */
+	journalEntries: number,
+	/**  Total bytes. */
+	bytes: number,
+};
+
 /**
  *  `data` payload of the `module:authenticate` handshake frame
  *  (server-runtime mirror shape).
@@ -361,6 +389,45 @@ export type PresenceChangedData = {
 	seq: number,
 	/**  Producer timestamp, unix epoch milliseconds (stamped by the bus). */
 	ts_ms: number,
+};
+
+/**
+ *  Provider metadata (no secrets).
+ *
+ *  This type NEVER contains `apiKey`, `secret`, `token`, or `config` fields.
+ */
+export type ProviderInfo = {
+	/**  Provider identifier (e.g. `openai`, `llama-cpp-local`). */
+	id: string,
+	/**  Provider kind tag (`openai`, `llama-cpp`, etc.). */
+	kind: string,
+	/**  Model name (empty string if not configured). */
+	model: string,
+	/**  Base URL (empty string if using default). */
+	baseUrl: string,
+	/**  Whether this provider is active. */
+	enabled: boolean,
+	/**  Unix milliseconds of last update. */
+	updatedAt: number,
+};
+
+/**  Provider domain statistics. */
+export type ProviderStatsData = {
+	/**  Number of providers. */
+	count: number,
+	/**  Total bytes. */
+	bytes: number,
+};
+
+/**
+ *  `data` payload of a `providers.list` reply.
+ *
+ *  Lists configured LLM providers (metadata only, no secrets). The `apiKey`
+ *  field is NEVER included in this reply — it is write-only via `providers.set`.
+ */
+export type ProvidersListReply = {
+	/**  List of provider metadata (no secrets). */
+	providers: ProviderInfo[],
 };
 
 /**  The `error` object carried by `error` frames and failing `rpc` replies. */
@@ -399,6 +466,20 @@ export type RuntimeStatusReply = {
 	uptimeSeconds: number,
 	/**  Protocol identifier ([`crate::dispatch::PROTOCOL`]). */
 	protocol: string,
+};
+
+/**  `data` payload of a `settings.get` reply. */
+export type SettingsGetReply = {
+	/**  Settings section name. */
+	section: string,
+	/**  Settings data as JSON string. */
+	settings: string,
+};
+
+/**  `data` payload of a `settings.set` reply. */
+export type SettingsSetReply = {
+	/**  Whether the save succeeded. */
+	ok: boolean,
 };
 
 /**
@@ -440,4 +521,28 @@ export type TokenDeltaData = {
 	seq: number,
 	/**  Producer timestamp, unix epoch milliseconds (stamped by the bus). */
 	ts_ms: number,
+};
+
+/**  Vault statistics data. */
+export type VaultStatsData = {
+	/**  Chat domain statistics. */
+	chats: DomainStatsData,
+	/**  Memory domain statistics. */
+	memory: MemoryStatsData,
+	/**  Provider domain statistics. */
+	providers: ProviderStatsData,
+	/**  Character domain statistics. */
+	characters: CharacterStatsData,
+};
+
+/**
+ *  `data` payload of a `vault.status` reply.
+ *
+ *  Vault statistics (counts and byte sizes only, no secret material).
+ */
+export type VaultStatusReply = {
+	/**  Whether the vault is available. */
+	available: boolean,
+	/**  Vault statistics. */
+	stats: VaultStatsData | null,
 };

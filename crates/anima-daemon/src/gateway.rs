@@ -482,33 +482,106 @@ impl Gateway {
         core: &CoreService,
         publisher: &EventPublisher,
     ) -> anima_channel::RendererHandlers {
-        let core = core.clone();
         let publisher = publisher.clone();
         let mut m = std::collections::HashMap::new();
-        m.insert(
-            "core.status".to_string(),
-            Box::new(move |_method: &str, _value: &serde_json::Value| {
-                if !core.available() {
-                    let snap = core.snapshot();
-                    let reason = snap.reason.unwrap_or_else(|| "unavailable".to_string());
-                    return Err(format!("core unavailable: {reason}"));
-                }
-                let reply = core.status_reply();
-                // Deduped inside the publisher: only a real health change emits.
-                publisher.status_changed(
-                    reply.core_available,
-                    reply.store_available,
-                    reply.store_health.clone(),
-                    None,
-                );
-                Ok(serde_json::to_value(reply).map_err(|e| e.to_string())?)
-            })
-                as Box<
-                    dyn Fn(&str, &serde_json::Value) -> Result<serde_json::Value, String>
-                        + Send
-                        + Sync,
-                >,
-        );
+        {
+            let core = core.clone();
+            m.insert(
+                "core.status".to_string(),
+                Box::new(move |_method: &str, _value: &serde_json::Value| {
+                    if !core.available() {
+                        let snap = core.snapshot();
+                        let reason = snap.reason.unwrap_or_else(|| "unavailable".to_string());
+                        return Err(format!("core unavailable: {reason}"));
+                    }
+                    let reply = core.status_reply();
+                    publisher.status_changed(
+                        reply.core_available,
+                        reply.store_available,
+                        reply.store_health.clone(),
+                        None,
+                    );
+                    Ok(serde_json::to_value(reply).map_err(|e| e.to_string())?)
+                })
+                    as Box<
+                        dyn Fn(&str, &serde_json::Value) -> Result<serde_json::Value, String>
+                            + Send
+                            + Sync,
+                    >,
+            );
+        }
+        {
+            let core = core.clone();
+            m.insert(
+                "providers.list".to_string(),
+                Box::new(move |_method: &str, _value: &serde_json::Value| {
+                    let reply = core.providers_list()?;
+                    Ok(serde_json::to_value(reply).map_err(|e| e.to_string())?)
+                })
+                    as Box<
+                        dyn Fn(&str, &serde_json::Value) -> Result<serde_json::Value, String>
+                            + Send
+                            + Sync,
+                    >,
+            );
+        }
+        {
+            let core = core.clone();
+            m.insert(
+                "settings.get".to_string(),
+                Box::new(move |_method: &str, value: &serde_json::Value| {
+                    let section = value
+                        .get("section")
+                        .and_then(|v| v.as_str())
+                        .ok_or_else(|| "missing section".to_string())?;
+                    let reply = core.settings_get(section)?;
+                    Ok(serde_json::to_value(reply).map_err(|e| e.to_string())?)
+                })
+                    as Box<
+                        dyn Fn(&str, &serde_json::Value) -> Result<serde_json::Value, String>
+                            + Send
+                            + Sync,
+                    >,
+            );
+        }
+        {
+            let core = core.clone();
+            m.insert(
+                "settings.set".to_string(),
+                Box::new(move |_method: &str, value: &serde_json::Value| {
+                    let section = value
+                        .get("section")
+                        .and_then(|v| v.as_str())
+                        .ok_or_else(|| "missing section".to_string())?;
+                    let settings = value
+                        .get("settings")
+                        .cloned()
+                        .ok_or_else(|| "missing settings".to_string())?;
+                    let reply = core.settings_set(section, settings)?;
+                    Ok(serde_json::to_value(reply).map_err(|e| e.to_string())?)
+                })
+                    as Box<
+                        dyn Fn(&str, &serde_json::Value) -> Result<serde_json::Value, String>
+                            + Send
+                            + Sync,
+                    >,
+            );
+        }
+        {
+            let core = core.clone();
+            m.insert(
+                "vault.status".to_string(),
+                Box::new(move |_method: &str, _value: &serde_json::Value| {
+                    let reply = core.vault_status()?;
+                    Ok(serde_json::to_value(reply).map_err(|e| e.to_string())?)
+                })
+                    as Box<
+                        dyn Fn(&str, &serde_json::Value) -> Result<serde_json::Value, String>
+                            + Send
+                            + Sync,
+                    >,
+            );
+        }
         m
     }
 
@@ -1047,5 +1120,88 @@ mod tests {
         assert!(!err.contains("tmp"));
         assert!(!err.contains(".sqlite"));
         assert_eq!(lane.len(), 0, "an unavailable core emits no status.changed");
+    }
+
+    #[test]
+    fn settings_roundtrip_via_rpc() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("server-channel");
+        let gateway = test_gateway(dir.clone(), dir.join(CERTS_DIR));
+
+        let handlers = Gateway::renderer_handlers(&gateway.core, &gateway.publisher);
+
+        // Set a setting
+        let set_handler = handlers.get("settings.set").expect("settings.set registered");
+        let set_payload = serde_json::json!({
+            "section": "chat",
+            "settings": {
+                "sendMode": "enter",
+                "suggestMode": "ctrl-enter",
+                "streamIdleTimeoutMs": 600000,
+                "showDirectorNotes": true,
+                "combineSystemMessages": true
+            }
+        });
+        let set_reply = set_handler("settings.set", &set_payload).expect("settings.set Ok");
+        let set_v: serde_json::Value = set_reply;
+        assert_eq!(set_v["ok"], true);
+
+        // Get it back
+        let get_handler = handlers.get("settings.get").expect("settings.get registered");
+        let get_payload = serde_json::json!({ "section": "chat" });
+        let get_reply = get_handler("settings.get", &get_payload).expect("settings.get Ok");
+        let get_v: serde_json::Value = get_reply;
+        assert_eq!(get_v["section"], "chat");
+        let settings_str = get_v["settings"].as_str().unwrap();
+        let settings: serde_json::Value = serde_json::from_str(settings_str).unwrap();
+        assert_eq!(settings.get("sendMode").unwrap(), "enter");
+        assert_eq!(settings.get("suggestMode").unwrap(), "ctrl-enter");
+    }
+
+    #[test]
+    fn providers_list_never_contains_secrets() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("server-channel");
+        let gateway = test_gateway(dir.clone(), dir.join(CERTS_DIR));
+
+        let handlers = Gateway::renderer_handlers(&gateway.core, &gateway.publisher);
+        let handler = handlers.get("providers.list").expect("providers.list registered");
+        let reply = handler("providers.list", &serde_json::json!({})).expect("providers.list Ok");
+        let v: serde_json::Value = reply;
+
+        // Check the serialized reply has no secret-bearing fields
+        let obj = v.as_object().unwrap();
+        let providers = obj.get("providers").and_then(|p| p.as_array());
+        if let Some(providers) = providers {
+            for provider in providers {
+                let p = provider.as_object().unwrap();
+                assert!(!p.contains_key("apiKey"), "apiKey must not be in provider list");
+                assert!(!p.contains_key("api_key"), "api_key must not be in provider list");
+                assert!(!p.contains_key("secret"), "secret must not be in provider list");
+                assert!(!p.contains_key("token"), "token must not be in provider list");
+                assert!(!p.contains_key("config"), "config must not be in provider list");
+            }
+        }
+    }
+
+    #[test]
+    fn vault_status_never_contains_secrets() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("server-channel");
+        let gateway = test_gateway(dir.clone(), dir.join(CERTS_DIR));
+
+        let handlers = Gateway::renderer_handlers(&gateway.core, &gateway.publisher);
+        let handler = handlers.get("vault.status").expect("vault.status registered");
+        let reply = handler("vault.status", &serde_json::json!({})).expect("vault.status Ok");
+        let v: serde_json::Value = reply;
+
+        // Check the serialized reply has no secret-bearing fields
+        let obj = v.as_object().unwrap();
+        assert!(!obj.contains_key("apiKey"));
+        assert!(!obj.contains_key("secret"));
+        assert!(!obj.contains_key("token"));
+        assert!(!obj.contains_key("config"));
+        assert!(!obj.contains_key("keys"));
+        assert!(!obj.contains_key("ciphertext"));
     }
 }

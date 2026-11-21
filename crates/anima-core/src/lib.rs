@@ -96,7 +96,8 @@ pub enum CoreEvent {
 /// wired to the same store and provider table.
 #[derive(Clone)]
 pub struct AppCore {
-    db: anima_store::Database,
+    /// SQLite database handle (public for daemon RPC access).
+    pub db: anima_store::Database,
     sessions: SessionRepo,
     messages: MessageRepo,
     bus: broadcast::Sender<CoreEvent>,
@@ -129,6 +130,11 @@ impl AppCore {
     /// Build a settings store bound to the core's event bus.
     pub fn settings(&self) -> settings::SettingsStore {
         settings::SettingsStore::new(self.db.clone(), self.bus.clone())
+    }
+
+    /// Build a provider repository bound to the core's database.
+    pub fn provider_repo(&self) -> anima_store::ProviderRepo {
+        anima_store::ProviderRepo::new(self.db.clone())
     }
 
     /// Create a session and emit event.
