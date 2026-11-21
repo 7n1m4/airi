@@ -67,13 +67,14 @@ cannot be built as a GUI feature first — the protocol lane must land first.
 | 1 | Rust core & gateway | **Reuse `anima-daemon` + `anima-channel` (WS :6121). Do not replace them.** | Verified: authenticated WS gateway with loopback `ws://` / forced `wss://` + locally minted CA, first-message auth (close 1008), 0600 config + UUID token, D-Bus control plane `org.moeru.airi.Daemon1`, and a Rust-canonical specta wire schema drift-checked by `pnpm check:wire-types` (`package.json:20`, generated `packages/server-shared/src/types/generated/anima-channel.ts`). Replacing it would duplicate security, config adoption and TS bindings for no measured gain. |
 | 2 | Wire protocol evolution | **Additive server→client event frame + event vocabulary in `crates/anima-channel/src/wire.rs`. Keep protocol version 1.** | Verified gap: `GatewayServerFrame` (`wire.rs:220-275`) has only Auth/Authenticated/Pong/Heartbeat/Rpc/Error; all replies flow through `SessionOutcome::replies_only` (`session.rs:95-101`). `design-daemon-client.md:17-19` (decision 3) already records that a new event lane is required before its Slice C. This is that lane. |
 | 3 | Control surface | **Flutter** control/chat app, independent WS client, no local store writer. | Net-new. Must obey decision 1 of `design-daemon-client.md`: the daemon is the single owner of core state; the client holds view state only. |
-| 4 | Pet renderer | **Godot 4 + plugins**, on demand, independent WS client; pet window outlives the Flutter window. **Both backends: Live2D via GDCubism AND 3D (VRM/MMD), plugin-selected per card.** | Net-new. Rendering/asset expertise already in-tree is `crates/anima-render` (spine/vrm); the Slint-specific `spine_render.rs`/`spine_rt.rs` adapters are **not** the reusable core. Decision A resolved 2026-11-21: both backends chosen (plugin per card). The specific Godot plugin/toolchain approach is still to be worked out. No GDCubism/VRM/MMD-in-Godot code exists in-tree yet. On desktop, Godot's own scene/animation system means the TypeScript avatar-driving glue (ACT token parsing, expression dispatch, Stage UI context bridge, BroadcastChannel expression relays) does **not** need porting — the daemon emits high-level events (lip-sync RMS, emotion tags, acting cues) that Godot maps into its animation state; this removes bridge boilerplate, not the event→animation mapping. Food for thought (user, 2026-11-21, `airi-wxp.4.8`): the TypeScript glue is still worth *reading* as a reference — not to port, but to learn how existing models' emotion/expression mappings work and re-express that mapping knowledge in Godot's animation state, mapping them to LLM-driven emotion keys for richer expression; "don't port the glue" ≠ "ignore the knowledge in it". Whether to import the upstream Godot sidecar (`docs/UPSTREAM_RADAR.md`, `docs/project-selective-upstream-sync-shortlist.md`) remains a separate open sub-question. |
+| 4 | Pet renderer | **Godot 4 + plugins**, on demand, independent WS client; pet window outlives the Flutter window. **Both backends: Live2D via GDCubism AND 3D (VRM/MMD), plugin-selected per card. Ship 3D (VRM/MMD) FIRST; Live2D gated behind legal review + user-fetched Cubism Core before any release.** | Net-new. Rendering/asset expertise already in-tree is `crates/anima-render` (spine/vrm); the Slint-specific `spine_render.rs`/`spine_rt.rs` adapters are **not** the reusable core. Decision A resolved 2026-11-21: both backends chosen (plugin per card). The specific Godot plugin/toolchain approach is still to be worked out. No GDCubism/VRM/MMD-in-Godot code exists in-tree yet. On desktop, Godot's own scene/animation system means the TypeScript avatar-driving glue (ACT token parsing, expression dispatch, Stage UI context bridge, BroadcastChannel expression relays) does **not** need porting — the daemon emits high-level events (lip-sync RMS, emotion tags, acting cues) that Godot maps into its animation state; this removes bridge boilerplate, not the event→animation mapping. Food for thought (user, 2026-11-21, `airi-wxp.4.8`): the TypeScript glue is still worth *reading* as a reference — not to port, but to learn how existing models' emotion/expression mappings work and re-express that mapping knowledge in Godot's animation state, mapping them to LLM-driven emotion keys for richer expression; "don't port the glue" ≠ "ignore the knowledge in it". Whether to import the upstream Godot sidecar (`docs/UPSTREAM_RADAR.md`, `docs/project-selective-upstream-sync-shortlist.md`) remains a separate open sub-question. Shipping posture resolved 2026-11-21: 3D first; Live2D legal gate per decision A below and `docs/research-godot-renderer-spike.md:30-40` — the proprietary Cubism Core binary MUST NEVER be committed. |
 | 5 | Web app / desktop app | **Vue web app remains the full-UI behaviour reference; the Electrobun/Vue desktop app (apps/stage-tamagotchi) is KEPT ALIVE until parity, then retired.** Both are live references/fallbacks; retirement needs BOTH gates: all business logic ported to Rust (anima-daemon) AND frontend ported to Flutter. Vue is a reference WS client. | Verified: the Vue renderer is the daily-driver surface (`design-electrobun-port.md`); its full behaviour is the parity ledger. The kept reference is specifically `apps/stage-web` (Vue **web**), retained **out of respect to the original AIRI project** (user, 2026-11-21), not merely as a parity target. Decision C resolved 2026-11-21 and **refined by user correction 2026-11-21**: `apps/stage-tamagotchi` MUST STAY ALIVE and working as the live fallback and working full-UI reference until ALL of its business logic is ported to Rust and its frontend to Flutter; only then may it be retired, gated on the parity checklist (`airi-wxp.6.4`) and explicit approval. This supersedes the earlier "retire the Electrobun desktop app / future wave" wording — it is the working reference/fallback during migration. The Slint cutover is a separate, unchanged big-bang deletion after domain migration (row 6). The shim-retirement work (airi-vxt) is delivered, but its shims must keep working while the app lives. Do not fork business logic into Dart or GDScript to "catch up" — extend the daemon and rebind all clients. |
 | 6 | Slint cutover | **Big-bang deletion of the Slint GUI after domain migration — no surviving fallback.** Move only its business logic into `anima-daemon`. | Net-new deletion; cutover decision resolved 2026-11-21. Once the §4 ports land, delete Slint in one cutover; no Slint fallback path survives. 1,728 lines of `.slint` markup, `run_ui()` (`crates/anima-slint/src/main.rs:100-241`) and Slint-only render adapters go; the bridge logic in §4 is ported, not thrown away. |
 | 7 | Realtime pipeline ownership | **The daemon owns VAD/STT → LLM → TTS and emits events.** | **Net-new integration.** The Rust crates exist (`anima-stt`, `anima-llm`, `anima-speech`, `anima-render/src/vrm/lipsync.rs`) but `anima-daemon/Cargo.toml:17-29` links **none** of them. Slint's hearing/speech bridges are intent-only ("nothing pumps audio into the pipeline yet" — `bridges/hearing.rs:22-23`; "in-app playback is not wired" — `bridges/speech.rs:44`). Live lip-sync today is a TS BroadcastChannel (`packages/stage-shared/src/beat-sync/eventa.ts:21-31`). |
 | 8 | Control plane & process lifecycle | **D-Bus stays for privileged verbs; tray/GUI drives Flutter/Godot process lifecycle.** | D-Bus methods verified in `crates/anima-daemon/src/control.rs:39,218-231`. Tray-driven launch/stop of GUI processes is net-new and must not become a new privileged data path: the daemon owns state, GUIs are clients. |
 | 9 | Serialization strategy | **Keep JSON text frames over the existing WS. MessagePack and UDS are parked, not adopted.** | The external proposal suggests MessagePack and local UDS; neither is justified here. UDS was already evaluated and parked in `design-daemon-gateway.md:110-157` (browser/CEF and mobile clients cannot use it; two transports means two auth stories). MessagePack would need a new codec, new generated bindings for three languages, and a reason — no profiling has supplied one. Revisit only with measurements. |
 | 10 | Mobile runtime shape | **Mobile is a REMOTE client of the desktop `anima-daemon` over libp2p, or Cloudflare Tunnel, or tunnel+libp2p. No embedded `flutter_rust_bridge` core; no separate local mobile daemon.** | Decision B resolved 2026-11-21: the user explicitly rejected both original options (embedded `flutter_rust_bridge` core; separate daemon process). Preserves the "one long-lived core" invariant — mobile is a thin client. Requires the security/trust model to cover libp2p peer identity and tunnel trust, not only `wss://` + local CA (see §8). `design-daemon-gateway.md` threat model needs a future update for libp2p/tunnel — do not edit that doc as part of this pivot. |
+| 11 | Client bindings (D5) | **Ratified 2026-11-21 (user): Rust-generated TS stays canonical; hand-write thin Dart/C# codecs; add Rust-generated golden JSON fixtures consumed by `flutter test` / `dotnet test`. Generated C# (`specta-csharp`) deferred but reversible behind the same fixtures; neutral schema rejected.** | Accepted ADR [`decision-client-bindings.md`](./decision-client-bindings.md). No Dart exporter exists; the C# exporter is experimental and version-uncoupled from the pinned `specta 2.0.0-rc.28`. Rust/`anima-channel` owns TS + golden fixtures; Flutter owner owns the Dart codec + `flutter test`; Godot owner owns the C# codec + `dotnet test`. A wire change merges only when the Rust drift check AND all three conformance jobs are green. Delivered in Wave 0/3/4 (bead `airi-wxp.2.8`). |
 
 ---
 
@@ -107,9 +108,9 @@ flowchart TB
     BUS --> GW
   end
 
-  subgraph godotplugins["Godot plugin boundary — BOTH backends chosen (plugin per card)"]
-    L2D["Live2D via GDCubism (chosen)"]
-    THREE["3D VRM / MMD (chosen)"]
+  subgraph godotplugins["Godot plugin boundary — BOTH backends chosen (plugin per card); ship 3D first, Live2D legal-gated"]
+    L2D["Live2D via GDCubism (chosen; gated: legal review + user-fetched Cubism Core)"]
+    THREE["3D VRM / MMD (chosen; ships first)"]
     TOOL["Specific Godot plugin / toolchain: TBD<br/>upstream sidecar import: separate open question"]
   end
 
@@ -140,7 +141,9 @@ Invariants implied by the diagram:
    the avatar lives in Godot plugins. `crates/anima-render/src/vrm/lipsync.rs` is the proven
    smoothing algorithm (fast attack, ~120 ms exponential decay, `[0,1]` clamp) to reproduce
    on the Godot side, not a daemon responsibility. Both Live2D (GDCubism) and 3D (VRM/MMD)
-   backends are supported, selected per card by plugin (decision A, 2026-11-21).
+   backends are supported, selected per card by plugin (decision A, 2026-11-21). Shipping posture
+   (2026-11-21): **3D first**; Live2D is gated behind legal review and a user-fetched Cubism Core,
+   a proprietary binary that must never be committed to this repo.
 5. **Mobile is remote, not a second core.** It reaches the daemon over libp2p / Cloudflare
    Tunnel / tunnel+libp2p as a thin client — no embedded `flutter_rust_bridge` core and no
    separate local mobile daemon (decision B, 2026-11-21).
@@ -207,19 +210,22 @@ those channels split three ways:
 
 ## 5. Open decisions requiring user input
 
-Status as of **2026-11-21**: decisions **A, B and C are RESOLVED** and recorded below. They
-remain in this table as the authoritative decision record; none is a blocker any more. Any
-future questions on **binding strategy** or **tray/lifecycle ownership** (rows D/E/F, if added)
-remain **OPEN** — the user has not decided those and this document does not hard-code an answer.
+Status as of **2026-11-21**: decisions **A, B, C and D (binding strategy / D5) are RESOLVED** and
+recorded below. They remain in this table as the authoritative decision record; none is a blocker
+any more. D5 was ratified by the user on 2026-11-21 (row D here, decision 11 in §2, accepted ADR
+[`decision-client-bindings.md`](./decision-client-bindings.md)). Only **tray/lifecycle ownership**
+(rows E/F, if added) remains **OPEN** — the user has not decided that and this document does not
+hard-code an answer.
 Also **OPEN** (food for later thought, 2026-11-21): on mobile the Flutter control UI and the Godot
 pet must share **one mobile screen** and the composition approach is an undecided future design
 question — desktop's separate-window model does not apply (bead `airi-wxp.4.7`).
 
 | ID | Question | Resolution / options | Blocks | Notes |
 |---|---|---|---|---|
-| **A — RESOLVED 2026-11-21** | Godot character backend | **Both Live2D via GDCubism AND 3D (VRM/MMD), plugin-selected per card.** (Original options: (1) Live2D only via GDCubism; (2) 3D only (VRM/MMD); (3) both, plugin-selected — option 3 chosen.) | Wave 4 (Godot renderer) — unblocked | Determines the plugin boundary, asset pipeline, licensing and whether `crates/anima-render`'s VRM lip-sync logic is ported to GDScript or superseded by Cubism parameter mapping. No GDCubism/VRM/MMD-in-Godot code exists in-tree today. The specific Godot plugin/toolchain approach is still to be worked out. **Still OPEN (separate sub-question):** whether to import the upstream Godot sidecar (`docs/UPSTREAM_RADAR.md`, `docs/project-selective-upstream-sync-shortlist.md`) — not resolved here. |
+| **A — RESOLVED 2026-11-21** | Godot character backend | **Both Live2D via GDCubism AND 3D (VRM/MMD), plugin-selected per card.** (Original options: (1) Live2D only via GDCubism; (2) 3D only (VRM/MMD); (3) both, plugin-selected — option 3 chosen.) | Wave 4 (Godot renderer) — unblocked | Determines the plugin boundary, asset pipeline, licensing and whether `crates/anima-render`'s VRM lip-sync logic is ported to GDScript or superseded by Cubism parameter mapping. No GDCubism/VRM/MMD-in-Godot code exists in-tree today. The specific Godot plugin/toolchain approach is still to be worked out. **Shipping posture RESOLVED 2026-11-21 (user):** keep both backends, but **ship 3D (VRM/MMD) first**. Live2D (GDCubism) is gated: no Live2D-backed build ships before legal review (MIT wrapper only; Live2D Open Software License components; SDK Release License review required before commercial release — `docs/research-godot-renderer-spike.md:30-40`) and before each user fetches Cubism Core from Live2D after accepting the terms. The proprietary Cubism Core binary MUST NEVER be committed (`docs/research-godot-renderer-spike.md:36`); this finding is unchanged. **Still OPEN (separate sub-question):** whether to import the upstream Godot sidecar (`docs/UPSTREAM_RADAR.md`, `docs/project-selective-upstream-sync-shortlist.md`) — not resolved here. |
 | **B — RESOLVED 2026-11-21** | Mobile runtime shape | **Mobile is a REMOTE client of the desktop anima-daemon over libp2p, or Cloudflare Tunnel, or tunnel+libp2p. No embedded `flutter_rust_bridge` core, no separate local mobile daemon.** (Both original options — embedded `flutter_rust_bridge` core; separate daemon process with the same WS protocol — explicitly rejected.) | Post-pivot mobile wave / Wave 7 — unblocked | Preserves the "one long-lived core" invariant; mobile is a thin client. Requires the security/trust model to cover libp2p peer identity and tunnel trust, not only `wss://` + local CA (see §8). Per the user (2026-11-21), when no PC is available the daemon may instead be hosted under **Termux on Android** as a separately installed alternative host — this does not reverse D4: no embedded core and no bundled local daemon remain rejected. Flutter/Godot clients stay thin in every topology specifically for battery life. `design-daemon-gateway.md` threat model needs a future update for libp2p/tunnel — do not edit that doc here. |
 | **C — RESOLVED 2026-11-21, refined 2026-11-21 (user correction)** | Fate of the Electrobun/Vue **desktop** app | **KEEP `apps/stage-tamagotchi` ALIVE and working until ALL of its business logic is ported to Rust (`anima-daemon`) AND its frontend is ported to the new Flutter app; then retire.** (Original options: (1) keep as a shipped reference client; (2) retire it, keeping Vue web as the behaviour reference only — option 2 was chosen, then refined.) | Wave 5/6 keep-alive; retirement a later parity-gated wave | The kept reference is specifically `apps/stage-web` (Vue **web**), retained **out of respect to the original AIRI project** (user, 2026-11-21), not merely as a parity target — it remains the behaviour reference too. **Supersedes** the earlier "retire the Electrobun desktop app / future wave" wording: the user clarified (2026-11-21) that stage-tamagotchi is the working full-UI reference and live fallback throughout the migration and must not be retired until BOTH gates pass. Retirement is gated on the parity checklist (`airi-wxp.6.4`), E2 conformance evidence (`airi-wxp.2.5`) and explicit approval. This is DIFFERENT from the Slint cutover (row 6), which stays BIG-BANG deletion after domain migration — no Slint fallback; do not change that decision. |
+| **D — RESOLVED 2026-11-21 (D5, user ratification)** | Client binding strategy | **Keep Rust-generated TS canonical; hand-write thin Dart (Flutter) / C# (Godot) codecs from that reference; Rust generates golden JSON fixtures consumed by `flutter test` / `dotnet test`. Generated C# via `specta-csharp` stays deferred but reversible behind the same fixtures; a language-neutral schema (JSON Schema/protobuf/flatbuffers) is rejected.** | Wave 0 (fixture exporter + conformance CI, `airi-wxp.2.8`), Wave 3 (Dart codec), Wave 4 (C# codec) | Accepted ADR: [`decision-client-bindings.md`](./decision-client-bindings.md). Ownership: Rust/`anima-channel` owns TS + golden fixtures; Flutter owner owns Dart codec + `flutter test`; Godot owner owns C# codec + `dotnet test`. A wire change merges only when the Rust drift check AND all three conformance jobs are green. No Dart exporter exists; `specta-csharp` is experimental and version-uncoupled from pinned `specta 2.0.0-rc.28`. |
 
 ---
 
@@ -279,18 +285,29 @@ resolved (2026-11-21: both Live2D and 3D, plugin-selected per card).
   are **drop-oldest / coalescing**; control events (`presence`, `status`) are queued.
   `anima-channel` has no tokio and is thread-per-connection (`server.rs:5`), so the bus must not
   block a reader thread.
-- Bindings: regenerate the TS file and keep `pnpm check:wire-types` (`package.json:20`) green —
-  this serves the Vue reference client. Land a generator plan for **Dart** (Flutter) and
-  **GDScript/C#** (Godot) clients with checked-in generated files and a drift check mirroring
-  the TS one. The three clients decode the same schema; none hand-writes event shapes.
+- Bindings (D5 ratified 2026-11-21 — see decision 11 in §2, row D in §5, and accepted ADR
+  [`decision-client-bindings.md`](./decision-client-bindings.md)): regenerate the TS file and keep
+  `pnpm check:wire-types` (`package.json:20`) green — this serves the Vue reference client and stays
+  the canonical artifact. Add a Rust `export-wire-fixtures` example that emits **golden JSON
+  fixtures** from the same specta `type_collection()` (one canonical example per client frame, RPC
+  reply and event topic), guarded by a `--check` flag like `export-wire-types.rs`. Dart (Flutter)
+  and C# (Godot) write **thin hand-written codecs** from the TS reference plus typed event payloads;
+  they consume the fixtures in `flutter test` / `dotnet test`. **No Dart/C# generator and no neutral
+  schema.** Generated C# (`specta-csharp`) is deferred but reversible behind the same fixtures.
+  Ownership: Rust/`anima-channel` owns TS + golden fixtures; Flutter owner owns the Dart codec +
+  `flutter test`; Godot owner owns the C# codec + `dotnet test`. Tracked in `airi-wxp.2.8`.
 
 **Exit criteria**
 
 - A unit/integration test proves the server emits an event with **no preceding client frame**,
   and that an unsubscribed session receives none.
 - `pnpm check:wire-types` and `cargo test --workspace --locked` pass.
-- Generated TS bindings consumed by a tiny Vue-side probe; Dart/GDScript generator design
-  recorded (generated stubs may land in Wave 3/4).
+- Generated TS bindings consumed by a tiny Vue-side probe; golden JSON fixtures generated from
+  `anima-channel` and checked in with a working `--check` drift guard (`airi-wxp.2.8`); the
+  Dart/`flutter test` and C#/`dotnet test` conformance jobs consume them. No Dart/C# generator is
+  introduced.
+- A wire change merges only when the Rust drift check **AND all three conformance jobs** (TS drift,
+  Dart `flutter test`, C# `dotnet test`) are green in the same PR.
 - Event vocabulary table and backpressure policy documented here (this section) match code.
 
 ### Wave 1 — Daemon absorbs Slint state and configuration
@@ -317,17 +334,20 @@ turn is deterministic enough for a test; no audio work remains in any Slint brid
 
 ### Wave 3 — Flutter control/chat client
 
-**Scope:** thin WS client with generated Dart bindings; chat streaming UI, settings,
-providers, cards; subscribe to the event vocabulary; tray/launcher can start the pet process;
-client holds view state only.
+**Scope:** thin WS client with a **hand-written Dart codec + typed payloads validated against the
+Rust-generated golden JSON fixtures** (D5 ratified 2026-11-21, no generator); chat streaming UI,
+settings, providers, cards; subscribe to the event vocabulary; tray/launcher can start the pet
+process; client holds view state only.
 
 **Exit criteria:** end-to-end chat against the daemon works; closing and relaunching Flutter
-loses no core state; stopping Flutter leaves the daemon and (if running) the pet alive.
+loses no core state; stopping Flutter leaves the daemon and (if running) the pet alive;
+`flutter test` conformance against the golden fixtures is green.
 
 ### Wave 4 — Godot 4 on-demand pet renderer
 
-**Scope:** Godot client with generated GDScript/C# bindings; consume `lip_sync.rms` and
-`emotion.tag`; implement expression/pose mapping (reproduce `lipsync.rs` smoothing if using a
+**Scope:** Godot client with a **hand-written C# codec + typed payloads validated against the
+Rust-generated golden JSON fixtures** (D5 ratified 2026-11-21, no `specta-csharp` dependency now);
+consume `lip_sync.rms` and `emotion.tag`; implement expression/pose mapping (reproduce `lipsync.rs` smoothing if using a
 morph-target avatar); window lifecycle so the pet can stay while Flutter is closed; plugin
 boundary wired per **resolved decision A (2026-11-21): both Live2D via GDCubism AND 3D
 (VRM/MMD), plugin-selected per card**. The specific Godot plugin/toolchain approach is still to
@@ -336,9 +356,19 @@ upstream Godot sidecar (`docs/UPSTREAM_RADAR.md`,
 `docs/project-selective-upstream-sync-shortlist.md`) remains a separate open sub-question and is
 not resolved by this wave.
 
+**Shipping posture (resolved 2026-11-21, user):** **ship 3D (VRM/MMD) first.** Both backends stay
+in scope behind the plugin boundary, but Live2D (GDCubism) is gated: no Live2D-backed build ships
+before legal review (MIT wrapper only; Live2D Open Software License components; SDK Release License
+review required before commercial release — `docs/research-godot-renderer-spike.md:30-40`) and
+before each user fetches Cubism Core from Live2D after accepting the terms. The proprietary Cubism
+Core binary **must never be committed** to this repo (`docs/research-godot-renderer-spike.md:36`);
+this finding is unchanged.
+
 **Exit criteria:** pet animates lip-sync and emotion from daemon events; survives Flutter
 closure; can be started/stopped on demand; both avatar backends and per-card plugin selection
-recorded in this document (decision A, 2026-11-21) before implementation begins.
+recorded in this document (decision A, 2026-11-21) before implementation begins; 3D (VRM/MMD)
+ships first with `dotnet test` conformance against the golden fixtures green; Live2D stays gated
+behind legal review + user-fetched Cubism Core and is not in the first shipping release.
 
 ### Wave 5 — Vue reference reconciliation
 
@@ -421,13 +451,18 @@ as a follow-up; Electrobun retirement scheduled behind BOTH parity gates, not si
 - **Forensic archives have no GUI deletion path.** Per `decision-audit-archive-retention.md`,
   `.cleared-*` archives accumulate forever and must not gain a Flutter/Slint/Godot delete
   button. Wave 6 deletes the *app*, not the archives.
-- **Specta drift.** Adding wire types changes the generated TS file; Dart/GDScript generation
-  is net-new and must gain equivalent drift checks or the three clients will diverge.
-- **Decisions recorded; remaining open sub-questions must not be assumed.** A, B and C are
-  resolved as of 2026-11-21 and no longer block Waves 4/5/7. Still OPEN: whether to import the
-  upstream Godot sidecar (`docs/UPSTREAM_RADAR.md`,
-  `docs/project-selective-upstream-sync-shortlist.md`), plus any binding-strategy or
-  tray/lifecycle-ownership questions (rows D/E/F). None may be hard-coded as answered.
+- **Specta drift (D5 ratified).** Adding wire types changes the generated TS file. D5 keeps that
+  drift check canonical and adds Rust-generated golden JSON fixtures with their own `--check`
+  guard; Dart/C# are hand-written codecs whose conformance is proven by `flutter test` / `dotnet
+  test`, not by generated-code parity (decision 11, accepted ADR
+  [`decision-client-bindings.md`](./decision-client-bindings.md), bead `airi-wxp.2.8`). A wire
+  change merges only when the Rust drift check AND all three conformance jobs are green.
+- **Decisions recorded; remaining open sub-questions must not be assumed.** A, B, C and D (D5
+  binding strategy) are resolved as of 2026-11-21 and no longer block Waves 4/5/7. Still OPEN:
+  whether to import the upstream Godot sidecar (`docs/UPSTREAM_RADAR.md`,
+  `docs/project-selective-upstream-sync-shortlist.md`), plus tray/lifecycle-ownership questions
+  (rows E/F). Live2D *shipping* is also gated on legal review + user-fetched Cubism Core (3D ships
+  first), but that does not reopen decision A. None may be hard-coded as answered.
 - **Non-goals for this pivot:** changing auth/token model, introducing MessagePack or UDS,
   reworking the Godot asset pipeline into `anima-render`, adding GUI audit deletion, or porting
   upstream code without separate authorization.
@@ -455,6 +490,13 @@ as a follow-up; Electrobun retirement scheduled behind BOTH parity gates, not si
   and eventa channel counts that §4.2 triages; decision C (2026-11-21, refined by user
   correction 2026-11-21) concerns this surface: keep the Electrobun desktop app alive as the
   live fallback until Rust business-logic AND Flutter frontend parity, then retire.
+- [`decision-client-bindings.md`](./decision-client-bindings.md) — accepted ADR (user,
+  2026-11-21) for decision 11 / D5: canonical TS + Rust-generated golden JSON fixtures +
+  hand-written Dart/C# codecs and the three conformance jobs.
+- [`research-godot-renderer-spike.md`](./research-godot-renderer-spike.md) — evidence behind
+  decision A's 3D-first shipping posture: GDCubism licensing layers, legal review before release,
+  and the absolute rule that the proprietary Cubism Core binary must never be committed (users
+  fetch it from Live2D after accepting the terms).
 - [`decision-audit-archive-retention.md`](./decision-audit-archive-retention.md) — mandatory
   retention/no-GUI-deletion policy that constrains the Slint deletion in Wave 6.
 - [`docs/README.md`](./README.md) — "one core, many surfaces" philosophy; this document
