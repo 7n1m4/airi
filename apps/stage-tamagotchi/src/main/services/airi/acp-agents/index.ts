@@ -9,6 +9,8 @@ import type {
   ElectronAcpSessionStatus,
 } from '../../../../shared/eventa'
 
+import process from 'node:process'
+
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -18,7 +20,7 @@ import z from 'zod'
 
 import { useLogg } from '@guiiai/logg'
 import { defineInvokeHandler } from '@moeru/eventa'
-import { app, shell } from 'electron'
+import { Utils } from 'electrobun/main'
 
 import * as acp from '@agentclientprotocol/sdk'
 
@@ -57,7 +59,7 @@ const acpConfigSchema = z.object({
 const defaultAcpConfig: ElectronAcpConfigFile = { agents: {} }
 
 function getConfigPath() {
-  return join(app.getPath('appData'), 'airi', 'acp.json')
+  return join(Utils.paths.appData, 'airi', 'acp.json')
 }
 
 function stringifyError(error: unknown) {
@@ -156,7 +158,7 @@ export function createAcpAgentsManager(): AcpAgentsManager {
 
   async function openConfigFile() {
     const { path } = await ensureConfigFile()
-    await shell.openPath(path)
+    Utils.openPath(path)
     return { path }
   }
 
@@ -164,13 +166,17 @@ export function createAcpAgentsManager(): AcpAgentsManager {
     for (const [name, rt] of agents) {
       try {
         for (const s of rt.activeSessions.values()) {
-          try { s.dispose() }
+          try {
+            s.dispose()
+          }
           catch {}
         }
         rt.connection.close()
       }
       catch (e) { log2.withError(e).warn('close error', name) }
-      try { rt.child.kill() }
+      try {
+        rt.child.kill()
+      }
       catch {}
     }
     agents.clear()
@@ -203,7 +209,10 @@ export function createAcpAgentsManager(): AcpAgentsManager {
         // find internal session id by acp session id
         let internalSessionId = sessionId
         for (const [id, rec] of sessions) {
-          if (rec.acpSessionId === sessionId) { internalSessionId = id; break }
+          if (rec.acpSessionId === sessionId) {
+            internalSessionId = id
+            break
+          }
         }
 
         if (pol === 'auto-all') {
@@ -267,7 +276,10 @@ export function createAcpAgentsManager(): AcpAgentsManager {
     const skipped: Array<{ name: string, reason: string }> = []
     for (const [name, cfg] of Object.entries(configCache.agents)) {
       const agentCfg = cfg as ElectronAcpAgentConfig
-      if (agentCfg.enabled === false) { skipped.push({ name, reason: 'disabled' }); continue }
+      if (agentCfg.enabled === false) {
+        skipped.push({ name, reason: 'disabled' })
+        continue
+      }
       const r = await startAgent(name, agentCfg)
       if (r.ok)
         started.push({ name })
@@ -363,7 +375,9 @@ export function createAcpAgentsManager(): AcpAgentsManager {
     const rec = sessions.get(sessionId)
     if (!rec)
       return
-    try { rec.activeSession.dispose() }
+    try {
+      rec.activeSession.dispose()
+    }
     catch {}
     const rt = agents.get(rec.agentName)
     if (rt)
@@ -401,7 +415,9 @@ export function createAcpAgentsManager(): AcpAgentsManager {
 
 export async function setupAcpAgentsManager() {
   const manager = createAcpAgentsManager()
-  onAppBeforeQuit(async () => { await manager.stopAll() })
+  onAppBeforeQuit(async () => {
+    await manager.stopAll()
+  })
   await manager.ensureConfigFile()
   manager.applyAndRestart().catch(e => log.withError(e).warn('failed to apply acp config during startup'))
   return manager

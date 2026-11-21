@@ -20,10 +20,11 @@ import {
   agenticServiceRotateHttpToken,
   agenticServiceTriggerCycle,
 } from '@proj-airi/stage-shared/agentic'
-import { BrowserWindow } from 'electron'
 import { boolean, number, object, optional, picklist, pipe, safeParse, string } from 'valibot'
 
 import { createConfig } from '../../../libs/electron/persistence'
+import { notImplemented } from '../../../rpc'
+import { all as getAllWindows } from '../../../windows/registry'
 import { createCompanionService, setupCompanionConsent } from './companion'
 import {
   authorizeAgenticHttpRequest,
@@ -280,14 +281,19 @@ function emitCycleRequested() {
  * the same helper `libp2p/index.ts` uses.
  */
 function emitToAllWindows<P>(contract: { toString: () => string }, payload: P) {
-  for (const window of BrowserWindow.getAllWindows()) {
+  for (const _window of getAllWindows()) {
     try {
-      window.webContents.send(contract.toString(), payload)
+      // NOTICE: Electrobun windows have no Electron `webContents`, so the raw
+      // custom-channel push has no counterpart. Fail loudly instead of pretending
+      // the event was delivered — the per-view eventa RPC replaces this channel.
+      notImplemented('BrowserWindow.webContents.send')
     }
     catch (err) {
       log.withError(err).warn('Failed to push agentic event to a window')
     }
   }
+  void contract
+  void payload
 }
 
 export async function createAgenticService(params: { context: AgenticInvokeContext }) {

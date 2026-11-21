@@ -1,12 +1,12 @@
 import type { createContext } from '@moeru/eventa/adapters/electron/main'
 import type { DockModeConfig, DockModeStatus, DockPosition, TargetWindowBounds } from '@proj-airi/electron-eventa'
-import type { BrowserWindow, DesktopCapturerSource } from 'electron'
+import type { BrowserWindow } from 'electron'
 
 import { defineInvokeHandler } from '@moeru/eventa'
 import { dockModeStatusChanged, dockModeTargetBounds, electron } from '@proj-airi/electron-eventa'
-import { desktopCapturer } from 'electron'
 
 import { onAppBeforeQuit, onAppWindowAllClosed } from '../../libs/bootkit/lifecycle'
+import { notImplemented } from '../../rpc'
 import { createWindowBoundsPoller } from './window-bounds-provider'
 
 function calculateDockedPosition(
@@ -65,23 +65,11 @@ export function createDockModeService(params: {
     stopDocking()
   })
 
-  // List desktop windows via desktopCapturer
+  // NOTICE (design doc §1.2): `desktopCapturer.getSources` has no Electrobun
+  // equivalent — there is no per-window source enumeration or thumbnail. Fail
+  // loudly instead of returning an empty list that would look like "no windows".
   defineInvokeHandler(params.context, electron.dockMode.listWindows, async () => {
-    const sources = await desktopCapturer.getSources({
-      types: ['window'],
-      thumbnailSize: { width: 160, height: 120 },
-    })
-
-    return sources
-      // exclude our own window
-      .filter((source: DesktopCapturerSource) => !source.id.includes(String(params.window.id)))
-      .map((source: DesktopCapturerSource) => ({
-        id: source.id,
-        name: source.name,
-        thumbnail: source.thumbnail && !source.thumbnail.isEmpty()
-          ? source.thumbnail.toDataURL()
-          : undefined,
-      }))
+    notImplemented('desktopCapturer.getSources')
   })
 
   // Start dock mode

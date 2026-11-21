@@ -54,11 +54,12 @@ import {
   libp2pServiceStop,
   libp2pServiceUpdatePairedDeviceAlias,
 } from '@proj-airi/stage-shared/libp2p'
-import { BrowserWindow, ipcMain } from 'electron'
 import { createLibp2p } from 'libp2p'
 import { array, boolean, maxLength, object, optional, picklist, pipe, safeParse, string } from 'valibot'
 
+import { ipcMain } from '../../../eventa-bus'
 import { createConfig } from '../../../libs/electron/persistence'
+import { all as getAllWindows, isDestroyed as isWindowDestroyed } from '../../../windows/registry'
 import { getOrCreateIdentity, getPrivateKey, hasIdentity, regenerateIdentity, setIdentityName } from './identity'
 import {
   acceptPairingInvitation,
@@ -86,11 +87,11 @@ import { webSocketsCloseSafe } from './websockets-bun-close'
 const log = useLogg('libp2p-service').useGlobalConfig()
 
 function emitToAllWindows<P>(contract: Eventa<P>, payload: P) {
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (win.isDestroyed() || win.webContents.isDestroyed())
+  for (const win of getAllWindows()) {
+    if (isWindowDestroyed(win))
       continue
     try {
-      const { context: winContext, dispose } = createContext(ipcMain, win)
+      const { context: winContext, dispose } = createContext(ipcMain as never, win as never)
       winContext.emit(contract, payload)
       dispose()
     }

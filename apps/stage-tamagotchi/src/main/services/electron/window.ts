@@ -6,7 +6,6 @@ import type { ElectronWindowLifecycleState } from '../../../shared/eventa'
 import { defineInvokeHandler } from '@moeru/eventa'
 import { bounds, startLoopGetBounds } from '@proj-airi/electron-eventa'
 import { createRendererLoop } from '@proj-airi/electron-vueuse/main'
-import { powerMonitor } from 'electron'
 
 import {
   electron,
@@ -69,22 +68,12 @@ export function createWindowService(params: { context: ReturnType<typeof createC
   params.window.on('focus', onFocus)
   params.window.on('blur', onBlur)
 
-  const onSuspend = () => emitWindowLifecycle('suspend')
-  const onResume = () => emitWindowLifecycle('restore')
-  const onLockScreen = () => emitWindowLifecycle('suspend')
-  const onUnlockScreen = () => emitWindowLifecycle('restore')
-
-  powerMonitor.on('suspend', onSuspend)
-  powerMonitor.on('lock-screen', onLockScreen)
-  powerMonitor.on('resume', onResume)
-  powerMonitor.on('unlock-screen', onUnlockScreen)
-
+  // NOTICE (design doc §3.1): Electrobun has no `powerMonitor`, so the
+  // suspend/lock/resume lifecycle pushes are an explicit drop rather than a
+  // silent subscription to an inert shim. Window-level show/hide/focus events
+  // below still report the same state machine.
   const cleanup = () => {
     stop()
-    powerMonitor.off('suspend', onSuspend)
-    powerMonitor.off('lock-screen', onLockScreen)
-    powerMonitor.off('resume', onResume)
-    powerMonitor.off('unlock-screen', onUnlockScreen)
   }
 
   onAppWindowAllClosed(cleanup)

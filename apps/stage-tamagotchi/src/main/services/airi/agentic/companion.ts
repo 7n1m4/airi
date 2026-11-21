@@ -32,10 +32,11 @@ import {
   companionShareReceived,
   NAP_CHAT_EXPIRY_MS,
 } from '@proj-airi/stage-shared/agentic'
-import { BrowserWindow, ipcMain } from 'electron'
 import { boolean, number, object, optional, picklist } from 'valibot'
 
+import { ipcMain } from '../../../eventa-bus'
 import { createConfig } from '../../../libs/electron/persistence'
+import { all as getAllWindows, isDestroyed as isWindowDestroyed } from '../../../windows/registry'
 import { registerCloudAdapters } from '../cloudflare'
 import { getLibp2pMeshPublisher } from '../libp2p'
 import { listPairedDevices } from '../libp2p/pairing'
@@ -589,11 +590,11 @@ async function publishCompanionShare(card: CompanionShareInput): Promise<Compani
 // `apps/stage-tamagotchi/src/main/services/airi/libp2p/index.ts` does.
 
 function emitToAllWindows<P>(contract: Eventa<P>, payload: P) {
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (win.isDestroyed() || win.webContents.isDestroyed())
+  for (const win of getAllWindows()) {
+    if (isWindowDestroyed(win))
       continue
     try {
-      const { context: winContext, dispose } = createContext(ipcMain, win)
+      const { context: winContext, dispose } = createContext(ipcMain as never, win as never)
       winContext.emit(contract, payload)
       dispose()
     }

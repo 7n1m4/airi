@@ -10,9 +10,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { electronPluginList, electronPluginLoadEnabled, electronPluginSetEnabled } from '../../../../shared/eventa'
 import { setupPluginHost } from './index'
 
-const appMock = vi.hoisted(() => ({
-  getPath: vi.fn(),
-}))
 const contextState = vi.hoisted(() => ({
   lastContext: undefined as ReturnType<typeof createContext<any, any>> | undefined,
 }))
@@ -20,8 +17,9 @@ const persistenceState = vi.hoisted(() => ({
   userData: '',
 }))
 
-vi.mock('electron', () => ({
-  app: appMock,
+// Electrobun port: `ipcMain` now comes from the in-process event bus instead of the
+// removed `electron` import.
+vi.mock('../../../eventa-bus', () => ({
   ipcMain: {},
 }))
 
@@ -109,7 +107,6 @@ describe('setupPluginHost', () => {
     userDataDir = await mkdtemp(join(tmpdir(), 'airi-plugins-'))
     pluginsDir = join(userDataDir, 'plugins', 'v1')
     await mkdir(pluginsDir, { recursive: true })
-    appMock.getPath.mockReturnValue(userDataDir)
     persistenceState.userData = userDataDir
   })
 

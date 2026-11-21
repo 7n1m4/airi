@@ -1,7 +1,5 @@
 import type { Libp2pServiceConfig } from '../../../../../../../packages/stage-shared/src/libp2p'
 
-import { Buffer } from 'node:buffer'
-
 import { describe, expect, it, vi } from 'vitest'
 
 /**
@@ -65,18 +63,16 @@ const h = vi.hoisted(() => ({
   handlers: {} as Record<string, Handler>,
 }))
 
-vi.mock('electron', () => ({
-  app: {
-    getPath: (name: string) => `/tmp/airi-libp2p-config-test/${name}`,
-    on: () => {},
-    whenReady: () => Promise.resolve(),
-  },
-  safeStorage: {
-    isEncryptionAvailable: () => true,
-    encryptString: (value: string) => Buffer.from(value),
-    decryptString: (buf: Buffer) => buf.toString('utf8'),
-  },
-  BrowserWindow: { getAllWindows: () => [] },
+// Electrobun port: `ipcMain` now comes from the in-process event bus, and window
+// enumeration from the registry — the Electron import is gone. Neither is
+// exercised by the config handler this suite drives, so inert stand-ins suffice.
+vi.mock('../../../eventa-bus', () => ({
+  ipcMain: {},
+}))
+
+vi.mock('../../../windows/registry', () => ({
+  all: () => [],
+  isDestroyed: () => false,
 }))
 
 vi.mock('../../../libs/electron/persistence', () => ({

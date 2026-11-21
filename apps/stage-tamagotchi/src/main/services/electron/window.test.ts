@@ -9,18 +9,9 @@ import {
 } from '../../../shared/eventa'
 import { createWindowService } from './window'
 
-const { powerMonitorMock } = vi.hoisted(() => {
-  // eslint-disable-next-line ts/no-require-imports
-  const EventEmitter = require('node:events')
-  return {
-    powerMonitorMock: new EventEmitter(),
-  }
-})
-
-vi.mock('electron', () => ({
-  powerMonitor: powerMonitorMock,
-}))
-
+// Electrobun port: `powerMonitor` was an explicit drop (design doc §3.1), so the
+// suspend/lock/resume lifecycle tests no longer apply — the window-level events
+// below are the only sources of lifecycle changes.
 vi.mock('@proj-airi/electron-vueuse/main', () => ({
   createRendererLoop: () => ({
     start: vi.fn(),
@@ -63,7 +54,6 @@ describe('createWindowService - Lifecycle and powerMonitor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    powerMonitorMock.removeAllListeners()
     context = createContext()
     mockWindow = createMockWindow()
   })
@@ -116,56 +106,6 @@ describe('createWindowService - Lifecycle and powerMonitor', () => {
     })
   })
 
-  it('forces visible: false when powerMonitor emits suspend or lock-screen', () => {
-    createWindowService({ context: context as never, window: mockWindow as never })
-    const emissions: any[] = []
-    context.on(electronWindowLifecycleChanged, (event) => {
-      emissions.push(event.body)
-    })
-
-    // Window is physically visible, but system enters suspend
-    mockWindow.isVisible.mockReturnValue(true)
-    powerMonitorMock.emit('suspend')
-
-    expect(emissions).toHaveLength(1)
-    expect(emissions[0]).toMatchObject({
-      reason: 'suspend',
-      visible: false,
-    })
-
-    // Screen locks
-    powerMonitorMock.emit('lock-screen')
-    expect(emissions).toHaveLength(2)
-    expect(emissions[1]).toMatchObject({
-      reason: 'suspend',
-      visible: false,
-    })
-  })
-
-  it('restores visible: true when powerMonitor emits resume or unlock-screen', () => {
-    createWindowService({ context: context as never, window: mockWindow as never })
-    const emissions: any[] = []
-    context.on(electronWindowLifecycleChanged, (event) => {
-      emissions.push(event.body)
-    })
-
-    mockWindow.isVisible.mockReturnValue(true)
-    powerMonitorMock.emit('unlock-screen')
-
-    expect(emissions).toHaveLength(1)
-    expect(emissions[0]).toMatchObject({
-      reason: 'restore',
-      visible: true,
-    })
-
-    powerMonitorMock.emit('resume')
-    expect(emissions).toHaveLength(2)
-    expect(emissions[1]).toMatchObject({
-      reason: 'restore',
-      visible: true,
-    })
-  })
-
   it('returns lifecycle snapshot via electronGetWindowLifecycleState invoke', async () => {
     createWindowService({ context: context as never, window: mockWindow as never })
     const getLifecycle = defineInvoke(context, electronGetWindowLifecycleState)
@@ -180,21 +120,5 @@ describe('createWindowService - Lifecycle and powerMonitor', () => {
       reason: 'snapshot',
       visible: true,
     })
-  })
-
-  it('unregisters powerMonitor listeners on window close', () => {
-    createWindowService({ context: context as never, window: mockWindow as never })
-
-    expect(powerMonitorMock.listenerCount('suspend')).toBe(1)
-    expect(powerMonitorMock.listenerCount('lock-screen')).toBe(1)
-    expect(powerMonitorMock.listenerCount('resume')).toBe(1)
-    expect(powerMonitorMock.listenerCount('unlock-screen')).toBe(1)
-
-    mockWindow.emit('close')
-
-    expect(powerMonitorMock.listenerCount('suspend')).toBe(0)
-    expect(powerMonitorMock.listenerCount('lock-screen')).toBe(0)
-    expect(powerMonitorMock.listenerCount('resume')).toBe(0)
-    expect(powerMonitorMock.listenerCount('unlock-screen')).toBe(0)
   })
 })

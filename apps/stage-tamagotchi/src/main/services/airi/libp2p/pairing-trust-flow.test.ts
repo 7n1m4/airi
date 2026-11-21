@@ -294,8 +294,9 @@ const stores = vi.hoisted(() => {
 
 type MockStore = Omit<StubStore, 'name'>
 
-vi.mock('electron', () => ({
-  app: { getPath: () => '/tmp/airi-libp2p-pairing-test' },
+// Electrobun port: the keychain boundary moved to a local module (Electron's
+// `safeStorage` has no equivalent), so mock that instead of `electron`.
+vi.mock('./safe-storage', () => ({
   safeStorage: {
     isEncryptionAvailable: () => true,
     // Reversible, so a token this node sealed can be read back by this node.

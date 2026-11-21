@@ -18,8 +18,9 @@ import {
   sensorsGetVolumeLevel,
   sensorsSetTrackingEnabled,
 } from '@proj-airi/stage-shared'
-import { powerMonitor } from 'electron'
 import { x } from 'tinyexec'
+
+import { notImplemented } from '../../rpc'
 
 const require = createRequire(import.meta.url)
 let activeWindow: any = null
@@ -292,7 +293,10 @@ export async function createSensorsService(params: { context: ReturnType<typeof 
     context,
     sensorsGetIdleTime,
     async () => {
-      return powerMonitor.getSystemIdleTime() * 1000
+      // NOTICE (design doc §1.2): Electrobun exposes no system idle time. Raise
+      // instead of returning a fabricated zero that would silently disable the
+      // renderer's idle/standby logic.
+      notImplemented('powerMonitor.getSystemIdleTime')
     },
   )
 

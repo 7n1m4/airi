@@ -13,7 +13,7 @@ import { useLogg } from '@guiiai/logg'
 import { defineInvoke, defineInvokeHandler } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/electron/main'
 import { manifestV1Schema, PluginHost } from '@proj-airi/plugin-sdk/plugin-host'
-import { app, ipcMain } from 'electron'
+import { Utils } from 'electrobun/main'
 import { array, object, record, safeParse, string } from 'valibot'
 
 import {
@@ -27,6 +27,7 @@ import {
   pluginProtocolListProviders,
   pluginProtocolListProvidersEventName,
 } from '../../../../shared/eventa'
+import { ipcMain } from '../../../eventa-bus'
 import { createConfig } from '../../../libs/electron/persistence'
 
 interface PluginHostService {
@@ -162,7 +163,7 @@ function createPluginSummary(entry: ManifestEntry, config: PluginConfig, loaded:
  */
 export async function setupPluginHost(): Promise<PluginHostService> {
   const log = useLogg('main/plugin-host').useGlobalConfig()
-  const pluginsRoot = join(app.getPath('userData'), 'plugins', 'v1')
+  const pluginsRoot = join(Utils.paths.userData, 'plugins', 'v1')
 
   const pluginConfig = createConfig('plugins', 'v1.json', pluginConfigSchema, {
     default: {
@@ -275,7 +276,7 @@ export async function setupPluginHost(): Promise<PluginHostService> {
     }
   }
 
-  const { context } = createContext(ipcMain)
+  const { context } = createContext(ipcMain as never)
   const invokePluginProtocolListProviders = defineInvoke(context, pluginProtocolListProviders)
 
   defineInvokeHandler(context, electronPluginList, async () => {

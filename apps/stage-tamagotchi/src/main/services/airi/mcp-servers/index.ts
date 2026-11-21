@@ -21,8 +21,9 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { defineInvokeHandler } from '@moeru/eventa'
-import { app, dialog, shell } from 'electron'
+import { Utils } from 'electrobun/main'
 
+import { version as APP_VERSION } from '../../../../../package.json'
 import {
   electronMcpApplyAndRestart,
   electronMcpCallTool,
@@ -134,7 +135,7 @@ function stringifyError(error: unknown) {
 }
 
 function getConfigPath() {
-  return join(app.getPath('appData'), 'airi', 'mcp.json')
+  return join(Utils.paths.appData, 'airi', 'mcp.json')
 }
 
 function parseQualifiedToolName(name: string) {
@@ -270,9 +271,10 @@ export function createMcpStdioManager(): McpStdioManager {
 
   const openConfigFile = async () => {
     const { path } = await ensureConfigFile()
-    const openResult = await shell.openPath(path)
-    if (openResult) {
-      throw new Error(openResult)
+    // Electrobun's `Utils.openPath` returns a boolean where Electron's
+    // `shell.openPath` returned an error string (empty on success).
+    if (!Utils.openPath(path)) {
+      throw new Error(`Failed to open MCP config file: ${path}`)
     }
     return { path }
   }
@@ -302,7 +304,7 @@ export function createMcpStdioManager(): McpStdioManager {
 
     const client = new Client({
       name: `proj-airi:stage-tamagotchi:mcp:${name}`,
-      version: app.getVersion(),
+      version: APP_VERSION,
     }, {
       capabilities: {},
     })
@@ -546,14 +548,17 @@ export function createMcpServersService(params: { context: ReturnType<typeof cre
   })
 
   defineInvokeHandler(params.context, electronSelectDirectories, async (payload) => {
-    const result = await dialog.showOpenDialog({
-      title: payload?.title || 'Select Allowed Directories for Filesystem MCP',
-      defaultPath: payload?.defaultPath,
-      properties: ['openDirectory', 'multiSelections', 'createDirectory'],
-    })
-    if (result.canceled || !result.filePaths.length) {
+    // Electrobun's `Utils.openFileDialog` returns just the chosen paths; an empty
+    // array is the cancel case Electron expressed as `{ canceled: true }`.
+    const filePaths = await Utils.openFileDialog({
+      startingFolder: payload?.defaultPath,
+      canChooseFiles: false,
+      canChooseDirectory: true,
+      allowsMultipleSelection: true,
+    }) as string[]
+    if (!filePaths.length) {
       return undefined
     }
-    return result.filePaths
+    return filePaths
   })
 }

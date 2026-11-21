@@ -6,7 +6,9 @@ import process from 'node:process'
 
 import koffi from 'koffi'
 
-import { globalShortcut, ipcMain } from 'electron'
+import { GlobalShortcut } from 'electrobun/main'
+
+import { ipcMain } from '../../eventa-bus'
 
 let currentHotkey: MicToggleHotkey = 'Scroll'
 let currentWindow: BrowserWindow | null = null
@@ -76,7 +78,7 @@ function initWinLockKeyChecker(): boolean {
  * Stop any existing monitoring and unregister shortcuts
  */
 export function cleanupMicToggleShortcut() {
-  globalShortcut.unregisterAll()
+  GlobalShortcut.unregisterAll()
   if (lockKeyPollingInterval) {
     clearInterval(lockKeyPollingInterval)
     lockKeyPollingInterval = null
@@ -176,7 +178,7 @@ export function setupMicToggleShortcut(mainWindow: BrowserWindow, hotkey: MicTog
 
     // 3. Standard globalShortcut for other keys/platforms
     try {
-      const isRegistered = globalShortcut.register(electronKey, () => {
+      const isRegistered = GlobalShortcut.register(electronKey, () => {
         console.info(`[Mic Toggle] Hotkey ${electronKey} pressed`)
         if (currentWindow && !currentWindow.isDestroyed()) {
           currentWindow.webContents.send('toggle-mic-from-shortcut', { timestamp: Date.now() })

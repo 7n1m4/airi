@@ -52,8 +52,10 @@ const h: Harness = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('electron', () => ({
-  app: { getPath: () => '/tmp/airi-libp2p-identity-test' },
+// Electrobun port: the keychain boundary moved to a local module, so mock that
+// instead of the removed `electron` import. `createConfig` is mocked below, so
+// the old `app.getPath` stub is no longer needed either.
+vi.mock('./safe-storage', () => ({
   safeStorage: {
     isEncryptionAvailable: () => h.storage.available,
     // A reversible stand-in so a stored identity can be read back: the module

@@ -6,10 +6,10 @@ import { randomBytes } from 'node:crypto'
 
 import { peerIdFromString } from '@libp2p/peer-id'
 import { multiaddr } from '@multiformats/multiaddr'
-import { safeStorage } from 'electron'
 import { array, boolean, finite, maxLength, minLength, number, object, optional, pipe, safeParse, strictObject, string } from 'valibot'
 
 import { createConfig } from '../../../libs/electron/persistence'
+import { safeStorage } from './safe-storage'
 
 const PAIRING_NAMESPACE = 'libp2p-pairing'
 const PAIRING_FILENAME = 'paired-devices.json'

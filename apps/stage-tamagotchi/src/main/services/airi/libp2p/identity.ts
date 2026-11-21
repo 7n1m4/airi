@@ -7,11 +7,11 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:
 
 import { generateKeyPair, privateKeyFromRaw } from '@libp2p/crypto/keys'
 import { peerIdFromString } from '@libp2p/peer-id'
-import { safeStorage } from 'electron'
 
 import * as v from 'valibot'
 
 import { createConfig } from '../../../libs/electron/persistence'
+import { safeStorage } from './safe-storage'
 
 const IDENTITY_NAMESPACE = 'libp2p-identity'
 const IDENTITY_FILENAME = 'libp2p-identity.json'

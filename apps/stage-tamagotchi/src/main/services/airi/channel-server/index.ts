@@ -17,7 +17,7 @@ import { defineInvokeHandler } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/electron/main'
 import { createServer, getLocalIPs } from '@proj-airi/server-runtime/server'
 import { Mutex } from 'async-mutex'
-import { app, ipcMain } from 'electron'
+import { Utils } from 'electrobun/main'
 import { createCA, createCert } from 'mkcert'
 import { x } from 'tinyexec'
 import { nullable, object, optional, string } from 'valibot'
@@ -26,6 +26,7 @@ import {
   electronApplyServerChannelConfig,
   electronGetServerChannelConfig,
 } from '../../../../shared/eventa'
+import { ipcMain } from '../../../eventa-bus'
 import { createConfig } from '../../../libs/electron/persistence'
 import {
   applyDaemonGatewayConfig,
@@ -171,7 +172,7 @@ function certHasAllDomains(certPem: string, domains: string[]): boolean {
 }
 
 async function installCACertificate(caCert: string) {
-  const userDataPath = app.getPath('userData')
+  const userDataPath = Utils.paths.userData
   const caCertPath = join(userDataPath, 'websocket-ca-cert.pem')
   writeFileSync(caCertPath, caCert)
 
@@ -209,7 +210,7 @@ async function installCACertificate(caCert: string) {
 }
 
 async function generateCertificate() {
-  const userDataPath = app.getPath('userData')
+  const userDataPath = Utils.paths.userData
   const caCertPath = join(userDataPath, 'websocket-ca-cert.pem')
   const caKeyPath = join(userDataPath, 'websocket-ca-key.pem')
 
@@ -250,7 +251,7 @@ async function generateCertificate() {
 }
 
 async function getOrCreateCertificate() {
-  const userDataPath = app.getPath('userData')
+  const userDataPath = Utils.paths.userData
   const certPath = join(userDataPath, 'websocket-cert.pem')
   const keyPath = join(userDataPath, 'websocket-key.pem')
   const expectedDomains = getCertificateDomains()
@@ -511,7 +512,7 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
 }
 
 export async function createServerChannelService(params: { serverChannel: Server }) {
-  const { context } = createContext(ipcMain)
+  const { context } = createContext(ipcMain as never)
   console.info('[Main/ServerChannel] Registering Eventa invoke handlers')
 
   defineInvokeHandler(context, electronGetServerChannelConfig, async () => {
